@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<cpc>
+    <desc>A set of basic functions for floating point numbers</desc>
+
+    <function id="add" type="python">
+        <desc>Add two floating point numbers: c=a+b.</desc>
+        <inputs>
+            <field id="a" type="float"> 
+            </field>
+            <field id="b" type="float">
+            </field>
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>a+b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.add" import="builtin.float"/>
+    </function>
+
+    <function id="sub" type="python">
+        <desc>Subtract two floating point numbers: c=a-b.</desc>
+        <inputs>
+            <field id="a" type="float"> 
+            </field>
+            <field id="b" type="float">
+            </field>
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>a-b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.add" import="builtin.float"/>
+    </function>
+
+    <function id="mul" type="python">
+        <desc>Multiply two floating point numbers: c=a*b.</desc>
+        <inputs>
+            <field id="a" type="float" />
+            <field id="b" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>a*b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.mul" import="builtin.float"/>
+    </function>
+
+    <function id="div" type="python">
+        <desc>Divide two floating point numbers: c=a/b.</desc>
+        <inputs>
+            <field id="a" type="float" />
+            <field id="b" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>a/b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.mul" import="builtin.float"/>
+    </function>
+
+    <function id="sqrt" type="python">
+        <desc>Calculate a square root: c=sqrt(a).</desc>
+        <inputs>
+            <field id="a" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>sqrt(a)</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.sqrt" import="builtin.float"/>
+    </function>
+
+    <function id="pow" type="python">
+        <desc>Calculate the power of a to b: c=a^b.</desc>
+        <inputs>
+            <field id="a" type="float" />
+            <field id="b" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>a^b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.pow" import="builtin.float"/>
+    </function>
+
+    <function id="exp" type="python">
+        <desc>Calculate an exponent: c=exp(a).</desc>
+        <inputs>
+            <field id="a" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>exp(a)</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.exp" import="builtin.float"/>
+    </function>
+
+    <function id="log" type="python">
+        <desc>Calculate a logarithm: c=log(a).</desc>
+        <inputs>
+            <field id="a" type="float" />
+        </inputs>
+        <outputs>
+            <field id="c" type="float">
+                <desc>log(a)</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.float.log" import="builtin.float"/>
+    </function>
+</cpc>

@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<cpc>
+    <import name="float" />
+    <type id="float-array" base="array" member-type="float" />
+    <!-- a basic addition controller function -->
+    <function id="cat" type="python">
+        <inputs>
+            <field id="a" type="file" />
+            <field id="b" type="file" />
+        </inputs>
+        <outputs>
+            <field id="c" type="file" />
+        </outputs>
+        <controller function="builtin.file.cat" import="builtin.file"/>
+    </function>
+
+    <!-- a basic multiplication controller function -->
+    <function id="to_file" type="python-extended">
+        <inputs>
+            <field id="a" type="float-array" />
+        </inputs>
+        <outputs>
+            <field id="b" type="file" />
+        </outputs>
+        <controller function="builtin.file.toFile" import="builtin.file"/>
+    </function>
+
+    <function id="ext_test" type="external">
+        <inputs>
+            <field id="a" type="float-array" />
+            <field id="b" type="float-array" />
+        </inputs>
+        <outputs>
+            <field id="afile" type="file" />
+            <field id="bfile" type="file" />
+            <field id="c" type="float-array" />
+        </outputs>
+        <controller executable="testexec" import="builtin.file" 
+                    persistent_dir="1" />
+    </function>
+
+    <function id="test-network" type="python-extended">
+        <inputs>
+            <field id="a" type="float" />
+        </inputs>
+        <outputs>
+            <field id="a" type="float" />
+        </outputs>
+        <controller function="builtin.file.testNetwork" import="builtin.file" />
+    </function>
+</cpc>

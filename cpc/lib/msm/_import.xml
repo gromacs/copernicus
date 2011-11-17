@@ -1,0 +1,410 @@
+<?xml version="1.0"?>
+<cpc>
+    <import name="gromacs" />
+
+    <type id="conf_array" base="array" member-type="file" />
+
+    <type id="inp_trajectory" base="list">
+        <desc>Input trajectory data</desc>
+        <field type="file" id="xtc">
+            <desc>Input xtc compress trajectory</desc>
+        </field>
+        <field type="file" id="tpr">
+            <desc>tpr file associated with the trajectory</desc>
+        </field>
+        <field type="file" id="conf" opt="true">
+            <desc>Final configuration</desc>
+        </field>
+    </type>
+
+    <type id="inp_trajectory_array" base="array" member-type="inp_trajectory" />
+
+    <type id="index_file_array" base="array" member-type="file" />
+    <type id="priority_array" base="array" member-type="int" />
+    <type id="desc_array" base="array" member-type="string" />
+
+
+    <type id="grompp_input" base="list">
+        <desc>Partial grompp input</desc>
+        <field type="file" id="mdp" ><desc>A .mpp settings file</desc></field>
+        <field type="file" id="top" ><desc>A .top topology file</desc></field>
+        <field type="gromacs::grompp-include-array" id="include" opt="true">
+            <desc>array of files to include</desc>
+        </field>
+        <field type="gromacs::mdp-array" id="settings" opt="true">
+            <desc>array of settings</desc>
+        </field>
+        <field type="string" id="mdrun_cmdline_options" opt="true">
+            <desc>mdrun command line options</desc>
+        </field>
+    </type>
+
+    <!-- output trajectories -->
+    <type id="trajectory" base="list">
+        <desc>Output trajectory type</desc>
+        <field type="file" id="xtc" >
+            <desc>A .xtc output trajectory file</desc>
+        </field>
+        <field type="file" id="lh5" >
+            <desc>A .lh5 reduced coordinate output trajectory file</desc>
+        </field>
+        <field type="file" id="xtc_nopbc" >
+            <desc>A .xtc output trajectory file without PBC</desc>
+        </field>
+        <field type="file" id="tpr" >
+            <desc>The tpr file associated with the xtc trajectory</desc>
+        </field>
+        <field type="float" id="dt" >
+            <desc>The time step (in ps) between frames</desc>
+        </field>
+        <field type="int" id="frames" >
+            <desc>The number of frames</desc>
+        </field>
+        <field type="file" id="conf" opt="true">
+            <desc>Final configuration</desc>
+        </field>
+        <field type="string" id="desc" opt="true">
+            <desc>(automatically generated) description of the simulation</desc>
+        </field>
+    </type>
+
+    <type id="trajectory_array" base="array" member-type="trajectory"></type>
+
+
+
+    <!-- gromacs msm controller function -->
+    <function id="msm_gmx_adaptive" type="external">
+        <desc>Markov State Modeling adaptive sampling function. Uses gromacs
+              to run simulations, and MSMBuilder to build the Markov State 
+              Model. </desc>
+        <inputs>
+            <!-- gromacs options -->
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp.</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An optional .ndx index file</desc>
+            </field>
+            <field type="conf_array" id="confs">
+                <desc>An array of starting configurations</desc>
+            </field>
+            <field type="int" id="num_sim" >
+                <desc>number of simulations to start simultaneously</desc>
+            </field>
+            <field type="int" id="num_microstates">
+                <desc>number of microstates (should be ~ 1/10th of 
+                      the number of configurations in each generation)</desc>
+            </field>
+            <field type="float" id="lag_time" opt="true">
+                <desc>Optional Markov model lag time in ns. If not set, will 
+                       not generate macrostates.</desc>
+            </field>
+            <!-- -->
+            <field type="int" id="num_macrostates">
+                <desc>number of macrostates to identify. 
+                        Should be small (~10, for example)</desc>
+            </field>
+            <field type="int" id="subsample" opt="true">
+                <desc>The sub-sampling interval in number of xtc frames for
+                the input trajectories: msmbuilder will use every nth 
+                frame (default: 1)</desc>
+            </field>
+            <!-- -->
+            <field type="float" id="recluster">
+                <desc>when to do re-clustering (in trajectory-ns) </desc>
+            </field>
+            <!--  -->
+            <field type="file" id="reference">
+                <desc>reference pdb file for clustering. This pdb file
+                      must contain all (and only) atoms in the 'grpname' group.
+                </desc>
+            </field>
+            <!--  -->
+            <field type="string" id="grpname" >
+                <desc>group name of the atoms to include in MSM</desc>
+            </field>
+
+            <field type="inp_trajectory_array" id="trajectories" opt="true">
+                <desc>An array of existing Gromacs trajectories</desc>
+            </field>
+        </inputs>
+
+        <outputs>
+            <field type="trajectory_array" id="trajectories">
+                <desc>Array of all trajectories. Used for indexing micro and
+                      macrostate assignments.</desc>
+            </field>
+            <field type="file" id="timescales">
+                <desc>Timescales vs. implied timescales plot</desc>
+            </field>
+            <field type="file" id="maxstate">
+                <desc>Configuration with the maximally populated microstate
+                </desc>
+            </field>
+            <field type="conf_array" id="macro_conf">
+                <desc>Array of representative configurations for macrostates. 
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_weights">
+                <desc>Relative weights of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_transition_counts">
+                <desc>Transition count matrix of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="index_file_array" id="micro_assignments">
+                <desc>An array of files with microstate assignments for each 
+                      frame in each trajectory.</desc>
+            </field>
+            <field type="index_file_array" id="macro_assignments">
+                <desc>An array of files with macrostate assignments for each 
+                      frame in each trajectory.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="int" id="generation">
+                <desc>The clustering generation number of the output results
+                </desc>
+            </field>
+            <!-- these things now go to a log file
+            <field type="file" id="log">
+                <desc>Log file</desc>
+            </field>
+            <field type="file" id="err">
+                <desc>Error output file</desc>
+            </field>
+            <field type="file" id="msm_stdout">
+                <desc>msmbuilder standard output</desc>
+            </field>
+            <field type="file" id="msm_stderr">
+                <desc>msmbuilder standard error</desc>
+            </field>
+            <field type="file" id="msm_macro_stdout">
+                <desc>msmbuilder macrostate assignment standard output</desc>
+            </field>
+            <field type="file" id="msm_macro_stderr">
+                <desc>msmbuilder macrostate assignment standard error</desc>
+            </field>
+                -->
+        </outputs>
+        <controller log="true" executable="msm" persistent_dir="true"
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function>
+
+
+    <function id="build_msm" type="external">
+        <desc>Do clustering and micro/macrostate assignments, and build a 
+              Markov state model, given a set of trajectories</desc>
+        <inputs>
+            <field type="trajectory_array" id="trajectories">
+                <desc>An array of trajectories</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An optional .ndx index file</desc>
+            </field>
+            <field type="int" id="num_microstates">
+                <desc>number of microstates (should be ~ 1/10th of 
+                      the number of configurations in each generation)</desc>
+            </field>
+            <field type="int" id="num_macrostates">
+                <desc>number of macrostates. </desc>
+            </field>
+            <field type="float" id="lag_time" opt="true">
+                <desc>Optional Markov model lag time in ns. If not set, 
+                    will not generate macrostates.</desc>
+            </field>
+            <field type="file" id="reference">
+                <desc>reference pdb file for clustering</desc>
+            </field>
+            <field type="int" id="start_per_state">
+                <desc>Number of simulations to start per (macro)state. If 
+                      lag_time is not set, the number of simulations started is
+                      num_macrostates*start_per_state. If lag_time is set, 
+                      it will be the number of macrostates actually found *
+                      start_per_state</desc>
+            </field>
+            <field type="string" id="grpname" >
+                <desc>group name of the atoms to include in MSM</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="sim_start_conf">
+                <desc>Array of starting configurations for for starting new
+                      adaptive sampling runs. </desc>
+            </field>
+            <field type="file" id="timescales">
+                <desc>Timescales vs. implied timescales plot</desc>
+            </field>
+            <field type="file" id="maxstate">
+                <desc>Configuration with the maximally populated microstate
+                </desc>
+            </field>
+            <field type="conf_array" id="macro_conf">
+                <desc>Array of representative configurations for macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_weights">
+                <desc>Relative weights of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_transition_counts">
+                <desc>Transition count matrix of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="index_file_array" id="micro_assignments">
+                <desc>An array of files with microstate assignments for each
+                      frame in each trajectory.</desc>
+            </field>
+            <field type="index_file_array" id="macro_assignments">
+                <desc>An array of files with macrostate assignments for each
+                      frame in each trajectory.
+                      Only output when a lag time has been set.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="cluster" persistent_dir="true" />
+    </function>
+
+    <!-- for the msm_gmx_adaptive subnet -->
+    <type id="build_msm_in_array" base="array" member-type="build_msm:in" />
+    <type id="build_msm_out_array" base="array" member-type="build_msm:out" />
+
+    <function id="xtc_to_lh5" type="external">
+        <desc>Convert an xtc compressed trajectory into an lh5 
+              trajectory with only coordinates of interest for MSM. 
+              Used internally in msm_gmx_adaptive</desc>
+        <inputs>
+            <field type="file" id="xtc">
+                <desc>The input trajectory</desc>
+            </field>
+            <field type="file" id="reference">
+                <desc>A reference pdb file</desc>
+            </field>
+            <field type="file" id="tpr">
+                <desc>The gromacs tpr file used to generated the xtc trajectory
+                </desc>
+            </field>
+            <field type="string" id="grpname">
+                <desc>Gromacs group name of atoms of interest</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>Optional gromacs index file</desc>
+            </field>
+            <field type="file" id="conf" opt="true">
+                <desc>Final configuration</desc>
+            </field>
+            <field type="string" id="desc" opt="true">
+                <desc>(automatically generated) description of the 
+                       simulation</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="trajectory" id="trajectory">
+                <desc>The full trajectory output</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="tolh5" />
+    </function>
+
+    <function id="trajectory_collect" type="external">
+        <desc>Collect a set of trajectories to calculate a total amount
+              of trajectory-ns and present to msm_cluster</desc>
+        <inputs>
+            <field type="trajectory_array" id="trajectories" opt="true">
+                <desc>An array of trajectories generated by gmx_sim</desc>
+            </field>
+            <field type="inp_trajectory_array" id="ext_trajectories" opt="true">
+                <desc>An array of existing external Gromacs trajectories</desc>
+            </field>
+            <field type="file" id="reference">
+                <desc>A reference pdb file</desc>
+            </field>
+            <field type="string" id="grpname">
+                <desc>Gromacs group name of atoms of interest</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>Optional gromacs index file</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="trajectory_array" id="trajectories">
+                <desc>An array of trajectories</desc>
+            </field>
+            <field type="float" id="total_traj_ns">
+                <desc>The total amount of trajectory time in ns</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="traj_collect" 
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function>
+
+    <function id="gmx_sim" type="network">
+        <desc>Basic unit of a run with trajectory conversion.</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp_input">
+                <desc>The simulation parameters</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An optional index file</desc>
+            </field>
+            <field type="file" id="reference">
+                <desc>Reference pdb file</desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>The starting configuration</desc>
+            </field>
+            <field type="string" id="grpname">
+                <desc>Selection group of atoms of interest for MSM</desc>
+            </field>
+            <field type="int" id="priority">
+                <desc>Run priority of commands issued</desc>
+            </field>
+            <field type="string" id="desc" opt="true">
+                <desc>(automatically generated) description of the 
+                       simulation</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="trajectory" id="trajectory">
+                <desc>The full trajectory information</desc>
+            </field>
+        </outputs>
+        <network>
+            <instance id="grompp" function="gromacs::grompp"/>
+            <instance id="mdrun" function="gromacs::mdrun"/>
+            <instance id="tolh5" function="xtc_to_lh5"/>
+
+            <!-- connections to grompp -->
+            <connection src="self:ext_in.grompp_input.mdp" 
+                        dest="grompp:in.mdp" />
+            <connection src="self:ext_in.grompp_input.top" 
+                        dest="grompp:in.top" />
+            <connection src="self:ext_in.grompp_input.include"
+                        dest="grompp:in.include" />
+            <connection src="self:ext_in.grompp_input.settings"
+                        dest="grompp:in.settings" />
+            <connection src="self:ext_in.ndx" dest="grompp:in.ndx" />
+            <connection src="self:ext_in.conf" dest="grompp:in.conf" />
+
+            <!-- connections to mdrun -->
+            <connection src="grompp:out.tpr" dest="mdrun:in.tpr" />
+            <connection src="self:ext_in.priority" dest="mdrun:in.priority" />
+            <connection src="self:ext_in.grompp_input.mdrun_cmdline_options" 
+                        dest="mdrun:in.cmdline_options" />
+
+            <!-- connections to tolh5 -->
+            <connection src="mdrun:out.conf" dest="tolh5:in.conf" />
+            <connection src="mdrun:out.xtc" dest="tolh5:in.xtc" />
+            <connection src="grompp:out.tpr" dest="tolh5:in.tpr" />
+            <connection src="self:ext_in.reference" dest="tolh5:in.reference" />
+            <connection src="self:ext_in.ndx" dest="tolh5:in.ndx" />
+            <connection src="self:ext_in.grpname" dest="tolh5:in.grpname" />
+            <connection src="self:ext_in.desc" dest="tolh5:in.desc" />
+
+            <!-- connections from tolh5 -->
+            <connection src="tolh5:out.trajectory" 
+                        dest="self:ext_out.trajectory" />
+        </network>
+    </function>
+
+</cpc>
+

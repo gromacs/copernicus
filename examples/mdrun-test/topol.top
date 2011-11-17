@@ -1,0 +1,12 @@
+; topology for silica walls + SPC/E water
+
+#include "amber03.ff/forcefield.itp"
+#include "amber03.ff/spce.itp"
+
+[ system ]
+; Name
+Water
+
+[ molecules ]
+; Compound        #mols
+SOL               511

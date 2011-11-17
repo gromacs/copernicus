@@ -1,0 +1,89 @@
+/*
+This file is part of Copernicus
+http://www.copernicus-computing.org/
+
+Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as published 
+by the Free Software Foundation
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+body 
+{ 
+    font-family: Helvetica,Arial; 
+    /*text-align: justify;*/
+    background: #F2F2F2;    
+}
+
+p
+{
+}
+
+#symbols{
+ float:left; 
+}
+
+#content
+{
+   
+}
+
+#toc
+{
+    /*float: right;*/
+}
+
+#leftcol{
+width:50em;
+float:left;
+border-color: #D3D3D3;
+border-style: solid;
+border-width: 1px;
+margin: 10px 10px 0;
+padding: 10px 15px;
+line-height:1.2;
+border-radius: 5px 5px 5px 5px;
+background:#FFFFFF;
+color:#444444;
+
+}
+
+#rightcol{
+float:right
+}
+
+
+.graph
+{
+    /*float: left;
+    clear: both;*/
+    /*background-color: blue;
+border: 1px solid red;*/
+    margin-left: 20px;
+}
+
+.figure{
+font-size:0.8em;
+}
+.figure img{
+display:block;
+margin:auto;
+}
+
+.figure-text-header{
+text-align:center
+}
+
+.figure-text{
+padding: 0px 100px 0px 100px;
+}

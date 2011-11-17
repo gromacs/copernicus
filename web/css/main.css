@@ -1,0 +1,171 @@
+/*
+This file is part of Copernicus
+http://www.copernicus-computing.org/
+ 
+Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as published 
+by the Free Software Foundation
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+   */
+
+body{
+/*background:#1F1E1E;*/
+background: #2F2C2C;
+color:#EEEEEE;
+font-family: 'HelveticaNeue-Light','Helvetica Neue Light','Helvetica Neue',Arial,Helvetica,sans-serif;
+
+}
+label{
+font-size: 0.9em;
+	
+}
+
+label{
+font-family:'HelveticaNeue-UltraLight','Helvetica Neue UltraLight','Helvetica Neue',Arial,Helvetica,sans-serif;
+font-weight:100;
+letter-spacing:1px;
+}
+
+input{	
+-moz-border-radius:0.5em;
+-webkit-border-radius:0.5em;
+border-radius:0.5em;
+border:1px solid #DDDDDD;
+padding:5px;
+display:block;
+margin: 0 0 8px 0;
+width:218px;
+outline-width:0px;
+font-size:13px;
+color:black;
+	
+}
+
+#main{
+background: #474444;
+border: 1px solid #646969;
+-moz-border-radius:0.2em;
+-webkit-border-radius:0.2em;
+border-radius:0.2em;                      
+padding:10px;
+width:1000px;
+margin:auto;
+
+}
+
+
+#project-info{
+border: 1px solid #646969;
+-moz-border-radius:0.2em;
+-webkit-border-radius:0.2em;
+border-radius:0.2em;                      
+padding:10px;
+}
+
+#project-form{
+width:300px;
+}
+
+fieldset{
+/*border:1px solid #FF8C00;*/	
+border:1px solid #514E4E;
+-moz-border-radius:0.4em;
+background:#514E4E;
+    
+}
+
+
+.button {
+	display: inline-block;
+	outline: none;
+	cursor: pointer;
+	text-align: center;
+	text-decoration: none;
+	color:#333333;
+	font-size:16px;
+	padding: .5em 2em .55em;
+	text-shadow:0 1px 0 #FFEE66;
+	-webkit-border-radius: .5em;
+	-moz-border-radius: .5em;
+	border-radius: .5em;
+	-webkit-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	-moz-box-shadow: 0 1px 2px rgba(0,0,0,.2);
+	box-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+.button:hover {
+	text-decoration: none;
+}
+.button:active {
+	position: relative;
+	top: 1px;
+}
+
+
+.orange {
+	border: solid 1px #da7c0c;
+	background: #f78d1d;
+	background: -webkit-gradient(linear, left top, left bottom, from(#faa51a), to(#f47a20));
+	background: -moz-linear-gradient(top,  #faa51a,  #f47a20);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#faa51a', endColorstr='#f47a20');
+}
+.orange:hover {
+	background: -webkit-gradient(linear, left top, left bottom, from(#f88e11), to(#f06015));
+	background: -moz-linear-gradient(top,  #f88e11,  #f06015);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#f88e11', endColorstr='#f06015');
+}
+.orange:active {
+	background: -webkit-gradient(linear, left top, left bottom, from(#f47a20), to(#faa51a));
+	background: -moz-linear-gradient(top,  #f47a20,  #faa51a);
+	filter:  progid:DXImageTransform.Microsoft.gradient(startColorstr='#f47a20', endColorstr='#faa51a');
+}
+
+ul.project-list{
+	list-style-type:none;
+	margin-left:0px;
+	padding-left:5px;
+}
+
+ul.project-list li:hover{
+background-color:#514E4E;
+cursor:pointer;
+}
+
+ul.project-list li.highlight{
+background-color:#514E4E;
+cursor:pointer;
+}
+
+
+
+
+/* layout elements */
+#leftcol{
+float:left;
+
+}
+
+#rightcol{
+float:left;
+margin-left:20px
+}
+
+.clear{
+clear:both;
+}
+
+
+/*END layout elements */
+
+
+

@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html>
+<!--
+This file is part of Copernicus
+http://www.copernicus-computing.org/
+
+Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as published 
+by the Free Software Foundation
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ -->
+<head>
+<link rel="stylesheet" type="text/css" href="../doc.css" />
+<style>
+span.comment{
+color:red;
+}
+ </style>
+ <title>Copernicus user guide</title>
+</head>
+<body>
+<div id="leftcol">
+<div id="toc">
+    <h2>Table of Contents</h2>
+    <ol>
+        <li><a href="#intro">Introduction</a></li>
+        <li><a href="#start">Getting started</a></li>
+        <li><a href="#conf">Configuration</a></li>        
+        <!--<li><a href="#project">Projects</a></li>-->
+        <li><a href="#servers">Servers</a></li>
+        <li><a href="#workers">Workers</a></li>
+        <li><a href="#cmd-line">The command line client tool</a></li>
+    </ol>
+</div>
+
+
+
+<div id="content">
+<a name="intro"><h1>Introduction</h1></a>
+
+<h2>What is Copernicus?</h2>
+<p>
+Copernicus is a system that aims to take the scope of computer simulations from the level of individual simulation runs to one focused on obtaining results by  allowing the user to specify these, rather than a detailed           prescription of how to obtain them. It is then up to the Copernicus run-time    system to break these desired end-results up into specific tasks and to run     these tasks as efficiently as possible on the available computational resources.
+</p>
+<p>
+Technically, Copernicus is a platform for running multi-level sampling tasks; in the field of molecular simulations, sampling algorithms such as Markov State Modeling and free energy perturbation methods rely on the results of individual simulations as samples to be processed by the higher level algorithm.
+</p>
+
+<h2>How does Copernicus work?</h2>
+
+<p>
+When running, Copernicus is a network of servers; you as a user start servers, connect to these servers through clients (right now, that's the command line server <code>cpcc</code>), and present the servers with 'workers': special clients that do computational work. 
+</p>
+<p>
+Computational tasks are dividied into <em>projects</em> that can each host a complex set of simulations. Each project belongs to a server and its contents can only be accessed by accessing that server with a client.
+</p>
+
+<h3>Dataflow Network</h3>
+
+<p>
+Projects consist of functions: a function can be a high-level object like a Markov State Modeling-based adaptive sampling run, or a lower-level object such as an individual <code>mdrun</code> simulation or a simple addition of two real numbers. 
+</p>
+<p>
+Functions have pre-defined inputs and outputs: for example, the <code>msm</code> function has inputs for MSM-specific settings such as the number of microstates, and outputs such as the set of macrostate weights. Outputs of active functions can be connected to inputs of other functions; whenever a active function has all of its required inputs, or whenever an input changes, the function gets called. 
+</p>
+<p>
+As outputs and inputs of functions can be connected to each other, they define networks that are the execution model of Copernicus: internally, all non-trivial functions are themselves dataflow networks. This has the advantage that the internal state of all projects can be inspected while running, and that parts of the network can be executed in parallel.
+</p>
+
+<h3>Server</h3>
+
+<p>
+At least one server nees to run to start executing projects: the server that hosts the project. Other servers can be added to serve as gateways for communication to the workers or host other projects (possibly by other users). 
+</p>
+<p>
+Servers are started and configured with the <code>cpc-server</code> command. Initial configuration can be done with <code>cpc-server setup &lt;dirname&gt;</code>, and the server is started (as a background process) with <code>cpc-server start</code>. 
+</p>
+<p>
+All Copernicus communication happens through encrypted connections, where both sides need to trust each other. The <code>cpc-server</code> command has a set of commands to request and establish trust between servers.
+</p>
+
+<h3>Worker</h3>
+
+<p>
+Workers execute commands in the command queue. As the workers connect to a server, they inform it of which <em>executables</em> are installed; this allows a server to construct a workload based on the worker's capabilities. Executables are descriptions of how to execute a command; possibly in combination with an actual binary executable. Example executables can be found in <code>examples/executables</code>.
+</p>
+
+<h3>Client</h3>
+
+<p>
+The only available client at the moment is the command-line client <code>cpcc</code>. It can be used to start projects, inspect and manipulate running projects, and inspect command queues. 
+</p>
+
+Throughout the documentation we might sometimes use the symbols below to represent servers clients and workers
+<table>
+<tr>
+<td>
+<img id="symbols" src="images/copernicus_symbols.png" alt="symbols"/> 
+</td>
+<td><span style="line-height:42px">Server<br/>Worker<br/> Client</span></td>
+</tr>
+</table>
+</div>
+
+
+
+<a name="start"><h1>Getting started</h1></a>
+	<h2>Downloading and Installing</h2>
+	The first step is to download and install the copernicus distribution. To do so follow these steps
+	<ul>
+	<li>Checkout the code from our git repository
+	<code>git clone git@git.copernicus-computing.org:copernicus copernicus</code>
+	</li>
+	<li>Set the <code>COPERNICUS_HOME</code> environment variable to the location where you checked out copernicus
+		<ul>
+			<li>On UNIX/Linux systems this is usually done by adding <code>export COPERNICUS_HOME=path/to/copernicus</code> </li>
+			
+		</ul>
+	</li>
+	<li>Now add <code>COPERNICUS_HOME</code> to your <code>PATH variable</code>
+		<ul>
+			<li>On UNIX/Linux systems this is usually done by adding <code>export PATH=$PATH:$COPERNICUS_HOME</code> </li>
+		</ul>
+	</li>
+	<li>You should now be able to run the following three commands 
+		<ul>
+		<li><code>cpcc</code></li>
+		<li><code>cpc-server</code></li>
+		<li><code>cpc-worker</code></li>
+		</ul>
+	</li>
+	<li>Setup Copernicus by running <code>cpc-server setup &lt;project-base-directory&gt;</code>.
+	where <code>&lt;project-base-directory&gt;</code> is the directory all of your copernicus projects will reside in 
+	This will initialize the necessary configuration files under <code>~/.copernicus/<machine-name></code></li>	
+	</ul>
+		
+	To verify that everything is working correctly type <code>cpc-server start -d</code>.
+	You should be able to see an output similiar to the one below.
+	
+	<pre>
+Starting server..
+DEBUG, cpc.dataflow.task: Creating new task queue.
+INFO, cpc.heartbeat.server: No heartbeat file
+DEBUG, cpc.queue.exec_thread: Started task exec thread.
+DEBUG, cpc.queue.exec_thread: Trying to get queued task.
+INFO, cpc.server: Serving HTTP on 0.0.0.0 port 14807...
+INFO, cpc.server: Serving HTTPS on 0.0.0.0 port 13807...	
+	</pre>
+	
+	You can stop the server by typing <code>cpc-server stop</code>
+	
+	<h2>Running a project</h2>
+	To get a high level understanding of how to use copernicus, we'll first go through a simple example
+	where we start a copernicus server and worker on our local machine. We'll then submit a project to it and run it.
+	In later sections, we'll go through parts more detailed
+	
+	<ul>
+		<li>First, we need to install 'executables' for the workers: these are short descriptions on how to execute a particular type of command. In <code>$COPERNICUS_HOME/examples/executables</code> there are a few <code>gromacs</code> executables for different platforms. Simply copy over the whole executables directory to <code>.copernicus/</code>. Do <pre>cp -r examples/executables ~/.copernicus/</pre> to do this.
+	</li>
+	
+	<li>Start a copernicus server <pre>cpc-server start</pre></li>
+
+	<li>We will now set up a project on our copernicus server. 	
+	The script <pre>examples/mdrun-test/rungmxtest</pre> 
+	is a simple script that sets up a project that will simulate water
+	(note that you will need to run this script from $COPERNICUS_HOME).
+	This example script executes several commands.
+	<ul>
+		<li>It initates a project.</li>
+		<li>It uploads a project definition containing the dataflow network this project uses</li>
+		<li>It uploads the three input files necessary for this project</li>
+		<li>Finally it will activate the project. Upon project activation the server will start generating commands that can be executed by workers.
+		</li>
+	</ul>
+	
+	After running the script you will see output similar to: 
+	<pre>
+Project mdrun_test created
+Imported module gromacs
+Added instance 'grompp' of function gromacs::grompp
+Added instance 'mdrun' of function gromacs::mdrun
+Connected grompp:out.tpr to mdrun:in.tpr
+Found item: Set type=file, value mdrun_test/_inputs/0000/conf.gro
+Found item: Set type=file, value mdrun_test/_inputs/0001/grompp.mdp
+Found item: Set type=file, value mdrun_test/_inputs/0002/topol.top
+Project mdrun_test activated.
+	</pre> 
+	<li>At this point the server should have a project named test
+	and it should have generated a command in the queue. The structure of the project is 
+        <div class="graph"> 
+        <img src="mdrun_test.png" alt="Graph of mdrun_test project" />
+        </div>
+        so the <code>tpr</code> output of the <code>grompp</code> function is fed into the <code>tpr</code> input of the <code>mdrun</code> function. You can make this graph with <pre>cpcc graph</pre> and processing the output with <a href="http://www.graphviz.org">graphviz</a> (the <code>dot</code> tool).
+        </li>
+        <li>
+	Execute the command <pre>cpcc p</pre>
+        You should see this:
+	<pre> 
+Projects:
+    mdrun_test
+	</pre>
+	
+	To see what's in the command queue we can now run 
+        <pre>cpcc q</pre>
+        The output should look like:
+	<pre>
+Queue:
+task mdrun.1: gromacs/mdrun in mdrun_test/mdrun/_persistence/run_001
+	</pre>		
+	</li>
+	<li>Now we'll start up a worker. Once the worker starts up it will connect to the server and ask for work. The server will then send the 
+	generated command to the worker.
+	To start up a worker with 4 cores on a single machine, run the command 
+        <pre>cpc-worker smp -n 4</pre>
+        As soon as the worker starts up the worker will receive a command from the server to execute. You should see: 
+	<pre>
+Available executables for platform smp:
+gromacs/mdrun 4.5.3
+INFO, cpc.worker: Got 1 commands.
+INFO, cpc.worker: cmd ID=72ef60f6ef923d5e0d74b7f81d3255c2f59b2c7e
+	</pre>
+	
+	It will take about 10-30 seconds for the worker finishes it work after that you should see an output like 	
+	<pre>
+INFO, cpc.worker: Command id 72ef60f6ef923d5e0d74b7f81d3255c2f59b2c7e finished
+INFO, cpc.worker: Got 0 commands.
+INFO, cpc.worker: Have free resources. Waiting 30 seconds
+	</pre>
+	
+	The first line says that the worker has finished executing the command(s). The subsequent lines say that the worker has asked for a new command to exeute, but received nothing	
+	<br/>
+	If you run <pre>cpcc q</pre> again, you will see that the queue is empty.	
+	</li>
+
+	<li>
+	At this stage we can take a look at the output the project has generated.
+	To see what outputs the mdrun function generates we can run the command 
+        <pre>cpcc list mdrun</pre>
+	The corresponding output will look like the below
+	
+	<pre>
+Instance/network 'mdrun':
+State: active
+Inputs:
+    tpr
+Outputs:
+    conf
+    stdout
+    edr
+    xtc
+    stderr
+    trr
+Subnet function instances:	
+	</pre>	
+        and we can get the output configuration with the command 
+        <pre>cpcc get-file mdrun:out.conf out.gro</pre>
+        Similarly, we can get the stderr (which is where most output goes in mdrun) with 
+        <pre>cpcc get-file mdrun:out.stderr stderr</pre>
+	</li>
+	</ul> 
+        <h2>Running a Markov state modelling project</h2>
+<p>
+        If the previous project (<code>mdrun_test</code>) ran successfully, and all the prerequisites for msmbuilder are met (it should be installed so that it can be found with <code>import msmbuilder</code>), we can start running an MSM project.  There is an example MSM project as a script and a set of input files in 
+        <pre>examples/msm-test</pre>
+        with a script
+        <pre>examples/msm-test/runtest</pre>
+        that starts a project that generates adaptive sampling runs of the alanine dipeptide in water. After running the script, there will be a function instance <code>msm</code> that contains the following inputs and outputs:
+        <pre>
+Instance/network 'msm':
+State: active
+Inputs:
+    conf_0
+    conf_1
+    conf_2
+    conf_3
+    conf_5
+    conf_4
+    conf_6
+    conf_7
+    conf_8
+    conf_9
+    mdp
+    top
+    ndx
+    include
+    reference
+    grpname
+    time_step
+    nstep
+    nstxtcout
+    recluster
+    num_sim
+    num_states
+Outputs:
+    log
+    err
+    msm_stdout
+    msm_stderr
+    macrostate_conf_0
+    macrostate_conf_1
+    macrostate_conf_2
+    macrostate_conf_3
+    macrostate_conf_4
+    macrostate_conf_5
+    macrostate_conf_6
+    macrostate_conf_7
+    macrostate_conf_8
+    macrostate_conf_9
+    transition_counts
+    msm_macro_stdout
+    timescales
+    maxstate
+    msm_macro_stderr
+    weights
+        </pre>
+<p>
+    Explanations for the meanings of these inputs and outputs can be found with <pre>cpcc info gromacs::msm::msm</pre>
+    Here <code>gromacs::msm::msm</code> is the full name of the Markov State Modeling function, with double colons (<code>::</code>) separating module names.
+</p>
+<p>
+The alanine dipeptide system is small, so the maximum number of cores each simulation should use is around 4. Workers can be limited to run jobs of that size by, for example
+<pre>
+./cpcc-worker smp -s 4 -n 24
+</pre>
+which starts a 24-core worker (be careful on machines that don't have that many cores!) but limits the size of each job to 4 cores. With 6 workers, the first generation of clustering should start in approximately 10 minutes on a modern machine. The macrostates can then be inspected with
+<pre>
+./cpcc get-file msm:out.macrostate_conf_0 macrostate_0.gro
+./cpcc get-file msm:out.macrostate_conf_1 macrostate_1.gro
+...
+./cpcc get-file msm:out.weights weights.out
+</pre>
+which gets some of the macrostate configurations and a file with the statistical weights associated with the first 10 macrostates. 
+</p>
+<!--<h3>The code behind Markov state modelling projects</h3>
+<p>
+The code for running MSM projects can be found in 
+<pre>
+cpc/lib/gromacs/msm
+</pre>
+where
+<dl>
+<dt><code>_import.xml</code></dt><dd>contains the input and output definitions of the <code>gromacs::msm</code> function</dd>
+<dt><code>msm</code></dt><dd>contains the top-level code for the <code>gromacs::msm</code> function. This code spawns a continuation run for every trajectory that finishes, and spawns additional runs whenever a clustering round is finished, based on msmbuilder's adaptive sampling.</dd>
+<dt><code>project.py</code></dt><dd>contains the code that calls msmbuilder's CopernicusProject and other objects.</dd>
+<dt><code>tolh5.py</code></dt><dd>contains code that converts <code>xtc</code> trajectory files to <code>lh5</code> files without solvent.</dd>
+</dl>
+</p> -->
+
+	
+	<h2>Starting up a small copernicus network</h2>
+	<p>In this section we will give a quick overview of how a copernicus network can be set up. A copernicus network consists of project servers and workers, and workers always communicate with one project server.
+	</p> 
+	<p>Project servers can connect to each other to form a network.
+	This allows project servers to utilize workers connected to other servers: if a worker connects to a server, it will be given a workload from that server unless there are no available jobs. If that is the case, the server delegates the worker's workload request to other servers in the network, in a prioritized order.
+	</p>
+        <p>
+	In this example we will start 2 copernicus servers and connect them: for this we need access to 2 different machines with copernicus <a href="#start">installed</a>.
+	On each machine we will run one server and one worker. The command line client tool will be to on each separate machine to connect to the server running on that same machine.
+        </p>	
+	<div class="figure" id="example-network">
+		<img src="images/example_network.png"/>
+		<div class="figure-text-header"><strong>The network being setup</strong><br/></span></div>
+		<div class="figure-text">
+		 Two individual machines with copernicus servers running on them. Each copernicus server has a
+		 worker connected to it. The command line client tools on each machine will be used to set up the copernicus network
+		</div>
+	</div>
+	
+	<ul>
+	<li>Begin by starting the copernicus server on each machine; this is done with the command <code>cpc-server start</code>.</li>
+	<li>To establish connection between two servers we will send a connection request from machine <em>A</em> to machine <em>B</em>.
+	The order doesn't matter but we need to keep track of who sent the request and who received it.<br/>
+	A connection request is <em>sent</em> with the command <pre>cpc-server add-node &lt;hostname&gt;</pre>	
+	If everything went OK, you will see a message notifying you that a node connection request has been sent.  You can always check to what nodes requests has been sent by running the 
+	command <pre>cpc-server list-sent-node-requests</pre>
+	</li>
+	<li>	
+	Node <em>B</em> should now have received a node connection request from node <em>A</em>.
+	We can check this by running the command <code>cpc-server list-node-requests</code> on Node <em>B</em>.
+	To grant the request sent from Node <em>A</em>, we run the command <pre>cpc-server trust-all</pre>
+	To verify that a connection has been established we can now run the command <pre>cpc-server list-nodes</pre>
+	on either node <em>A</em> or node <em>B</em>.  	 	 
+	</li>			
+	</ul>
+	
+	We now have a copernicus network consisting of two servers, with one worker connected to each server.
+	With this server network, workers can be used by other servers in the network. Whenever a server has no work in its queue it will ask its neighbouring servers for work that it can send to the worker.
+
+	
+<a name="conf"><h1>Configuration</h1></a>
+	All the three applications: the server <code>cpc-server</code>, the worker <code>cpc-worker</code> and the client <code>cpcc</code>, have their own configuration files.
+	
+	<h2>Location of configuration files</h2>
+	By default configuration files will be located in <code>~/.copernicus/&lt;HOSTNAME&gt;</code>
+	We will refer to this path as <code>&lt;CONFIG_HOME&gt;</code> in the rest of the user guide 
+	<p>
+	<a href="#server-conf">Server Configuration</a><br/>
+	<a href="#client-conf">Command line Client tool configuration</a><br/>
+	<a href="#server-conf">Worker configuration</a><br/>
+	<a href="multi-user.html">Multi-user setup</a><br/>
+	</p>
+	
+	
+<a name="project"><h1>Projects</h1></a>
+
+<a name="servers"><h1>Servers</h1></a>
+	The server is the backbone of copernicus: it is responsible for managing a project and splitting it up into smaller tasks for the workers to process and postprocess returned. It is also an access point for clients or a conduit in the server overlay network.
+	
+	
+	<a name="server-conf"><h2>Configuration</h2></a>
+        <p>
+	To list available configuration parameters run the command <pre>cpc-server config-list</pre>. This lets you see a list of all available configuration parameters.</p>	
+        <p>
+	To see the configuration parameters and their respective values run <pre>cpc-server config-values</pre></p>
+        <p>
+	To change change a value you can run the command 
+        <pre>cpc-server config &lt;param&gt; &lt;value&gt;</pre>
+        For example, to change the <code>https</code> port the server listens on to 11111, you could run
+	<pre>cpc-server config server_https_port 11111</pre> (by default, the <code>https</code> port is 13807)</p> 
+	
+	<h2>Connecting copernicus servers</h2>
+        <p>
+	Copernicus servers can connect to each other.  There are two reasons to do this: a server can act as a distribution point for workloads: once a server has no more commands to send to a worker it will ask its connected nodes if they have any commands that need processing. Also, a server can act as a conduit for network traffic: if a cluster's compute nodes are not directly accessible to the outside world, but its head node is, a server on the head node will allow workers on the compute nodes to connect to servers running outside the cluster.
+        </p>
+        <p>
+	To set up a connection between 2 nodes we need to follow the following steps.
+	<ol>
+	<li>Send a request to the node we want to connect to. This is done with the commend
+	<code>cpc-server add-node</code>
+	</li>
+	<li>
+	The server that received the connection request has to grant the connection request.
+	To see what nodes have requested connection can be used, give the command <code>cpc-server list-node-requests</code>
+	To grant a request we use the command <code>cpc-server trust </code>
+	</li>
+	<li>
+	Once a connection has been established we can run the command <code>cpc-server list-nodes</code> to see what nodes 
+	that the server is connected to.  
+	</li>
+	</ol>
+        </p>	
+	<h2>Network Topology</h2>
+        <p>
+	As you start to connect more copernicus servers together you might want to have an easy overview of the network topology. This can be achieved with 
+the command <pre>cpcc network-topology</pre> 
+        </p>
+
+	<h2>Worker delegation</h2>
+	<p>
+	When a worker asks for work and the server has no more commands in its queue, it will ask its connected servers if they have any work in their respective queues. This is called worker delegation.
+        </p>
+        <p>
+	Worker delegation not only works with the nearest connected servers, the connected servers can further delegate to their neighbouring servers, if they have no work.
+	</p>
+	<p>
+	Each connected server of a server has a different priority. When worker request is delegated, the server delegates first to the node with the highest priority (here, priority is a number greate than or equal to 0, and 0 means highest priority). 
+	The priority can be checked with the <code>cpc-server list-nodes</code> command.
+	The number next to the node determines the priority.
+	</p>	
+	<p>
+	To change the priority of a node we can run the command <code>cpc-server change-node-priority</code>.
+	
+	For example, if we have a server with the nodes: 
+	<pre>
+	&gt; cpc-server list-nodes
+	Connected nodes:
+	0 mango.fruits.net:13807
+	1 banana.fruits.net:13807
+	2 melon.fruits.net:13807
+	3 kiwi.fruits.net:13807		
+	</pre>
+        (the nodes are listed with their priority number, the host name, and the listening <code>https</code> port number). Suppose we would like to reorder priorities so that <code>kiwi</code> is prioritised before <code>melon</code>, we run
+	
+	<pre>
+	&gt; cpc-server change-node priority 2 kiwi.fruits.net 13807
+	Connected nodes:
+	0 mango.fruits.net:13807
+	1 banana.fruits.net:13807
+	2 kiwi.fruits.net:13807
+	3 melon.fruits.net:13807
+	</pre>
+
+	To simply define a node as the one with the highest priority, we set the priority to 0.  If we'd like to give it the lowest priority, any number greater than 3 would work.
+	</p>
+	
+	<h2>Server logs</h2>
+        <p>
+        If a function produces an error, it can be obtained with <pre>cpcc ls &lt;function-instance&gt;</pre>
+        The server also maintains logs, that can be checked for debugging purposes. These logs are located in <code>&lt;CONFIG_HOME&gt;/server/log</code>
+	The two existing log files are <code>error.log</code> and <code>server.log</code>
+	The easisest way to read these logs is to use <code>tail</code>: for example <code>tail -f server.log</code>
+        </p>	
+	
+	<h2>Security</h2>
+	All communication between servers is done through securely SSL. This is the reason that trust relationships must be established explicitly through <code>cpcc add-node</code> and <code>cpcc trust-all</code>.
+	
+<a name="workers"><h1>Workers</h1></a>
+
+<p>
+Workers are started with the command <code>cpc-worker &lt;workertype&gt; &lt;worker-args&gt;</code>, where <code>&lt;workertype&gt;</code> stands for the worker type. Currently supported worker types are
+<ul>
+<li><code>smp</code> for single-node workers. Takes the arguments <code>-n</code> for the number of cores to use, and <code>-s</code> for the individual command size.</li>
+<li><code>mpi</code> for MPI workers. Takes the arguments <code>-n</code> for the number of cores to use or <code>-hf hostfile</code> to specify a file with hostnames, and <code>-s</code> for the individual command size. The location of the <code>mpirun</code> executable can be specified through the <code>MPIRUN</code> environment variable.</li>
+<li><code>cray</code> for Cray XT/XE workers. Takes the arguments <code>-n</code> for the number of cores to use and <code>-s</code> for the individual command size.</li>
+</ul>
+</p>
+
+<a name="worker-conf"><h2>Configuration</h2></a>	
+	To list available configuration parameters run the command <pre>cpc-worker config-list</pre>
+        This gives a list of all available configuration parameters.	
+	To see the configuration parameters and their respective values, run <pre>cpc-worker config-values</pre>
+	To change change a value, run the command <pre>cpc-worker config &lt;param&gt; &lt;value&gt;</pre>
+        For example to change the https port the worker connects to 11111, run
+	<pre>cpc-worker config client_https_port 11111</pre>	
+
+
+<!--<h2>Starting up workers</h2>
+<h2>Worker capabilities</h2>-->
+
+<a name="cmd-line"><h1>The command line client tool</h1></a>
+<!--what is it?
+
+
+Connecting a command line client to a server
+Installing it separatley on your laptop-->
+
+<p>
+The copernicus client allows you to connect to a server and issue commands. There are serveral types of commands:
+<ul>
+<li>Project-related commands
+    <dl>
+    <dt><code>cpcc projects|p</code></dt>
+    <dd>List the server's projects.</dd>
+    <dt><code>cpcc start &lt;projectname&gt;</code></dt>
+    <dd>Start a new project and set it to be the default project.</dd>
+    <dt><code>cpcc activate &lt;projectname&gt;</code></dt>
+    <dd>Activate all function instances in a project.</dd>
+    <dt><code>cpcc rm|remove &lt;projectname&gt;</code></dt>
+    <dd>Stop and remove a project.</dd>
+    <dt><code>cpcc set-default &lt;projectname&gt;</code></dt>
+    <dd>Set a default project.</dd>
+    <dt><code>cpcc upload [-p &lt;projectname&gt;] upload.xml</code></dt>
+    <dd>Upload a project definition file.</dd>
+    <dt><code>cpcc ls|list [-p &lt;projectname&gt;] [item]</code></dt>
+    <dd>List information about a named function instance or function input/output record, or the whole network.</dd>
+    <dt><code>cpcc info [-p &lt;projectname&gt;] function_name|module_name|type_name</code></dt>
+    <dd>Giva a description of a function, a module or a type.</dd>
+    <dt><code>cpcc get      [-p projectname] inst:in|out.ioname</code></dt>
+    <dd>Get a named function input/output record's value.</dd>
+    <dt><code>cpcc get-file [-p projectname] inst:in|out.ioname filename</code></dt>
+    <dd>Get and save a named function input/output record's file.</dd>
+    <dt><code>cpcc set      [-p projectname] inst:in.ioname value</code></dt>
+    <dd>Set a named function input record's value.</dd>
+    <dt><code>cpcc set-file [-p projectname] inst:in.ioname filename</code></dt>
+    <dd>Upload a named function input record's file value.</dd>
+    <dt><code>cpcc import   [-p projectname] modulename</code></dt>
+    <dd>Import a library into a project.</dd>
+    <dt><code>cpcc instance [-p projectname] function_name name</code></dt>
+    <dd>Create a function instance in a project.</dd>
+    <dt><code>cpcc connect  [-p projectname] inst:out.item inst:in.item</code></dt>
+    <dd>Connect two function instance's function input/output items.</dd>
+    </dl>
+</li>
+<li>
+    Server state queries and commands
+    <dl>
+        <dt><code>cpcc queue|q</code></dt>
+            <dd>List a server's job queue.</dd>
+        <dt><code>cpcc running|r </code></dt>
+            <dd>List a server's running jobs.</dd>
+        <dt><code>cpcc heartbeats|h </code></dt>
+            <dd>List a server's active heartbeat items from workers.</dd>
+        <dt><code>cpcc worker-failed workerID</code></dt>
+            <dd>Force the server to consider a worker as failed.</dd>
+        <dt><code>cpcc command-failed commandID</code></dt>
+            <dd>Force the server to consider a command as failed.</dd>
+        <dt><code>cpcc stop</code></dt>
+            <dd>Stop the server.</dd>
+    </dl>
+</li>
+<li>Client setup commands
+    <dl>
+        <dt><code>cpcc setup [name]</code></dt>
+            <dd>Initialize a client's setup.</dd>
+        <dt><code>cpcc trust-server host [http_port]</code></dt>
+            <dd>Trust a specific server's keys.</dd>
+        <dt><code>cpcc config-list</code></dt>
+            <dd>List the client configuration items.</dd>
+        <dt><code>cpcc config-values</code></dt>
+            <dd>List the client configuration items and their values.</dd>
+        <dt><code>cpcc config param value</code></dt>
+            <dd>Change a client configuration item.</dd>
+    </dl>
+</li>
+</ul>
+</p>
+<p>
+The Copernicus client has commands to inspect the active network: <code>cpcc list</code> and <code>cpcc get</code>, and commands to manipulate it: <code>cpcc set</code>, <code>cpcc instance</code> and <code>cpcc connect</code>,to set values, create a function instance and connect instance I/O.
+</p>
+<p>
+All current projects can be listed with <code>cpcc p</code>. The command queue can be queried with <code>cpcc q</code>, while a running list of commands can be obtained with <code>cpcc r</code>, and a list of heartbeat items with <code>cpcc h</code>.
+</p>
+
+<h2><a name="client-conf">Configuration</a></h2>
+	To list available configuration parameters run the command <pre>cpcc config-list</pre>. This lets you see a list of all available configuration parameters. To see the configuration parameters and their respective values run <pre>cpcc config-values</pre>
+	To change change a value you can run the command <pre>cpcc config &lt;param&gt; &lt;value&gt;</pre>
+       <!-- for example to change the https port the client connects to you can run
+	<code>cpcc config client_https_port 11111</code>	-->
+
+<!--
+<a name="#dataflow"><h1>Dataflow network</h1></a>
+<ul>
+<li><span class="comment">How do we build one up?</span></li>
+
+</ul>
+
+</div>
+</div>
+-->
+<!-- <div id="rightcol">
+<h2>Command line reference</h2>
+
+</div> -->
+
+
+</body>
+</html>

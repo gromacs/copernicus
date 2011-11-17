@@ -1,0 +1,6 @@
+digraph f {
+    grompp [ shape="record" label="grompp | {  { <gen_vel_in> gen_vel | <mdp_in> mdp | <top_in> top | <conf_in> conf } | { <tpr_out> tpr | <stdout_out> stdout } }"  ]
+    mdrun [ shape="record" label="mdrun | {  { <tpr_in> tpr } | { <conf_out> conf | <stdout_out> stdout | <edr_out> edr | <xtc_out> xtc | <stderr_out> stderr | <trr_out> trr } }"  ]
+    grompp:tpr_out -> mdrun:tpr_in;
+}
+

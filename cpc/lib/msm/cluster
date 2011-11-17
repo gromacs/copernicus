@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+import shutil
+import glob
+import stat
+import subprocess
+import logging
+import traceback
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+import cpc.util
+import cpc.util.log
+
+
+import msmproject
+
+
+def cluster(inp, out):
+    # replace stdout with stderr so that MSMBuilder output goes htere
+    oldStdout=sys.stdout
+    sys.stdout=sys.stderr
+    try:
+        # do the re-clustering
+        sys.stderr.write("Starting re-clustering\n");
+
+        msmProject=msmproject.MSMProject(inp, out)
+
+        #  Build the microstate MSM
+        msmProject.createMicroStates()
+        lagTime=inp.getInput('lag_time')
+        if lagTime is not None:
+            # and the macro state MSM
+            msmProject.createMacroStates()
+
+        # now set the outputs for the new runs:
+        i=0
+        for fname in msmProject.newRuns:
+            out.setOut('sim_start_conf[%d]'%i, cpc.dataflow.FileValue(fname))
+            i+=1
+    except:
+        fo=StringIO()
+        traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
+                                  sys.exc_info()[2], file=fo)
+        errmsg="Run error: %s\n"%(fo.getvalue())
+        sys.stderr.write(errmsg)
+        raise
+    sys.stdout=oldStdout
+
+
+# read the input data
+inp=cpc.dataflow.readInput()
+
+if inp.testing():
+    sys.exit(0)
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+cluster(inp, out)
+
+# write out the output data
+out.writeXML(sys.stdout)
+

@@ -1,0 +1,26 @@
+TITLE     Giant Rising Ordinary Mutants for A Clerical Setup
+MODEL        1
+ATOM      1 1HH3 ACE     1      -0.529  -0.569   0.955  1.00  0.00           H
+ATOM      2  CH3 ACE     1      -0.410   0.146   0.154  1.00  0.00           C
+ATOM      3 2HH3 ACE     1      -0.762   1.110   0.490  1.00  0.00           H
+ATOM      4 3HH3 ACE     1      -1.005  -0.170  -0.690  1.00  0.00           H
+ATOM      5  C   ACE     1       1.048   0.238  -0.245  1.00  0.00           C
+ATOM      6  O   ACE     1       1.659  -0.755  -0.662  1.00  0.00           O
+ATOM      7  N   ALA     2       1.748   1.526  -0.136  1.00  0.00           N
+ATOM      8  H   ALA     2       1.334   2.461   0.210  1.00  0.00           H
+ATOM      9  CA  ALA     2       3.115   1.287  -0.589  1.00  0.00           C
+ATOM     10  HA  ALA     2       3.332   0.206  -0.507  1.00  0.00           H
+ATOM     11  CB  ALA     2       3.199   1.715  -2.064  1.00  0.00           C
+ATOM     12  HB1 ALA     2       2.491   1.148  -2.698  1.00  0.00           H
+ATOM     13  HB2 ALA     2       2.966   2.789  -2.201  1.00  0.00           H
+ATOM     14  HB3 ALA     2       4.207   1.546  -2.486  1.00  0.00           H
+ATOM     15  C   ALA     2       4.109   2.012   0.287  1.00  0.00           C
+ATOM     16  O   ALA     2       3.941   3.186   0.638  1.00  0.00           O
+ATOM     17  N   NME     3       5.313   1.299   0.738  1.00  0.00           N
+ATOM     18  H   NME     3       5.569   0.326   0.519  1.00  0.00           H
+ATOM     19  CH3 NME     3       6.072   2.231   1.554  1.00  0.00           C
+ATOM     20 1HH3 NME     3       5.826   3.246   1.281  1.00  0.00           H
+ATOM     21 2HH3 NME     3       5.839   2.083   2.599  1.00  0.00           H
+ATOM     22 3HH3 NME     3       7.130   2.074   1.405  1.00  0.00           H
+TER
+ENDMDL

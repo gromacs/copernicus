@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<cpc>
+    <desc>A set of basic functions for integers</desc>
+
+    <function id="add" type="python">
+        <desc>Add two integers: c=a+b.</desc>
+        <inputs>
+            <field id="a" type="int"> 
+            </field>
+            <field id="b" type="int">
+            </field>
+        </inputs>
+        <outputs>
+            <field id="c" type="int">
+                <desc>a+b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.int.add" import="builtin.int"/>
+    </function>
+
+    <function id="sub" type="python">
+        <desc>Subtract two integers: c=a-b.</desc>
+        <inputs>
+            <field id="a" type="int"> 
+            </field>
+            <field id="b" type="int">
+            </field>
+        </inputs>
+        <outputs>
+            <field id="c" type="int">
+                <desc>a-b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.int.add" import="builtin.int"/>
+    </function>
+
+    <function id="mul" type="python">
+        <desc>Multiply two integers: c=a*b.</desc>
+        <inputs>
+            <field id="a" type="int" />
+            <field id="b" type="int" />
+        </inputs>
+        <outputs>
+            <field id="c" type="int">
+                <desc>a*b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.int.mul" import="builtin.int"/>
+    </function>
+
+    <function id="div" type="python">
+        <desc>Divide two integers: c=a/b.</desc>
+        <inputs>
+            <field id="a" type="int" />
+            <field id="b" type="int" />
+        </inputs>
+        <outputs>
+            <field id="c" type="int">
+                <desc>a/b</desc>
+            </field>
+        </outputs>
+        <controller function="builtin.int.mul" import="builtin.int"/>
+    </function>
+</cpc>

@@ -1,0 +1,343 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+import shutil
+import glob
+import stat
+import subprocess
+import logging
+import traceback
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+# we can do this in a python controller:
+log=logging.getLogger('cpc.msm')
+
+import cpc.dataflow
+from cpc.dataflow import IntValue
+from cpc.dataflow import FileValue
+from cpc.dataflow import StringValue
+from cpc.dataflow import ArrayValue
+import cpc.server.command
+import cpc.util
+import cpc.util.log
+
+
+import project
+
+
+
+
+class GromacsError(cpc.util.CpcError):
+    pass
+
+        
+
+def spawnNewSim(fo, localConf, remoteConf, run_num, ndx, genVel):
+    """Create a new run, and add it to the function output object fo.
+       
+       fo = the FunctionRunOutput object
+       localConf = the configuration file if the file is local to this 
+                    isntance, or None.
+       remoteConf = the number of an mdrun output with a configuration to
+                    use.
+       run_num = the number of this run"""
+    # create a new run.
+    # We create runs by making the appropriate subnet output
+    # and input for configuraiton and xtc respectively, 
+    # and create instances that we connect.
+    fo.addSubnetInput("conf_%d"%run_num, "file")
+    fo.addSubnetInput("lh5_%d"%run_num, "file")
+    fo.addSubnetInput("xtc_%d"%run_num, "file")
+
+    # add these instance for each new sim:
+    fo.addInstance("grompp_%d"%run_num, "gromacs::grompp")
+    fo.addInstance("mdrun_%d"%run_num, "gromacs::mdrun")
+    fo.addInstance("tolh5_%d"%run_num, "gromacs::msm::xtc_to_lh5")
+    
+
+    # self.top -> grompp[i].top
+    fo.addConnection("self:out.top", "grompp_%d:in.top"%run_num)
+    # self.mdp -> grompp[i].mdp
+    fo.addConnection("self:out.mdp", "grompp_%d:in.mdp"%run_num)
+    # self.ref -> tolh5[i].ref
+    fo.addConnection("self:out.ref", "tolh5_%d:in.ref"%run_num)
+    # grompp[i].tpr -> mdrun[i].tpr 
+    fo.addConnection("grompp_%d:out.tpr"%run_num, "mdrun_%d:in.tpr"%run_num)
+    # grompp[i].tpr -> tolh5[i].tpr 
+    fo.addConnection("grompp_%d:out.tpr"%run_num, "tolh5_%d:in.tpr"%run_num)
+    # mdrun[i].xtc -> tolh5[i].xtc 
+    fo.addConnection("mdrun_%d:out.xtc"%run_num, "tolh5_%d:in.xtc"%run_num)
+    # self.grpname -> tolh5[i].grpname 
+    fo.addConnection("self:out.grpname", "tolh5_%d:in.grpname"%run_num)
+    # tolh5[i].lh5 -> self.lh5[i]
+    fo.addConnection("tolh5_%d:out.lh5"%run_num, "self:in.lh5_%d"%run_num)
+    # tolh5[i].xtc_orig -> self.xtc[i]
+    fo.addConnection("tolh5_%d:out.xtc_orig"%run_num, "self:in.xtc_%d"%run_num)
+    # mdrun[i].conf -> self.conf[i]
+    fo.addConnection("mdrun_%d:out.conf"%run_num, "self:in.conf_%d"%run_num)
+
+    # genVel -> grompp[i].gen_vel
+    fo.addConnection(None, "grompp_%d:in.gen_vel"%run_num, 
+                     IntValue(genVel))
+    if ndx:
+        # self.ndx -> tolh5[i].ndx
+        fo.addConnection("self:out.ndx", "tolh5_%d:in.ndx"%run_num)
+
+    if localConf is not None:
+        fo.addSubnetOutput("conf_%d"%run_num, "file")
+        fo.setSubOut('conf_%d'%run_num, FileValue(localConf))
+        # self.conf[i] -> grompp[i].conf
+        fo.addConnection("self:out.conf_%d"%run_num, 
+                         "grompp_%d:in.conf"%run_num)
+    else:
+        fo.addConnection("mdrun_%d:out.conf"%remoteConf,
+                         "grompp_%d:in.conf"%run_num)
+
+def msm(inp):
+    oldStdout=sys.stdout
+    oldStderr=sys.stderr
+    #errfilename=os.path.join(inp.outputDir, "err.log")
+    logfile=open(stdoutfilename,"w")
+    #errfile=open(errfilename,"w")
+    sys.stdout=logfile
+    sys.stderr=logfile
+    # this is what we pass back to the server:
+    fo=inp.getFunctionOutput()
+    try:
+        #cpc.util.log.initServerLogToStdout(debug=True)
+        # now  
+        output=open(os.path.join(inp.persistentDir, "test.out"),"w")
+        #output.write("%s"%str(inp.inputs))
+        #output.write("%s"%str(inp.subnetInputs))
+        output.close()
+       
+        pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir, 
+                                                   "persistent.dat")) 
+        run_num=pers.get("running")
+        if run_num is None:
+            run_num=0
+        # the list of runs that have finished and that are handled
+        finishedHandled=pers.get("finished_handled") 
+        if finishedHandled is None:
+            finishedHandled=[]
+        # at how many trajectory-ns the last recluster was done
+        lastRecluster=pers.get("last_recluster")
+        if lastRecluster is None:
+            lastRecluster=0
+        # the total trajectory-ns that have finished
+        totalTrajectoryns=pers.get("total_trajectory_ns" )
+        if totalTrajectoryns is None:
+            init=True # we need to initialize
+            totalTrajectoryns=0
+        else:
+            init=False
+
+        msmProject=project.MSMProject(inp, fo)
+
+        #if inp.subnetInputs is None or len(inp.subnetInputs) == 0:
+        if init:
+            log.debug("ERROR: this controller is obsolete.\n")
+            log.debug("Do NOT use for new projects.\n")
+            print("ERROR: this controller is obsolete.")
+            print("Do NOT use for new projects.")
+            sys.exit(1)
+            # this is the first time we run
+            #print("Setting up run.")
+            if run_num > 0:
+                raise GromacsError("Already ran init!")
+            #print("setting up new run")
+            log.debug("setting up new run")
+
+            #newSubnetInp.append( NewSubnetIO( "xtcs", "xtc_array") )
+            #newSubnetOut.append( NewSubnetIO( "confs", "conf_array") )
+
+
+            fo.addSubnetInput("lh5", "lh5_array")
+            fo.addSubnetInput("confs", "conf_array")
+            fo.addSubnetOutput("top", "file")
+            fo.addSubnetOutput("mdp", "file")
+            fo.addSubnetOutput("ref", "file")
+            fo.addSubnetOutput("grpname", "string")
+
+            
+            fo.setSubOut('top', FileValue(inp.getInput('top')))
+            fo.setSubOut('mdp', FileValue(inp.getInput('mdp')))
+            fo.setSubOut('ref', FileValue(inp.getInput('reference')))
+            fo.setSubOut('grpname', StringValue(inp.getInput('grpname')))
+
+            if msmProject.ndx is not None:
+                fo.addSubnetOutput("ndx", "file" ) 
+                fo.setSubOut('ndx', FileValue(inp.getInput('ndx')))
+
+            #subnetOutputs['confs'] = Value( [] , arrayType)
+            # TODO: include-array
+
+            # for each gro file in the input spec:
+            num_sim=msmProject.num_sim
+            run_num = 0
+            # Number of simulations started per gro-file
+            num_started = 0
+            nconfs=len(msmProject.grofile)
+            #print("found %d confs"%nconfs)
+            while run_num < num_sim:
+                # create a new run.
+                #print("using conf %d for run %d"%(run_num%nconfs, run_num))
+                spawnNewSim(fo, msmProject.grofile[run_num%nconfs],
+                            None, run_num, (msmProject.ndx is not None), 
+                            1)
+                run_num+=1
+        
+        else:            
+            log.debug("Simulation has finished")
+            # a simulation has most likely finished.
+            trajs=[None] * run_num
+            finished=[]
+            newlyFinished=[]
+            # make a list of xtc files and unhandled, finished runs
+            for i in range(run_num):
+                #lh5v=inp.subnetInputs.get('lh5_%d'%i)
+                lh5v=inp.getSubnetInput('lh5_%d'%i)
+                if lh5v is not None:
+                    #inf=(i, lh5v.value)
+                    #trajs[i]=inf
+                    finished.append(i)
+                    if i not in finishedHandled:
+                        #print("***Simulation %d has newly finished"%i)
+                        log.debug("***Simulation %d has newly finished"%i)
+                        newlyFinished.append(i)
+            
+            #print("%s sims have finished"%len(finished))
+            log.debug("%s sims have finished"%len(finished))
+            #msmProject.convertXtc2lh5(xtclist)  
+            # immediately start a new simulation for a finished one
+            for fin in newlyFinished:
+                spawnNewSim(fo, None, fin, run_num, 
+                            (msmProject.ndx is not None), 1)
+                run_num += 1
+                totalTrajectoryns += (msmProject.dt*msmProject.nstep)/1000
+                # mark it as handled.
+                finishedHandled.append(fin)
+           
+            log.debug("total trajectory ns: %g,  last_recluster %g"%
+                      (float(totalTrajectoryns), float(lastRecluster)))
+            #print("total trajectory ns: %g,  last_recluster %g"%
+                  #(float(totalTrajectoryns), float(lastRecluster)))
+
+            if (totalTrajectoryns - lastRecluster >= msmProject.recluster):
+                # do the re-clustering
+                log.debug("Starting re-clustering");
+                #print("Starting re-clustering\n");
+                lastRecluster=totalTrajectoryns
+                cluster_round=pers.get('cluster_round')
+                if cluster_round  is None:
+                    cluster_round=0
+                cluster_round = cluster_round + 1
+                pers.set('cluster_round',cluster_round)
+                # build a filelist. A file list here is a list of lists
+                filelist=[]
+                for index in finished:
+                    #nm=inp.subnetInputs.get('lh5_%d'%index).value
+                    nm=inp.getSubnetInput('lh5_%d'%index)
+                    filelist.append([os.path.join(inp.getBaseDir(),nm)])
+                #log.debug(filelist)
+
+                #  Build the microstate MSM
+                msmProject.createMicroStates(filelist)
+                # and the macro state MSM
+                gro_list = msmProject.createMacroStates()
+
+                #gro_list = msmProject.listRandomConfs()
+                num_to_start = len(gro_list)
+                log.debug("new random confs: %s"%str(gro_list))
+                # now start new sims
+                num_started=0
+                while num_started < num_to_start:
+                    newconf=gro_list[num_started]
+                    #newconf=os.path.join(inp.outputDir, 
+                    #                     "randomconf%d.gro"%num_started)
+                    # don't ask...:
+                    #shutil.copyfile(os.path.join("RandomConfs", 
+                    #                             gro_list[num_started]), 
+                    #                newconf)
+                    # start new simulations based on these
+                    spawnNewSim(fo, newconf, None, run_num,
+                                (msmProject.ndx is not None), 0)
+                    run_num+=1
+                    num_started = num_started + 1
+
+
+        pers.set("running", run_num)
+        pers.set("finished_handled", finishedHandled)
+        pers.set("total_trajectory_ns", totalTrajectoryns)
+        pers.set("last_recluster", lastRecluster)
+        pers.write()
+    except:
+        fo=StringIO()
+        traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
+                                  sys.exc_info()[2], file=fo)
+        errmsg="Run error: %s"%(fo.getvalue())
+        log.debug(errmsg)
+        sys.stdout=oldStdout
+        sys.stderr=oldStderr
+        print errmsg
+        #sys.stdout=oldStdout
+        #sys.stderr=oldStderr
+        raise
+    sys.stdout=oldStdout
+    sys.stderr=oldStderr
+    fo.setOut("log", FileValue(logfilename))
+    #outputs["err"] = Value( errfilename, fileType)
+    return fo
+
+reader=cpc.dataflow.IOReader(True)
+reader.read(sys.stdin, "stdin")
+inp=reader.getFunctionRunInput()
+if inp.testing():
+    # if there are no inputs, we're testing wheter the command can run
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    sys.exit(0)
+
+log=cpc.util.log.initControllerLog(inp.persistentDir, "msm")
+
+#log.debug("     Output dir=%s"%inp.outputDir)
+#log.debug("Persistence dir=%s"%inp.persistentDir)
+
+# we move there so that log output stays
+os.chdir(inp.persistentDir)
+#log.debug("    working dir=%s"%os.getcwd())
+logfilename=os.path.join(inp.outputDir, "msm.log")
+stdoutfilename=os.path.join(inp.outputDir, "msm.stdout")
+
+out=msm(inp)
+
+out.writeXML(sys.stdout)
+
+shutil.copy(os.path.join(inp.persistentDir, "controller.log"), logfilename)
+
+log.debug("Exiting controller")

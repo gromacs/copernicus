@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<executable name="gromacs/mdrun" platform="cray" arch="Linux-x86_64" version="4.5.3">
+    <run in_path="yes" cmdline="$MPIRUN $EXECUTABLE_DIR/mdrun -cpt 10 -maxh 1" />
+    <cmd-joinable match_args="yes" match_ncores="yes" 
+                  common_args="-multidir" specific_args="$RUN_DIR" />
+</executable>

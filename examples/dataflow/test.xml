@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<cpc>
+    <import name="float" />
+
+    <type id="float-array" base="array" member-type="float">
+        <desc>An array of floats.</desc>
+    </type>
+    <type id="file-array" base="array" member-type="file">
+        <desc>An array of files.</desc>
+    </type>
+    <!-- a function as network -->
+    <function id="addmul" type="network">
+        <desc>Test function that adds and multiplies</desc>
+        <inputs>
+            <field id="a" type="float">
+                <desc>First input</desc>
+            </field>
+            <field id="b" type="float">
+                <desc>Second input</desc>
+            </field>
+            <field id="c" type="float">
+                <desc>Third input</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field id="q" type="float">
+                <desc>q = (a+b)*c</desc>
+            </field>
+        </outputs>
+        <!-- the network definition -->
+        <network>
+            <!-- a function in a network definition stands for a function 
+                 instance -->
+            <instance id="add" function="float::add"/>
+            <instance id="mul" function="float::mul"/>
+            <!-- a connection connects an output (src) with an input (dest).
+                 the src and dest are composed of a first part: the 
+                 subfunction, and a second part, the output or input, 
+                 separated by a dot. -->
+            <connection src="add:out.c" dest="mul:in.a" />
+            <connection src="mul:out.c" dest="self:ext_out.q" />
+            <connection src="self:ext_in.a" dest="add:in.a" />
+            <connection src="self:ext_in.b" dest="add:in.b" />
+            <connection src="self:ext_in.c" dest="mul:in.b" />
+        </network>
+    </function>
+
+    <!-- a network of active function instances -->
+    <network>
+        <instance id="addmul" function="addmul" />
+        <instance id="add" function="float::add" />
+        <!-- consts are constant input values -->
+        <assign type="float" value="3." dest="addmul:in.a"/> 
+        <assign type="float" value="4." dest="addmul:in.b"/> 
+        <assign type="float" value="5." dest="addmul:in.c"/> 
+        <assign type="float" value="6." dest="add:in.b"/> 
+
+
+        <connection src="addmul:out.q" dest="add:in.a" />
+    </network>
+</cpc>

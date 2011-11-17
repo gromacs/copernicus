@@ -1,0 +1,10 @@
+*~
+*.pyc
+*.project
+*.pydevproject
+.DS_Store
+.*.swp
+.AppleDouble
+MANIFEST
+build
+dist

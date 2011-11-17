@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<cpc>
+    <import name="file" />
+    <import name="builtin" />
+
+
+    <!-- a network of active function instances -->
+    <network>
+        <instance id="c_tof" function="file:to_file" />
+        <instance id="d_tof" function="file:to_file" />
+        <instance id="cat" function="file:cat" />
+        <instance id="add" function="builtin:plus" />
+        <instance id="test" function="file:test" />
+        <!-- consts are constant input values -->
+        <!--<const id="a" type="real" value="3." />
+        <const id="b" type="real" value="4." />
+        <const id="d" type="real" value="5." />-->
+        <instance id="testnetwork" function="file:test-network" />
+
+        <assign type="real" value="3." dest="add:in.a" />
+        <assign type="real" value="4." dest="add:in.b" />
+        <assign type="real" value="5." dest="d_tof:in.a[0]" />
+        <assign type="real" value="6." dest="d_tof:in.a[1]" />
+        <assign type="real" value="7." dest="d_tof:in.a[2]" />
+
+        <!--<connection src="a" dest="add.a" />
+        <connection src="b" dest="add.b" />-->
+
+        <connection src="add.c" dest="c_tof.a[0]" />
+        <assign type="real" value="6." dest="c_tof:in.a[1]" />
+        <!--<connection src="d" dest="d_tof.a" />-->
+
+        <connection src="c_tof.b" dest="cat.a" />
+        <connection src="d_tof.b" dest="cat.b" />
+
+        <connection src="cat.c" dest="test.a" />
+
+
+        <assign type="real" value="3" dest="testnetwork:in.a" />
+    </network>
+</cpc>

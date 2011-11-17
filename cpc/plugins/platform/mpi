@@ -1,0 +1,206 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+
+# A platform plugin for MPI. Runs MPI jobs.
+# We can assume that the current directory is the right directory. 
+
+import sys
+import os
+import subprocess
+import json
+import StringIO
+
+# check the number of arguments
+if len(sys.argv)<3:
+    print "ERROR: wrong number of arguments!"
+    sys.exit(1)
+
+# fix the module search path form the first argument
+sys.path.append(sys.argv[1])
+
+# now we can import copernicus stuff. This might be convenient for setting
+# paths.
+import cpc.util
+import cpc.util.plugin
+import cpc.server.command.platform_reservation
+
+
+platform_name="mpi"
+def savePersistence(reservation, persistence):
+    outpers=open(os.path.join(reservation.getWorkerDir(), 
+                              "platform_%s.json"%platform_name), "w")
+    json.dump(persistence, outpers, indent=4)
+    outpers.close() 
+
+def loadPersistence(reservation):
+    """Load persistence data from a file."""
+    inpers=open(os.path.join(reservation.getWorkerDir(), 
+                             "platform_%s.json"%platform_name), "r")
+    persistence=json.load(inpers)
+    inpers.close() 
+    return persistence
+
+
+
+try:
+    command=sys.argv[2] # the command to run. 
+    if command == "info":
+        # the testCommand will throw an exception if it failed.
+        #cpc.util.plugin.testCommand("grompp -version")
+        print('<plugin type="run" name="mpi" protocol_version="0.1"/>')
+        sys.exit(0)
+
+    # interpret the rest of the arguments
+    joinRuns=False # whether to force runs to be joined
+    hostfile=None  # file with nodes
+    ncores_max=None # the number of cores available
+    ncores_min=1    # the minimum number of cores available
+    ncores_pref=None # the preferred size of an individual run. 
+    # parse the arguments
+    prevarg=None
+    err=False
+    for i in range(3, len(sys.argv)):
+        arg=sys.argv[i]
+        if prevarg is None:
+            if arg == "-":
+                break
+            elif arg == "-n":
+                prevarg=arg
+            elif arg == "-hf":
+                prevarg=arg
+            elif arg == "-s":
+                prevarg=arg
+            elif arg == "--join":
+                joinRuns=True
+            else:
+                err=True
+        else:
+            if prevarg == "-n":
+                ncores_max=int(arg)
+            if prevarg == "-hf":
+                hostfile=arg
+            elif prevarg == "-s":
+                ncores_pref=int(arg)
+            prevarg=None
+
+    mpirun="mpirun"
+    if os.getenv('MPIRUN') is not None:
+        mpirun=os.getenv('MPIRUN')
+
+    if (err or (prevarg is not None) or 
+        ( (ncores_max is None) and (hostfile is None))):
+        print "Usage: cpc worker mpi [--join] [-n <ncores>| -hf hostfile] [-s <run-size>]"
+        sys.exit(1)
+
+    # now read in the platform reservation
+    plr=cpc.server.command.platform_reservation.PlatformReservationReader()
+    plr.read(sys.stdin)
+    reservation=plr.getReservation()
+
+    if command == "platform":
+        if joinRuns:
+            platattrs=' prefer_join="true"'
+        else:
+            platattrs=' '
+        if hostfile is not None:
+            # if we have a hostfile, we need to reserve hosts for the 
+            # individual runs.
+            platattrs += ' call_run="true" call_finish="true"'
+            # we also copy the hostfile to the run directory
+            hostlist=[]
+            inhosts=open(hostfile, "r")
+            for line in inhosts:
+                host=line.strip()
+                if host != "":
+                    hostlist.append(host)
+            inhosts.close()
+            ncores_max=len(hostlist)
+            persistence={ "ntot" : ncores_max, 
+                          "remaining" : hostlist,
+                          "reserved" : {} }
+            # and write it to the persistence file
+            savePersistence(reservation, persistence)
+        # report capabilities
+        print('<platform name="mpi" arch="linux_x86_64"%s>'%platattrs)
+        print('  <resources>')
+        print('    <max>')
+        print('        <resource name="cores" value="%d"/>'%ncores_max)
+        print('    </max>')
+        print('    <min>')
+        print('        <resource name="cores" value="%d"/>'%ncores_min)
+        print('    </min>')
+        print('    <pref>')
+        if ncores_pref is not None:
+            print('        <resource name="cores" value="%d"/>'%ncores_pref)
+        print('    </pref>')
+        print('  </resources>')
+        print('  <run-vars>')
+        if hostfile is None:
+            print('  <run-var name="MPIRUN" value="%s -np $NCORES"/>'%mpirun)
+        print('  </run-vars>')
+        print('</platform>')
+    elif command == "run":
+        # Prepare for running a command. Can reply with another set of 
+        # variables. Used to reserve resources. Is only called when the
+        # attribute 'call_run' is set to true in the platform description.
+        # 
+        # get the hostfile, and reserve nodes. 
+        persistence=loadPersistence(reservation)
+        if persistence["reserved"].has_key(reservation.getID()):
+            raise cpc.util.CpcError("Reservation %s already exists!"%
+                                               reservation.getID())
+        reserved=[]
+        for rsrc in reservation.getReservedResources():
+            #outfile.write("name=%s, value=%d\n"%(rsrc.name, rsrc.value))
+            if rsrc.name == "cores":
+                # reserve cores
+                for i in range(rsrc.value):
+                    reserved.append(persistence["remaining"].pop())
+        # add the reserved nodes to the persistence's reserved entry
+        persistence["reserved"][reservation.getID()]=reserved
+        # write the reservation data
+        nhostfile=os.path.join(reservation.getCmdDir(), "hostfile")
+        outf=open(nhostfile, "w")
+        for host in reserved:
+            outf.write("%s\n"%host)
+        savePersistence(reservation, persistence)
+        print('  <run-vars>')
+        print(u'  <run-var name="MPIRUN" value="mpirun -np $NCORES -hostfile %s"/>'%
+              (os.path.abspath(nhostfile)))
+        print('  </run-vars>')
+    elif command == "finish":
+        # Finish up running a command. Used to release  reserved resources.
+        # Is only called when the attribute 'call_finish' is set to true in 
+        # the platform description. Output is ignored.
+        persistence=loadPersistence(reservation)
+        # get the entry
+        reserved=persistence["reserved"][reservation.getID()]
+        del persistence["reserved"][reservation.getID()]
+        # and add it to the remaining list
+        persistence["remaining"].extend(reserved)
+        savePersistence(reservation, persistence)
+    else:
+        raise cpc.util.CpcError("Wrong command '%s'"%command)
+except cpc.util.CpcError as e:
+    print e.__str__()
+    sys.exit(1)
+

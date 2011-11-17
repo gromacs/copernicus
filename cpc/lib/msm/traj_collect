@@ -1,0 +1,137 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+import shutil
+import subprocess
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+import cpc.util
+
+
+#import msmbuilder.Trajectory
+
+
+
+def trajCollect(inp): 
+    out=inp.getFunctionOutput()
+    if not inp.hasSubnetOutput('ext_trajectories'):
+        # We make a subnet output to remember the original external trajectories
+        out.addSubnetOutput('ext_trajectories', 'inp_trajectory_array')
+        #out.addSubnetOutput('reference', 'file')
+        #out.addSubnetOutput('grpname', 'string')
+        #out.addSubnetOutput('ndx', 'file')
+        out.addSubnetInput('trajectories', 'trajectory_array')
+        out.addSubnetOutput('desc', 'desc_array')
+
+        if inp.hasInput('ext_trajectories'):
+            out.setSubOut('ext_trajectories', 
+                          inp.getInputValue('ext_trajectories'))
+        init=True
+        totns=0
+    else:
+        totns=inp.getOutput('total_traj_ns')
+
+    if inp.isInputUpdated('ext_trajectories'):
+        extTrajectories=inp.getInput('ext_trajectories')
+        if extTrajectories is not None and len(extTrajectories)>0:
+            i=0
+            for traj in extTrajectories:
+                # assume that they're added as new trajectories
+                if init or traj.getSubValue('xtc').isUpdated():
+                    #ns, dt, frames=checkTrajectory(
+                    #                                  traj.getSubValue('xtc'))
+                    #totns+=ns
+                    # now make a new xtc_to_tolh5 and connect it to the right
+                    # inputs/outputs
+                    nnmame='tolh5_%d'%i
+                    out.addInstance('xtc_to_lh5', nname)
+                    out.addConnection('self.ext_in.reference', 
+                                      '%s.reference'%nname)
+                    out.addConnection('self.ext_in.grpname', '%s.grpname'%nname)
+                    out.addConnection('self.ext_in.ndx', '%s.ndx'%nname)
+                    out.addConnection('self.ext_in.ext_trajectories[%d].xtc'%i,
+                                      '%s.xtc'%nname)
+                    out.addConnection('self.ext_in.ext_trajectories[%d].tpr'%i,
+                                      '%s.tpr'%nname)
+                    out.addConnection('%s.trajectory'%nname,
+                                      'self.sub_in.trajectories[%d]'%i)
+                    out.setSubOut('desc[%d]'%i, 
+                                  cpc.dataFlow.StringValue('external %d'%i))
+                    out.addConnection('%s.desc[%d]'%i, '%s.desc'%nname)
+                i+=1
+    # first do the subnet input trajectories
+    totns=0
+    trajectories=inp.getSubnetInput('trajectories')
+    if trajectories is not None:
+        for traj in trajectories:
+            # TODO: fix the API for this
+            dt=traj.getSubValue(['dt'])
+            frames=traj.getSubValue(['frames'])
+            if (dt is not None and dt.value is not None and
+                frames is not None and frames.value is not None):
+                ns=dt.value*(frames.value-1)/1000.
+                totns += ns
+                if traj.isUpdated():
+                    out.setOut('trajectories[+]', traj)
+
+    # then do the input trajectories
+    trajectories=inp.getInput('trajectories')
+    if trajectories is not None:
+        for traj in trajectories:
+            # TODO: fix the API for this
+            dt=traj.getSubValue(['dt'])
+            frames=traj.getSubValue(['frames'])
+            if (dt is not None and dt.value is not None and
+                frames is not None and frames.value is not None):
+                ns=dt.value*(frames.value-1)/1000.
+                totns += ns
+                if traj.isUpdated():
+                    out.setOut('trajectories[+]', traj)
+
+    # Used this way, old trajectories stay around, even if they disappear from
+    # the 'ext_trajectories' input.
+    out_total=inp.getOutput('total_traj_ns')
+    if out_total is None or out_total!=totns:
+        out.setOut('total_traj_ns', cpc.dataflow.FloatValue(totns))
+    return out
+
+# read the input data
+inp=cpc.dataflow.readInput()
+
+if inp.testing():
+    cpc.util.plugin.testCommand("gmxcheck -version")
+    sys.exit(0)
+
+# prepare the output data
+sys.stderr.write('basedir=%s"\n'%inp.getBaseDir())
+out=trajCollect(inp)
+
+out.writeXML(sys.stdout)
+out.writeXML(sys.stderr)
+
+

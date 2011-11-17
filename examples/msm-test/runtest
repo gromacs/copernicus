@@ -1,0 +1,35 @@
+#!/bin/sh
+
+
+./cpcc start test
+./cpcc import msm
+# make the MSM function instance
+./cpcc instance msm::msm_gmx_adaptive msm
+
+# set its values. 
+# Descriptions can be obtained with cpcc info msm::msm_mgx_adaptive
+./cpcc setf msm:in.grompp.top examples/msm-test/topol.top
+./cpcc setf msm:in.grompp.mdp examples/msm-test/grompp.mdp
+# reference pdb 
+./cpcc setf msm:in.reference  examples/msm-test/reference.pdb
+
+# starting configurations
+./cpcc setf msm:in.confs[+] examples/msm-test/equil0.gro
+./cpcc setf msm:in.confs[+] examples/msm-test/equil1.gro
+./cpcc setf msm:in.confs[+] examples/msm-test/equil2.gro
+./cpcc setf msm:in.confs[+] examples/msm-test/equil3.gro
+
+# re-clustering frequency
+./cpcc set msm:in.recluster 1.0
+# number of simulations to start per macrostate
+./cpcc set msm:in.num_sim 20
+./cpcc set msm:in.num_microstates 100
+./cpcc set msm:in.num_macrostates 10
+./cpcc set msm:in.lag_time 1
+# select these atoms:
+./cpcc set msm:in.grpname  Protein
+
+# and start the function instance
+./cpcc activate
+
+

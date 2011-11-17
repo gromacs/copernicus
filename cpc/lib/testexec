@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+
+import os
+import sys
+import logging
+
+
+log=logging.getLogger('cpc.external')
+
+#import cpc.dataflow.external
+import cpc.dataflow
+from cpc.dataflow import Value
+from cpc.dataflow import FileValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import NewInstance
+from cpc.dataflow import NewSubnetIO
+from cpc.dataflow import NewConnection
+
+
+#reader=cpc.dataflow.IOReader()
+#reader.read(sys.stdin, "stdin")
+#inp=reader.getFunctionRunInput()
+
+inp=cpc.dataflow.readInput()
+
+if inp.testing():
+    #log.debug("Testing.")
+    #sys.stdout.write("bla!!")
+    sys.exit(0)
+
+of=inp.getFunctionOutput()
+
+a_array=inp.getInput("a")
+b_array=inp.getInput("b")
+
+c=[]
+
+aoutname=os.path.join(inp.getOutputDir(), "a.out")
+boutname=os.path.join(inp.getOutputDir(), "b.out")
+aoutf=open(aoutname, "w")
+boutf=open(boutname, "w")
+for i in range(min(len(a_array), len(b_array))):
+    c.append(FloatValue(a_array[i].value + b_array[i].value))
+    aoutf.write("%g\n"%a_array[i].value)
+    boutf.write("%g\n"%b_array[i].value)
+
+of.setOut("afile", FileValue(aoutname))
+of.setOut("bfile", FileValue(boutname))
+of.setOut("c", ArrayValue(c))
+
+of.writeXML(sys.stdout)
+
+outf=open(os.path.join(inp.getPersistentDir(), "output.log"), "w")
+of.writeXML(outf)
+outf.close()
+
+#outf=open("bla", "w")
+#msg=sys.stdin.read()
+#outf.write(msg)
+
+#reader=cpc.dataflow.external.ExternalIOReader()
+
+#reader.read(sys.stdin, "stdin")
+
+#outf.close()
+
+
+#print '<function-output>'
+#print '<outputs>'
+#print '  <value name="b" value="3" />'
+#print '</outputs>'
+#print '</function-output>'
+#
+

@@ -1,0 +1,125 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+
+# A platform plugin for SMP. Directly runs jobs.
+
+import sys
+import os
+import subprocess
+import multiprocessing
+
+# check the number of arguments
+if len(sys.argv)<3:
+    print "ERROR: wrong number of arguments!"
+    sys.exit(1)
+
+# fix the module search path form the first argument
+sys.path.append(sys.argv[1])
+
+# now we can import copernicus stuff. This might be convenient for setting
+# paths.
+import cpc.util
+import cpc.util.plugin
+
+
+try:
+    command=sys.argv[2] # the command to run. 
+    if command == "info":
+        # the testCommand will throw an exception if it failed.
+        #cpc.util.plugin.testCommand("grompp -version")
+        print('<plugin type="run" name="smp" protocol_version="0.1"/>')
+        sys.exit(0)
+
+    # interpret the rest of the arguments
+    joinRuns=False # whether to force runs to be joined
+    ncores_max=0    # the number of cores available
+    try:
+        ncores_max=multiprocessing.cpu_count()
+    except NotImplementedError:
+        pass
+    ncores_min=1    # the minimum number of cores available
+    ncores_pref=None # the preferred size of an individual run. 
+    # parse the arguments
+    prevarg=None
+    err=False
+    for i in range(3, len(sys.argv)):
+        arg=sys.argv[i]
+        if prevarg is None:
+            if arg == "-":
+                break
+            elif arg == "-n":
+                prevarg=arg
+            elif arg == "-s":
+                prevarg=arg
+            elif arg == "--join":
+                joinRuns=True
+            else:
+                err=True
+        else:
+            if prevarg == "-n":
+                ncores_max=int(arg)
+            elif prevarg == "-s":
+                ncores_pref=int(arg)
+            prevarg=None
+
+
+    if err or (prevarg is not None) or (ncores_max==0):
+        print "Usage: cpc worker smp [--join] -n <ncores> [-s <run-size>]"
+        sys.exit(1)
+
+    if command == "platform":
+        if joinRuns:
+            prefjoin='prefer_join="true"'
+        else:
+            prefjoin=''
+        # report capabilities
+        print('<platform-list>')
+        print(' <platform name="smp" arch="linux_x86_64" %s>'%prefjoin)
+        print('  <resources>')
+        print('    <max>')
+        print('        <resource name="cores" value="%d"/>'%ncores_max)
+        print('    </max>')
+        print('    <min>')
+        print('        <resource name="cores" value="%d"/>'%ncores_min)
+        print('    </min>')
+        print('    <pref>')
+        if ncores_pref is not None:
+            print('        <resource name="cores" value="%d"/>'%ncores_pref)
+        print('    </pref>')
+        print('  </resources>')
+        print('  </platform>')
+        print('</platform-list>')
+    elif command == "run":
+        # Prepare for running a command. Can reply with another set of 
+        # variables. Used to reserve resources.
+        # we do nothing here; there is no need to reserve resources
+        pass
+    elif command == "finish":
+        # Finish up running a command. Used to release reserved resources.
+        # we do nothing here; there is no need to release resources
+        pass
+    else:
+        raise cpc.util.CpcError("Wrong command '%s'"%command)
+except cpc.util.CpcError as e:
+    print e.__str__()
+    sys.exit(1)
+

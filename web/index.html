@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<!--
+This file is part of Copernicus
+http://www.copernicus-computing.org/
+
+Copyright (C) 2011, Iman Pouya, Sander Pronk, Erik Lindahl, and others.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as published 
+by the Free Software Foundation
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+-->
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<link type ="text/css" rel="stylesheet" href="css/main.css"></link>
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+<script type="text/javascript" src = "http://ajax.microsoft.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
+
+<script type="text/javascript" src="js/main.js"></script>
+<!-- <script type="text/javascript" src="js/ajaxupload.js"></script>  -->
+
+</head>
+<title>Copernicus</title>
+<body>
+
+<div id ="header">
+</div>
+
+<div id ="main">
+	<div id="leftcol">
+		<div id ="project-form">	
+			<!-- emulates cpc run-tarfile command -->
+			<form method="post" enctype="multipart/form-data" action="copernicus">
+				<fieldset>
+					<input type="hidden" name="cmd" value="run-project"/>
+					<legend>Upload Project</legend>
+					<label for="cmd">Test input</label>
+					<input type="text" name="basedir" />					
+					<label for="job">Spec file</label>
+					<input id ="file-uploader" type="file" name="job" />										
+ 					<input type="submit" value="temporary submit"></input>
+					<div id='submit-project' class="button orange" style="width:100px" type ="button" value = "Submit">Submit</div>
+				</fieldset>
+			</form>
+		</div>
+		
+		
+		<!-- An ajax request should fill this data -->	
+		<ul id="project-list" class ="project-list">
+		</ul>
+
+	</div>
+	
+	<div id="rightcol">
+		
+		<div id="project-info">
+			
+		</div>
+		
+	</div>
+	
+	<div class="clear"></div>
+
+</div>
+
+
+<div id ="footer">
+</div>
+
+</body>
+
+
+</html>

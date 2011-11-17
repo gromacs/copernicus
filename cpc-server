@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+
+# This is the main executable, from which all actions are launched. 
+
+import sys
+import copy
+
+import cpc.client
+import cpc.network.server
+import cpc.worker
+import cpc.util
+import cpc.util.log
+import cpc.server.tracking
+
+from cpc.worker.worker import WorkerMessage
+from cpc.client.view.cmdline import CmdLine
+from cpc.util.openssl import OpenSSL
+from cpc.network.com.client_base import ClientError
+from cpc.client import ClientMessage
+from cpc.network.com.client_response import ProcessedResponse
+from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.client_conf import ClientConf
+from cpc.util import cmd_line_utils
+import os
+
+
+def print_usage():
+    print "Usage: cpc-server start [-d]"
+    print "       cpc-server config-list"
+    print "       cpc-server config param value"   
+    print "       cpcc setup default-project-directory"
+    print ""
+    print "Common options:"
+    print "       cpc-server [-c confdir]"
+    sys.exit(1)
+
+# make a copy for later
+args=copy.copy(sys.argv)
+
+if len(args)<2:
+    print_usage()
+
+# remove the 0th argument
+args.pop(0)
+confdir=None
+
+debug=False
+# first parse common options
+while len(args)>0:
+    if args[0][0]!='-':
+        break
+    elif args[0]=='-c':
+        option = args.pop(0)
+        if len(args) < 1:
+            sys.stdout.write("ERROR: no value specified for global option '%s'"%option)
+            print_usage()
+        confdir=args.pop(0)
+    elif args[0]=='-d':
+        args.pop(0)
+        debug=True
+    else:
+        sys.stdout.write("ERROR: no command or faulty global option '%s'"%
+              args[0])
+        print_usage()
+
+
+
+
+def getArg(argnr, name):
+    try: 
+        ret=args[argnr]
+    except IndexError:
+        raise ClientError("Missing argument: %s"%name)
+    return ret
+
+
+cmd=args[0]
+
+if(cmd !='setup'):
+    # read in common configuration
+    cf=ServerConf(confdir=confdir)
+    clientConf=ClientConf(confdir=confdir)
+try:
+    if cmd == "help":
+        print_usage()
+    elif cmd == "start":
+        if len(args)>1:
+            if args[1] == "-d":
+                debug=True
+                cpc.util.log.initServerLogToStdout(debug)
+            else:
+                print_usage()
+        print "Starting server.."        
+        cpc.network.server.forkAndRun(cf, debug )
+        sys.exit(0)
+    elif cmd == "setup":    
+        
+        # the -c option will be ignored here.
+        # by default we do a setup with the hostname as base config dir or a name defined by user input
+        rundir = getArg(1, 
+                        "Run directory: the base directory for project output")
+        cn=None
+        confdir =None
+        if(len(args)>2):
+            cn = getArg(2,"distinguished name for the server")            
+    
+    
+        cmd_line_utils.initiateServerSetup(rundir, cn)
+        cmd_line_utils.initiateClientToolSetup(cn)
+        cmd_line_utils.initiateWorkerSetup(cn)
+        sys.exit(0)
+    
+    # initialize the client log
+    cpc.util.log.initClientLog(debug)
+    # initialize the tracker
+    cpc.server.tracking.tracker.initTracker()     
+    if cmd == "config-list":
+        print '\n'
+        conf = ServerConf()
+        configs = conf.getUserSettableConfigs()
+        cmd_line_utils.printSortedConfigListDescriptions(configs)           
+    
+    elif cmd == "config-values":
+        print '\n'
+        conf = ServerConf()
+        configs = conf.getUserSettableConfigs()
+        cmd_line_utils.printSortedConfigListValues(configs)
+
+    elif cmd == "config":
+        param = args[1]
+        value = args[2]
+        
+        conf = ServerConf()
+        conf.set(param,value)  
+    elif cmd == "stop":
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.stopRequest()).pprint()    
+    else: 
+        print "ERROR: unknown command"
+except ClientError as e:
+    print("ERROR: %s"%str(e))
+except cpc.util.CpcError as e:
+    print("ERROR: %s"%str(e))
+#except IOError as e:
+#    raise e
+
+

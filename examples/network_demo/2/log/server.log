@@ -1,0 +1,107 @@
+2011-09-01 16:20:16,986 - INFO    - cpc.server     : Serving HTTP on 0.0.0.0 port 14809...
+2011-09-01 16:20:16,989 - INFO    - cpc.server     : Serving HTTPS on 0.0.0.0 port 13809...
+2011-09-01 16:20:20,395 - INFO    - cpc.server.request_handler: PUT /copernicus
+2011-09-01 16:20:20,395 - DEBUG   - cpc.server.request_handler: Headers are: 'Host: tcbm03.theophys.kth.se:14809
+Accept-Encoding: identity
+Content-Length: 1585
+originating-client: tcbm03.theophys.kth.se
+Content-Type: application/x-www-form-urlencoded
+'
+
+2011-09-01 16:20:20,398 - DEBUG   - cpc.server.request_handler: Done. Reply message is: '[
+    {
+        "status": "OK", 
+        "message": "", 
+        "data": {
+            "host": "tcbm03.theophys.kth.se", 
+            "http_port": 14809, 
+            "class": "NodeConnectRequest", 
+            "key": "-----BEGIN CERTIFICATE-----\nMIIDXDCCAkQCCQCIeNjRxMoGtjANBgkqhkiG9w0BAQUFADBwMR8wHQYDVQQDExZ0\nY2JtMDMudGhlb3BoeXMua3RoLnNlMQ0wCwYDVQQIEwR0ZXN0MQswCQYDVQQGEwJT\nRTEcMBoGCSqGSIb3DQEJARYNdGVzdEB0ZXN0LmNvbTETMBEGA1UEChMKY29wZXJu\naWN1czAeFw0xMTA5MDExNDIwMTRaFw0xMjA4MzExNDIwMTRaMHAxHzAdBgNVBAMT\nFnRjYm0wMy50aGVvcGh5cy5rdGguc2UxDTALBgNVBAgTBHRlc3QxCzAJBgNVBAYT\nAlNFMRwwGgYJKoZIhvcNAQkBFg10ZXN0QHRlc3QuY29tMRMwEQYDVQQKEwpjb3Bl\ncm5pY3VzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA74k+PpbFXZAd\nwpJlNPEWvY7SFEuNRlo7AcDatPalnGzMB/Xc8dhdZUqEqFBd1sl1d2alnr9iPdpd\nB/myMu+Y1eevzgY9D+/4icsjE/Gfs71p4+nCvoZ144J+sOKj5VigUPBgEZRa7VZP\nYQuZkPd78btLmoglKHOVp2N30D28X3YBkylWQ0FXE/ANcvGfzsZ/bfgeqnteYQxb\ne3kz22nAdeop7TvDNTSpfVJeZajbzjyemZbByzZ4VSGqB6jBRkWTiJtwn31Vr2r3\ne94IwN3K+59Yiu56Sbkgd35ylRQL0LjWo+qmfGVmOebPFzlcHQ1LoXwvyA2cmPLO\nWKluvkYMRwIDAQABMA0GCSqGSIb3DQEBBQUAA4IBAQAsXK9fwLIcJHaGcD4LEtVm\nJeCZtQZ67V7B93OGinzzrOTqJGXvKzrByghMhZcJuvHNsX0LvePBiqWP/TjeTn2r\nDuQ3/ddP6SpgozgIgrYfcZnidD/jkuTySP+T1xUmLBkVzBU/DfeKC7ZvzzQfSKhG\nErz9OJYh2DtjxKn0zSnfcwzl7Xd41N/nsVl9eAp1Ytp27SrZWdWf2rkG/aBm/c0v\nOJIPA47f0M45oNI0N66iWElaPw+zdHnlkqCvft7Zy71qvSi65SYesVasunLMv9jO\nqWnkdERVw+GiCUHdqs87weqjy/KbSDVVtzSD5mUHtvNhnWHrrPFGUsX/HiZor9er\n-----END CERTIFICATE-----\n", 
+            "https_port": 13809
+        }
+    }
+]'
+
+2011-09-01 16:20:20,728 - INFO    - cpc.server.request_handler: PUT /copernicus
+2011-09-01 16:20:20,728 - DEBUG   - cpc.server.request_handler: Headers are: 'Host: tcbm03.theophys.kth.se:14809
+Accept-Encoding: identity
+Content-Length: 1563
+originating-client: tcbm03.theophys.kth.se
+Content-Type: application/x-www-form-urlencoded
+'
+
+2011-09-01 16:20:20,729 - DEBUG   - cpc.server.request_handler: Done. Reply message is: '[
+    {
+        "status": "OK", 
+        "message": "", 
+        "data": {
+            "host": "tcbm03.theophys.kth.se", 
+            "http_port": 14809, 
+            "class": "NodeConnectRequest", 
+            "key": "-----BEGIN CERTIFICATE-----\nMIIDXDCCAkQCCQCIeNjRxMoGtjANBgkqhkiG9w0BAQUFADBwMR8wHQYDVQQDExZ0\nY2JtMDMudGhlb3BoeXMua3RoLnNlMQ0wCwYDVQQIEwR0ZXN0MQswCQYDVQQGEwJT\nRTEcMBoGCSqGSIb3DQEJARYNdGVzdEB0ZXN0LmNvbTETMBEGA1UEChMKY29wZXJu\naWN1czAeFw0xMTA5MDExNDIwMTRaFw0xMjA4MzExNDIwMTRaMHAxHzAdBgNVBAMT\nFnRjYm0wMy50aGVvcGh5cy5rdGguc2UxDTALBgNVBAgTBHRlc3QxCzAJBgNVBAYT\nAlNFMRwwGgYJKoZIhvcNAQkBFg10ZXN0QHRlc3QuY29tMRMwEQYDVQQKEwpjb3Bl\ncm5pY3VzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA74k+PpbFXZAd\nwpJlNPEWvY7SFEuNRlo7AcDatPalnGzMB/Xc8dhdZUqEqFBd1sl1d2alnr9iPdpd\nB/myMu+Y1eevzgY9D+/4icsjE/Gfs71p4+nCvoZ144J+sOKj5VigUPBgEZRa7VZP\nYQuZkPd78btLmoglKHOVp2N30D28X3YBkylWQ0FXE/ANcvGfzsZ/bfgeqnteYQxb\ne3kz22nAdeop7TvDNTSpfVJeZajbzjyemZbByzZ4VSGqB6jBRkWTiJtwn31Vr2r3\ne94IwN3K+59Yiu56Sbkgd35ylRQL0LjWo+qmfGVmOebPFzlcHQ1LoXwvyA2cmPLO\nWKluvkYMRwIDAQABMA0GCSqGSIb3DQEBBQUAA4IBAQAsXK9fwLIcJHaGcD4LEtVm\nJeCZtQZ67V7B93OGinzzrOTqJGXvKzrByghMhZcJuvHNsX0LvePBiqWP/TjeTn2r\nDuQ3/ddP6SpgozgIgrYfcZnidD/jkuTySP+T1xUmLBkVzBU/DfeKC7ZvzzQfSKhG\nErz9OJYh2DtjxKn0zSnfcwzl7Xd41N/nsVl9eAp1Ytp27SrZWdWf2rkG/aBm/c0v\nOJIPA47f0M45oNI0N66iWElaPw+zdHnlkqCvft7Zy71qvSi65SYesVasunLMv9jO\nqWnkdERVw+GiCUHdqs87weqjy/KbSDVVtzSD5mUHtvNhnWHrrPFGUsX/HiZor9er\n-----END CERTIFICATE-----\n", 
+            "https_port": 13809
+        }
+    }
+]'
+
+2011-09-01 16:20:21,064 - INFO    - cpc.server.request_handler: PUT /copernicus
+2011-09-01 16:20:21,064 - DEBUG   - cpc.server.request_handler: Headers are: 'Host: tcbm03.theophys.kth.se:14809
+Accept-Encoding: identity
+Content-Length: 1605
+originating-client: tcbm03.theophys.kth.se
+Content-Type: application/x-www-form-urlencoded
+'
+
+2011-09-01 16:20:21,066 - DEBUG   - cpc.server.request_handler: Done. Reply message is: '[
+    {
+        "status": "OK", 
+        "message": "", 
+        "data": {
+            "host": "tcbm03.theophys.kth.se", 
+            "http_port": 14809, 
+            "class": "NodeConnectRequest", 
+            "key": "-----BEGIN CERTIFICATE-----\nMIIDXDCCAkQCCQCIeNjRxMoGtjANBgkqhkiG9w0BAQUFADBwMR8wHQYDVQQDExZ0\nY2JtMDMudGhlb3BoeXMua3RoLnNlMQ0wCwYDVQQIEwR0ZXN0MQswCQYDVQQGEwJT\nRTEcMBoGCSqGSIb3DQEJARYNdGVzdEB0ZXN0LmNvbTETMBEGA1UEChMKY29wZXJu\naWN1czAeFw0xMTA5MDExNDIwMTRaFw0xMjA4MzExNDIwMTRaMHAxHzAdBgNVBAMT\nFnRjYm0wMy50aGVvcGh5cy5rdGguc2UxDTALBgNVBAgTBHRlc3QxCzAJBgNVBAYT\nAlNFMRwwGgYJKoZIhvcNAQkBFg10ZXN0QHRlc3QuY29tMRMwEQYDVQQKEwpjb3Bl\ncm5pY3VzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA74k+PpbFXZAd\nwpJlNPEWvY7SFEuNRlo7AcDatPalnGzMB/Xc8dhdZUqEqFBd1sl1d2alnr9iPdpd\nB/myMu+Y1eevzgY9D+/4icsjE/Gfs71p4+nCvoZ144J+sOKj5VigUPBgEZRa7VZP\nYQuZkPd78btLmoglKHOVp2N30D28X3YBkylWQ0FXE/ANcvGfzsZ/bfgeqnteYQxb\ne3kz22nAdeop7TvDNTSpfVJeZajbzjyemZbByzZ4VSGqB6jBRkWTiJtwn31Vr2r3\ne94IwN3K+59Yiu56Sbkgd35ylRQL0LjWo+qmfGVmOebPFzlcHQ1LoXwvyA2cmPLO\nWKluvkYMRwIDAQABMA0GCSqGSIb3DQEBBQUAA4IBAQAsXK9fwLIcJHaGcD4LEtVm\nJeCZtQZ67V7B93OGinzzrOTqJGXvKzrByghMhZcJuvHNsX0LvePBiqWP/TjeTn2r\nDuQ3/ddP6SpgozgIgrYfcZnidD/jkuTySP+T1xUmLBkVzBU/DfeKC7ZvzzQfSKhG\nErz9OJYh2DtjxKn0zSnfcwzl7Xd41N/nsVl9eAp1Ytp27SrZWdWf2rkG/aBm/c0v\nOJIPA47f0M45oNI0N66iWElaPw+zdHnlkqCvft7Zy71qvSi65SYesVasunLMv9jO\nqWnkdERVw+GiCUHdqs87weqjy/KbSDVVtzSD5mUHtvNhnWHrrPFGUsX/HiZor9er\n-----END CERTIFICATE-----\n", 
+            "https_port": 13809
+        }
+    }
+]'
+
+2011-09-01 16:20:21,398 - INFO    - cpc.server.request_handler: PUT /copernicus
+2011-09-01 16:20:21,399 - DEBUG   - cpc.server.request_handler: Headers are: 'Host: tcbm03.theophys.kth.se:14809
+Accept-Encoding: identity
+Content-Length: 1563
+originating-client: tcbm03.theophys.kth.se
+Content-Type: application/x-www-form-urlencoded
+'
+
+2011-09-01 16:20:21,400 - DEBUG   - cpc.server.request_handler: Done. Reply message is: '[
+    {
+        "status": "OK", 
+        "message": "", 
+        "data": {
+            "host": "tcbm03.theophys.kth.se", 
+            "http_port": 14809, 
+            "class": "NodeConnectRequest", 
+            "key": "-----BEGIN CERTIFICATE-----\nMIIDXDCCAkQCCQCIeNjRxMoGtjANBgkqhkiG9w0BAQUFADBwMR8wHQYDVQQDExZ0\nY2JtMDMudGhlb3BoeXMua3RoLnNlMQ0wCwYDVQQIEwR0ZXN0MQswCQYDVQQGEwJT\nRTEcMBoGCSqGSIb3DQEJARYNdGVzdEB0ZXN0LmNvbTETMBEGA1UEChMKY29wZXJu\naWN1czAeFw0xMTA5MDExNDIwMTRaFw0xMjA4MzExNDIwMTRaMHAxHzAdBgNVBAMT\nFnRjYm0wMy50aGVvcGh5cy5rdGguc2UxDTALBgNVBAgTBHRlc3QxCzAJBgNVBAYT\nAlNFMRwwGgYJKoZIhvcNAQkBFg10ZXN0QHRlc3QuY29tMRMwEQYDVQQKEwpjb3Bl\ncm5pY3VzMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA74k+PpbFXZAd\nwpJlNPEWvY7SFEuNRlo7AcDatPalnGzMB/Xc8dhdZUqEqFBd1sl1d2alnr9iPdpd\nB/myMu+Y1eevzgY9D+/4icsjE/Gfs71p4+nCvoZ144J+sOKj5VigUPBgEZRa7VZP\nYQuZkPd78btLmoglKHOVp2N30D28X3YBkylWQ0FXE/ANcvGfzsZ/bfgeqnteYQxb\ne3kz22nAdeop7TvDNTSpfVJeZajbzjyemZbByzZ4VSGqB6jBRkWTiJtwn31Vr2r3\ne94IwN3K+59Yiu56Sbkgd35ylRQL0LjWo+qmfGVmOebPFzlcHQ1LoXwvyA2cmPLO\nWKluvkYMRwIDAQABMA0GCSqGSIb3DQEBBQUAA4IBAQAsXK9fwLIcJHaGcD4LEtVm\nJeCZtQZ67V7B93OGinzzrOTqJGXvKzrByghMhZcJuvHNsX0LvePBiqWP/TjeTn2r\nDuQ3/ddP6SpgozgIgrYfcZnidD/jkuTySP+T1xUmLBkVzBU/DfeKC7ZvzzQfSKhG\nErz9OJYh2DtjxKn0zSnfcwzl7Xd41N/nsVl9eAp1Ytp27SrZWdWf2rkG/aBm/c0v\nOJIPA47f0M45oNI0N66iWElaPw+zdHnlkqCvft7Zy71qvSi65SYesVasunLMv9jO\nqWnkdERVw+GiCUHdqs87weqjy/KbSDVVtzSD5mUHtvNhnWHrrPFGUsX/HiZor9er\n-----END CERTIFICATE-----\n", 
+            "https_port": 13809
+        }
+    }
+]'
+
+2011-09-01 16:20:22,372 - INFO    - cpc.server.request_handler: PUT /copernicus
+2011-09-01 16:20:22,372 - DEBUG   - cpc.server.request_handler: Headers are: 'Host: 0.0.0.0:13809
+Accept-Encoding: identity
+Content-Length: 8
+originating-client: tcbm03.theophys.kth.se
+Content-Type: application/x-www-form-urlencoded
+'
+
+2011-09-01 16:20:22,372 - INFO    - cpc.server.command: Stop request received
+2011-09-01 16:20:22,372 - DEBUG   - cpc.server.request_handler: Done. Reply message is: '[
+    {
+        "status": "OK", 
+        "message": "Quitting."
+    }
+]'
+
+2011-09-01 16:20:22,374 - INFO    - cpc.server.request_handler: shutting down

@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<executable name="gromacs/mdrun" platform="smp" arch="" version="4.5.3">
+    <run in_path="yes" cmdline="mdrun -rcon 0.8 -cpt 10 -maxh 1 -nt $NCORES" />
+</executable>

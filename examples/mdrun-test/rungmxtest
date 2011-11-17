@@ -1,0 +1,25 @@
+#!/bin/sh
+
+
+# start the project
+./cpcc start mdrun_test
+# import the gromacs module with grompp and mdrun functions
+./cpcc import gromacs
+# add the grompp and mdrun function instances
+./cpcc instance gromacs::grompp grompp
+./cpcc instance gromacs::mdrun mdrun
+# connect the tpr output of grompp to the tpr input of mdrun
+./cpcc connect grompp:out.tpr mdrun:in.tpr
+# set the grompp inputs
+./cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro
+./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp
+./cpcc set-file grompp:in.top  examples/mdrun-test/topol.top
+# 
+./cpcc set grompp:in.settings[0].name nsteps
+./cpcc set grompp:in.settings[0].value 12500
+./cpcc set grompp:in.settings[1].name integrator
+./cpcc set grompp:in.settings[1].value md
+# and activate
+./cpcc activate 
+
+
