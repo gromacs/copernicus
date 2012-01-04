@@ -16,6 +16,10 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+print "setup.py not supported yet. Please run commands directly (i.e. like ./cpcc)"
+
+import sys
+sys.exit(1)
 
 from distutils.core import setup
 
@@ -47,7 +51,7 @@ setup(
                 'cpc.worker' ],
       #package_dir={ 'copernicus' : 'copernicus'} ,
       scripts=['cpcc','cpc-server','cpc-worker'],
-      license='TBD',
+      license='GPL',
       long_description=open('README.txt').read(),
      )
 
