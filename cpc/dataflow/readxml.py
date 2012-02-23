@@ -48,7 +48,7 @@ import external
 import value
 import active_value
 import vtype
-import active
+import active_network
 import active_inst
 import task
 import run
@@ -111,6 +111,8 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         self.descReaderEndTag=None
         self.descContext=None # a describable context
         self.fileList=project.getFileList()
+        self.affectedInputAIs=set()
+        self.affectedOutputAIs=set()
 
 
     def getTaskList(self):
@@ -128,31 +130,53 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
 
     def read(self, filename):
         """Read a file with import library definitions."""
+        #try:
+        self.filename=filename
+        self.dirName=os.path.split(filename)[0]
+            #parser=xml.sax.make_parser()
+            #parser.setContentHandler(self)
+        inf=open(filename, 'r')
+            #parser.parse(inf)
+        self._doRead(inf)
+        inf.close()
+        #except ProjectXMLError as e:
+        #    raise e
+        #except apperror.ApplicationError as e:
+        #    raise ProjectXMLError(str(e), self)
+
+    def readFile(self, infile, reportFilename):
+        """Read a file object with import library definitions."""
+        #try:
+        self.filename=reportFilename
+        self.dirName=None
+            #parser=xml.sax.make_parser()
+            #parser.setContentHandler(self)
+            #parser.parse(file)
+        log.debug("Starting file reading.")
+        self._doRead(infile)
+        log.debug("Reading finished. Processing affected active instances")
+        for ai in self.affectedOutputAIs:
+            ai.handleNewOutputConnections()
+        for ai in self.affectedInputAIs:
+            ai.handleNewInputConnections()
+        for ai in self.affectedInputAIs:
+            ai.handleNewInput(None, 0)
+        #except ProjectXMLError as e:
+        #    raise e
+        #except apperror.ApplicationError as e:
+        #    raise ProjectXMLError(str(e), self)
+
+    def _doRead(self, inf):
         try:
-            self.filename=filename
-            self.dirName=os.path.split(filename)[0]
             parser=xml.sax.make_parser()
             parser.setContentHandler(self)
-            inf=open(filename, 'r')
             parser.parse(inf)
-            inf.close()
         except ProjectXMLError as e:
             raise e
         except apperror.ApplicationError as e:
             raise ProjectXMLError(str(e), self)
 
-    def readFile(self, file, reportFilename):
-        """Read a file object with import library definitions."""
-        try:
-            self.filename=reportFilename
-            self.dirName=None
-            parser=xml.sax.make_parser()
-            parser.setContentHandler(self)
-            parser.parse(file)
-        except ProjectXMLError as e:
-            raise e
-        except apperror.ApplicationError as e:
-            raise ProjectXMLError(str(e), self)
+
 
     def getFilename(self):
         return self.filename
@@ -424,14 +448,15 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             # get the value from the type object
             val=active_value.ActiveValue(value.interpretLiteral(valueString,tp),
                                          tp)
-            log.debug("value is %s"%str(val))
+            #log.debug("value is %s, %s"%(str(val), valueString))
             # get the destination
             dstInstName,dstDir,dstItemName=(connection.splitIOName(dst, 
                                                                    keywords.In))
             cn=connection.makeInitialValue(self.network, 
                                            dstInstName, dstDir, 
                                            dstItemName, val)
-            self.network.addConnection(cn)
+            self.network.addConnection(cn, self.affectedInputAIs,
+                                       self.affectedOutputAIs)
         elif name == "connection":
             if self.network is None:
                 raise ProjectXMLError("connection without network", self)
@@ -463,7 +488,8 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 cn=connection.makeInitialValue(self.network,
                                                dstInstName, dstDir, dstItemName,
                                                val)
-            self.network.addConnection(cn)
+            self.network.addConnection(cn, self.affectedInputAIs,
+                                       self.affectedOutputAIs)
         elif name=="controller":
             # generic items
             if cpc.util.getBooleanAttribute(attrs,"persistent_dir"):
@@ -524,7 +550,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                       self)
         elif name == "active":
             # read in a description of an active network + active instances
-            if not isinstance(self.network, active.ActiveNetwork): 
+            if not isinstance(self.network, active_network.ActiveNetwork): 
                 raise ProjectXMLError("active instance without active network",
                                       self)
             if not attrs.has_key("id"):
@@ -731,6 +757,8 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             else:
                 self.type=None
         elif name == "active":
+            self.affectedInputAIs.discard(self.activeInst)
+            self.affectedOutputAIs.discard(self.activeInst)
             self.activeInstStack.pop()
             if len(self.activeInstStack) > 0:
                 self.activeInst=self.activeInstStack[-1]

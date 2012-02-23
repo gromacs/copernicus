@@ -46,7 +46,8 @@ class ActiveError(apperror.ApplicationError):
 
 class ActiveNetwork(network.Network):
     """An active function network is a function network with actual data."""
-    def __init__(self, project, net, taskQueue, dirName, inActiveInstance=None):
+    def __init__(self, project, net, taskQueue, dirName, 
+                 networkLock, inActiveInstance=None):
         """Create a new active network from a network. It may be part
            of an active instance.
           
@@ -69,6 +70,8 @@ class ActiveNetwork(network.Network):
         self.activeInstances=dict()
         # a lock to prevent concurrent mutations
         self.lock=threading.Lock()
+        # and a global lock to prevent concurrent network mutations
+        self.networkLock=networkLock
         # add self
         if inActiveInstance is not None:
             instCopy=inActiveInstance.instance.copy()
@@ -104,11 +107,23 @@ class ActiveNetwork(network.Network):
                     #if self.inActiveInstance is not None:
                     #    self.inActiveInstance.addLinkedInstance(instCopy)
             # and now connect
+            affectedInputAIs=set()
+            affectedOutputAIs=set()
             for conn in net.connections:
                 # copy the connection
                 connCopy=connection.copyConnection(conn, self)
                 connCopy.markImplicit()
-                self.addConnection(connCopy)
+                self.addConnection(connCopy, affectedInputAIs, 
+                                   affectedOutputAIs)
+            # and now run the right handlers for the affected AIs
+            if inActiveInstance is not None:
+                affectedOutputAIs.add(inActiveInstance)
+            if inActiveInstance is not None:
+                affectedInputAIs.add(inActiveInstance)
+            for ai in affectedOutputAIs:
+                ai.handleNewOutputConnections()
+            for ai in affectedInputAIs:
+                ai.handleNewInputConnections()
 
     def getBasedir(self):
         """Get the base directory."""
@@ -117,6 +132,10 @@ class ActiveNetwork(network.Network):
     def getParentInstance(self):
         """Get the instance this active network belongs to."""
         return self.inActiveInstance
+
+    def getNetworkLock(self):
+        """Get the global network lock assigned to this active network."""
+        return self.networkLock
 
     def addInstance(self, inst):
         """Add a new instance, and return its activeInstance."""
@@ -289,26 +308,69 @@ class ActiveNetwork(network.Network):
         #    dstAcp.setPropagateValue(initialValue) 
 
 
-    def addConnection(self, conn, seqNr=None):
-        """Add a connection."""
+    def addConnection(self, conn, affectedInputAIs=None, 
+                      affectedOutputAIs=None):
+        """Add a connection
+            conn = the Connection object
+            affectedInputAIs = a set that will be updated with the active 
+                               instances that have changed inputs because of 
+                               the new connection. For these active instances,
+                               handleNewInputConnections AND handleNewInput
+                               will have to be called (AFTER affectedOutputAIs
+                               are handled). This makes it possible
+                               to make multiple connections in a single
+                               transaction.
+            affectedOutputAIs = a set that will be updated with the active 
+                                instances that have changed outputs because of 
+                                the new connection. For these active instances,
+                                handleNewOutputConnections will have to be
+                                called. 
+                                This makes it possible to make multiple 
+                                connections in a single transaction.
+
+            if both affectedInputAIs and affectedOutputAIs are None, the 
+            affected AIs will be updated immediately.
+            """
         with self.lock:
-            network.Network.addConnection(self, conn)
+            network.Network.addConnection(self, conn, 
+                                          affectedInputAIs,
+                                          affectedOutputAIs)
             (srcAcp, dstAcp) = self.__getSrcDestAcps(conn)
+            # it is an error to have only one of them None. 
+            ownSet=(affectedInputAIs is None and affectedOutputAIs is None)
             if conn.getSrcInstance() is not None:
-                #self._addConnection(conn, srcAcp, dstAcp)
-                #if seqNr is None:
-                #    seqNr=srcAcp.activeInstance.getSeqNr()-1
-                seqNr=0
-                srcAcp.connectDestination(dstAcp, conn, seqNr)
+                if ownSet:
+                    affectedInputAIs=set()
+                    affectedOutputAIs=set()
+                srcAcp.connectDestination(dstAcp, conn, affectedInputAIs, 
+                                          affectedOutputAIs)
                 log.debug("Active connection points  %s->%s connected"%
                           (srcAcp.value.getFullName(),
                            dstAcp.value.getFullName()))
+                if ownSet:
+                    for ai in affectedOutputAIs:
+                        ai.handleNewOutputConnections()
+                    for ai in affectedInputAIs:
+                        ai.handleNewInputConnections()
+                    for ai in affectedInputAIs:
+                        ai.handleNewInput(None, 0)
             else:
-                dstAcp.activeInstance.setNamedInputValue(
-                                                conn.getDstIO().getDir(),
-                                                conn.getDstItemList(),
-                                                conn.getInitialValue())
-
+                #dstAcp.activeInstance.setNamedInputValue(
+                #                                conn.getDstIO().getDir(),
+                #                                conn.getDstItemList(),
+                #                                conn.getInitialValue())
+                val=conn.getInitialValue()
+                log.debug("Setting input to %s: %s"%(dstAcp.value.getFullName(),
+                                                     val.value))
+                if ownSet:
+                    affectedInputAIs=set()
+                with dstAcp.activeInstance.lock:
+                    dstAcp.setNewSetValue(conn.getInitialValue(),
+                                          affectedInputAIs)
+                if ownSet:
+                    for ai in affectedInputAIs:
+                        ai.handleNewInput(None, 0)
+                    
 
     def activateAll(self):
         """Activate all activeinstances in this network, starting them."""

@@ -289,8 +289,8 @@ class FunctionRunOutput(object):
     """A class holding the output of a function's run method.
        
        Its readable and directly manipulable member variables are:
-       - outputs (a list of tuples of (ioitems, OutValues))
-       - subnetOutputs (a list of tuples of (ioitems, OutValues))
+       - outputs (a list of OutputItem objects)
+       - subnetOutputs (a list of OutputItem objects)
        - cmds (a list of Commands)
        - newSubnetInputs (a list of NewSubnetIOs)
        - newSubnetOutputs (a list of NewSubnetIOs)
@@ -300,32 +300,32 @@ class FunctionRunOutput(object):
     def __init__(self):
         """Initialize a run output (usually just before returning a run
            method). """
-           #outputs =  a dict with function outputs
-           #subnetOutputs = a dict with subnet outputs
-           #cmds = a list of commands to queue
-           #newInstances = a list of new instances to spawn in the subnet
-           #newConnections = a list of new connections to make in the subnet
-           #newSubnetInputs = a list of new subnet input items to make.
-           #newSubnetOutputs = a list of new subnet output items to make."""
+        # A list of OutputItem objects for outputs
         self.outputs=[]
+        # A list of OutputItem objects for subnet outputs
         self.subnetOutputs=[]
+        #cmds = a list of commands to queue
         self.cmds=None
+        #newInstances = a list of new instances to spawn in the subnet
         self.newInstances=None
+        #newConnections = a list of new connections to make in the subnet
         self.newConnections=None
+        #newSubnetInputs = a list of new subnet input items to make.
         self.newSubnetInputs=None
+        #newSubnetOutputs = a list of new subnet output items to make."""
         self.newSubnetOutputs=None
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
             ioitem = the full output specifier 
             outval = an OutValue (OutValue object) """
-        self.outputs.append( (ioitem, outval) )
+        self.outputs.append( OutputItem(ioitem, outval) )
 
     def setSubOut(self, ioitem, outval):
         """Set a specified subnet output value.
             name = the output name
             outval = the output value (OutValue object) """
-        self.subnetOutputs.append( (ioitem, outval) )
+        self.subnetOutputs.append( OutputItem(ioitem, outval) )
 
     def addSubnetInput(self, name, typename):
         """Add a new subnet input.
@@ -388,17 +388,16 @@ class FunctionRunOutput(object):
         # write the outputs
         if self.outputs is not None and len(self.outputs)>0:
             outf.write('%s<outputs>\n'%iindstr)
-            for (outItem, outValue) in self.outputs:
-                outf.write('%s<value id="%s">\n'%(iiindstr, outItem))
-                outValue.writeXML(outf, indent+3)
+            for output in self.outputs:
+                outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
+                output.val.writeXML(outf, indent+3)
                 outf.write('%s</value>\n'%(iiindstr))
             outf.write('%s</outputs>\n'%iindstr)
         if self.subnetOutputs is not None and len(self.subnetOutputs)>0:
             outf.write('%s<subnet-outputs>\n'%iindstr)
-            for (outItem, outValue) in self.subnetOutputs:
-            #for outItem in self.subnetOutputs:
-                outf.write('%s<value id="%s">\n'%(iiindstr, outItem))
-                outValue.writeXML(outf, indent+3)
+            for output in self.subnetOutputs:
+                outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
+                output.val.writeXML(outf, indent+3)
                 outf.write('%s</value>\n'%(iiindstr))
             outf.write('%s</subnet-outputs>\n'%iindstr)
         if self.newSubnetInputs is not None and len(self.newSubnetInputs)>0:
@@ -490,6 +489,19 @@ class IOReaderError(apperror.ApplicationXMLError):
         else:
             self.str = "%s: %s"%(reader.getFilename(), msg)
 
+
+
+class OutputItem:
+    """Class to hold information about an output item:
+       name = the full name of the output item
+       val = the value
+       item = (optional) the actual output subvalue as used by the server
+       """
+    def __init__(self, name, val, item=None):
+        self.name=name
+        self.val=val
+        self.item=None
+
 class BoolValue(value.Value):
     """OutValue for boolean objects."""
     def __init__(self, val):
@@ -576,8 +588,6 @@ class IOReader(xml.sax.handler.ContentHandler):
         self.cmdReaderEndTag=None
         # and internal stuff
         self.section=IOReader.none
-        #self.inValue=None
-        #self.inValueType=None
         self.valueReader=None
         self.valueReaderEndTag=None
         self.valueName=None

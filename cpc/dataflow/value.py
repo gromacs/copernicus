@@ -502,7 +502,6 @@ class Value(object):
             raise ValError("Uknown compound type.")
         return ret
 
-
 class File(object):
     """Keeps track of a file."""
     def __init__(self, name, fileList):

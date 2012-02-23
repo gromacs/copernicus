@@ -69,8 +69,11 @@ class Network(object):
                    name)
 
 
-    def addConnection(self, conn):
-        """Connect a connection within the network."""
+    def addConnection(self, conn, affectedInputAIs=None, 
+                      affectedOutputAIs=None):
+        """Connect a connection within the network. The sets affectedInputAIs
+           and affectedOutputAIs are ignored because this is not an active
+           network."""
         conn.connect()
         self.connections.append(conn)
 

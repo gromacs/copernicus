@@ -182,3 +182,30 @@ class ActiveValue(value.Value):
         return listlist
 
 
+    def _handleParentCLI(self, sourceAI, seqNr):
+        """Helper function for handleConnectedListenerInput()"""
+        if self.listener is not None:
+            for ai in self.listener.getDestinationActiveInstances():
+                ai.handleNewInput(sourceAI, seqNr)
+        if self.parent is not None:
+            self.parent._handleParentCLI(sourceAI, seqNr)
+
+    def _handleChildCLI(self, sourceAI, seqNr):
+        """Helper function for handleConnectedListenerInput()"""
+        if self.listener is not None:
+            for ai in self.listener.getDestinationActiveInstances():
+                ai.handleNewInput(sourceAI, seqNr)
+        if isinstance(self.value, dict):
+            for val in self.value.itervalues():
+                val._handleChildCLI(sourceAI, seqNr)
+        elif isinstance(self.value, list):
+            for val in self.value:
+                val._handleChildCLI(sourceAI, seqNr)
+
+    def handleConnectedListenerInput(self, sourceAI, seqNr):
+        """Find all listeners associated with this value and call 
+           handleNewInput() on all of the destinations."""
+        if self.parent is not None:
+            self._handleParentCLI(sourceAI, seqNr)
+        self._handleChildCLI(sourceAI, seqNr)
+

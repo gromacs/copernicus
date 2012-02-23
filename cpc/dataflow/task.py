@@ -159,35 +159,53 @@ class Task(object):
                 #self.activeInstance.addNewSubnetOutput(newSubnetOutput.name,tp)
                 so=self.activeInstance.getSubnetOutputs()
                 so.addMember(newSubnetOutput.name, tp, True, False)
-        # handle addConnection last, because it may depend on items 
-        # that were just created 
-        if out.newConnections is not None:
-            imports=self.project.getImportList()
-            activeNet=self.activeInstance.getNet()
-            if activeNet is None:
-                raise TaskNetError(self.activeInstance.instance.getName())
-            for newConnection in out.newConnections:
-                if newConnection.srcStr is not None:
-                    log.debug("Making new connection %s -> %s)"%
-                              (newConnection.srcStr, newConnection.dstStr))
-                    conn=connection.makeConnectionFromDesc(activeNet,
-                                                           newConnection.srcStr,
-                                                           newConnection.dstStr)
-                else:
-                    log.debug("Making assignment %s -> %s)"%
-                              (newConnection.val.value, newConnection.dstStr))
-                
-                    #tp=self.project.getType(newConnection.val.type)
-                    #tp=imports.getTypeByFullName(newConnection.val.type,
-                    #                             self.function.getLib())
-                    #val=value.Value(tp.valueFromLiteral(
-                    #                        newConnection.val.value), tp)
-                    conn=connection.makeInitialValueFromDesc(activeNet,
-                                                        newConnection.dstStr,
-                                                        newConnection.val)
-                activeNet.addConnection(conn, self.seqNr)
         for inst in addedInstances:
             inst.activate()
+
+        # we lock the active instance's outputs so no other task
+        # can interrupt us during the update
+        with self.activeInstance.lock:
+            # handle addConnection last, because it may depend on items 
+            # that were just created. This is done as an atomic operation:
+            # all connections are made at once from a data perspective.
+            if out.newConnections is not None:
+                self.project.getNetworkLock().acquire()
+                imports=self.project.getImportList()
+                activeNet=self.activeInstance.getNet()
+                if activeNet is None:
+                    raise TaskNetError(self.activeInstance.instance.getName())
+                affectedInputAIs=set()
+                affectedOutputAIs=set()
+                for newConnection in out.newConnections:
+                    if newConnection.srcStr is not None:
+                        log.debug("Making new connection %s -> %s)"%
+                                  (newConnection.srcStr, newConnection.dstStr))
+                        conn=connection.makeConnectionFromDesc(activeNet,
+                                                           newConnection.srcStr,
+                                                           newConnection.dstStr)
+                    else:
+                        log.debug("Making assignment %s -> %s)"%
+                                  (newConnection.val.value, 
+                                   newConnection.dstStr))
+                        conn=connection.makeInitialValueFromDesc(activeNet,
+                                                           newConnection.dstStr,
+                                                           newConnection.val)
+                    activeNet.addConnection(conn, affectedInputAIs,
+                                            affectedOutputAIs)
+                # and now run the right handlers for the affected AIs
+                # so that outputs know where they go
+                for ai in affectedOutputAIs:
+                    ai.handleNewOutputConnections()
+                # and inputs are connected to the right output
+                for ai in affectedInputAIs:
+                    ai.handleNewInputConnections()
+            # now handle the output.
+            self.activeInstance.handleTaskOutput(self, out.outputs, 
+                                                 out.subnetOutputs)
+            # and handle the new input due to new connections
+            if out.newConnections is not None:
+                for ai in affectedInputAIs:
+                    ai.handleNewInput(None, 0)
 
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,
@@ -223,24 +241,22 @@ class Task(object):
                                     (str(ret.outputs), str(ret.subnetOutputs), 
                                      str(self.cmds),str(ret.cmds)))
 
-                updateLock=self.project.getUpdateLock()
-                # use the project's global update lock:
-                with updateLock:
-                    self._handleFnOutput(ret)
+                self._handleFnOutput(ret)
 
-                    if ret.cmds is not None: 
-                        for cmd in ret.cmds:
-                            cmd.setTask(self)
-                            self.cmds.append(cmd)
+                if ret.cmds is not None: 
+                    for cmd in ret.cmds:
+                        cmd.setTask(self)
+                        self.cmds.append(cmd)
+                else:
+                    # the task is done.
+                    self.activeInstance.removeTask(self)
 
-                    # everything went OK; we got results
-                    log.debug("Ran fn %s, got %s"%(self.function.getName(), 
+                # everything went OK; we got results
+                log.debug("Ran fn %s, got %s"%(self.function.getName(), 
                                                    str(ret.outputs)) )
-                    # if there is nothing to execute
-                    if len(self.cmds) == 0:
-                        self.activeInstance.handleTaskOutput(self, ret.outputs, 
-                                                             ret.subnetOutputs)
-                        self.fnInput.destroy()
+                # there is nothing more to execute
+                if len(self.cmds) == 0:
+                    self.fnInput.destroy()
             except cpc.util.CpcError as e:
                 self.activeInstance.markError(e.__str__())
                 return None

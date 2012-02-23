@@ -36,8 +36,8 @@ import function
 import value
 import active_value
 import active_inst
+import active_network
 import task
-import active
 import lib
 import readxml
 import connection
@@ -73,6 +73,7 @@ class Project(object):
         self.conf=conf
         self.name=name
         self.basedir=basedir
+        self.networkLock=threading.Lock()
         log.debug("Creating project %s"%name)
         if queue is None:
             log.debug("Creating new task queue %s"%name)
@@ -83,7 +84,8 @@ class Project(object):
         # the file list
         self.fileList=value.FileList(basedir) 
         # create the active network (the top-level network)
-        self.active=active.ActiveNetwork(self, None, self.queue, basedir) 
+        self.active=active_network.ActiveNetwork(self, None, self.queue, 
+                                                 basedir, self.networkLock) 
         
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", "", self.active)
@@ -116,6 +118,9 @@ class Project(object):
     def getUpdateLock(self):
         """Return the update lock"""
         return self.updateLock
+    def getNetworkLock(self):
+        """Return the network lock"""
+        return self.networkLock
 
     def getFileList(self):
         """Get the project's file list"""
@@ -172,12 +177,27 @@ class Project(object):
     def setNamedValue(self, itemname, literal, sourceType=None):
         """Get a value with a specific name according to the rule
            [instance]:[instance].[ioitem]"""
-        with self.updateLock:
-            instanceName,direction,ioItemList=connection.splitIOName(itemname, 
-                                                                     None)
-            instance=self.active.getNamedActiveInstance(instanceName)
-            return instance.setNamedInputValue(direction, ioItemList, literal, 
-                                               sourceType)
+        #with self.updateLock:
+        instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
+        instance=self.active.getNamedActiveInstance(instanceName)
+        with instance.lock:
+            oval=instance.findNamedInputValue(direction, ioItemList)
+            # now we can extract the type.
+            tp=oval.getType()
+            if not isinstance(literal, value.Value):
+                newVal=value.interpretLiteral(literal, tp, sourceType)
+            else:
+                newVal=literal
+                if not (tp.isSubtype(rval.getType()) or 
+                        rval.getType().isSubtype(tp) ):
+                    raise ActiveError(
+                              "Incompatible types in assignment: %s to %s"%
+                              (rval.getType().getName(), tp.getName()))
+            instance.setInputValue(oval, newVal)
+            instance.processSetInputValues()
+        return newVal
+        #    return instance.setNamedInputValue(direction, ioItemList, literal, 
+        #                                       sourceType)
 
     def getNamedInstance(self, instname):
         item=self.active.getNamedActiveInstance(instname)
@@ -203,7 +223,7 @@ class Project(object):
                                                                    None)
                 try:
                     item=self.active.getNamedActiveInstance(instName)
-                except active.ActiveError:
+                except active_network.ActiveError:
                     item=None
                 if item is not None:
                     tp=item.getNamedType(direction, itemlist)
@@ -240,10 +260,10 @@ class Project(object):
             else:
                 try:
                     item=self.active.getNamedActiveInstance(pathname)
-                except active.ActiveError:
+                except active_network.ActiveError:
                     item=None
                 if item is not None:
-                    if isinstance(item, active.ActiveNetwork):
+                    if isinstance(item, active_network.ActiveNetwork):
                         ret["type"]="network"
                         ret["name"]=pathname
                         ret["instances"]=item.getActiveInstanceList()
@@ -375,7 +395,7 @@ class Project(object):
             item=self.active.getNamedActiveInstance(pathname)
             ret=dict()
             if item is not None:
-                if isinstance(item, active.ActiveNetwork):
+                if isinstance(item, active_network.ActiveNetwork):
                     ret["name"]=pathname
                     ret["instances"]=item.getActiveInstanceList(True, True)
                     ret["connections"]=item.getConnectionList()
@@ -404,7 +424,10 @@ class Project(object):
             cn=connection.makeConnection(self.active,
                                          srcInstName, srcDir, srcItemName,
                                          dstInstName, dstDir, dstItemName)
-            self.active.addConnection(cn)
+            #inputAIs=set()
+            #outputAIs=set()
+            self.active.addConnection(cn, None, None)
+            
 
     def importTopLevelFile(self, fileObject, filename):
         """Read a source file as a top-level description."""
