@@ -121,7 +121,7 @@ class ServerToServerMessage(ClientBase):
         cacheKey = 'network-topology'
         topology = Cache().get(cacheKey)
         if topology==False:
-            client = ClientMessage()
+            client = ClientMessage(conf=ServerConf()) # can we do this without creating a call to self?
             response = client.networkTopology()  
             topology = ProcessedResponse(response).getData()
             Cache().add(cacheKey,topology)

@@ -19,6 +19,7 @@
 
 import logging.handlers
 import os
+import platform
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.log.format.colorformat import ColoredFormatter 
 from cpc.util.log.format import colorformat
@@ -40,12 +41,18 @@ def initClientLog(debug=False):
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-    COLOR_FORMAT = colorformat.formatter_message(stdoutFormat)
-    handler=logging.StreamHandler()
-    colorFormatter = ColoredFormatter(COLOR_FORMAT)
-    #formatter=logging.Formatter(stdoutFormat)
-    handler.setFormatter(colorFormatter)
-    logger.addHandler(handler)
+
+    if(platform.system()=='Windows'):
+        colorformat.add_coloring_to_emit_windows()
+        handler=logging.StreamHandler()
+        handler.emit(handler)
+        logger.addHandler(handler)
+    else:
+        COLOR_FORMAT = colorformat.formatter_message(stdoutFormat)
+        handler=logging.StreamHandler()
+        colorFormatter = ColoredFormatter(COLOR_FORMAT)
+        handler.setFormatter(colorFormatter)
+        logger.addHandler(handler)
     initErrorLog()
 
 

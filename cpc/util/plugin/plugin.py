@@ -18,6 +18,7 @@
 
 
 import os
+import platform
 import subprocess
 import stat
 import logging
@@ -116,12 +117,12 @@ class Plugin:
             procbasenames.append(self.specificLocation)
             procbasenames.append(os.path.join(self.specificLocation, "plugin"))
         for pname in procbasenames:
-            # try each item in the name list            
+            # try each item in the name list
             try:
                 # we have to add the conditional here
                 # because python won't clean up the pipes 
-                # that are left open if it fails..                             
-                if (not os.path.isdir(pname)) and os.access(pname, os.X_OK):
+                # that are left open if it fails..
+                if (not os.path.isdir(pname)) and os.access(pname, os.X_OK) and platform.system()!='Windows':
                     nargs[0] = pname
                     proc=subprocess.Popen(nargs,
                                           stdin=stdinf,
@@ -129,9 +130,23 @@ class Plugin:
                                           stderr=subprocess.STDOUT,
                                           cwd=dir,
                                           close_fds=True)
-                    success=True                    
+                    success=True
+
+                    #if this is windows we cannot use close_fds as well as doing redirects
+                    #catch the error and do not redirect pipes
                     break
-            except OSError as e:                
+                elif (not os.path.isdir(pname+".exe")) and os.access(pname+".exe", os.X_OK):   #this means we are running in windows
+                    log.debug("trying to start subprocess without redirection of standard handles ")
+                    nargs[0] = pname+".exe"
+                    print nargs
+                    proc=subprocess.Popen(nargs,
+                        cwd=dir,
+                        stdin=stdinf,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        close_fds=False)
+                    success=True
+            except OSError as e:
                 log.debug("Tried path %s: %s"%(pname, e.__repr__()))
              
                                   

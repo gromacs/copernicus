@@ -38,7 +38,7 @@ from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.server.command import Resource
 from cpc.server.tracking.tracker import Tracker
 from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.worker_conf import WorkerConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
 from server_command import ServerCommand
 
 log=logging.getLogger('cpc.server.workercmd')
@@ -162,7 +162,7 @@ class SCWorkerReady(ServerCommand):
         if request.headers.has_key('originating-server'):
             originating = request.headers['originating-server']
         else:
-            originating = WorkerConf().getHostName() #FIXME this cannot be correct ever
+            originating = ConnectionBundle().getHostName() #FIXME this cannot be correct ever
         log.debug("worker identified %s"%request.headers['originating-client'] )
         serverState.setWorkerState("idle",workerData,request.headers['originating-client'])    
         
@@ -305,7 +305,7 @@ class SCCommandFinished(ServerCommand):
         
         #forward CommandFinished-signal to project server
         log.debug("finished command %s"%cmdID)
-        msg=ServerToServerMessage(projServer)
+        msg=ServerToServerMessage(projServer)  #FIXME if this is current server do not make a connection to self??
         ret = msg.commandFinishForwardRequest(cmdID, workerServer)
 
 class SCCommandFailed(ServerCommand):

@@ -20,36 +20,25 @@
 
 
 
-# This is the main executable, from which all actions are launched. 
+# This is the main executable, from which all actions are launched.
+import os
 
 import sys
 import copy
 
 import cpc.client
 import cpc.network.server
+from cpc.util import cmd_line_utils
+from cpc.util.conf.connection_bundle import ConnectionBundle
 import cpc.worker
 import cpc.util
 import cpc.util.log
-
-from cpc.worker.worker import WorkerMessage
-from cpc.client.view.cmdline import CmdLine
-from cpc.util.openssl import OpenSSL
 from cpc.network.com.client_base import ClientError
-from cpc.client import ClientMessage
-from cpc.network.com.client_response import ProcessedResponse
-from cpc.util.conf.worker_conf import WorkerConf
-from cpc.util.conf.server_conf import ServerConf  
-from cpc.util import cmd_line_utils
 
 
 def print_usage():
 
-    print "Usage: [-c conf-dir] [-d] cpc-worker worker-type"
-    print "       cpc-worker setup [name]" 
-    print "       cpc-worker trust-server host [http_port]"
-    print "       cpc-worker config-list"
-    print "       cpc-worker config-values"
-    print "       cpc-worker config param value"   
+    print "Usage: [-c conf-file] [-d] cpc-worker worker-type"
     print ""
     sys.exit(1)
 
@@ -61,7 +50,7 @@ if len(args)<2:
 
 # remove the 0th argument
 args.pop(0)
-confdir=None
+conffile=None
 
 debug=False
 # first parse common options
@@ -73,7 +62,7 @@ while len(args)>0:
         if len(args) < 1:
             sys.stdout.write("ERROR: no value specified for global option '%s'"%option)
             print_usage()
-        confdir=args.pop(0)
+        conffile=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
         debug=True
@@ -98,67 +87,12 @@ def getArg(argnr, name):
 
 cmd=args[0]
 
-if(cmd != 'setup'):
-    cf=WorkerConf(confdir=confdir)
-    ServerConf(confdir=confdir)  #remove this when clientLog and errorLog inits are generalized
-    
+cf= cmd_line_utils.initiateConnectionBundle(conffile)cpcc
 cpc.util.log.initClientLog(debug)
 
 try:
     if cmd == "help":
-        print_usage() 
-    elif cmd == "setup":    
-        
-        # the -c option will be ignored here.
-        # by default we do a setup with the hostname as base config dir or a name defined by user input
-        cn=None
-        confdir =None
-        if(len(args)>1):
-            cn = getArg(1,"default setup name for the worker")            
-   
-        cmd_line_utils.initiateWorkerSetup(cn) 
-    elif cmd== "trust-server":
-        host = args[1]
-        
-        
-        port = "14807"
-        if len(args)>2:
-            port = args[2]   
-        clnt = WorkerMessage(host,port)
-        cert = ProcessedResponse(clnt.addClientRequest(host,port)).getData()
-              
-        #TODO some checks needed here.
-#        1. check if we have that ca in the chain
-#        2. check so we dont have two different certificates for same host in chain        
-        openssl = OpenSSL(WorkerConf())
-        openssl.addCa(cert)
-
-        cf.set("client_host",host)
-        cf.set("client_http_port",port)
-        cf.set("client_https_port","13807")
-        
-        print "default server changed to %s"%host        
-# 
-        #save the certificate in the keychain 
-    elif cmd == "config-list":
-
-        print '\n'
-        conf = WorkerConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListDescriptions(configs)           
-    
-    elif cmd == "config-values":
-        print '\n'
-        conf = WorkerConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListValues(configs)
-
-    elif cmd == "config":
-        param = args[1]
-        value = args[2]
-        
-        conf = WorkerConf()
-        conf.set(param,value)      
+        print_usage()
     else:
         type=getArg(0, "Worker type")
         restargs=[]

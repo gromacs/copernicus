@@ -27,8 +27,8 @@ from cpc.network.server_request import ServerRequest
 from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.util import json_serializer
+from cpc.util.conf.connection_bundle import ConnectionBundle
 from cpc.util.openssl import OpenSSL
-from cpc.util.conf.client_conf import ClientConf
 
 from cpc.network.node_connect_request import NodeConnectRequest
 
@@ -40,10 +40,17 @@ class ClientMessage(ClientBase):
         Messages that end users should be able to call should be defined here
     '''
 
-    def __init__(self,host=None,port=None):
+    def __init__(self,host=None,port=None,conf=None):
+        '''
+        @input String host : the hostname
+        @input String port : the port to connect to
+        @input Conf conf
+        '''
         self.host = host
         self.port = port
-        self.conf = ClientConf()
+        self.conf = conf
+        if self.conf==None: #fixme specify connectionBundle externally
+            self.conf = ConnectionBundle()
         if self.host == None:
             self.host = self.conf.getClientHost()
         if self.port == None:

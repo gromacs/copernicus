@@ -25,7 +25,8 @@ class RealHttpsConnection(httplib.HTTPConnection):
     def connect(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        #create an ssl context and load certificate verify locations  
+        #create an ssl context and load certificate verify locations
+       # print open(self.caFile,'r').read()
         self.sock = ssl.wrap_socket(sock,
                                     self.privateKeyFile,
                                     self.certFile,

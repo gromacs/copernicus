@@ -234,10 +234,11 @@ class Conf:
                                     relTo=relTo,validation=validation,
                                     allowedValues=allowedValues)
        
-    def tryRead(self):
+    def tryRead(self,confname=None):
         
-        try:   
-            confname = self.getFile('conf_file')
+        try:
+            if confname ==None:
+                confname = self.getFile('conf_file')
             #self.conf = pickle.loads(f.read())
             f = open(confname,'r')  
             str = f.read()
@@ -287,6 +288,19 @@ class Conf:
         # and write out that dict.       
         f.write(json.dumps(conf,default = cpc.util.json_serializer.toJson,indent=4))               
         f.close()
+
+
+    def toJson(self):
+        '''
+        returns a json formatted string
+        @return json String
+        '''
+
+        conf = dict()
+        for cf in self.conf.itervalues():
+                conf[cf.name] = cf.get()
+
+        return json.dumps(conf,default = cpc.util.json_serializer.toJson,indent=4)
 
     def reread(self):
         """Update from configuration file. First reset all values, then 
@@ -355,10 +369,7 @@ class Conf:
     
     def getKeyDir(self):
         return self.getFile('key_dir')
-    #DEPRECATED
-    #def getServerCertDir(self):
-     #   return self.getFile('server_cert_dir')
-    
+
     def getCertFile(self):
         return self.getFile('cert_file')
     

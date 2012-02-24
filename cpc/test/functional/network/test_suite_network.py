@@ -22,6 +22,5 @@ import network_test
 
 suite = unittest.TestSuite()
 suite.addTest(unittest.TestLoader().loadTestsFromTestCase(network_test.NetworkTest.testStart2Servers(self)))
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_worker_conf.TestWorkerConf))
 suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_server_conf.TestServerConf))
 suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_client_conf.TestClientConf))

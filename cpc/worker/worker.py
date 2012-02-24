@@ -52,7 +52,7 @@ class Worker(object):
         self.type=type
         self.args=args
         self.quit=False
-        self.id="%s-%d"%(self.conf.hostname, os.getpid())
+        self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
         # Process (untar) the run request into a directory name
         # that is unique for this process+hostname, and worker 
         # job iteration
