@@ -123,11 +123,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
             self.value.update(self.sourceValue, seqNr)
             self.value.markUpdated(True)
             return True
-        elif self.newSetValue is not None:
-            self.value.update(self.newSetValue, self.value.seqNr)
-            self.value.markUpdated(True)
-            self.newSetValue=None
-            return True
         return False
 
     def copyNewSetValue(self):
@@ -143,7 +138,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
     def setNewSetValue(self, val, affectedInputAIs):
         """Set a newSetValue val to be checked for with copyNewSetValue or
            copySpecificSourceValue."""
-        #self.newSetValue=val
         self._searchDestinationAI(affectedInputAIs, True, val)
 
     def getDestinations(self):
@@ -162,11 +156,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # now figure out which active instances changed
         affectedOutputAIs.add(self.sourceAcp.activeInstance)
         destAcp._searchDestinationAI(affectedInputAIs, True)
-        #changed=set() 
-        #destAcp._acceptPropagateToListeners(changed, seqNr)
-        #
-        #for inst in changed:
-        #    inst.handleNewInput()
 
     def disconnectDestination(self, activeConnection, conn):
         """Remove an existing downstream connection to another 
@@ -184,46 +173,15 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
            value changes."""
         pass
 
-    #def _acceptPropagate(self, changedSet, seqNr):
-    #    self.copyValue(seqNr)
-    #    changedSet.add(self.activeInstance)
-    #    for dest in self.dests:
-    #        dest.acp._acceptPropagateToListeners(changedSet, seqNr)
-
-    #def _acceptPropagateToListeners(self, changedSet, seqNr):
-    #    self.copyValue(seqNr)
-    #    changedSet.add(self.activeInstance)
-    #    for dest in self.dests:
-    #        dest.acp._acceptPropagate(changedSet, seqNr)
-    #    # now find other listeners and propagate them
-    #    listeners=self.value.findListeners()
-    #    for listener in listeners:
-    #        if listener is not self:
-    #            listener._acceptPropagate(changedSet, seqNr)
-
-    #def propagateValue(self, changedSet, seqNr):
-    #    """Propagate a new value to its destinations. Appends the 
-    #       encountered active instances to the set 'changedSet'."""
-    #    for dest in self.dests:
-    #        dest.acp._acceptPropagateToListeners(changedSet, seqNr)
-
 
     def searchDestinationActiveInstances(self):
         """Get the set of destination active instances for this source
            acp."""
         self.destAIs=set()
         self._searchDestinationAI(self.destAIs, False)
-        #for dest in self.dests:
-        #    dest.acp._searchDestinationAI(self.destAIs, True)
-
-    #def findDestinationActiveInstances(self):
-    #    """Search for all destination active instances. Useful when
-    #       the state has changed but the AIs don't yet reflect this 
-    #       (as in ActiveNetwork.addConnection()."""
-    #    ret=set()
-    #    self.acp._findDestinationAI(ret, False)
 
     def getDestinationActiveInstances(self):
+        """Return the pre-computed set of destination active instances."""
         return self.destAIs
 
     def _searchDestinationAI(self, destAIs, selfAdd, newVal=None):
@@ -245,59 +203,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
                 listener._searchDestinationAI(destAIs, True, newVal)
 
 
-    #def _findDestReceiverConnections(self, source):
-    #    """Add all receiver connections that this acp is directly connected 
-    #       to."""
-    #    ret=[]
-    #    for dest in self.dests:
-    #        ret.extend(dest.acp._findReceiverConnections(source))
-    #    ret.append(ReceiverConnection(source.activeInstance, source, 
-    #                                  self.activeInstance, self))
-    #    return ret
-
-    #def _findReceiverConnections(self, source):
-    #    """Find all relevant listeners and update their receiver connections"""
-    #    ret=[]
-    #    for dest in self.dests:
-    #        ret.extend(dest.acp._findReceiverConnections(source))
-    #    # now find all the subitems
-    #    listlist=self.value.findListeners()
-    #    #log.debug("listlist=%s"%str(listlist))
-    #    #nstr="[ "
-    #    #for item in listlist:
-    #    #    nstr+= "%s (%s), "%(item.value.getFullName(),
-    #    #                        id(item))
-    #    #nstr+=" ]"
-    #    #log.debug("self=%s (%s), listlist=%s"% 
-    #    #          (self.value.getFullName(), id(self), nstr))
-    #    for acp in listlist:
-    #        if acp != self:
-    #            ret.extend(acp._findDestReceiverConnections(source)) 
-    #    # and append myself.
-    #    #if self.direction.isInput():
-    #    # we assume we don't need to check whether we're ourselves an input
-    #    # because this function is only run for dests
-    #    ret.append(ReceiverConnection(source.activeInstance, source, 
-    #                                  self.activeInstance, self))
-    #    return ret
-
-    #def findReceiverConnections(self):
-    #    """Find and return all receiver connection objects associated with 
-    #       this acp."""
-    #    #lst=self._findDestReceiverConnections(self)
-    #    lst=[]
-    #    for dest in self.dests:
-    #        lst.append(ReceiverConnection(self.activeInstance, self,
-    #                                      dest.activeInstance, dest))
-    #    #               dest.acp._findReceiverConnections(self))
-    #    #listlist=self.value.findListeners()
-    #    #for acp in listlist:
-    #    #    if acp != self:
-    #    #        lst.extend(acp._findReceiverConnections(self)) 
-    #    self.receiverList=lst
-    #    # update all upstream acps
-    #    if self.sourceAcp is not None and self.sourceAcp is not self:
-    #        self.sourceAcp.findReceiverConnections()
 
     def writeXML(self, outf, indent=0):
         """Write value to xml"""

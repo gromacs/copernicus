@@ -397,7 +397,7 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
-    def projectSetRequest(self, project, item, value, filename):
+    def projectSetRequest(self, project, item, value, filename, commit):
         """Get a data item from a project."""
         cmdstring="project-set"
         fields = []
@@ -411,7 +411,17 @@ class ClientMessage(ClientBase):
         if filename is not None:
             fields.append(Input('filename', os.path.basename(filename)))
             files = [FileInput('upload','upload.dat',open(filename,'r'))]  
+        if commit:
+            fields.append(Input('commit', 1))
         response=self.putRequest(ServerRequest.prepareRequest(fields,files)) 
+        return response
+
+    def projectCommitRequest(self, project):
+        """Commit a series of previously scheduled set requests, atomically."""
+        cmdstring="project-commit"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
     
     def addClientRequest(self,host,port):

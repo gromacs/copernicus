@@ -21,11 +21,17 @@ import logging
 import json
 import os
 import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 from server_command import ServerCommand
 
 import cpc.dataflow
 import cpc.util
+
+
 
 log=logging.getLogger('cpc.server.projectcmd')
 
@@ -218,10 +224,13 @@ class SCProjectConnect(ServerCommand):
             prj=serverState.getProjectList().getDefault()
         src=request.getParam('source')
         dst=request.getParam('destination')
-        prj.connect(src, dst)
-        response.add("Connected %s to %s"%(src, dst))
-
-
+        prj.scheduleConnect(src, dst)
+        response.add("Scheduled connecting %s to %s at commit\n"%(src, dst))
+        if ( request.hasParam('commit') and 
+             int(request.getParam('commit')) == 1):
+            outf=StringIO()
+            prj.commitChanges(outf)
+            response.add(outf.getvalue())
 
 class SCProjectImport(ServerCommand):
     """Import a module (file/lib) to the project."""
@@ -298,7 +307,7 @@ class SCProjectSet(ServerCommand):
         itemname=request.getParam('item')
         try:
             if upfile is None:
-                val=prj.setNamedValue(itemname, setval)
+                val=prj.scheduleSet(itemname, setval)
             else:
                 # write out the file 
                 dir=prj.getNewInputSubDir()
@@ -311,15 +320,39 @@ class SCProjectSet(ServerCommand):
                 outFile=open(setval, "w")
                 outFile.write(upfile.read())
                 outFile.close()
-                val=prj.setNamedValue(itemname, setval, cpc.dataflow.fileType)
+                val=prj.scheduleSet(itemname, setval, cpc.dataflow.fileType)
             if val is None:
                 tpname='None'
                 response.add("Item not found: %s"%(itemname))
             else:
                 tpname=val.getType().getName()
-                response.add("Found item: Set type=%s, value %s"%(tpname, 
-                                                                  setval) )
+                if ( request.hasParam('commit') and 
+                     int(request.getParam('commit')) == 1):
+                    outf=StringIO()
+                    prj.commitChanges(outf)
+                    response.add(outf.getvalue())
+                    response.add(
+                       "Committed assignment (type=%s, value %s)"% 
+                       (tpname, val.getDesc()) )
+                else:
+                    response.add(
+                       "Scheduled assignment (type=%s, value %s) at commit"%
+                       (tpname, val.getDesc()) )
         except cpc.dataflow.ApplicationError as e:
             response.add("Item not found: %s"%(str(e)))
+
+class SCProjectCommit(ServerCommand):
+    """Commit several project-set commands in a project."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-commit")
+
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        outf=StringIO()
+        prj.commitChanges(outf)
+        response.add(outf.getvalue())
 
 

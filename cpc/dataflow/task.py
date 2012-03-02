@@ -162,14 +162,19 @@ class Task(object):
         for inst in addedInstances:
             inst.activate()
 
-        # we lock the active instance's outputs so no other task
-        # can interrupt us during the update
-        with self.activeInstance.lock:
-            # handle addConnection last, because it may depend on items 
-            # that were just created. This is done as an atomic operation:
-            # all connections are made at once from a data perspective.
+        # we handle new network connnections and new output atomically: 
+        # if the new network connection references newly outputted data,
+        # that is all the instance sees.
+        try:
+            affectedInputAIs=None
+            affectedOutputAIs=None
+            outputsLocked=False
+            inputsLocked=False
+            selfLocked=False
+            # now do the parts that require locks. 
             if out.newConnections is not None:
-                self.project.getNetworkLock().acquire()
+                # we set the global lock
+                self.project.networkLock.acquire()
                 imports=self.project.getImportList()
                 activeNet=self.activeInstance.getNet()
                 if activeNet is None:
@@ -192,20 +197,51 @@ class Task(object):
                                                            newConnection.val)
                     activeNet.addConnection(conn, affectedInputAIs,
                                             affectedOutputAIs)
-                # and now run the right handlers for the affected AIs
                 # so that outputs know where they go
                 for ai in affectedOutputAIs:
-                    ai.handleNewOutputConnections()
+                    ai.outputLock.acquire()
+                    if ai == self.activeInstance: 
+                        selfLocked=True
+                # An exception during the above loop should be impossible.
+                outputsLocked=True
+                if not selfLocked:
+                    self.activeInstance.outputLock.acquire()
+                    selfLocked=True
                 # and inputs are connected to the right output
                 for ai in affectedInputAIs:
+                    ai.inputLock.acquire()
+                # An exception during the above loop should be impossible.
+                inputsLocked=True
+                # now make the new connections
+                for ai in affectedOutputAIs:
+                    ai.handleNewOutputConnections()
+                for ai in affectedInputAIs:
                     ai.handleNewInputConnections()
-            # now handle the output.
+            else:
+                self.activeInstance.outputLock.acquire()
+                selfLocked=True
+            # we can do this safely because activeInstance.inputLock is an rlock
             self.activeInstance.handleTaskOutput(self, out.outputs, 
                                                  out.subnetOutputs)
-            # and handle the new input due to new connections
-            if out.newConnections is not None:
+            if affectedInputAIs is not None:
                 for ai in affectedInputAIs:
                     ai.handleNewInput(None, 0)
+        finally:
+            # unlock everything in the right order
+            if (affectedInputAIs is not None) and inputsLocked:
+                for ai in affectedInputAIs:
+                    ai.inputLock.release()
+            if (affectedOutputAIs is not None) and outputsLocked:
+                if (affectedOutputAIs is not None): 
+                    for ai in affectedOutputAIs:
+                        ai.outputLock.release()
+                        if ai == self.activeInstance:
+                            selfLocked=False
+            if selfLocked:
+                self.activeInstance.outputLock.release()
+            if out.newConnections is not None:
+                # we releae the global lock
+                self.project.networkLock.release()
 
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,

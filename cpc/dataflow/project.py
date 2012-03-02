@@ -38,6 +38,7 @@ import active_value
 import active_inst
 import active_network
 import task
+import transaction
 import lib
 import readxml
 import connection
@@ -59,21 +60,16 @@ class Project(object):
            basedir = the full (existing) base directory of the project
            queue = an optional shared task queue
         """
-        # create an empty function network for active functions
-        #self.lock=threading.Lock()
-        # the update lock is to prevent multiple threads from updating the 
-        # dataflow layout and data: the current implementation only allows
-        # one thread to propagate dataflow data at a time. This is probably
-        # an optimization: python itself has a global interpreter lock, so
-        # the increased simplicity of a single-threaded update algorithm
-        # wins out over any gains distributed updating would have.
-        # In any case, the dataflow program should never be limited by 
-        # updates: that's entirely contrary to the idea behind Copernicus.
-        self.updateLock=threading.Lock()
+        # the network lock is to prevent multiple threads from updating the 
+        # dataflow layout. 
+        # Only when this lock is locked, are updates such as ActiveNetwork's 
+        # addConnection allowed. 
+        # See the active_inst.py's documentation for detailed of all the locks
+        # and how they can interact.
+        self.networkLock=threading.RLock()
         self.conf=conf
         self.name=name
         self.basedir=basedir
-        self.networkLock=threading.Lock()
         log.debug("Creating project %s"%name)
         if queue is None:
             log.debug("Creating new task queue %s"%name)
@@ -98,16 +94,20 @@ class Project(object):
         if not os.path.exists(self.inputDir):
             os.mkdir(self.inputDir)
         self.inputNr=0
+        # a list of scheduled changes and its lock
+        self.transactionListLock=threading.Lock()
+        self.transactionList=[]
 
     def getName(self):
-        """Return the project name"""
+        """Return the project name. This is a const property"""
         return self.name
     def getBasedir(self):
-        """Return the base directory"""
+        """Return the base directory. This is a const property"""
         return self.basedir
     def getNewInputSubDir(self):
-        """Return a new input subdir. NOTE: it won't be created."""
-        with self.updateLock:
+        """Return the name of a new input subdir to store new externally 
+           set input files in.  NOTE: it won't be created."""
+        with self.networkLock:
             newsub=os.path.join(self.inputDir, "%04d"%self.inputNr)
             self.inputNr+=1
             while os.path.exists(newsub):
@@ -115,36 +115,31 @@ class Project(object):
                 self.inputNr+=1
         return newsub
 
-    def getUpdateLock(self):
-        """Return the update lock"""
-        return self.updateLock
-    def getNetworkLock(self):
-        """Return the network lock"""
-        return self.networkLock
-
     def getFileList(self):
-        """Get the project's file list"""
+        """Get the project's file list. This pointer is a const property, 
+           and the file list has its own locking mechanism."""
         return self.fileList
 
     def getTopLevelLib(self):
         """Get the top-level import library"""
         return self.topLevelImport
+
     def getFunction(self, fname):
         """Return the function object associated with a name."""
-        try:
-            return self.functions[fname]
-        except KeyError:
-            raise ProjectError("function with name %s is not defined."%fname)
+        with self.networkLock:
+            try:
+                return self.functions[fname]
+            except KeyError:
+                raise ProjectError("function with name %s is not defined."%
+                                   fname)
+
     def addFunction(self, function):
         """Add a function to the project."""
-        name=function.getName()
-        if self.functions.has_key(name):
-            raise ProjectError("function with name %s already exists."%name)
-        self.functions[name]=function
-
-    def getActive(self):
-        """Get the ActiveNetwork object associated with this project."""
-        return self.active
+        with self.networkLock:
+            name=function.getName()
+            if self.functions.has_key(name):
+                raise ProjectError("function with name %s already exists."%name)
+            self.functions[name]=function
 
     def getImportList(self):
         """Get the function import list."""
@@ -153,39 +148,23 @@ class Project(object):
     def getNamedValue(self, itemname):
         """Get a value for a specific name according to the rule
            [instance]:[instance].[ioitem]."""
-        with self.updateLock:
-            instanceName,direction,ioItemList=connection.splitIOName(itemname, 
-                                                                     None)
-            instance=self.active.getNamedActiveInstance(instanceName)
-            if direction==function_io.inputs:
-                return instance.getInputs().getSubValue(ioItemList)
-            elif direction==function_io.outputs:
-                return instance.getOutputs().getSubValue(ioItemList)
-            elif direction==function_io.subnetInputs:
-                return instance.getSubnetInputs().getSubValue(ioItemList)
-            elif direction==function_io.subnetOutputs:
-                return instance.getSubnetOutputs().getSubValue(ioItemList)
-
-    #def getNamedType(self, itemname):
-    #    """Get the expected type of a specific name according to the rule
-    #       [instance]:[instance].[ioitem]."""
-    #    tp=self.getNamedType(itemname)
-    #    if tp is None:
-    #        raise ProjectError("Type of item %s not found"%itemname)
-    #    return tp
-
-    def setNamedValue(self, itemname, literal, sourceType=None):
-        """Get a value with a specific name according to the rule
-           [instance]:[instance].[ioitem]"""
         #with self.updateLock:
+        instanceName,direction,ioItemList=connection.splitIOName(itemname, 
+                                                                 None)
+        instance=self.active.getNamedActiveInstance(instanceName)
+        return instance.getNamedValue(direction, ioItemList)
+
+    def scheduleSet(self, itemname, literal, sourceType=None):
+        """Add an instance of a set in the transaction schedule."""
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
         with instance.lock:
-            oval=instance.findNamedInputValue(direction, ioItemList)
+            oval=instance.findNamedInput(direction, ioItemList)
             # now we can extract the type.
             tp=oval.getType()
             if not isinstance(literal, value.Value):
-                newVal=value.interpretLiteral(literal, tp, sourceType)
+                newVal=value.interpretLiteral(literal, tp, sourceType, 
+                                              self.fileList)
             else:
                 newVal=literal
                 if not (tp.isSubtype(rval.getType()) or 
@@ -193,11 +172,63 @@ class Project(object):
                     raise ActiveError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
-            instance.setInputValue(oval, newVal)
-            instance.processSetInputValues()
+        with self.transactionListLock:
+            self.transactionList.append(transaction.Set(instance, oval, newVal))
         return newVal
-        #    return instance.setNamedInputValue(direction, ioItemList, literal, 
-        #                                       sourceType)
+
+    def scheduleConnect(self, src, dst):
+        """Add an instance of a connect in the transaction schedule."""
+        srcInstName,srcDir,srcItemName=connection.splitIOName(src, None)
+        dstInstName,dstDir,dstItemName=connection.splitIOName(dst, None)
+        cn=connection.makeConnection(self.active,
+                                     srcInstName, srcDir, srcItemName,
+                                     dstInstName, dstDir, dstItemName)
+        with self.transactionListLock:
+            self.transactionList.append(transaction.Connect(cn))
+
+    def commitChanges(self, outf):
+        """Commit a set of changes scheduled with scheduleSet()"""
+        affectedInputAIs=set()
+        affectedOutputAIs=set()
+        inputsLocked=False
+        outputsLocked=False
+        outf.write("Committing scheduled changes:\n")
+        with self.transactionListLock:
+            with self.networkLock:
+                try:
+                    # first get all affected active instances.
+                    for item in self.transactionList:
+                        item.getAffected(self, 
+                                         affectedInputAIs, 
+                                         affectedOutputAIs)
+                    # lock all affected I/O active instances
+                    for ai in affectedOutputAIs:
+                        ai.outputLock.acquire()
+                    outputsLocked=True
+                    for ai in affectedInputAIs:
+                        ai.inputLock.acquire()
+                    inputsLocked=True
+                    
+                    # now run the transaction
+                    for item in self.transactionList:
+                        outf.write("- ")
+                        item.run(self, outf)
+                    # now handle new connections
+                    for ai in affectedOutputAIs:
+                        ai.handleNewOutputConnections()
+                    for ai in affectedInputAIs:
+                        ai.handleNewInputConnections()
+                    for ai in affectedInputAIs:
+                        ai.handleNewInput(None, 0)
+                finally:
+                    # make sure everything is released.
+                    if inputsLocked:
+                        for ai in affectedInputAIs:
+                            ai.inputLock.release()
+                    if outputsLocked:
+                        for ai in affectedOutputAIs:
+                            ai.outputLock.release()
+            self.transactionList=[]
 
     def getNamedInstance(self, instname):
         item=self.active.getNamedActiveInstance(instname)
@@ -208,7 +239,7 @@ class Project(object):
     def getNamedItemList(self, pathname):
         """Get an list based on a path name according to the rule
            [instance]:[instance]"""
-        with self.updateLock:
+        with self.networkLock:
             ret=dict()
             if ( (keywords.SubTypeSep in pathname) or 
                  (keywords.ArraySepStart in pathname) or
@@ -284,8 +315,8 @@ class Project(object):
 
     def getNamedDescription(self, pathname):
         """Get a description of a named function/type/lib"""
-        with self.updateLock:
-            ret=dict()
+        #with self.updateLock:
+        ret=dict()
             # the item 
             #if ( (keywords.SubTypeSep in pathname) or 
             #     (keywords.ArraySepStart in pathname) or
@@ -316,74 +347,74 @@ class Project(object):
             #        ret["desc"]=""
             #        return ret
             #else:
-            item=self.imports.getItemByFullName(pathname)
-            if item is not None:
-                ret["name"]=pathname
-                desc=item.getDescription()
-                if desc is not None:
-                    ret["desc"]=desc.get()
-                else:
-                    ret["desc"]=""
-                if isinstance(item, lib.ImportLibrary):
-                    ret["type"]="library"
-                    rfuncs=[]
-                    funcs=item.getFunctionList()
-                    for f in funcs:
-                        nf={ "name" : f }
-                        desc=item.getFunction(f).getDescription()
+        item=self.imports.getItemByFullName(pathname)
+        if item is not None:
+            ret["name"]=pathname
+            desc=item.getDescription()
+            if desc is not None:
+                ret["desc"]=desc.get()
+            else:
+                ret["desc"]=""
+            if isinstance(item, lib.ImportLibrary):
+                ret["type"]="library"
+                rfuncs=[]
+                funcs=item.getFunctionList()
+                for f in funcs:
+                    nf={ "name" : f }
+                    desc=item.getFunction(f).getDescription()
+                    if desc is not None:
+                        nf["desc"] = desc.get()
+                    else:
+                        nf["desc"] = ""
+                    rfuncs.append(nf)
+                ret["functions"]=rfuncs
+                rtypes=[]
+                types=item.getTypeList()
+                for t in types:
+                    if not item.getType(t).isImplicit():
+                        nf={ "name" : t }
+                        desc=item.getType(t).getDescription()
                         if desc is not None:
                             nf["desc"] = desc.get()
                         else:
                             nf["desc"] = ""
-                        rfuncs.append(nf)
-                    ret["functions"]=rfuncs
-                    rtypes=[]
-                    types=item.getTypeList()
-                    for t in types:
-                        if not item.getType(t).isImplicit():
-                            nf={ "name" : t }
-                            desc=item.getType(t).getDescription()
-                            if desc is not None:
-                                nf["desc"] = desc.get()
-                            else:
-                                nf["desc"] = ""
-                            rtypes.append(nf)
-                    if len(rtypes)>0:
-                        ret["types"]=rtypes
-                elif isinstance(item, function.Function):
-                    ret["type"]="function"
-                    ioitems=item.getInputs()
-                    inps=[]
-                    for key in ioitems.getMemberKeys():
-                        retd=dict()
-                        retd["name"]=key
-                        retd["type"]=ioitems.getMember(key).getName()
-                        desc=ioitems.getListMember(key).getDescription()
-                        if desc is not None:
-                            retd["desc"]=desc.get()
-                        else:
-                            retd["desc"]=""
-                        inps.append(retd)
-                    ret["inputs"]=inps
-                    ioitems=item.getOutputs()
-                    outs=[]
-                    for key in ioitems.getMemberKeys():
-                        retd=dict()
-                        retd["name"]=key
-                        retd["type"]=ioitems.getMember(key).getName()
-                        desc=ioitems.getListMember(key).getDescription()
-                        if desc is not None:
-                            retd["desc"]=desc.get()
-                        else:
-                            retd["desc"]=""
-                        outs.append(retd)
-                    ret["outputs"]=outs
-                elif isinstance(item, vtype.Type):
-                    ret["type"]="type"
-            else:
-                ret["name"]="Not found: %s"%pathname
-                ret["desc"]=""
-            return ret
+                        rtypes.append(nf)
+                if len(rtypes)>0:
+                    ret["types"]=rtypes
+            elif isinstance(item, function.Function):
+                ret["type"]="function"
+                ioitems=item.getInputs()
+                inps=[]
+                for key in ioitems.getMemberKeys():
+                    retd=dict()
+                    retd["name"]=key
+                    retd["type"]=ioitems.getMember(key).getName()
+                    desc=ioitems.getListMember(key).getDescription()
+                    if desc is not None:
+                        retd["desc"]=desc.get()
+                    else:
+                        retd["desc"]=""
+                    inps.append(retd)
+                ret["inputs"]=inps
+                ioitems=item.getOutputs()
+                outs=[]
+                for key in ioitems.getMemberKeys():
+                    retd=dict()
+                    retd["name"]=key
+                    retd["type"]=ioitems.getMember(key).getName()
+                    desc=ioitems.getListMember(key).getDescription()
+                    if desc is not None:
+                        retd["desc"]=desc.get()
+                    else:
+                        retd["desc"]=""
+                    outs.append(retd)
+                ret["outputs"]=outs
+            elif isinstance(item, vtype.Type):
+                ret["type"]="type"
+        else:
+            ret["name"]="Not found: %s"%pathname
+            ret["desc"]=""
+        return ret
 
 
  
@@ -391,7 +422,7 @@ class Project(object):
     def getGraph(self, pathname):
         """Get an graph description based on a path name according to the rule
            [instance]:[instance]."""
-        with self.updateLock:
+        with self.networkLock:
             item=self.active.getNamedActiveInstance(pathname)
             ret=dict()
             if item is not None:
@@ -409,61 +440,47 @@ class Project(object):
     def addInstance(self, name, functionName):
         """Add an instance with a name and function name to the top-level
            network."""
-        with self.updateLock:
+        with self.networkLock:
             func=self.imports.getFunctionByFullName(functionName, 
                                                     self.topLevelImport)
             inst=instance.Instance(name, func, functionName)
             self.active.addInstance(inst)
 
-    def connect(self, src, dst):
-        """Connect source and destination with each other in the top-level
-           network. src and dst have syntax: inst:[in|out].item[subitem]"""
-        with self.updateLock:
-            srcInstName,srcDir,srcItemName=connection.splitIOName(src, None)
-            dstInstName,dstDir,dstItemName=connection.splitIOName(dst, None)
-            cn=connection.makeConnection(self.active,
-                                         srcInstName, srcDir, srcItemName,
-                                         dstInstName, dstDir, dstItemName)
-            #inputAIs=set()
-            #outputAIs=set()
-            self.active.addConnection(cn, None, None)
-            
-
     def importTopLevelFile(self, fileObject, filename):
         """Read a source file as a top-level description."""
-        #with self.lock:
-        with self.updateLock:
-            reader=readxml.ProjectXMLReader(self.topLevelImport, 
-                                            self.imports,
+        with self.networkLock:
+            reader=readxml.ProjectXMLReader(self.topLevelImport, self.imports,
                                             self)
             reader.readFile(fileObject, filename)
 
     def importName(self, name):
         """Import a named module."""
-        if not self.imports.exists(name):
-            baseFilename="%s.xml"%name.replace(keywords.ModSep, '/')
-            baseFilename2="%s/_import.xml"%name.replace(keywords.ModSep, '/')
-            filename=None
-            for pathItem in self.conf.getImportPaths():
-                nfilename=os.path.join(pathItem, baseFilename)
-                if os.path.exists(nfilename):
-                    filename=nfilename
-                    break
-                nfilename=os.path.join(pathItem, baseFilename2)
-                if os.path.exists(nfilename):
-                    filename=nfilename
-                    break
-            if filename is None:
-                raise ProjectError("Library %s not found"%name)
-            log.debug("Importing library %s with file name %s"% (name, 
-                                                                 filename))
-            newlib=lib.ImportLibrary(name, filename, None)
-            reader=readxml.ProjectXMLReader(newlib, self.imports, self)
-            reader.read(filename)
-            self.imports.add(newlib)
-            return newlib
-        else:
-            return self.imports.get(name)
+        with self.networkLock:
+            if not self.imports.exists(name):
+                baseFilename="%s.xml"%name.replace(keywords.ModSep, '/')
+                baseFilename2="%s/_import.xml"%name.replace(keywords.ModSep, 
+                                                            '/')
+                filename=None
+                for pathItem in self.conf.getImportPaths():
+                    nfilename=os.path.join(pathItem, baseFilename)
+                    if os.path.exists(nfilename):
+                        filename=nfilename
+                        break
+                    nfilename=os.path.join(pathItem, baseFilename2)
+                    if os.path.exists(nfilename):
+                        filename=nfilename
+                        break
+                if filename is None:
+                    raise ProjectError("Library %s not found"%name)
+                log.debug("Importing library %s with file name %s"% (name, 
+                                                                     filename))
+                newlib=lib.ImportLibrary(name, filename, None)
+                reader=readxml.ProjectXMLReader(newlib, self.imports, self)
+                reader.read(filename)
+                self.imports.add(newlib)
+                return newlib
+            else:
+                return self.imports.get(name)
 
     def getAllTasks(self):
         """Get a list of all tasks to queue for execution."""
@@ -473,11 +490,12 @@ class Project(object):
 
     def activate(self, pathname):
         """Activate all active instances."""
-        if pathname.strip() == "":
-            self.active.activateAll()
-        else:
-            item=self.active.getNamedActiveInstance(pathname)
-            item.activate()
+        with self.networkLock:
+            if pathname.strip() == "":
+                self.active.activateAll()
+            else:
+                item=self.active.getNamedActiveInstance(pathname)
+                item.activate()
 
     def getQueue(self):
         """Get the task queue."""
@@ -504,7 +522,7 @@ class Project(object):
         fname=os.path.join(self.basedir, "_state.xml")
         if os.path.exists(fname):
             log.debug("Importing project state from %s"%fname)
-            with self.updateLock:
+            with self.networkLock:
                 reader=readxml.ProjectXMLReader(self.topLevelImport, 
                                                 self.imports,
                                                 self)
@@ -522,13 +540,14 @@ class Project(object):
 
 
     def writeState(self):
-        fname=os.path.join(self.basedir, "_state.xml")
-        nfname=os.path.join(self.basedir, "_state.xml.new")
-        fout=open(nfname, 'w')
-        fout.write('<?xml version="1.0"?>\n')
-        self.writeXML(fout, 0)
-        fout.close()
-        # now we use POSIX file renaming  atomicity to make sure the state 
-        # is always a consistent file.
-        os.rename(nfname, fname)
+        with self.networkLock:
+            fname=os.path.join(self.basedir, "_state.xml")
+            nfname=os.path.join(self.basedir, "_state.xml.new")
+            fout=open(nfname, 'w')
+            fout.write('<?xml version="1.0"?>\n')
+            self.writeXML(fout, 0)
+            fout.close()
+            # now we use POSIX file renaming  atomicity to make sure the state 
+            # is always a consistent file.
+            os.rename(nfname, fname)
 

@@ -19,7 +19,7 @@
 
 
 import logging
-log=logging.getLogger('cpc.dataflow.active')
+log=logging.getLogger('cpc.dataflow.active_network')
 
 import threading
 import os
@@ -308,8 +308,7 @@ class ActiveNetwork(network.Network):
         #    dstAcp.setPropagateValue(initialValue) 
 
 
-    def addConnection(self, conn, affectedInputAIs=None, 
-                      affectedOutputAIs=None):
+    def addConnection(self, conn, affectedInputAIs, affectedOutputAIs):
         """Add a connection
             conn = the Connection object
             affectedInputAIs = a set that will be updated with the active 
@@ -337,23 +336,14 @@ class ActiveNetwork(network.Network):
                                           affectedOutputAIs)
             (srcAcp, dstAcp) = self.__getSrcDestAcps(conn)
             # it is an error to have only one of them None. 
-            ownSet=(affectedInputAIs is None and affectedOutputAIs is None)
+            if (affectedInputAIs is None or affectedOutputAIs is None):
+                raise CpcError("ERROR: addConnection affectedInputAI or affectedOutputAI is none")
             if conn.getSrcInstance() is not None:
-                if ownSet:
-                    affectedInputAIs=set()
-                    affectedOutputAIs=set()
                 srcAcp.connectDestination(dstAcp, conn, affectedInputAIs, 
                                           affectedOutputAIs)
                 log.debug("Active connection points  %s->%s connected"%
                           (srcAcp.value.getFullName(),
                            dstAcp.value.getFullName()))
-                if ownSet:
-                    for ai in affectedOutputAIs:
-                        ai.handleNewOutputConnections()
-                    for ai in affectedInputAIs:
-                        ai.handleNewInputConnections()
-                    for ai in affectedInputAIs:
-                        ai.handleNewInput(None, 0)
             else:
                 #dstAcp.activeInstance.setNamedInputValue(
                 #                                conn.getDstIO().getDir(),
@@ -362,14 +352,9 @@ class ActiveNetwork(network.Network):
                 val=conn.getInitialValue()
                 log.debug("Setting input to %s: %s"%(dstAcp.value.getFullName(),
                                                      val.value))
-                if ownSet:
-                    affectedInputAIs=set()
                 with dstAcp.activeInstance.lock:
                     dstAcp.setNewSetValue(conn.getInitialValue(),
                                           affectedInputAIs)
-                if ownSet:
-                    for ai in affectedInputAIs:
-                        ai.handleNewInput(None, 0)
                     
 
     def activateAll(self):

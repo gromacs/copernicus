@@ -485,6 +485,8 @@ class Value(object):
            the client describing the value."""
         if not self.type.isCompound():
             if self.value is not None:
+                if self.fileValue is not None:
+                    return self.fileValue.getName()
                 return self.type.valueToLiteral(self.value)
             else:
                 return "None"

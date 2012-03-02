@@ -8,6 +8,7 @@
 # add the grompp and mdrun function instances
 ./cpcc instance gromacs::grompp grompp
 ./cpcc instance gromacs::mdrun mdrun
+./cpcc activate 
 # connect the tpr output of grompp to the tpr input of mdrun
 ./cpcc connect grompp:out.tpr mdrun:in.tpr
 # set the grompp inputs
@@ -19,7 +20,6 @@
 ./cpcc set grompp:in.settings[0].value 12500
 ./cpcc set grompp:in.settings[1].name integrator
 ./cpcc set grompp:in.settings[1].value md
-# and activate
-./cpcc activate 
-
+# and commit this set of updates
+./cpcc commit
 

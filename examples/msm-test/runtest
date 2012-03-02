@@ -5,6 +5,8 @@
 ./cpcc import msm
 # make the MSM function instance
 ./cpcc instance msm::msm_gmx_adaptive msm
+# and start the function instance
+./cpcc activate
 
 # set its values. 
 # Descriptions can be obtained with cpcc info msm::msm_mgx_adaptive
@@ -29,7 +31,6 @@
 # select these atoms:
 ./cpcc set msm:in.grpname  Protein
 
-# and start the function instance
-./cpcc activate
-
+# commit the changes
+./cpcc commit
 
