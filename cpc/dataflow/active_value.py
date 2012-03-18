@@ -47,7 +47,11 @@ class ValueUpdateListener(object):
 
 class ActiveValue(value.Value):
     """The class describing an active data value, as held by an active 
-       instance."""
+       instance.
+       
+       Values are trees with dicts/lists of members; the top level is usually
+       a <instance>:in or <instance>:out. ActiveValue trees have listeners:
+       active connection points that connect values together."""
     def __init__(self, val, tp, parent=None, selfName=None, seqNr=0,
                  createObject=None, fileList=None):
         """Initializes an new value, with no references
@@ -73,47 +77,50 @@ class ActiveValue(value.Value):
         """Get the associated listener."""
         return self.listener
 
-    def update(self, outputVal, newSeqNr, sourceTag=None):
+    def update(self, srcVal, newSeqNr, sourceTag=None):
         """Set a new value from a Value, and call update() on all subitems. 
-           This keeps all the metadata intact."""
+           This keeps all the metadata intact.
+           
+           srcVal = the input value.
+           newSeqNr = the new sequence number (or None to keep the old one)
+           sourceTag = any source tag to apply."""
         if newSeqNr is None:
             newSeqNr=self.seqNr
         if self.seqNr > newSeqNr:
             log.debug("Rejecting update because of sequence number: %d>%d."%
                       (self.seqNr, newSeqNr))
             return
-        if self.basetype!=outputVal.basetype:
+        if self.basetype!=srcVal.basetype:
             raise ActiveValError("Type mismatch in %s: expected %s, got %s"%
                                  (self.getFullName(),
                                   self.basetype.getName(), 
-                                  outputVal.basetype.getName()))
+                                  srcVal.basetype.getName()))
         self.sourceTag=sourceTag
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
         self.fileValue=None
         # check updated
-        if outputVal.updated:
+        if srcVal.updated:
             self.markUpdated(True)
         # now set the value.
-        if not outputVal.basetype.isCompound():
+        if not srcVal.basetype.isCompound():
             # and set value
-            if (self.fileList is not None and 
-                outputVal.basetype.isSubtype(vtype.fileType)
-                and outputVal.value is not None):
-                if os.path.isabs(outputVal.value):
-                    self.fileValue=self.fileList.getAbsoluteFile(outputVal.
-                                                                 value)
+            if ( (self.fileList is not None) and 
+                 (srcVal.basetype.isSubtype(vtype.fileType)) and 
+                 (srcVal.value is not None)):
+                if os.path.isabs(srcVal.value):
+                    self.fileValue=self.fileList.getAbsoluteFile(srcVal.value)
                     self.value=self.fileValue.getName()
                 else:
-                    self.fileValue=self.fileList.getFile(outputVal.value)
-                    self.value=outputVal.value
+                    self.fileValue=self.fileList.getFile(srcVal.value)
+                    self.value=srcVal.value
             else:
-                self.value=outputVal.value
+                self.value=srcVal.value
         else:
-            self.updated=outputVal.updated
+            self.updated=srcVal.updated
             if self.basetype == vtype.listType:
-                for name, item in outputVal.value.iteritems():
+                for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
                         raise ActiveValError("Unknown member item '%s'"%name)
                     # make the value if it doesn't exist
@@ -123,7 +130,7 @@ class ActiveValue(value.Value):
                                                       members[name], name)
                     self.value[name].update(item, newSeqNr)
             elif self.basetype == vtype.dictType:
-                for name, item in outputVal.value:
+                for name, item in srcVal.value:
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None,
                                                       self.type.getMembers(),
@@ -133,7 +140,7 @@ class ActiveValue(value.Value):
                 i=0
                 if not isinstance(self.value, list):
                     self.value=[]
-                for item in outputVal.value:
+                for item in srcVal.value:
                     if len(self.value) < i+1:
                         self.value.append(self._create(None, 
                                                        self.type.getMembers(), 
@@ -161,21 +168,17 @@ class ActiveValue(value.Value):
 
     def acceptNewValue(self, sourceValue, sourceTag):
         """Find all newly set value of this value and any of its children that
-           originate from source."""
+           originate from source.
+           
+           sourceValue = the input value
+           sourceTag = a source tag to check for (or None to accept anything)"""
         ret=False
-        #log.debug("Trying new value for %s"%(self.getFullName()))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
-            #log.debug("Accepting new value for %s"%(self.getFullName()))
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
                 self.update(sourceValue, sourceValue.seqNr, sourceTag)
-                #sourceValue.sourceTag=None
-                #sourceValue.seqNr=None
                 ret=True
-        #else:
-        #    log.debug("%s != %s"%(sourceValue.sourceTag, sourceTag))
-        # now check all the child values
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:
@@ -231,7 +234,11 @@ class ActiveValue(value.Value):
 
     def propagate(self, sourceTag, seqNr):
         """Find all listeners associated with this value and update their 
-           values, calling propagate on their associated listeners."""
+           values, calling propagate() on their associated listeners.
+           
+           sourceTag = a source tag that handleInput matches to check
+                       for input from a single source
+           seqNr = a sequence number to check for updated inputs."""
         if self.parent is not None:
             self.parent._propagateParent(sourceTag, seqNr)
         self._propagateChild(sourceTag, seqNr)
@@ -239,16 +246,12 @@ class ActiveValue(value.Value):
         """Helper function for propagateListenerOutput()"""
         if self.listener is not None:
             self.listener.propagate(sourceTag, seqNr)
-            #for acp in self.listener.getDestinationACPs():
-            #    acp.stageNewInput(sourceTag, seqNr)
         if self.parent is not None:
             self.parent._propagateParent(sourceTag, seqNr)
     def _propagateChild(self, sourceTag, seqNr):
         """Helper function for propagateListenerOutput()"""
         if self.listener is not None:
             self.listener.propagate(sourceTag, seqNr)
-            #for acp in self.listener.getDestinationACPs():
-            #    acp.stageNewInput(sourceTag, seqNr)
         if isinstance(self.value, dict):
             for val in self.value.itervalues():
                 val._propagateChild(sourceTag, seqNr)
@@ -258,8 +261,8 @@ class ActiveValue(value.Value):
 
     def notifyListeners(self, sourceTag, seqNr):
         """Find all listeners' destinations associated with this value and call 
-           notify() on them. """
-           #handleNewInput() on all of the destinations."""
+           notify() on them. This in turn calls handleNewInput() on the 
+           activeInstances that the acps belong to."""
         if self.parent is not None:
             self.parent._notifyParentListeners(sourceTag, seqNr)
         self._notifyChildListeners(sourceTag, seqNr)

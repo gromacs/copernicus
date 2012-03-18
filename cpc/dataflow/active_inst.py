@@ -187,6 +187,12 @@ class ActiveInstance(object):
         # inputVal/subnetInputVal may be 'in flight', but only one per source
         # (connected output, or global update). These are then handled with
         # handleNewInput(source).
+        # Because different sources always affected different inputs, this
+        # can be done safely.
+        # TODO: we now rely on the python global lock to make sure that
+        # stagedInputValues are always readable. We should probably lock 
+        # it while doing handleNewInput or updates (we can do this on a
+        # very fine-grained level).
         # 
         # It is an rlock because a function that locks it (handleNewInput)
         # could be called when the inputlock is already locked 
