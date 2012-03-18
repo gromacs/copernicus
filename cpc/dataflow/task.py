@@ -195,8 +195,8 @@ class Task(object):
                                                            newConnection.dstStr,
                                                            newConnection.val)
                     conns.append(conn)
-                    activeNet.findConnectionAffected(conn, affectedInputAIs,
-                                                     affectedOutputAIs)
+                    activeNet.findConnectionSrcDest(conn, affectedInputAIs,
+                                                    affectedOutputAIs)
                 # Now lock all affected outputs
                 # An exception during this loop should be impossible:
                 for ai in affectedOutputAIs:
@@ -207,7 +207,6 @@ class Task(object):
                 # now handle the connection updates
                 for conn in conns:
                     activeNet.addConnection(conn, self)
- 
             if not selfLocked:
                 self.activeInstance.outputLock.acquire()
                 selfLocked=True
