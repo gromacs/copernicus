@@ -82,8 +82,11 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         self.directDests=[]
         # the parent active instance
         self.activeInstance=activeInstance
+        # the ultimate source value
         self.sourceValue=self.value
         self.sourceAcp=self
+        # the direct source value (i.e. what this is connected to).
+        self.directSource=None
         #self.receiverList=[]
         self.direction=direction
         # precomputed set of all the direct acps associated with the value of 
@@ -98,13 +101,18 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
     def getSourceActiveInstance(self):
         return self.sourceAcp.activeInstance
 
-    def setSource(self, sourceAcp, sourceValue):
-        """Set the source active instance."""
-        #self.sourceInstances=sourceInstance
+    def setSource(self, directSource, sourceAcp, sourceValue):
+        """Set the source active instance.
+           
+           directSource = the directly connectd source acp
+           sourceAcp = the originating source (source of the source..)
+           sourceValue = the originating source value
+           """
+        self.directSource=directSource
         self.sourceValue=sourceValue
         self.sourceAcp=sourceAcp
         for dest in self.directDests:
-            dest.acp.setSource(sourceAcp, sourceValue)
+            dest.acp.setSource(self, sourceAcp, sourceValue)
 
     def stageNewInput(self, source, seqNr):
         """Stage new input into the newValue fields of the value
@@ -124,7 +132,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         dst=Dest(destAcp, conn)
         self.directDests.append(dst)
         # handle the destination's end.
-        destAcp.setSource(self.sourceAcp, self.sourceValue)
+        destAcp.setSource(self, self.sourceAcp, self.sourceValue)
         # recalculate the output connection points
         self.activeInstance.handleNewOutputConnections()
         # propagate our value downstream
@@ -193,6 +201,13 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
             # in all its listeners
             affectedInputAIs.add(dest.acp.activeInstance)
             dest.acp.findConnectedInputAIs(affectedInputAIs)
+
+    def findConnectedOutputAIs(self, affectedOutputAIs):
+        """Find all source acps and their active instances. Update the set
+           affecteOutputAIs with these"""
+        affectedOutputAIs.add(self.activeInstance)
+        if self.directSource is not None:
+            self.directSource.findConnectedOutputAIs(affectedOutputAIs)
 
     def writeXML(self, outf, indent=0):
         """Write value to xml"""

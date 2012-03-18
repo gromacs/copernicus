@@ -312,7 +312,8 @@ class ActiveNetwork(network.Network):
             conn.srcAcp = srcAcp
             conn.dstAcp = dstAcp
             if conn.getSrcInstance() is not None:
-                affectedOutputAIs.add(dstAcp.sourceAcp.activeInstance)
+                #affectedOutputAIs.add(dstAcp.sourceAcp.activeInstance)
+                dstAcp.findConnectedOutputAIs(affectedOutputAIs)
             affectedInputAIs.add(dstAcp.activeInstance)
             dstAcp.findConnectedInputAIs(affectedInputAIs)
 
