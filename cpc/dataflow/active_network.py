@@ -46,8 +46,8 @@ class ActiveError(apperror.ApplicationError):
 
 class ActiveNetwork(network.Network):
     """An active function network is a function network with actual data."""
-    def __init__(self, project, net, taskQueue, dirName, 
-                 networkLock, inActiveInstance=None):
+    def __init__(self, project, net, taskQueue, dirName, networkLock,
+                 inActiveInstance=None):
         """Create a new active network from a network. It may be part
            of an active instance.
           
@@ -113,17 +113,16 @@ class ActiveNetwork(network.Network):
                 # copy the connection
                 connCopy=connection.copyConnection(conn, self)
                 connCopy.markImplicit()
-                self.addConnection(connCopy, affectedInputAIs, 
-                                   affectedOutputAIs)
+                self.findConnectionSrcDest(connCopy, affectedInputAIs,
+                                            affectedOutputAIs)
+                self.addConnection(connCopy, self) 
             # and now run the right handlers for the affected AIs
             if inActiveInstance is not None:
                 affectedOutputAIs.add(inActiveInstance)
             if inActiveInstance is not None:
                 affectedInputAIs.add(inActiveInstance)
-            for ai in affectedOutputAIs:
-                ai.handleNewOutputConnections()
             for ai in affectedInputAIs:
-                ai.handleNewInputConnections()
+                ai.handleNewInput(self, None)
 
     def getBasedir(self):
         """Get the base directory."""
@@ -292,69 +291,62 @@ class ActiveNetwork(network.Network):
             dstAcp=dstAcpInst.getSubnetOutputACP(conn.getDstItemList())
         return (srcAcp, dstAcp)
 
-    #def _addConnection(self, conn, srcAcp, dstAcp):
-        #if srcAcp is not None:
-        # it's a real connection
-        #log.debug("Connecting %s.%s.%s to %s.%s.%s"%
-        #          (srcAcp.activeInstance.name, 
-        #           str(srcAcp.ioItem.getDir()), srcAcp.name,
-        #           dstAcp.activeInstance.name, 
-        #           str(dstAcp.ioItem.getDir()), dstAcp.name))
-        #srcAcp.connectDestination(dstAcp, conn)
-        #log.debug("%s->%s connected"%(srcAcp.value.getFullName(),
-        #                              dstAcp.value.getFullName()))
-        #else:
-        #    # it's an initial value
-        #    dstAcp.setPropagateValue(initialValue) 
+    def findConnectionSrcDest(self, conn, affectedInputAIs, affectedOutputAIs):
+        """First step in making a connection: finding out the source and 
+           destination (and the affected source/destination active instances).
 
-
-    def addConnection(self, conn, affectedInputAIs, affectedOutputAIs):
-        """Add a connection
-            conn = the Connection object
-            affectedInputAIs = a set that will be updated with the active 
-                               instances that have changed inputs because of 
+           conn = the Connection object. Updated by this function
+           affectedInputAIs = a set that will be updated with the affected
+                              destination active instances of the new 
+                              connection.
+           affectedOutputAIs = a set that will be updated with the active 
+                               instances that have changed outputs because of 
                                the new connection. For these active instances,
-                               handleNewInputConnections AND handleNewInput
-                               will have to be called (AFTER affectedOutputAIs
-                               are handled). This makes it possible
-                               to make multiple connections in a single
-                               transaction.
-            affectedOutputAIs = a set that will be updated with the active 
-                                instances that have changed outputs because of 
-                                the new connection. For these active instances,
-                                handleNewOutputConnections will have to be
-                                called. 
-                                This makes it possible to make multiple 
-                                connections in a single transaction.
+                               handleNewOutputConnections will have to be
+                               called. 
+                               This makes it possible to make multiple 
+                               connections in a single transaction.
+           """
+        with self.lock:
+            (srcAcp, dstAcp) = self.__getSrcDestAcps(conn)
+            conn.srcAcp = srcAcp
+            conn.dstAcp = dstAcp
+            if conn.getSrcInstance() is not None:
+                affectedOutputAIs.add(dstAcp.sourceAcp.activeInstance)
+            affectedInputAIs.add(dstAcp.activeInstance)
+            dstAcp.findConnectedInputAIs(affectedInputAIs)
 
-            if both affectedInputAIs and affectedOutputAIs are None, the 
-            affected AIs will be updated immediately.
+    def addConnection(self, conn, sourceTag): 
+        """Add a connection. 
+            findConnectionSrcDest MUST have been called on this connection
+            before, and all affected output AIs MUST be locked at this point.
+            After this, handleConnectedListenerInput() must be called on 
+            affected destination ACPs' value.
+
+            conn = the connection object
+            sourceTag = the source to tag new inputs with
             """
         with self.lock:
-            network.Network.addConnection(self, conn, 
-                                          affectedInputAIs,
-                                          affectedOutputAIs)
-            (srcAcp, dstAcp) = self.__getSrcDestAcps(conn)
-            # it is an error to have only one of them None. 
-            if (affectedInputAIs is None or affectedOutputAIs is None):
-                raise CpcError("ERROR: addConnection affectedInputAI or affectedOutputAI is none")
+            network.Network.addConnection(self, conn, sourceTag)
+            #(srcAcp, dstAcp) = self.__getSrcDestAcps(conn)
             if conn.getSrcInstance() is not None:
-                srcAcp.connectDestination(dstAcp, conn, affectedInputAIs, 
-                                          affectedOutputAIs)
+                conn.srcAcp.connectDestination(conn.dstAcp, conn, sourceTag)
                 log.debug("Active connection points  %s->%s connected"%
-                          (srcAcp.value.getFullName(),
-                           dstAcp.value.getFullName()))
+                          (conn.srcAcp.value.getFullName(),
+                           conn.dstAcp.value.getFullName()))
             else:
                 #dstAcp.activeInstance.setNamedInputValue(
                 #                                conn.getDstIO().getDir(),
                 #                                conn.getDstItemList(),
                 #                                conn.getInitialValue())
                 val=conn.getInitialValue()
-                log.debug("Setting input to %s: %s"%(dstAcp.value.getFullName(),
-                                                     val.value))
-                with dstAcp.activeInstance.lock:
-                    dstAcp.setNewSetValue(conn.getInitialValue(),
-                                          affectedInputAIs)
+                log.debug("Setting input to %s: %s"%
+                          (conn.dstAcp.value.getFullName(), val.value))
+                conn.dstAcp.update(val, sourceTag, None)
+                conn.dstAcp.propagate(sourceTag, None)
+                #with dstAcp.activeInstance.lock:
+                #    dstAcp.setNewSetValue(conn.getInitialValue(),
+                #                          affectedInputAIs)
                     
 
     def activateAll(self):
@@ -370,11 +362,9 @@ class ActiveNetwork(network.Network):
     def writeXML(self, outFile, indent=0):
         """Write an XML description of the active network."""
         indstr=cpc.util.indStr*indent
-        #iindstr=cpc.util.indStr*(indent+1)
         with self.lock:
             outFile.write('%s<network>\n'%indstr)
             for inst in self.instances.itervalues():
-                #if inst.getName() != keywords.Self:
                 if not inst.isImplicit():
                     inst.writeXML(outFile, indent+1) 
             for conn in self.connections:

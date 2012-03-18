@@ -62,7 +62,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
        ActiveConnection objects. Can serve as input or output
        point, with active instance or further connection points associated
        with it."""
-    def __init__(self, val, activeInstance, direction):
+    def __init__(self, val, activeInstance, direction, isConstOut=False):
         """Initialize an active connection point with an any active instance 
            and downstream connections.
 
@@ -71,26 +71,24 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
            activeInstance = the active instance associated with this connection 
                             point
            direction = the direction associated with this acp
+           isConstOut = whether this is a const output connection point:
+                        a connection point that serves to hold a constant
+                        for an input.
         """
+        # tie ourselves into the value.
         self.value=val
         self.value.setListener(self)
-        # new value; needed to collect updated values into an update transaction
-        # self.newValue=None
-        # self.newValueSource=None
-        # new value from manual setting. Used for update transactions generated
-        # by user (cpcc set)
-        self.newSetValue=None
-        #self.newSetValueSeqnr=0
-        # 
-        self.dests=[]
+        # immediate destination active connection points
+        self.directDests=[]
+        # the parent active instance
         self.activeInstance=activeInstance
         self.sourceValue=self.value
         self.sourceAcp=self
-        self.receiverList=[]
+        #self.receiverList=[]
         self.direction=direction
-        # the destination active instances:
-        self.destAIs=set()
-        self.newlyAdded=False
+        # precomputed set of all the direct acps associated with the value of 
+        # this acp.
+        self.listeners=[]
 
     def getValue(self):
         return self.value
@@ -105,104 +103,96 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         #self.sourceInstances=sourceInstance
         self.sourceValue=sourceValue
         self.sourceAcp=sourceAcp
-        for dest in self.dests:
+        for dest in self.directDests:
             dest.acp.setSource(sourceAcp, sourceValue)
 
-    def copyValue(self, seqNr):
-        self.value.update(self.sourceValue, seqNr)
-        # if it's copied this way, this specific item is always updated.
-        # Any sub-items could be marked updated before.
-        self.value.markUpdated(True)
+    def stageNewInput(self, source, seqNr):
+        """Stage new input into the newValue fields of the value
+          
+           source = the source output item/project
+           seqNr = the new sequence number (or None)
+           """
+        self.value.stageNewValue(self.sourceValue, source, seqNr)
 
-    def copySpecificSourceValue(self, sourceAI, seqNr):
-        """Check and update this acp's value based on the presence of an 
-           updated value in the source, if sourceAI and seqNr match the 
-           source's value."""
-        if ( sourceAI == self.sourceAcp.activeInstance and 
-               seqNr == self.sourceValue.seqNr ): 
-            self.value.update(self.sourceValue, seqNr)
-            self.value.markUpdated(True)
-            return True
-        return False
-
-    def copyNewSetValue(self):
-        """Check and update this acp's value based on the presence of an 
-           updated value in the source in newSetValue."""
-        if self.newSetValue is not None:
-            self.value.update(self.newSetValue, self.value.seqNr)
-            self.value.markUpdated(True)
-            self.newSetValue=None
-            return True
-        return False
-
-    def setNewSetValue(self, val, affectedInputAIs):
-        """Set a newSetValue val to be checked for with copyNewSetValue or
-           copySpecificSourceValue."""
-        self._searchDestinationAI(affectedInputAIs, True, val)
-
-    def getDestinations(self):
-        """Get all downstream connections."""
-        return self.dests
-
-    def connectDestination(self, destAcp, conn, 
-                           affectedInputAIs, affectedOutputAIs):
+    def connectDestination(self, destAcp, conn, source):
         """Add a downstream connection to another activeConnectionPoint. 
-           To be called from ActiveNetwork.addConnection()."""
+           To be called from ActiveNetwork.addConnection().
+   
+           NOTE: assumes the active instance's output lock is locked
+           """
+        # now do the actual connecting bit
         dst=Dest(destAcp, conn)
-        self.dests.append(dst)
-        destAcp.newlyAdded=True
-        # set the source.
+        self.directDests.append(dst)
+        # handle the destination's end.
         destAcp.setSource(self.sourceAcp, self.sourceValue)
-        # now figure out which active instances changed
-        affectedOutputAIs.add(self.sourceAcp.activeInstance)
-        destAcp._searchDestinationAI(affectedInputAIs, True)
-
-    def disconnectDestination(self, activeConnection, conn):
-        """Remove an existing downstream connection to another 
-           activeConnectionPoint."""
-        found=None
-        for dest in self.dests:
-            if dest.conn== conn:
-                found=dest
-                break
-        if found:
-            self.dests.remove(found)
-
-    def update(self):
-        """Function inherited from ValueUpdateListener. Called whenever a
-           value changes."""
-        pass
+        # recalculate the output connection points
+        self.activeInstance.handleNewOutputConnections()
+        # propagate our value downstream
+        self.value.propagate(source, None)
 
 
-    def searchDestinationActiveInstances(self):
-        """Get the set of destination active instances for this source
-           acp."""
-        self.destAIs=set()
-        self._searchDestinationAI(self.destAIs, False)
+    def update(self, newValue, sourceTag, seqNr):
+        """Update the value associated with this connection point."""
+        self.value.update(newValue, seqNr, sourceTag)
 
-    def getDestinationActiveInstances(self):
-        """Return the pre-computed set of destination active instances."""
-        return self.destAIs
+    def propagate(self, sourceTag, seqNr):
+        """Accept a new value with a source tag and sequence number, 
+           and propagate it to any listeners."""
+        # first handle direct destinations
+        self._propagateDests(sourceTag, seqNr)
+        # then handle other listeners to the same value
+        for listener in self.listeners:
+            # these listeners are in the same value tree, so no need to update
+            listener.propagate(sourceTag, seqNr)
 
-    def _searchDestinationAI(self, destAIs, selfAdd, newVal=None):
-        """Helper function for searchDestinationActiveInstances."""
-        if selfAdd:
-            log.debug("  Adding dest %s"% self.value.getFullName())
-            destAIs.add(self.activeInstance)
-            if newVal is not None:
-                log.debug("     Adding newSetValue to %s"%
-                          self.value.getFullName())
-                self.newSetValue=newVal
-        # first find direct destinations
-        for dest in self.dests:
-            dest.acp._searchDestinationAI(destAIs, True, newVal)
-        # find other listeners in sub-values
-        listeners=self.value.findListeners()
-        for listener in listeners:
-            if listener is not self:
-                listener._searchDestinationAI(destAIs, True, newVal)
+    def _propagateDests(self, sourceTag, seqNr):
+        """Propagate an updated value to the direct destinations of this acp."""
+        for dest in self.directDests:
+            # because in it's another value tree, we first need to update it
+            dest.acp.value.acceptNewValue(self.value, sourceTag)
+            dest.acp.propagate(sourceTag, seqNr)
 
+    def notifyDestinations(self, sourceTag, seqNr):
+        """Notify the ActiveInstance associated with this acp through 
+           handleNewInput(), and notify all listeners through 
+           notifyListeners()."""
+        self._notifyDests(sourceTag, seqNr)
+        for listener in self.listeners:
+            # these listeners are in the same value tree, so no need to update
+            listener.notifyDestinations(sourceTag, seqNr)
 
+    def _notifyDests(self, sourceTag, seqNr):
+        """Helper function for notifyDestinations()"""
+        for dest in self.directDests:
+            # because in it's another value tree, we first need to update it
+            dest.acp.activeInstance.handleNewInput(sourceTag, seqNr)
+            dest.acp.notifyDestinations(sourceTag, seqNr)
+
+    def searchDestinations(self):
+        """Get the set of destination active instances for this source acp."""
+        self.listeners=[]
+        self.value.findListeners(self.listeners, self)
+
+    def getListeners(self):
+        """Return the pre-computed set listeners on the value of this acp."""
+        return self.listeners
+
+    def findConnectedInputAIs(self, affectedInputAIs):
+        """Find all input AIs associated with this acp and add them to the set
+           affectedInputAIs"""
+        # we don't add self; that's already done when this function is called
+        # (even recursively).
+        self._findConnectedInputAIs(affectedInputAIs)
+        for listener in self.listeners:
+            listener._findConnectedInputAIs(affectedInputAIs)
+
+    def _findConnectedInputAIs(self, affectedInputAIs):
+        """Helper function for findConnectedInputAIs."""
+        for dest in self.directDests:
+            # we add it and then make it search for its direct destinations
+            # in all its listeners
+            affectedInputAIs.add(dest.acp.activeInstance)
+            dest.acp.findConnectedInputAIs(affectedInputAIs)
 
     def writeXML(self, outf, indent=0):
         """Write value to xml"""

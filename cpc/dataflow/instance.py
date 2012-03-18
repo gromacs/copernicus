@@ -162,7 +162,7 @@ class Instance(object):
     def addInputConnection(self, conn, isDst):
         """Set an input connection, possibly replacing an existing input
            connection with that input name."""
-        log.debug("Adding input connection %s"%(conn.dstString()))
+        #log.debug("Adding input connection %s"%(conn.dstString()))
         if isDst:
             for iconn in self.inputConns:
                 # check whether one of the inputs completely subsumes the other
@@ -184,7 +184,7 @@ class Instance(object):
     def addSubnetInputConnection(self, conn, isDst):
         """Set an input connection, possibly replacing an existing input
            connection with that input name."""
-        log.debug("Adding subnet input connection %s"%(conn.dstString()))
+        #log.debug("Adding subnet input connection %s"%(conn.dstString()))
         if isDst:
             for iconn in self.subnetInputConns:
                 # check whether one of the inputs completely subsumes the other

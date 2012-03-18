@@ -155,12 +155,12 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         log.debug("Starting file reading.")
         self._doRead(infile)
         log.debug("Reading finished. Processing affected active instances")
-        for ai in self.affectedOutputAIs:
-            ai.handleNewOutputConnections()
+        #for ai in self.affectedOutputAIs:
+        #    ai.handleNewOutputConnections()
+        #for ai in self.affectedInputAIs:
+            #ai.handleNewInputConnections()
         for ai in self.affectedInputAIs:
-            ai.handleNewInputConnections()
-        for ai in self.affectedInputAIs:
-            ai.handleNewInput(None, 0)
+            ai.handleNewInput(self, None)
         #except ProjectXMLError as e:
         #    raise e
         #except apperror.ApplicationError as e:
@@ -455,8 +455,9 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             cn=connection.makeInitialValue(self.network, 
                                            dstInstName, dstDir, 
                                            dstItemName, val)
-            self.network.addConnection(cn, self.affectedInputAIs,
-                                       self.affectedOutputAIs)
+            self.network.findConnectionSrcDest(cn, self.affectedInputAIs,
+                                               self.affectedOutputAIs)
+            self.network.addConnection(cn, self)
         elif name == "connection":
             if self.network is None:
                 raise ProjectXMLError("connection without network", self)
@@ -488,8 +489,12 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 cn=connection.makeInitialValue(self.network,
                                                dstInstName, dstDir, dstItemName,
                                                val)
-            self.network.addConnection(cn, self.affectedInputAIs,
-                                       self.affectedOutputAIs)
+
+            self.network.findConnectionSrcDest(cn, self.affectedInputAIs,
+                                               self.affectedOutputAIs)
+            self.network.addConnection(cn, self)
+            #self.network.addConnection(cn, self.affectedInputAIs,
+            #                           self.affectedOutputAIs)
         elif name=="controller":
             # generic items
             if cpc.util.getBooleanAttribute(attrs,"persistent_dir"):

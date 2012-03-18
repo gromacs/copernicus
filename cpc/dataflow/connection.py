@@ -160,9 +160,9 @@ def makeConnection(network,
         srcSubItem = sub items (array subscripts, etc) for the source
         ...
         """
-    log.debug("making connection %s.%s.%s -> %s.%s.%s"%
-              (srcInstanceName, srcDir, str(srcItemList),
-               dstInstanceName, dstDir, str(dstItemList)))
+    #log.debug("making connection %s.%s.%s -> %s.%s.%s"%
+    #          (srcInstanceName, srcDir, str(srcItemList),
+    #           dstInstanceName, dstDir, str(dstItemList)))
 
     srcInst=network.getInstance(srcInstanceName)
     if srcDir==function_io.inputs:
@@ -267,6 +267,11 @@ class Connection(object):
         self.srcExternal=False # whether the source is an 'ext_in' object
         self.dstExternal=False # whether the destination is an 'ext_out' object
         #self.subnetLoop=False # whether this connection is self subnet-to-net
+
+        # source and destination active connection points for when making
+        # changes to active networks.
+        self.srcAcp = None
+        self.dstAcp = None
 
     def markImplicit(self):
         """Mark this connection as implicit: it shouldn't be written out

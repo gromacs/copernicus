@@ -63,6 +63,7 @@ class ActiveValue(value.Value):
                              createObject=createObject, fileList=fileList)
         self.seqNr=seqNr # sequence number.
         self.listener=None
+        self.sourceTag=None
 
     def setListener(self, listener):
         """Set a pointer to an associated listener (usually an active 
@@ -72,9 +73,11 @@ class ActiveValue(value.Value):
         """Get the associated listener."""
         return self.listener
 
-    def update(self, outputVal, newSeqNr):
+    def update(self, outputVal, newSeqNr, sourceTag=None):
         """Set a new value from a Value, and call update() on all subitems. 
            This keeps all the metadata intact."""
+        if newSeqNr is None:
+            newSeqNr=self.seqNr
         if self.seqNr > newSeqNr:
             log.debug("Rejecting update because of sequence number: %d>%d."%
                       (self.seqNr, newSeqNr))
@@ -84,6 +87,7 @@ class ActiveValue(value.Value):
                                  (self.getFullName(),
                                   self.basetype.getName(), 
                                   outputVal.basetype.getName()))
+        self.sourceTag=sourceTag
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
@@ -155,57 +159,125 @@ class ActiveValue(value.Value):
         else:
             raise ActiveValError("Tried to add member to non-list value")
 
-    def _findSubListeners(self, listlist):
+    def acceptNewValue(self, sourceValue, sourceTag):
+        """Find all newly set value of this value and any of its children that
+           originate from source."""
+        ret=False
+        #log.debug("Trying new value for %s"%(self.getFullName()))
+        if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
+            #log.debug("Accepting new value for %s"%(self.getFullName()))
+            if sourceValue.seqNr is None:
+                sourceValue.seqNr=self.seqNr
+            if sourceValue.seqNr >= self.seqNr:
+                self.update(sourceValue, sourceValue.seqNr, sourceTag)
+                #sourceValue.sourceTag=None
+                #sourceValue.seqNr=None
+                ret=True
+        #else:
+        #    log.debug("%s != %s"%(sourceValue.sourceTag, sourceTag))
+        # now check all the child values
+        if isinstance(sourceValue.value, dict):
+            for name, val in sourceValue.value.iteritems():
+                if name in self.value:
+                    rt=self.value[name].acceptNewValue(val,sourceTag)
+                    ret=ret or rt
+                else:
+                    # only check the direct descendants
+                    if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
+                        self.value[name]=self._create(None, 
+                                                      self.type.getMember(name),
+                                                      members[name], name)
+                        ret=ret or self.value[name].acceptNewValue(val,
+                                                                   sourceTag)
+        elif isinstance(self.value, list):
+            i=0
+            for val in sourceValue.value:
+                if i+1 < len(self.value):
+                    ret=ret or self.value[i].acceptNewValue(val, sourceTag)
+                else:
+                    # only check the direct descendants
+                    if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
+                        self.value.append(self._create(None, 
+                                                      self.type.getMember(name),
+                                                      members[name], name))
+                        rt=self.value[i].acceptNewValue(val, sourceTag)
+                        ret=ret or rt
+                i+=1
+        return ret
+
+    def findListeners(self, listeners, omitSelf=None):
+        """Find all listeners on this value and all its subvalues. 
+           listeners = a (usually empty) list to add listeners to
+           omitSelf = an optional listener to omit."""
+        self._findChildListeners(listeners, omitSelf)
+        if self.parent is not None:
+            self.parent._findParentListeners(listeners, omitSelf)
+    def _findChildListeners(self, listlist, omitSelf):
         """Helper function for findListeners()."""
-        if self.listener is not None:
+        if (self.listener is not None) and (self.listener!=omitSelf):
             listlist.append(self.listener)
         if isinstance(self.value, dict):
             for val in self.value.itervalues():
-                val._findSubListeners(listlist)
+                val._findChildListeners(listlist, omitSelf)
         elif isinstance(self.value, list):
             for val in self.value:
-                val._findSubListeners(listlist)
-
-    def _findSuperListeners(self, listlist):
+                val._findChildListeners(listlist, omitSelf)
+    def _findParentListeners(self, listlist, omitSelf):
         """Helper function for findListeners()."""
-        if self.listener is not None:
+        if (self.listener is not None) and (self.listener!=omitSelf):
             listlist.append(self.listener)
         if self.parent is not None:
-            self.parent._findSuperListeners(listlist)
+            self.parent._findParentListeners(listlist, omitSelf)
 
-    def findListeners(self):
-        """Find all listeners on this value and all its subvalues."""
-        listlist=[]
-        self._findSubListeners(listlist)
+    def propagate(self, sourceTag, seqNr):
+        """Find all listeners associated with this value and update their 
+           values, calling propagate on their associated listeners."""
         if self.parent is not None:
-            self.parent._findSuperListeners(listlist)
-        return listlist
-
-
-    def _handleParentCLI(self, sourceAI, seqNr):
-        """Helper function for handleConnectedListenerInput()"""
+            self.parent._propagateParent(sourceTag, seqNr)
+        self._propagateChild(sourceTag, seqNr)
+    def _propagateParent(self, sourceTag, seqNr):
+        """Helper function for propagateListenerOutput()"""
         if self.listener is not None:
-            for ai in self.listener.getDestinationActiveInstances():
-                ai.handleNewInput(sourceAI, seqNr)
+            self.listener.propagate(sourceTag, seqNr)
+            #for acp in self.listener.getDestinationACPs():
+            #    acp.stageNewInput(sourceTag, seqNr)
         if self.parent is not None:
-            self.parent._handleParentCLI(sourceAI, seqNr)
-
-    def _handleChildCLI(self, sourceAI, seqNr):
-        """Helper function for handleConnectedListenerInput()"""
+            self.parent._propagateParent(sourceTag, seqNr)
+    def _propagateChild(self, sourceTag, seqNr):
+        """Helper function for propagateListenerOutput()"""
         if self.listener is not None:
-            for ai in self.listener.getDestinationActiveInstances():
-                ai.handleNewInput(sourceAI, seqNr)
+            self.listener.propagate(sourceTag, seqNr)
+            #for acp in self.listener.getDestinationACPs():
+            #    acp.stageNewInput(sourceTag, seqNr)
         if isinstance(self.value, dict):
             for val in self.value.itervalues():
-                val._handleChildCLI(sourceAI, seqNr)
+                val._propagateChild(sourceTag, seqNr)
         elif isinstance(self.value, list):
             for val in self.value:
-                val._handleChildCLI(sourceAI, seqNr)
+                val._propagateChild(sourceTag, seqNr)
 
-    def handleConnectedListenerInput(self, sourceAI, seqNr):
-        """Find all listeners associated with this value and call 
-           handleNewInput() on all of the destinations."""
+    def notifyListeners(self, sourceTag, seqNr):
+        """Find all listeners' destinations associated with this value and call 
+           notify() on them. """
+           #handleNewInput() on all of the destinations."""
         if self.parent is not None:
-            self._handleParentCLI(sourceAI, seqNr)
-        self._handleChildCLI(sourceAI, seqNr)
+            self.parent._notifyParentListeners(sourceTag, seqNr)
+        self._notifyChildListeners(sourceTag, seqNr)
+    def _notifyParentListeners(self, sourceTag, seqNr):
+        """Helper function for notifyListeners()"""
+        if self.listener is not None:
+            self.listener.notifyDestinations(sourceTag, seqNr)
+        if self.parent is not None:
+            self.parent._notifyParentListeners(sourceTag, seqNr)
+    def _notifyChildListeners(self, sourceTag, seqNr):
+        """Helper function for notifyListeners()"""
+        if self.listener is not None:
+            self.listener.notifyDestinations(sourceTag, seqNr)
+        if isinstance(self.value, dict):
+            for val in self.value.itervalues():
+                val._notifyChildListeners(sourceTag, seqNr)
+        elif isinstance(self.value, list):
+            for val in self.value:
+                val._notifyChildListeners(sourceTag, seqNr)
+
 

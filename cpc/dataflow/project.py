@@ -80,8 +80,12 @@ class Project(object):
         # the file list
         self.fileList=value.FileList(basedir) 
         # create the active network (the top-level network)
+        affectedInputAIs=set()
         self.active=active_network.ActiveNetwork(self, None, self.queue, 
                                                  basedir, self.networkLock) 
+        if len(affectedInputAIs)!=0:
+            raise ProjectError("Top-level active network has initial elements!")
+
         
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", "", self.active)
@@ -190,7 +194,7 @@ class Project(object):
         """Commit a set of changes scheduled with scheduleSet()"""
         affectedInputAIs=set()
         affectedOutputAIs=set()
-        inputsLocked=False
+        #inputsLocked=False
         outputsLocked=False
         outf.write("Committing scheduled changes:\n")
         with self.transactionListLock:
@@ -198,33 +202,20 @@ class Project(object):
                 try:
                     # first get all affected active instances.
                     for item in self.transactionList:
-                        item.getAffected(self, 
-                                         affectedInputAIs, 
+                        item.getAffected(self, affectedInputAIs, 
                                          affectedOutputAIs)
                     # lock all affected I/O active instances
                     for ai in affectedOutputAIs:
                         ai.outputLock.acquire()
                     outputsLocked=True
-                    for ai in affectedInputAIs:
-                        ai.inputLock.acquire()
-                    inputsLocked=True
-                    
                     # now run the transaction
                     for item in self.transactionList:
                         outf.write("- ")
-                        item.run(self, outf)
-                    # now handle new connections
-                    for ai in affectedOutputAIs:
-                        ai.handleNewOutputConnections()
+                        item.run(self, self, outf)
                     for ai in affectedInputAIs:
-                        ai.handleNewInputConnections()
-                    for ai in affectedInputAIs:
-                        ai.handleNewInput(None, 0)
+                        ai.handleNewInput(self, 0)
                 finally:
                     # make sure everything is released.
-                    if inputsLocked:
-                        for ai in affectedInputAIs:
-                            ai.inputLock.release()
                     if outputsLocked:
                         for ai in affectedOutputAIs:
                             ai.outputLock.release()
