@@ -52,6 +52,7 @@ class AtomicFunction(network_function.NetworkedFunction):
            output = list of output items
         """
         network_function.NetworkedFunction.__init__(self, name, lib)
+        self.genTasks=True
 
 
 class SimpleFunctionFunction(AtomicFunction):

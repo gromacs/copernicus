@@ -29,6 +29,7 @@ import copy
 import cpc.util
 import apperror
 import value
+import function_io
 import active_value
 
 class ActiveConnectionError(apperror.ApplicationError):
@@ -62,7 +63,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
        ActiveConnection objects. Can serve as input or output
        point, with active instance or further connection points associated
        with it."""
-    def __init__(self, val, activeInstance, direction, isConstOut=False):
+    def __init__(self, val, activeInstance, direction):
         """Initialize an active connection point with an any active instance 
            and downstream connections.
 
@@ -71,9 +72,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
            activeInstance = the active instance associated with this connection 
                             point
            direction = the direction associated with this acp
-           isConstOut = whether this is a const output connection point:
-                        a connection point that serves to hold a constant
-                        for an input.
         """
         # tie ourselves into the value.
         self.value=val
@@ -173,7 +171,9 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Helper function for notifyDestinations()"""
         for dest in self.directDests:
             # because in it's another value tree, we first need to update it
-            dest.acp.activeInstance.handleNewInput(sourceTag, seqNr)
+            if ( (dest.acp.direction == function_io.inputs) or 
+                 (dest.acp.direction == function_io.subnetInputs) ):
+                dest.acp.activeInstance.handleNewInput(sourceTag, seqNr)
             dest.acp.notifyDestinations(sourceTag, seqNr)
 
     def searchDestinations(self):

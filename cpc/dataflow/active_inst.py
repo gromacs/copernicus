@@ -133,18 +133,11 @@ class ActiveInstance(object):
         self.stagedInputVal=active_value.ActiveValue(None, inst.getInputs(),
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
-        #self.stagedOutputVal=active_value.ActiveValue(None, inst.getOutputs(),
-        #                  selfName="%s:%s"%(self.getCanonicalName(), "out"),
-        #                  fileList=fileList)
 
         self.stagedSubnetInputVal=active_value.ActiveValue(None, 
                           inst.getSubnetInputs(),
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
-        #self.stagedSubnetOutputVal=active_value.ActiveValue(None, 
-        #                  inst.getSubnetOutputs(),
-        #                 selfName="%s:%s"%(self.getCanonicalName(), "sub_out"),
-        #                  fileList=fileList)
 
         # list of active connection points
         self.inputAcps=[]
@@ -156,7 +149,7 @@ class ActiveInstance(object):
         if ( (self.function.outputDirNeeded() or 
               self.function.persistentDirNeeded() or
               self.function.hasLog()) and 
-            not os.path.exists(dirName)):
+             not os.path.exists(dirName)):
             os.mkdir(dirName)
         self.baseDir=dirName
         # make a persistent scratch dir if needed.
@@ -174,8 +167,6 @@ class ActiveInstance(object):
         # an ever-increasing number to prevent outputs from overwriting 
         # each other
         self.outputDirNr=0 
-
-        #self.updated=False
 
         # There are three locks: lock, inputLock and outputLock. 
         # Because updates involve multiple active instances, maintaining 
@@ -656,7 +647,8 @@ class ActiveInstance(object):
         """Whether all inputs are there for the instance to be run.
            Assumes self.inputLock is locked.
            """
-        if (self.state == ActiveInstance.active):
+        if ( (self.state == ActiveInstance.active) and
+             (self.function.genTasks) ):
             ret=self.inputVal.haveAllRequiredValues()
             #log.debug("Checking whether instance %s can run: %s"%
             #          (self.getCanonicalName(), str(ret)))

@@ -65,10 +65,8 @@ class Function(description.Describable):
         self.name=name
 
         # the I/O items are types (lists)
-        self.inputs=vtype.ListType("%s:in"%self.name, vtype.listType,
-                                   lib=lib)
-        self.outputs=vtype.ListType("%s:out"%self.name, vtype.listType,
-                                    lib=lib)
+        self.inputs=vtype.ListType("%s:in"%self.name, vtype.listType, lib=lib)
+        self.outputs=vtype.ListType("%s:out"%self.name, vtype.listType, lib=lib)
         self.subnetInputs=vtype.ListType("%s:sub-in"%self.name, 
                                          vtype.listType, lib=lib)
         self.subnetOutputs=vtype.ListType("%s:sub-out"%self.name, 
@@ -77,6 +75,9 @@ class Function(description.Describable):
         self.outputs.markImplicit()
         self.subnetInputs.markImplicit()
         self.subnetOutputs.markImplicit()
+
+        self.genTasks=True # whether to generate tasks based on this function
+                           # NetworkFunctions, for example, have no tasks
         self.log=False # whether the function wants to log output
 
         # whether an output dir is needed despite having no input/output files
@@ -268,6 +269,7 @@ class ConstFunction(Function):
         inputs=[]
         outputs=[ function_io.FunctionOutput("val", tp)  ]
         Function.__init__(self, "const", inputs, outputs)
+        self.genTasks=False
 
     def writeXML(self, outFile, indent=0):
         """The function itself does not need to be described."""

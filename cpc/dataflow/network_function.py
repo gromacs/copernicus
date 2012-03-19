@@ -53,6 +53,7 @@ class SelfFunction(function.Function):
         function.Function.__init__(self, keywords.Self, [], [])
         self.name=keywords.Self # this is its name
         self.function=inFunction # the parent function
+        self.genTasks=False
 
 class SelfInstance(instance.Instance):
     """An instance specifically for the 'self' object."""
@@ -112,6 +113,7 @@ class NetworkFunction(NetworkedFunction):
            input = list of input items
            output = list of output items """
         NetworkedFunction.__init__(self, name, lib)
+        self.genTasks=False
 
     #def addInput(self, ioitem):
     #    """Add an input, and a corresponding subnetOutput and its connection.
