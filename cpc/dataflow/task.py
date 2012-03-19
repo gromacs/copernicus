@@ -146,6 +146,8 @@ class Task(object):
                 #self.activeInstance.addNewSubnetInput(newSubnetInput.name, tp)
                 si=self.activeInstance.getSubnetInputs()
                 si.addMember(newSubnetInput.name, tp, True, False)
+                si=self.activeInstance.getStagedSubnetInputs()
+                si.addMember(newSubnetInput.name, tp, True, False)
         # and new subnet outputs
         log.debug("new subnet outputs: %s"%str(out.newSubnetOutputs))
         if out.newSubnetOutputs is not None:

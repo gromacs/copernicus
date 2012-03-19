@@ -149,7 +149,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # then handle other listeners to the same value
         for listener in self.listeners:
             # these listeners are in the same value tree, so no need to update
-            listener.propagate(sourceTag, seqNr)
+            listener._propagateDests(sourceTag, seqNr)
 
     def _propagateDests(self, sourceTag, seqNr):
         """Propagate an updated value to the direct destinations of this acp."""
@@ -165,7 +165,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         self._notifyDests(sourceTag, seqNr)
         for listener in self.listeners:
             # these listeners are in the same value tree, so no need to update
-            listener.notifyDestinations(sourceTag, seqNr)
+            listener._notifyDests(sourceTag, seqNr)
 
     def _notifyDests(self, sourceTag, seqNr):
         """Helper function for notifyDestinations()"""

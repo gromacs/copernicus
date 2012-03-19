@@ -189,7 +189,7 @@ class ActiveValue(value.Value):
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
                         self.value[name]=self._create(None, 
                                                       self.type.getMember(name),
-                                                      members[name], name)
+                                                      name)
                         ret=ret or self.value[name].acceptNewValue(val,
                                                                    sourceTag)
         elif isinstance(self.value, list):
@@ -201,8 +201,8 @@ class ActiveValue(value.Value):
                     # only check the direct descendants
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
                         self.value.append(self._create(None, 
-                                                      self.type.getMember(name),
-                                                      members[name], name))
+                                                      self.type.getMembers(),
+                                                      i))
                         rt=self.value[i].acceptNewValue(val, sourceTag)
                         ret=ret or rt
                 i+=1

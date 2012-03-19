@@ -289,6 +289,9 @@ class ActiveInstance(object):
     def getSubnetInputs(self):
         """Get the subnet input value object."""
         return self.subnetInputVal
+    def getStagedSubnetInputs(self):
+        """Get the staged subnet input value object."""
+        return self.stagedSubnetInputVal
     def getSubnetOutputs(self):
         """Get the subnet output value object."""
         return self.subnetOutputVal
