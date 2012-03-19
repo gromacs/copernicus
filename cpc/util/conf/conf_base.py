@@ -30,6 +30,9 @@ import cpc.util.exception
 import cpc.util.cert_req_conf_template
 import cpc.util.ca_conf_template
 
+from ConfigParser import SafeConfigParser
+
+
 class ConfError(cpc.util.exception.CpcError):
     pass
 
@@ -96,7 +99,9 @@ class ConfValue:
 class Conf:
     """Common configuration class. Reads from copernicus base directory"""
     __shared_state = {}   
-    GLOBAL_DIR = os.path.join(os.environ["HOME"],".copernicus")
+
+    #GLOBAL_DIR = os.path.join(os.environ["HOME"],parser.get('default','app-name'))
+
     
     def __init__(self,conffile='cpc.conf', confdir = None,reInit =False):
         """Read basic configuration stuff"""
@@ -114,14 +119,22 @@ class Conf:
         self._add('hostname',self.hostname,'hostname',userSettable=True)
         
         # We first need to find out where our configuration files are.
+
+
+        parser = SafeConfigParser()
+        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+        parser.read(os.path.join(base,'properties'))
+
+        base_path = ".%s"%parser.get('default','app-name')
+
         self._add('global_dir', os.path.join(os.environ["HOME"],
-                                             ".copernicus"),
+                    base_path),
                   'The global configuration directory',
                   userSettable=True)
         
                   
         self._add('conf_dir', os.path.join(os.environ["HOME"],
-                                           ".copernicus",
+                                           base_path,
                                            self.hostname),
                   'The configuration directory',
                   userSettable=True)

@@ -66,10 +66,6 @@ class SecureServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
         fpem = conf.getPrivateKey()                    
         fcert = conf.getCertFile()
         ca = conf.getCaChainFile()
-
-        print ca
-        print fpem
-        print fcert
         sock = socket.socket(self.address_family,self.socket_type)
 
         self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\

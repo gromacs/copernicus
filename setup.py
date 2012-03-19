@@ -21,6 +21,7 @@ print "setup.py not supported yet. Please run commands directly (i.e. like ./cpc
 import sys
 sys.exit(1)
 
+
 from distutils.core import setup
 
 setup(
@@ -51,6 +52,7 @@ setup(
                 'cpc.worker' ],
       #package_dir={ 'copernicus' : 'copernicus'} ,
       scripts=['cpcc','cpc-server','cpc-worker'],
+
       license='GPL',
       long_description=open('README.txt').read(),
      )

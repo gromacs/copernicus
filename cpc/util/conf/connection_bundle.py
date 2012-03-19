@@ -22,6 +22,7 @@ Created on Apr 11, 2011
 
 @author: iman
 '''
+from ConfigParser import SafeConfigParser
 import socket
 import tempfile
 import sys
@@ -110,15 +111,20 @@ class ConnectionBundle(Conf):
 
 
         #Worker specific configs
+        parser = SafeConfigParser()
+        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+        parser.read(os.path.join(base,'properties'))
+
+        base_path = ".%s"%parser.get('default','app-name')
 
         self._add('global_dir', os.path.join(os.environ["HOME"],
-            ".copernicus"),
+            base_path),
             'The global configuration directory',
             userSettable=True)
 
-        #FIXME after handling the excutables dir remove all this
+        #FIXME after handling executables all this can be handled
         self._add('conf_dir', os.path.join(os.environ["HOME"],
-            ".copernicus",
+            base_path,
             self.getHostName()),
             'The configuration directory',
             userSettable=True)
@@ -140,7 +146,7 @@ class ConnectionBundle(Conf):
             True)
 
         self._add('run_dir', os.path.join(os.environ["HOME"],
-            "copernicus",  #FIXME not hardcoded copernicus path here
+            "worker",
             "run"),
             "The run directory for the run client",
             True)
