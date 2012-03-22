@@ -200,7 +200,7 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.workerFailedRequest(id)).pprint()
     elif cmd == "command-failed":
-        id=getArg(args, 1, "command ID")
+        id=getArg(args, 1, "command ID", 0)
         #server=None
         clnt=ClientMessage()
         ProcessedResponse(clnt.commandFailedRequest(id)).pprint()

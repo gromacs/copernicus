@@ -104,6 +104,8 @@ class Command(object):
         self.running=running # whether the command is running
         self.id=id
         self.workerServer=workerServer
+        # the cpu time in seconds used by this command
+        self.cputime=0
         # dictionary of reserved resource objects
         self.reserved={}
         # dictionary of required resource objects
@@ -182,6 +184,17 @@ class Command(object):
         else:
             return None
 
+    def addCputime(self, cputime):
+        """Add a number of cpu seconds used."""
+        self.cputime += cputime
+
+    def setCputime(self, cputime):
+        """Set a number of cpu seconds used."""
+        self.cputime = cputime
+
+    def getCputime(self):
+        """Return the amount of cpu seconds used for this command."""
+        return self.cputime
 
     def addMinRequired(self, rsrc):
         """Add a single required resource.
@@ -277,6 +290,8 @@ class Command(object):
             outf.write(' min_version="%s"'%self.minVersion.getStr())
         if self.maxVersion is not None:
             outf.write(' max_version="%s"'%self.maxVersion.getStr())
+        if self.cputime > 0:
+            outf.write(' used_cpu_time="%d"'%self.cputime)
         outf.write('>\n')
         for arg in self.args:
             outf.write('%s<arg value="%s"/>\n'%(iindstr, arg))
@@ -314,6 +329,8 @@ class Command(object):
         commandDict['priority'] = self.getFullPriority()
         #commandDict['dir'] = os.path.join(self.task.dir, self.dir)
         commandDict['dir'] = self.dir
+        if self.cputime > 0:
+            commandDict['used-cpu-time'] = self.cputime
         return commandDict
 
     def writeWorkerXML(self, outf):
@@ -380,6 +397,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
             dir=None
             id=None
             workerServer=None
+            cputime=0
             if attrs.has_key('id'):
                 id=attrs.getValue('id')
             #if attrs.has_key('project_id'):
@@ -392,6 +410,8 @@ class CommandReader(xml.sax.handler.ContentHandler):
                 workerServer=attrs.getValue('worker_server')
             if not attrs.has_key('executable'):
                 raise CommandReaderError("command has no executable", self.loc)
+            if attrs.has_key('used_cpu_time'):
+                cputime=float(attrs.getValue('used_cpu_time'))
             executable=attrs.getValue('executable')
             if attrs.has_key('add_priority'):
                 try:
@@ -415,6 +435,8 @@ class CommandReader(xml.sax.handler.ContentHandler):
                                     addPriority, minVersion, maxVersion, 
                                     id=id, running=running, 
                                     workerServer=workerServer)
+            if cputime > 0:
+                self.setCputime(cputime)
         elif name == 'arg':
             if not attrs.has_key('value'):
                 

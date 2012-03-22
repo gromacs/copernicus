@@ -230,8 +230,8 @@ class SCWorkerReady(ServerCommand):
                         tmp.write(message.read(len(message)))
                         tmp.seek(0)    
                         
-                        for key in clientResponse.headers:
-                            print "%s:%s"%(key,clientResponse.headers[key])
+                        #for key in clientResponse.headers:
+                        #    print "%s:%s"%(key,clientResponse.headers[key])
                                                     
                         response.setFile(tmp,'application/x-tar')
                         response.headers['originating-server']=\
@@ -242,7 +242,8 @@ class SCWorkerReady(ServerCommand):
                 response.add("No command")
 
 class SCCommandFinishedForward(ServerCommand):
-    """Get forwarded finished command info. The command output is not sent in this message"""
+    """Get forwarded finished command info. The command output is not sent in 
+       this message"""
     def __init__(self):
         ServerCommand.__init__(self, "command-finished-forward")
 
@@ -251,6 +252,9 @@ class SCCommandFinishedForward(ServerCommand):
         cmdID=request.getParam('cmd_id')
         workerServer=request.getParam('worker_server')
         cmd=serverState.getRunningCmdList().get(cmdID)
+        cputime=0
+        if request.hasParam('used_cpu_time'):
+            cputime=float(request.getParam('used_cpu_time'))
       
         if workerServer is not None:  
             #remote asset tracking
@@ -269,6 +273,7 @@ class SCCommandFinishedForward(ServerCommand):
         #TODO should be located elsewhere
         with self.lock:
             cmd.running = False
+            cmd.addCputime(cputime)
             if runfile is not None:
                 log.debug("extracting file for %s to dir %s"%(cmdID,cmd.dir))
                 cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
@@ -294,6 +299,9 @@ class SCCommandFinished(ServerCommand):
         cmdID=request.getParam('cmd_id')
         runfile=request.getFile('rundata')
         projServer=request.getParam('project_server')
+        cputime=0
+        if request.hasParam('used_cpu_time'):
+            cputime=float(request.getParam('used_cpu_time'))
         
         #the command's workerserver is by definition this server
         workerServer = serverState.conf.getHostName()
@@ -306,7 +314,7 @@ class SCCommandFinished(ServerCommand):
         #forward CommandFinished-signal to project server
         log.debug("finished command %s"%cmdID)
         msg=ServerToServerMessage(projServer)
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer)
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -320,6 +328,9 @@ class SCCommandFailed(ServerCommand):
             runfile=request.getFile('rundata')
         except cpc.util.CpcError:
             runfile=None
+        cputime=0
+        if request.hasParam('used_cpu_time'):
+            cputime=float(request.getParam('used_cpu_time'))
         log.error("Failed cmd_id = %s\n"%cmdID)
         cmdID=request.getParam('cmd_id')
         projServer=request.getParam('project_server')
@@ -336,7 +347,7 @@ class SCCommandFailed(ServerCommand):
         #forward CommandFinished-signal to project server
         log.debug("Run failure reported")
         msg=ServerToServerMessage(projServer)
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer)
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
         #found=False
         #try:
         #    cmd=serverState.getRunningCmdList().get(cmdID)
@@ -371,7 +382,7 @@ class SCWorkerHeartbeat(ServerCommand):
         # handle this from within the (locked) list that we have of all 
         # monitored runs
         serverState.getHeartbeatList().ping(workerID, workerDir,
-                                                 iteration, itemsXML, response)
+                                            iteration, itemsXML, response)
 
 class SCWorkerFailed(ServerCommand):
     """Get notified about a failed worker."""

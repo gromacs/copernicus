@@ -220,7 +220,7 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
-    def commandFailedRequest(self, cmdID):
+    def commandFailedRequest(self, cmdID, cputime):
         cmdstring='command-finished-forward'
         fields = []
         input = Input('cmd', cmdstring)
@@ -228,6 +228,7 @@ class ClientMessage(ClientBase):
         fields.append(cmdIdInput)
         fields.append(input)
         fields.append(Input('project_server', ''))
+        fields.append(Input('used_cpu_time', cputime))
         #if jobTarFileobj is not None:
         #    jobTarFileobj.seek(0)
         #    files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]

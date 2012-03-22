@@ -66,7 +66,7 @@ class WorkerMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
         return response
     
-    def commandFinishedRequest(self, cmdID, origServer, jobTarFileobj):
+    def commandFinishedRequest(self, cmdID, origServer, cputime, jobTarFileobj):
         cmdstring='command-finished'
         fields = []
         input = Input('cmd', cmdstring)
@@ -74,6 +74,7 @@ class WorkerMessage(ClientBase):
         fields.append(input)
         fields.append(cmdIdInput)
         fields.append(Input('project_server', origServer))
+        fields.append(Input('used_cpu_time', str(cputime)))
         jobTarFileobj.seek(0)
         files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
         headers = dict()

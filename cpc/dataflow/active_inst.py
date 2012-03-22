@@ -101,6 +101,9 @@ class ActiveInstance(object):
         fileList=project.getFileList()
         # counts the nubmer of times a task has been generated
         self.runSeqNr=0 
+        # counts the number of CPU seconds that this instance has used
+        # on workers. Locked with outputLock
+        self.cputime=0
         # a run lock used for running a task with this active instance if
         # there is a persistent directory.
         if self.function.persistentDirNeeded():
@@ -246,6 +249,12 @@ class ActiveInstance(object):
         """Get the function associated with this a.i."""
         with self.lock:
             return self.function
+
+
+    def addCputime(self, cputime):
+        """add used cpu time to this active instance."""
+        with self.outputLock:
+            self.cputime=cputime
 
     # functions for readxml:
     def setState(self, state):

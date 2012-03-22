@@ -29,6 +29,7 @@ import tarfile
 import shutil
 import threading
 import traceback
+import time
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -71,14 +72,18 @@ class WorkLoad(object):
         for rsrc in platform.getMaxResources().itervalues():
             cmdRes=cmd.getReserved(rsrc.name)
             if cmdRes is not None:
-                self.used[rsrc.name]= Resource(rsrc.name,
-                                                                 cmdRes)
+                self.used[rsrc.name]= Resource(rsrc.name, cmdRes)
         # this should be protected by a lock, given by the worker:
         self.running=False
         self.args=None # the argument list for low level run
         self.failed=False # whether the run caused an exception
         self.id=id
         self.workerDir=workerDir
+        # the amount of cpu time used for this workload
+        #self.cputime=0
+        self.realTimeSpent=0
+        # for now, the number of cores is the multiplier factor
+        self.cputimeMultiplier=self.used['cores'].value
 
     def canJoin(self, other):
         """Check whether two workloads can be joined.
@@ -112,6 +117,10 @@ class WorkLoad(object):
                 log.debug("arguments don't match")
                 return False
         return True
+
+    def getCputime(self):
+        """Get the cpu time spent in this workload."""
+        return self.cputimeMultiplier*self.realTimeSpent
 
     def join(self, others):
         """Join this workload to a list of others:
@@ -186,7 +195,8 @@ class WorkLoad(object):
         # TODO: find out where the original request came from.
         clnt= WorkerMessage()
         # the cmddir, taskID and projectID together define a unique command.
-        clnt.commandFinishedRequest(self.cmd.id, self.originatingServer, tff)
+        clnt.commandFinishedRequest(self.cmd.id, self.originatingServer, 
+                                    self.getCputime(), tff)
         tff.close()
         for workload in self.joinedTo:
             workload.returnResults()
@@ -258,6 +268,7 @@ class WorkLoad(object):
         #self._returnResults()
 
 def runThreadFn(workload, condVar):
+    startTime=time.time()
     try:
         workload._runInThread()
         workload.failed=False
@@ -267,8 +278,10 @@ def runThreadFn(workload, condVar):
                                   sys.exc_info()[2], file=fo)
         log.error("Worker error: %s"%(fo.getvalue()))
         workload.failed=True
+    endTime=time.time()
     condVar.acquire()
     workload.running=False
+    workload.realTimeSpent += endTime-startTime
     condVar.notify() 
     condVar.release()
 

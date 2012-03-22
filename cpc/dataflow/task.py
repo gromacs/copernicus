@@ -100,6 +100,7 @@ class Task(object):
         self.seqNr=seqNr
         self.fnInput=fnInput
         self.cmds=[]
+        self.cputime=0
 
     def setFnInput(self, fnInput):
         """Replace the fnInput object. Only for readxml"""
@@ -235,78 +236,6 @@ class Task(object):
         for inst in addedInstances:
             inst.activate()
 
-
-            ## now do the parts that require locks. 
-            #if out.newConnections is not None:
-            #    # we set the global lock
-            #    self.project.networkLock.acquire()
-            #    imports=self.project.getImportList()
-            #    activeNet=self.activeInstance.getNet()
-            #    if activeNet is None:
-            #        raise TaskNetError(self.activeInstance.instance.getName())
-            #    affectedInputAIs=set()
-            #    affectedOutputAIs=set()
-            #    for newConnection in out.newConnections:
-            #        if newConnection.srcStr is not None:
-            #            log.debug("Making new connection %s -> %s)"%
-            #                      (newConnection.srcStr, newConnection.dstStr))
-            #            conn=connection.makeConnectionFromDesc(activeNet,
-            #                                               newConnection.srcStr,
-            #                                               newConnection.dstStr)
-            #        else:
-            #            log.debug("Making assignment %s -> %s)"%
-            #                      (newConnection.val.value, 
-            #                       newConnection.dstStr))
-            #            conn=connection.makeInitialValueFromDesc(activeNet,
-            #                                               newConnection.dstStr,
-            #                                               newConnection.val)
-            #        activeNet.addConnection(conn, affectedInputAIs,
-            #                                affectedOutputAIs)
-            #    # so that outputs know where they go
-            #    for ai in affectedOutputAIs:
-            #        ai.outputLock.acquire()
-            #        if ai == self.activeInstance: 
-            #            selfLocked=True
-            #    outputsLocked=True
-            #    if not selfLocked:
-            #        self.activeInstance.outputLock.acquire()
-            #        selfLocked=True
-            #    # and inputs are connected to the right output
-            #    for ai in affectedInputAIs:
-            #        ai.inputLock.acquire()
-            #    # An exception during the above loop should be impossible.
-            #    inputsLocked=True
-            #    # now make the new connections
-            #    for ai in affectedOutputAIs:
-            #        ai.handleNewOutputConnections()
-            #    for ai in affectedInputAIs:
-            #        ai.handleNewInputConnections()
-            #else:
-            #    self.activeInstance.outputLock.acquire()
-            #    selfLocked=True
-            ## we can do this safely because activeInstance.inputLock is an rlock
-            #self.activeInstance.handleTaskOutput(self, out.outputs, 
-            #                                     out.subnetOutputs)
-            #if affectedInputAIs is not None:
-            #    for ai in affectedInputAIs:
-            #        ai.handleNewInput(None, 0)
-        #finally:
-        #    # unlock everything in the right order
-        #    if (affectedInputAIs is not None) and inputsLocked:
-        #        for ai in affectedInputAIs:
-        #            ai.inputLock.release()
-        #    if (affectedOutputAIs is not None) and outputsLocked:
-        #        if (affectedOutputAIs is not None): 
-        #            for ai in affectedOutputAIs:
-        #                ai.outputLock.release()
-        #                if ai == self.activeInstance:
-        #                    selfLocked=False
-        #    if selfLocked:
-        #        self.activeInstance.outputLock.release()
-        #    if out.newConnections is not None:
-        #        # we releae the global lock
-        #        self.project.networkLock.release()
-
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,
            possibly in response to a finished command (given as parameter cmd) 
@@ -331,6 +260,10 @@ class Task(object):
                 self.fnInput.cmd=None
                 if cmd is not None:
                     self.cmds.remove(cmd)
+                    # do cpu time accounting.
+                    cputime=cmd.getCputime()
+                    if cputime > 0:
+                        self.activeInstance.addCputime(cputime)
 
                 # handle things that can throw exceptions:
                 haveRetcmds=(ret.cmds is not None) and len(ret.cmds)>0
