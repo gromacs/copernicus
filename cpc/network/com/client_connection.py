@@ -20,13 +20,14 @@
 import httplib
 import mmap
 import logging
-
+import socket
 import cpc.util
 from cpc.network.com.client_response import ClientResponse
 from cpc.network.https_connection_pool import HTTPSConnectionPool
 from cpc.util.conf.connection_bundle import ConnectionBundle
 
 log=logging.getLogger('cpc.client')
+
 
 class ClientError(cpc.util.CpcError):
     def __init__(self, exc):
@@ -68,7 +69,7 @@ class ClientConnection:
     def sendRequest(self,req,method="POST"):
         if not req.headers.has_key('Originating-Client') \
               and not req.headers.has_key('originating-client'):
-            req.headers['originating-client']=ConnectionBundle().getHostName()
+            req.headers['originating-client']=socket.getfqdn()
         self.conn.request(method, "/copernicus",req.msg,req.headers)
                 
         response=self.conn.getresponse()
