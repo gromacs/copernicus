@@ -162,7 +162,7 @@ class SCWorkerReady(ServerCommand):
         if request.headers.has_key('originating-server'):
             originating = request.headers['originating-server']
         else:
-            originating = ConnectionBundle().getHostName() #FIXME this cannot be correct ever
+            originating = ServerConf().getHostName() #FIXME this cannot be correct ever
         log.debug("worker identified %s"%request.headers['originating-client'] )
         serverState.setWorkerState("idle",workerData,request.headers['originating-client'])    
         
