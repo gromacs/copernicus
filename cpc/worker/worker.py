@@ -150,7 +150,7 @@ class Worker(object):
                 for workload in finishedWorkloads:
                     self.workloads.remove(workload)
 
-            if not self.acceptCommands and len(self.workloads):
+            if not self.acceptCommands and len(self.workloads)==0:
                 self.quit = True
         self.heartbeat.stop()
     
