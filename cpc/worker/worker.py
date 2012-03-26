@@ -86,48 +86,52 @@ class Worker(object):
         self.runCondVar=threading.Condition(self.runLock)
         self.iteration=0
 
+        self.acceptCommands = True
+
     def run(self):
         """Ask for tasks until told to quit."""
         while not self.quit:
-            # send a request for a command to run                    
-            resp=self._obtainCommands()
-            # and extract the command and run directory
-            workloads=self._extractCommands(resp)
-            log.info("Got %d commands."%len(workloads))
-            for workload in workloads:
-                log.info("cmd ID=%s"%workload.cmd.id)
-                # Check whether we have the neccesary executable. 
-                # (If not, we need to ask for it)
-                if workload.executable is None:
-                    # TODO: implement getting the executable
-                    log.error("Found no executable!")
-                    raise WorkerError("Executable not found")
-                workload.reservePlatform()
-            if len(workloads)>0:
-                # We first prepare
-                self._prepareWorkloads(workloads)
-                # add the new workloads to our lists
-                self.workloads.extend(workloads)
-                self.heartbeat.addWorkloads(workloads)
-                # Now we run.
-                #if len(workloads)>1:
-                #   raise WorkerError("More than 1 command: %d"% len(workloads))
-                log.debug("Running workloads: %d"%len(self.workloads))
-                #hb=heartbeat.Heartbeat(cmd.id, origServer, rundir)
+            # send a request for a command to run
+            if self.acceptCommands:
+                resp=self._obtainCommands()
+                # and extract the command and run directory
+                workloads=self._extractCommands(resp)
+                log.info("Got %d commands."%len(workloads))
                 for workload in workloads:
-                    workload.run(self.runCondVar, self.plugin, self.args)
+                    log.info("cmd ID=%s"%workload.cmd.id)
+                    # Check whether we have the neccesary executable.
+                    # (If not, we need to ask for it)
+                    if workload.executable is None:
+                        # TODO: implement getting the executable
+                        log.error("Found no executable!")
+                        raise WorkerError("Executable not found")
+                    workload.reservePlatform()
+                if len(workloads)>0:
+                    # We first prepare
+                    self._prepareWorkloads(workloads)
+                    # add the new workloads to our lists
+                    self.workloads.extend(workloads)
+                    self.heartbeat.addWorkloads(workloads)
+                    # Now we run.
+                    #if len(workloads)>1:
+                    #   raise WorkerError("More than 1 command: %d"% len(workloads))
+                    log.debug("Running workloads: %d"%len(self.workloads))
+                    #hb=heartbeat.Heartbeat(cmd.id, origServer, rundir)
+                    for workload in workloads:
+                        workload.run(self.runCondVar, self.plugin, self.args)
             # now wait until a workload finishes
             finishedWorkloads = []
             self.runCondVar.acquire()
             stopWaiting=False
             while not stopWaiting:
-                haveRemainingResources=self._haveRemainingResources()
-                if haveRemainingResources:
-                    log.info("Have free resources. Waiting 30 seconds")
-                    self.runCondVar.wait(30)
-                else:
-                    # we can't ask for new jobs, so we wait indefinitely
-                    self.runCondVar.wait()
+                if self.acceptCommands:
+                    haveRemainingResources=self._haveRemainingResources()
+                    if haveRemainingResources:
+                        log.info("Have free resources. Waiting 30 seconds")
+                        self.runCondVar.wait(30)
+                    else:
+                        # we can't ask for new jobs, so we wait indefinitely
+                        self.runCondVar.wait()
                 # loop over all workloads
                 for workload in self.workloads:
                     if not workload.running:
@@ -145,6 +149,9 @@ class Worker(object):
                 self.heartbeat.delWorkloads(finishedWorkloads)
                 for workload in finishedWorkloads:
                     self.workloads.remove(workload)
+
+            if not self.acceptCommands and len(self.workloads):
+                self.quit = True
         self.heartbeat.stop()
     
     def _printAvailableExes(self):
@@ -317,3 +324,6 @@ class Worker(object):
                     return False
         return True
 
+    def shutdown(self):
+        log.info("Received shutdown signal")
+        self.acceptCommands = False
