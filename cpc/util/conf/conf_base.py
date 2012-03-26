@@ -100,9 +100,7 @@ class Conf:
     """Common configuration class. Reads from copernicus base directory"""
     __shared_state = {}   
 
-    #GLOBAL_DIR = os.path.join(os.environ["HOME"],parser.get('default','app-name'))
 
-    
     def __init__(self,conffile='cpc.conf', confdir = None,reInit =False):
         """Read basic configuration stuff"""
         # all objects created will share the same state
@@ -458,4 +456,7 @@ class Conf:
         return self.getFile("cert_req_conf")
     def getCADir(self):
         return self.getFile("ca_dir")
+
+    def getGlobaDir(self):
+        return self.get("global_dir")
     

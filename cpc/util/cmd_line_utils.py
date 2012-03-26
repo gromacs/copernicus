@@ -88,7 +88,7 @@ def initiateServerSetup(rundir,configName =None,confDir=None):
         configName = socket.getfqdn()
 
     if(confDir==None):
-        confDir = os.path.join(Conf.GLOBAL_DIR,configName)
+        confDir = os.path.join(Conf().getGlobaDir(),configName)
     
     checkDir = os.path.join(confDir,"server")
     if os.path.exists(checkDir)==True:
