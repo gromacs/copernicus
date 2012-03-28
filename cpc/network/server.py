@@ -68,13 +68,19 @@ class SecureServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
         ca = conf.getCaChainFile()
         sock = socket.socket(self.address_family,self.socket_type)
 
-        self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
-                                       #cert_reqs = ssl.CERT_REQUIRED,
-                                       ssl_version=ssl.PROTOCOL_SSLv23,
-                                       #ca_certs=ca
-                                       )
-        self.server_bind()
-        self.server_activate()
+        try:
+            self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
+                                           cert_reqs = ssl.CERT_REQUIRED,
+                                           ssl_version=ssl.PROTOCOL_SSLv23,
+                                           ca_certs=ca
+                                           )
+            self.server_bind()
+            self.server_activate()
+
+        except Exception:
+            print "HTTPS port %s already taken"%conf.getServerHTTPSPort()
+            serverState.doQuit()
+
 
     def getState(self):
         return self.serverState
@@ -88,12 +94,12 @@ class SecureServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
 class HTTPServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
     def __init__(self,handler_class,conf,serverState):
         self.serverState = serverState
-        self.conf = conf        
-        BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(), 
-                                                  conf.getServerHTTPPort()), 
-                                           handler_class)
-        
-        
+        self.conf = conf
+
+        BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
+                                                      conf.getServerHTTPPort()),
+                                               handler_class)
+
     def getState(self):
         return self.serverState
 
@@ -101,33 +107,41 @@ class HTTPServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
         """Get the server command list."""
         return cpc.server.message.scInsecureList
 
-def serveHTTP(serverState):   
-    httpserver = HTTPServer(request_handler.handler,ServerConf(),serverState)
-    sa2 = httpserver.socket.getsockname()    
-    log.info("Serving HTTP on %s port %s..."%(sa2[0], sa2[1]))
-    httpserver.serve_forever()
+def serveHTTP(serverState):
+    try:
+        httpserver = HTTPServer(request_handler.handler,ServerConf(),serverState)
+        sa2 = httpserver.socket.getsockname()
+        log.info("Serving HTTP on %s port %s..."%(sa2[0], sa2[1]))
+        httpserver.serve_forever()
+    except Exception:
+        print "HTTP port %s already taken"%ServerConf().getServerHTTPPort()
+        serverState.doQuit()
    
-    
-    
-def verifyCallback(conn,x509obj,errorNum,errorDepth,returnCode):
-    print "in verify callback"
-    return
+
+def serveHTTPS(serverState):
+    try:
+        httpd = SecureServer(request_handler.handler, ServerConf(), serverState)
+        sa = httpd.socket.getsockname()
+        log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))
+        httpd.serve_forever();
+
+    except Exception:
+        print "HTTPS port %s already taken"%ServerConf().getServerHTTPSPort()
+        serverState.doQuit()
+
 
 #starts an http server in a thread.
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
-    
+
     cpc.util.log.initServerLog(ServerConf().isDebug())
     th=Thread(target = serveHTTP,args=[serverState])
     th.daemon=True
     th.start()
-    httpd = SecureServer(request_handler.handler, conf, serverState)        
-    sa = httpd.socket.getsockname()          
-    log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))  
-    httpd.serve_forever();
-    
-    
-    
+
+
+    serveHTTPS(serverState)
+
     
 def shutdownServer(self):
     log.info("shutdown complete")
@@ -203,7 +217,7 @@ def forkAndRun(conf, do_debug):
         # now start the server
         serverState.startExecThreads()
         serverLoop(conf, serverState)
-    return 
+    return
 
 
 def JobList():
