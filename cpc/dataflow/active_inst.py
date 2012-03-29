@@ -256,6 +256,16 @@ class ActiveInstance(object):
         with self.outputLock:
             self.cputime=cputime
 
+    def getCputime(self):
+        with self.outputLock:
+            return self.cputime
+
+    def getCumulativeCputime(self):
+        with self.outputLock:
+            cputime = self.cputime
+        cputime += self.subnet.getCumulativeCputime()
+        return cputime
+
     # functions for readxml:
     def setState(self, state):
         """Set the state without updating values"""

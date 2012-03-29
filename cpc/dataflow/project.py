@@ -289,6 +289,9 @@ class Project(object):
                         ret["type"]="network"
                         ret["name"]=pathname
                         ret["instances"]=item.getActiveInstanceList()
+                        cputime=int(item.getCumulativeCputime())
+                        if cputime > 0:
+                            ret["cumulative-cputime" ]=str(cputime)
                     else:
                         ret["type"]="instance"
                         ret["name"]=item.getCanonicalName()
@@ -298,6 +301,12 @@ class Project(object):
                         if net is not None:
                             ret["instances" ]=net.getActiveInstanceList()
                         ret["state" ]=str(item.getStateStr())
+                        cputime=int(item.getCputime())
+                        if cputime > 0:
+                            ret["cputime" ]=str(cputime)
+                        cputime=int(item.getCumulativeCputime())
+                        if cputime > 0:
+                            ret["cumulative-cputime" ]=str(cputime)
             if item is None:
                 ret["type"]="Not found: "
                 ret["name"]=pathname

@@ -356,6 +356,15 @@ class ActiveNetwork(network.Network):
             for inst in self.activeInstances.itervalues():
                 inst.activate()
 
+    def getCumulativeCputime(self):
+        """Get the cumulative CPU time used (in seconds) for all active
+           instances in this network and all subnets."""
+        cputime=0
+        with self.lock:
+            for ai in self.activeInstances.itervalues():
+                cputime += ai.getCumulativeCputime()
+        return cputime
+
     def getNet(self):
         """Get the first network, or None if none exists."""
         return self

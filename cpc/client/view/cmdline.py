@@ -218,6 +218,12 @@ class CmdLine(object):
                 co.write('Network function instances:\n')
             for name, item in list['instances'].iteritems():
                 co.write('    %s (%s)\n'%(name, item))
+        if 'cputime' in list:
+            co.write("CPU-seconds used in this instance: %s\n"%list['cputime'])
+        if 'cumulative-cputime' in list:
+            co.write(
+                "CPU-seconds used in this instance and its sub-instances: %s\n"%
+                list['cumulative-cputime'])
         return co.getvalue()
 
     @staticmethod
