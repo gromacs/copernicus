@@ -365,6 +365,13 @@ class ActiveNetwork(network.Network):
                 cputime += ai.getCumulativeCputime()
         return cputime
 
+    def findErrorStates(self, retlist):
+        """Find any error states associated with this any of the 
+           sub-instances. Fills retlist with tuples of (ai, errormessage)"""
+        with self.lock:
+            for ai in self.activeInstances.itervalues():
+                ai.findErrorStates(retlist)
+
     def getNet(self):
         """Get the first network, or None if none exists."""
         return self

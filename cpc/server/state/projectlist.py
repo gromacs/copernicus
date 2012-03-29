@@ -48,6 +48,25 @@ class ProjectListNotFoundError(ProjectListError):
     def __str__(self):
         return "Project '%s' not found in project list"%self.name
 
+
+class ProjectListNoDefaultError(ProjectListError):
+    def __init__(self, projectlistlen):
+        self.projectlistlen=projectlistlen
+    def __str__(self):
+        if self.projectlistlen > 0:
+            return "No default project"
+        else:
+            return "No project"
+
+
+class ProjectListNoProjectError(ProjectListError):
+    def __init__(self):
+        pass
+    def __str__(self):
+        return "No default project"
+
+
+
 class ProjectList(object):
     """Synchronized project list."""
     def __init__(self, conf, cmdQueue):
@@ -87,6 +106,9 @@ class ProjectList(object):
     def getDefault(self):
         """Get the default project."""
         with self.lock:
+            if ( (self.defaultProjectName is None) or 
+                 (self.defaultProjectName == "") ):
+                raise ProjectListNoDefaultError(len(self.projects))
             try:
                 return self.projects[self.defaultProjectName]
             except KeyError:

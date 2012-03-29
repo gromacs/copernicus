@@ -107,7 +107,7 @@ class SCProjectActivate(ServerCommand):
             response.add("%s in project %s activated."%(item, prj.getName()))
         
 class SCProjectList(ServerCommand):
-    """List project tems."""
+    """List named items in a project: instances or networks."""
     def __init__(self):
         ServerCommand.__init__(self, "project-list")
     def run(self, serverState, request, response):

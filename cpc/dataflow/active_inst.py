@@ -245,6 +245,29 @@ class ActiveInstance(object):
                 return self.state
             else:
                 return "ERROR: %s"%self.errmsg
+
+    def getPropagatedStateStr(self):
+        """Get the propagated state associated with this active instance:
+           i.e. with any error conditions of sub-instances."""
+        retlist=[]
+        # find any errors
+        self.findErrorStates(retlist)
+        if len(retlist) == 0:
+            return self.getStateStr()
+        else:
+            retst=""
+            for (ai, errmsg) in retlist:
+                retst="ERROR in %s: %s\n"%(ai.getCanonicalName(), errmsg)
+            return retst
+
+    def findErrorStates(self, retlist):
+        """Find any error states associated with this ai or any of its 
+           sub-instances. Fills retlist with tuples of (ai, errormessage)"""
+        with self.lock:
+            if self.state == ActiveInstance.error:
+                retlist.append(self, self.errmsg)
+        self.subnet.findErrorStates(retlist)
+
     def getFunction(self):
         """Get the function associated with this a.i."""
         with self.lock:

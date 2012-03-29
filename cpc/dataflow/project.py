@@ -300,7 +300,8 @@ class Project(object):
                         net=item.getNet()
                         if net is not None:
                             ret["instances" ]=net.getActiveInstanceList()
-                        ret["state" ]=str(item.getStateStr())
+                        #ret["state" ]=str(item.getStateStr())
+                        ret["state"]=str(item.getPropagatedStateStr())
                         cputime=int(item.getCputime())
                         if cputime > 0:
                             ret["cputime" ]=str(cputime)
