@@ -56,7 +56,7 @@ def initiateConnectionBundle(conffile=None):
     '''
     if(conffile == None): # no conffile is provided we try to see if a file exists in our basic directory
         cf = ConnectionBundle()
-        conffile =os.path.join(cf.getConfDir(),"client.cnx")
+        conffile =os.path.join(cf.getGlobaDir(),"client.cnx")
         if(os.path.isfile(conffile)):
             cf = ConnectionBundle(conffile = conffile,reload=True)
 
