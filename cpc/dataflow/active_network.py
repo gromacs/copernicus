@@ -348,7 +348,6 @@ class ActiveNetwork(network.Network):
                 #with dstAcp.activeInstance.lock:
                 #    dstAcp.setNewSetValue(conn.getInitialValue(),
                 #                          affectedInputAIs)
-                    
 
     def activateAll(self):
         """Activate all activeinstances in this network, starting them."""

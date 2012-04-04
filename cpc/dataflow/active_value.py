@@ -77,7 +77,7 @@ class ActiveValue(value.Value):
         """Get the associated listener."""
         return self.listener
 
-    def update(self, srcVal, newSeqNr, sourceTag=None):
+    def update(self, srcVal, newSeqNr, sourceTag=None, markUpdated=False):
         """Set a new value from a Value, and call update() on all subitems. 
            This keeps all the metadata intact.
            
@@ -101,7 +101,7 @@ class ActiveValue(value.Value):
         fileValue=self.fileValue
         self.fileValue=None
         # check updated
-        if srcVal.updated:
+        if srcVal.updated or markUpdated:
             self.markUpdated(True)
         # now set the value.
         if not srcVal.basetype.isCompound():
@@ -166,6 +166,7 @@ class ActiveValue(value.Value):
         else:
             raise ActiveValError("Tried to add member to non-list value")
 
+
     def acceptNewValue(self, sourceValue, sourceTag):
         """Find all newly set value of this value and any of its children that
            originate from source.
@@ -173,11 +174,13 @@ class ActiveValue(value.Value):
            sourceValue = the input value
            sourceTag = a source tag to check for (or None to accept anything)"""
         ret=False
+        #log.debug("AcceptNewValue on %s: %s"%(self.getFullName(), 
+        #                                      sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                self.update(sourceValue, sourceValue.seqNr, sourceTag)
+                self.update(sourceValue, sourceValue.seqNr, sourceTag, True)
                 ret=True
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
@@ -207,6 +210,10 @@ class ActiveValue(value.Value):
                         ret=ret or rt
                 i+=1
         return ret
+
+    def setSourceTag(self, sourceTag):
+        """Force the source tag to a certain value."""
+        self.sourceTag=sourceTag
 
     def findListeners(self, listeners, omitSelf=None):
         """Find all listeners on this value and all its subvalues. 

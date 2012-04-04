@@ -70,6 +70,81 @@
 
     <type id="trajectory_array" base="array" member-type="trajectory"></type>
 
+    <function id="build_msm" type="external">
+        <desc>Do clustering and micro/macrostate assignments, and build a 
+              Markov state model, given a set of trajectories</desc>
+        <inputs>
+            <field type="trajectory_array" id="trajectories">
+                <desc>An array of trajectories</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An optional .ndx index file</desc>
+            </field>
+            <field type="int" id="num_microstates">
+                <desc>number of microstates (should be ~ 1/10th of 
+                      the number of configurations in each generation)</desc>
+            </field>
+            <field type="int" id="num_macrostates">
+                <desc>number of macrostates. </desc>
+            </field>
+            <field type="float" id="lag_time" opt="true">
+                <desc>Optional Markov model lag time in ns. If not set, 
+                    will not generate macrostates.</desc>
+            </field>
+            <field type="file" id="reference">
+                <desc>reference pdb file for clustering</desc>
+            </field>
+            <field type="int" id="start_per_state">
+                <desc>Number of simulations to start per (macro)state. If 
+                      lag_time is not set, the number of simulations started is
+                      num_macrostates*start_per_state. If lag_time is set, 
+                      it will be the number of macrostates actually found *
+                      start_per_state</desc>
+            </field>
+            <field type="string" id="grpname" >
+                <desc>group name of the atoms to include in MSM</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="sim_start_conf">
+                <desc>Array of starting configurations for for starting new
+                      adaptive sampling runs. </desc>
+            </field>
+            <field type="file" id="timescales">
+                <desc>Timescales vs. implied timescales plot</desc>
+            </field>
+            <field type="file" id="maxstate">
+                <desc>Configuration with the maximally populated microstate
+                </desc>
+            </field>
+            <field type="conf_array" id="macro_conf">
+                <desc>Array of representative configurations for macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_weights">
+                <desc>Relative weights of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="file" id="macro_transition_counts">
+                <desc>Transition count matrix of macrostates.
+                      Only output when a lag time has been set.</desc>
+            </field>
+            <field type="index_file_array" id="micro_assignments">
+                <desc>An array of files with microstate assignments for each
+                      frame in each trajectory.</desc>
+            </field>
+            <field type="index_file_array" id="macro_assignments">
+                <desc>An array of files with macrostate assignments for each
+                      frame in each trajectory.
+                      Only output when a lag time has been set.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="cluster" persistent_dir="true" />
+    </function>
+
+    <!-- for the msm_gmx_adaptive subnet -->
+    <type id="build_msm_in_array" base="array" member-type="build_msm:in" />
+    <type id="build_msm_out_array" base="array" member-type="build_msm:out" />
 
 
     <!-- gromacs msm controller function -->
@@ -187,86 +262,46 @@
             </field>
                 -->
         </outputs>
+        <subnet-inputs>
+            <field type="float" id="total_traj_ns">
+                <desc>Total trajectory-ns generated</desc>
+            </field>
+            <field type="trajectory_array" id="trajectories">
+                <desc>All trajectories</desc>
+            </field>
+            <field type="trajectory_array" id="trajs">
+                <desc>The finished trajectories</desc>
+            </field>
+            <field type="build_msm_out_array" id="msm_out">
+                <desc>The array of MSM generation outputs</desc>
+            </field>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="grompp_input" id="grompp_inp_gen_vel">
+                <desc>grompp input where gen_vel is true</desc>
+            </field>
+            <field type="grompp_input" id="grompp_inp_no_gen_vel">
+                <desc>grompp input where gen_vel is fals</desc>
+            </field>
+            <field type="desc_array" id="desc">
+                <desc>Array of run descriptions</desc>
+            </field>
+            <field type="conf_array" id="confs">
+            </field>
+            <field type="file" id="ndx">
+                <desc>The index file</desc>
+            </field>
+            <field type="priority_array" id="priority">
+                <desc>The run priorities for the simulations</desc>
+            </field>
+            <field type="build_msm_in_array" id="msm_in">
+                <desc>The array of MSM generation inputs</desc>
+            </field>
+        </subnet-outputs>
         <controller log="true" executable="msm" persistent_dir="true"
                     access_outputs="true" access_subnet_outputs="true" />
     </function>
 
-
-    <function id="build_msm" type="external">
-        <desc>Do clustering and micro/macrostate assignments, and build a 
-              Markov state model, given a set of trajectories</desc>
-        <inputs>
-            <field type="trajectory_array" id="trajectories">
-                <desc>An array of trajectories</desc>
-            </field>
-            <field type="file" id="ndx" opt="true">
-                <desc>An optional .ndx index file</desc>
-            </field>
-            <field type="int" id="num_microstates">
-                <desc>number of microstates (should be ~ 1/10th of 
-                      the number of configurations in each generation)</desc>
-            </field>
-            <field type="int" id="num_macrostates">
-                <desc>number of macrostates. </desc>
-            </field>
-            <field type="float" id="lag_time" opt="true">
-                <desc>Optional Markov model lag time in ns. If not set, 
-                    will not generate macrostates.</desc>
-            </field>
-            <field type="file" id="reference">
-                <desc>reference pdb file for clustering</desc>
-            </field>
-            <field type="int" id="start_per_state">
-                <desc>Number of simulations to start per (macro)state. If 
-                      lag_time is not set, the number of simulations started is
-                      num_macrostates*start_per_state. If lag_time is set, 
-                      it will be the number of macrostates actually found *
-                      start_per_state</desc>
-            </field>
-            <field type="string" id="grpname" >
-                <desc>group name of the atoms to include in MSM</desc>
-            </field>
-        </inputs>
-        <outputs>
-            <field type="conf_array" id="sim_start_conf">
-                <desc>Array of starting configurations for for starting new
-                      adaptive sampling runs. </desc>
-            </field>
-            <field type="file" id="timescales">
-                <desc>Timescales vs. implied timescales plot</desc>
-            </field>
-            <field type="file" id="maxstate">
-                <desc>Configuration with the maximally populated microstate
-                </desc>
-            </field>
-            <field type="conf_array" id="macro_conf">
-                <desc>Array of representative configurations for macrostates.
-                      Only output when a lag time has been set.</desc>
-            </field>
-            <field type="file" id="macro_weights">
-                <desc>Relative weights of macrostates.
-                      Only output when a lag time has been set.</desc>
-            </field>
-            <field type="file" id="macro_transition_counts">
-                <desc>Transition count matrix of macrostates.
-                      Only output when a lag time has been set.</desc>
-            </field>
-            <field type="index_file_array" id="micro_assignments">
-                <desc>An array of files with microstate assignments for each
-                      frame in each trajectory.</desc>
-            </field>
-            <field type="index_file_array" id="macro_assignments">
-                <desc>An array of files with macrostate assignments for each
-                      frame in each trajectory.
-                      Only output when a lag time has been set.</desc>
-            </field>
-        </outputs>
-        <controller log="true" executable="cluster" persistent_dir="true" />
-    </function>
-
-    <!-- for the msm_gmx_adaptive subnet -->
-    <type id="build_msm_in_array" base="array" member-type="build_msm:in" />
-    <type id="build_msm_out_array" base="array" member-type="build_msm:out" />
 
     <function id="xtc_to_lh5" type="external">
         <desc>Convert an xtc compressed trajectory into an lh5 

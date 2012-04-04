@@ -265,7 +265,7 @@ class ActiveInstance(object):
            sub-instances. Fills retlist with tuples of (ai, errormessage)"""
         with self.lock:
             if self.state == ActiveInstance.error:
-                retlist.append(self, self.errmsg)
+                retlist.append( (self, self.errmsg) )
         self.subnet.findErrorStates(retlist)
 
     def getFunction(self):

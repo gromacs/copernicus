@@ -134,6 +134,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # recalculate the output connection points
         self.activeInstance.handleNewOutputConnections()
         # propagate our value downstream
+        self.value.setSourceTag(source)
         self.value.propagate(source, None)
 
 
@@ -144,6 +145,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
     def propagate(self, sourceTag, seqNr):
         """Accept a new value with a source tag and sequence number, 
            and propagate it to any listeners."""
+        #log.debug("Propagating new value to %s"%self.value.getFullName())
         # first handle direct destinations
         self._propagateDests(sourceTag, seqNr)
         # then handle other listeners to the same value
@@ -155,6 +157,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Propagate an updated value to the direct destinations of this acp."""
         for dest in self.directDests:
             # because in it's another value tree, we first need to update it
+            #log.debug("Accepting new value %s to %s"%
+            #          (self.value.value, dest.acp.value.getFullName()))
             dest.acp.value.acceptNewValue(self.value, sourceTag)
             dest.acp.propagate(sourceTag, seqNr)
 
