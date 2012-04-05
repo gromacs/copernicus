@@ -120,7 +120,11 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
            """
         self.value.stageNewValue(self.sourceValue, source, seqNr)
 
-    def connectDestination(self, destAcp, conn, source):
+    def update(self, newValue, sourceTag, seqNr):
+        """Update the value associated with this connection point."""
+        self.value.update(newValue, seqNr, sourceTag)
+
+    def connectDestination(self, destAcp, conn, sourceTag):
         """Add a downstream connection to another activeConnectionPoint. 
            To be called from ActiveNetwork.addConnection().
    
@@ -132,15 +136,25 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # handle the destination's end.
         destAcp.setSource(self, self.sourceAcp, self.sourceValue)
         # recalculate the output connection points
-        self.activeInstance.handleNewOutputConnections()
+        self.activeInstance.handleNewConnections()
+        # now find the listeners of the destination value. We can do
+        # this because its input is locked, and if it's an output, it cannot
+        # write there anyway because it's a valid destination for this.
+        listeners=[]
+        destAcp.value.findListeners(listeners)
+        for listener in listeners:
+            listener.searchDestinations()
         # propagate our value downstream
-        self.value.setSourceTag(source)
-        self.value.propagate(source, None)
+        #self.value.setSourceTag(sourceTag)
+        self._propagateSpecificDest(destAcp, sourceTag, None)
+        
 
-
-    def update(self, newValue, sourceTag, seqNr):
-        """Update the value associated with this connection point."""
-        self.value.update(newValue, seqNr, sourceTag)
+    def _propagateSpecificDest(self, dest, sourceTag, seqNr):
+        """Propagate a value to a specific destination"""
+        log.debug("*Propagating new value %s to %s"%
+                  (self.value.value, dest.value.getFullName()))
+        dest.value.update(self.value, seqNr, sourceTag=sourceTag)
+        dest.propagate(sourceTag, seqNr)
 
     def propagate(self, sourceTag, seqNr):
         """Accept a new value with a source tag and sequence number, 
@@ -151,15 +165,18 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # then handle other listeners to the same value
         for listener in self.listeners:
             # these listeners are in the same value tree, so no need to update
+            log.debug("Listener-propagating to %s"%
+                      (listener.value.getFullName()))
             listener._propagateDests(sourceTag, seqNr)
 
     def _propagateDests(self, sourceTag, seqNr):
         """Propagate an updated value to the direct destinations of this acp."""
         for dest in self.directDests:
             # because in it's another value tree, we first need to update it
-            #log.debug("Accepting new value %s to %s"%
-            #          (self.value.value, dest.acp.value.getFullName()))
-            dest.acp.value.acceptNewValue(self.value, sourceTag)
+            log.debug("Propagating new value %s to %s"%
+                      (self.value.value, dest.acp.value.getFullName()))
+            #dest.acp.value.acceptNewValue(self.value, sourceTag)
+            dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
             dest.acp.propagate(sourceTag, seqNr)
 
     def notifyDestinations(self, sourceTag, seqNr):
@@ -184,6 +201,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Get the set of destination active instances for this source acp."""
         self.listeners=[]
         self.value.findListeners(self.listeners, self)
+        log.debug("%s: %d listeners"%(self.value.getFullName(), 
+                                      len(self.listeners)))
 
     def getListeners(self):
         """Return the pre-computed set listeners on the value of this acp."""

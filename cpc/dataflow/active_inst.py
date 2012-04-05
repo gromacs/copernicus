@@ -171,6 +171,10 @@ class ActiveInstance(object):
         # each other
         self.outputDirNr=0 
 
+        # whether any input value has changed, prompting a task run if 
+        # the instance is active.
+        self.updated=False
+
         # There are three locks: lock, inputLock and outputLock. 
         # Because updates involve multiple active instances, maintaining 
         # of locks is not done from within the active instances.
@@ -459,6 +463,7 @@ class ActiveInstance(object):
                 outItems=vtype.parseItemList(out.name)
                 # now get the actual entry in the output value tree
                 oval=self.outputVal.getSubValue(outItems, create=True)
+                log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
                 if oval is None:
@@ -468,13 +473,14 @@ class ActiveInstance(object):
                                self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, task.seqNr, task)
-                #oval.markUpdated(True)
+                oval.markUpdated(True)
                 # now stage all the inputs 
                 oval.propagate(task, task.seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
                 oval=self.subnetOutputVal.getSubValue(outItems, create=True)
+                log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
                 if oval is None:
@@ -484,7 +490,7 @@ class ActiveInstance(object):
                          self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, task.seqNr, task)
-                #oval.markUpdated(True)
+                oval.markUpdated(True)
                 # now stage all the inputs 
                 oval.propagate(task, task.seqNr)
         # Round 2: now alert the receiving active instances
@@ -527,11 +533,18 @@ class ActiveInstance(object):
             # outputLocked, so that it doesn't overwrite the staged input,
             # and this a.i. should be inputLocked so no two threads do the
             # same at the same time.
-            upd1=self.inputVal.acceptNewValue(self.stagedInputVal,sourceTag)
+            upd1=self.inputVal.acceptNewValue(self.stagedInputVal,sourceTag,
+                                              True)
+            if upd1:
+                self.stagedInputVal.setUpdated(False)
             # also check the subnet input values
             upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
-                                                    sourceTag)
-            if upd1 or upd2:
+                                                    sourceTag, True)
+            if upd2:
+                self.stagedSubnetInputVal.setUpdated(False)
+            # now merge it with whether we should already update
+            self.updated = self.updated or (upd1 or upd2)
+            if self.updated:
                 log.debug("%s: Processing new input for %s of fn %s"%
                           (self.getCanonicalName(), self.instance.getName(), 
                            self.function.getName()))
@@ -542,9 +555,8 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
-    def handleNewOutputConnections(self):
-        """Process a new output connection. Must be called BEFORE the 
-           corresponding handleNewInputConnections for a network update
+    def handleNewConnections(self):
+        """Process a new output connection. 
            
            NOTE: This function assumes that self.outputLock is locked and
                  that there is some global lock preventing concurrent updates, 
@@ -557,20 +569,30 @@ class ActiveInstance(object):
         # concurrently.
         listeners=[]
         self.outputVal.findListeners(listeners)
+        log.debug("%s: %d listeners"%(self.outputVal.getFullName(), 
+                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.subnetOutputVal.findListeners(listeners)
+        log.debug("%s: %d listeners"%(self.subnetOutputVal.getFullName(), 
+                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.stagedInputVal.findListeners(listeners)
+        log.debug("%s: %d listeners"%(self.stagedInputVal.getFullName(), 
+                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.stagedSubnetInputVal.findListeners(listeners)
+        log.debug("%s: %d listeners"%(self.stagedSubnetInputVal.getFullName(), 
+                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
+
+
 
     def findNamedInput(self, direction, itemList):
         """Find the *staging* value object corresponding to the named item.
@@ -615,6 +637,7 @@ class ActiveInstance(object):
            from another source can take place in the mean time. 
            Normally, this is project.networkLock
           """
+        newVal.setUpdated(True)
         val.update(newVal, val.seqNr, sourceTag)
         val.propagate(sourceTag, None)
                
@@ -693,10 +716,11 @@ class ActiveInstance(object):
            Assumes self.inputLock is locked.
            """
         if ( (self.state == ActiveInstance.active) and
-             (self.function.genTasks) ):
+             (self.function.genTasks) and
+             (self.updated) ):
             ret=self.inputVal.haveAllRequiredValues()
-            #log.debug("Checking whether instance %s can run: %s"%
-            #          (self.getCanonicalName(), str(ret)))
+            log.debug("Checking whether instance %s can run: %s"%
+                      (self.getCanonicalName(), str(ret)))
             return ret
         return False
 
@@ -741,6 +765,7 @@ class ActiveInstance(object):
                       self.runSeqNr)
         self.activeNetwork.taskQueue.put(tsk)
         self.tasks.append(tsk)
+        self.updated=False
 
     def addTask(self, tsk):
         """Append an existing task to the task list. Useful for reading in"""

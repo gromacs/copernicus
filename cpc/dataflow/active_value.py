@@ -77,7 +77,7 @@ class ActiveValue(value.Value):
         """Get the associated listener."""
         return self.listener
 
-    def update(self, srcVal, newSeqNr, sourceTag=None, markUpdated=False):
+    def update(self, srcVal, newSeqNr, sourceTag=None, resetSourceTag=False):
         """Set a new value from a Value, and call update() on all subitems. 
            This keeps all the metadata intact.
            
@@ -87,8 +87,8 @@ class ActiveValue(value.Value):
         if newSeqNr is None:
             newSeqNr=self.seqNr
         if self.seqNr > newSeqNr:
-            log.debug("Rejecting update because of sequence number: %d>%d."%
-                      (self.seqNr, newSeqNr))
+            log.debug("Rejecting update to %s because of sequence number: %d>%d."%
+                      (self.getFullName(), self.seqNr, newSeqNr))
             return
         if self.basetype!=srcVal.basetype:
             raise ActiveValError("Type mismatch in %s: expected %s, got %s"%
@@ -96,15 +96,19 @@ class ActiveValue(value.Value):
                                   self.basetype.getName(), 
                                   srcVal.basetype.getName()))
         self.sourceTag=sourceTag
+        if resetSourceTag:
+            log.debug("resetting source tag %s"%self.getFullName())
+            srcVal.sourceTag=None
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
         self.fileValue=None
         # check updated
-        if srcVal.updated or markUpdated:
+        if srcVal.updated: 
             self.markUpdated(True)
         # now set the value.
         if not srcVal.basetype.isCompound():
+            #self.updated=srcVal.updated
             # and set value
             if ( (self.fileList is not None) and 
                  (srcVal.basetype.isSubtype(vtype.fileType)) and 
@@ -118,7 +122,7 @@ class ActiveValue(value.Value):
             else:
                 self.value=srcVal.value
         else:
-            self.updated=srcVal.updated
+            #self.updated=srcVal.updated
             if self.basetype == vtype.listType:
                 for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
@@ -128,14 +132,16 @@ class ActiveValue(value.Value):
                         self.value[name]=self._create(None, 
                                                       self.type.getMember(name),
                                                       members[name], name)
-                    self.value[name].update(item, newSeqNr)
+                    self.value[name].update(item, newSeqNr, sourceTag,
+                                            resetSourceTag)
             elif self.basetype == vtype.dictType:
                 for name, item in srcVal.value:
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None,
                                                       self.type.getMembers(),
                                                       name)
-                    self.value[name].update(item, newSeqNr)
+                    self.value[name].update(item, newSeqNr, sourceTag,
+                                            resetSourceTag)
             elif self.basetype == vtype.arrayType:
                 i=0
                 if not isinstance(self.value, list):
@@ -145,7 +151,8 @@ class ActiveValue(value.Value):
                         self.value.append(self._create(None, 
                                                        self.type.getMembers(), 
                                                        i))
-                    self.value[i].update(item, newSeqNr)
+                    self.value[i].update(item, newSeqNr,sourceTag,
+                                         resetSourceTag)
                     i+=1
             else:
                 raise ActiveValError("Unknown compound type")
@@ -167,12 +174,14 @@ class ActiveValue(value.Value):
             raise ActiveValError("Tried to add member to non-list value")
 
 
-    def acceptNewValue(self, sourceValue, sourceTag):
+    def acceptNewValue(self, sourceValue, sourceTag, resetSourceTag=False):
         """Find all newly set value of this value and any of its children that
            originate from source.
            
            sourceValue = the input value
-           sourceTag = a source tag to check for (or None to accept anything)"""
+           sourceTag = a source tag to check for (or None to accept anything)
+    
+           Returns: a boolean telling whether an update has taken place."""
         ret=False
         #log.debug("AcceptNewValue on %s: %s"%(self.getFullName(), 
         #                                      sourceValue.value))
@@ -180,12 +189,19 @@ class ActiveValue(value.Value):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                self.update(sourceValue, sourceValue.seqNr, sourceTag, True)
-                ret=True
+                log.debug("Found update in %s, %s %s"%
+                          (self.getFullName(), resetSourceTag, 
+                           sourceValue.value))
+                self.update(sourceValue, sourceValue.seqNr, sourceTag,
+                            resetSourceTag=resetSourceTag)
+                #sourceValue.updated=False
+                sourceValue.setUpdated(False)
+                return True
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:
-                    rt=self.value[name].acceptNewValue(val,sourceTag)
+                    rt=self.value[name].acceptNewValue(val,sourceTag, 
+                                                        resetSourceTag)
                     ret=ret or rt
                 else:
                     # only check the direct descendants
@@ -193,20 +209,24 @@ class ActiveValue(value.Value):
                         self.value[name]=self._create(None, 
                                                       self.type.getMember(name),
                                                       name)
-                        ret=ret or self.value[name].acceptNewValue(val,
-                                                                   sourceTag)
+                        rt=self.value[name].acceptNewValue(val, sourceTag,
+                                                           resetSourceTag)
+                        ret=ret or rt
         elif isinstance(self.value, list):
             i=0
             for val in sourceValue.value:
                 if i+1 < len(self.value):
-                    ret=ret or self.value[i].acceptNewValue(val, sourceTag)
+                    rt=self.value[i].acceptNewValue(val, sourceTag,
+                                                    resetSourceTag)
+                    ret=ret or rt
                 else:
                     # only check the direct descendants
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
                         self.value.append(self._create(None, 
                                                       self.type.getMembers(),
                                                       i))
-                        rt=self.value[i].acceptNewValue(val, sourceTag)
+                        rt=self.value[i].acceptNewValue(val, sourceTag,
+                                                        resetSourceTag)
                         ret=ret or rt
                 i+=1
         return ret
