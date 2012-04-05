@@ -157,10 +157,10 @@ class TaskExecThread(object):
                         # signal that we're waiting, and wait
                         log.debug("Pausing...")
                         self.waiter.releaseAndWait()
-                log.debug("Waiting for queued task..")
+                #log.debug("Waiting for queued task..")
                 task=self.taskQueue.get()
                 if task is not None:
-                    log.debug("Got queued task.")
+                    #log.debug("Got queued task.")
                     cmds=task.run()
                     if cmds is not None:
                         for cmd in cmds:

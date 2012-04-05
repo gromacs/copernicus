@@ -454,7 +454,7 @@ class ActiveInstance(object):
            this active instance.
 
            NOTE: assumes that the ai is locked with self.outputLock!!!"""
-        log.debug("Handling task %s output"%self.getCanonicalName())
+        #log.debug("Handling task %s output"%self.getCanonicalName())
         # first set things locally 
         changedInstances=set()
         # Round 1: set the new output values
@@ -463,7 +463,7 @@ class ActiveInstance(object):
                 outItems=vtype.parseItemList(out.name)
                 # now get the actual entry in the output value tree
                 oval=self.outputVal.getSubValue(outItems, create=True)
-                log.debug("Handling output for %s"%(oval.getFullName()))
+                #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
                 if oval is None:
@@ -480,7 +480,7 @@ class ActiveInstance(object):
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
                 oval=self.subnetOutputVal.getSubValue(outItems, create=True)
-                log.debug("Handling output for %s"%(oval.getFullName()))
+                #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
                 if oval is None:
@@ -515,7 +515,7 @@ class ActiveInstance(object):
                  some global lock preventing concurrent updates, and 
                  that it is locked. This normally is project.networkLock.
            """
-        log.debug("handleNewInput on  %s"%self.getCanonicalName())
+        #log.debug("handleNewInput on  %s"%self.getCanonicalName())
         with self.inputLock:
             # first check whether we've already checked this
             #self.updated=False
@@ -545,9 +545,9 @@ class ActiveInstance(object):
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
             if self.updated:
-                log.debug("%s: Processing new input for %s of fn %s"%
-                          (self.getCanonicalName(), self.instance.getName(), 
-                           self.function.getName()))
+                #log.debug("%s: Processing new input for %s of fn %s"%
+                #          (self.getCanonicalName(), self.instance.getName(), 
+                #           self.function.getName()))
                 # only continue if we're active
                 if self.state != ActiveInstance.active:
                     return
@@ -562,33 +562,27 @@ class ActiveInstance(object):
                  that there is some global lock preventing concurrent updates, 
                  and that it is locked. This normally is project.networkLock.
            """
-        log.debug("%s: Processing new connections"%(self.getCanonicalName()))
+        #log.debug("%s: Processing new connections"%(self.getCanonicalName()))
         # regenerate the output listeners' list of connected active 
         # instances and other listeners. We rely on a global network 
         # update lock to prevent multiple threads from adding connections 
         # concurrently.
         listeners=[]
         self.outputVal.findListeners(listeners)
-        log.debug("%s: %d listeners"%(self.outputVal.getFullName(), 
-                                      len(listeners)))
+        #log.debug("%s: %d listeners"%(self.outputVal.getFullName(), 
+        #                              len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.subnetOutputVal.findListeners(listeners)
-        log.debug("%s: %d listeners"%(self.subnetOutputVal.getFullName(), 
-                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.stagedInputVal.findListeners(listeners)
-        log.debug("%s: %d listeners"%(self.stagedInputVal.getFullName(), 
-                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
         listeners=[]
         self.stagedSubnetInputVal.findListeners(listeners)
-        log.debug("%s: %d listeners"%(self.stagedSubnetInputVal.getFullName(), 
-                                      len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
 
@@ -601,9 +595,9 @@ class ActiveInstance(object):
 
            Assumes a locked self.inputLock
            """
-        log.debug("%s: Finding value for %s of fn %s"%
-                  (self.getCanonicalName(), self.instance.getName(), 
-                   self.function.getName()))
+        #log.debug("%s: Finding value for %s of fn %s"%
+        #          (self.getCanonicalName(), self.instance.getName(), 
+        #           self.function.getName()))
         if direction==function_io.inputs:
             topval=self.stagedInputVal
         elif direction==function_io.subnetInputs:
@@ -620,11 +614,11 @@ class ActiveInstance(object):
         val.findListeners(listeners)
         log.debug("Finding affected inputs for %s"%self.getCanonicalName())
         for listener in listeners:
-            log.debug("   found listener: %s"%(listener.value.getFullName()))
+            #log.debug("   found listener: %s"%(listener.value.getFullName()))
             listener.findConnectedInputAIs(affectedInputAIs)
             #destais=listener.getDestinationAIs()
-        for ai in affectedInputAIs:
-            log.debug("   add affected input: %s"%(ai.getCanonicalName()))
+        #for ai in affectedInputAIs:
+            #log.debug("   add affected input: %s"%(ai.getCanonicalName()))
             #affectedInputAIs.update(destais)
         affectedInputAIs.add(self)
 
@@ -645,8 +639,8 @@ class ActiveInstance(object):
     def getNamedValue(self, direction, itemList):
         """Get a specific named value ."""
         # now change input values
-        log.debug("Processing new value for %s of fn %s"%
-                  (self.instance.getName(), self.function.getName()))
+        #log.debug("Processing new value for %s of fn %s"%
+        #          (self.instance.getName(), self.function.getName()))
         if direction==function_io.inputs:
             with self.inputLock:
                 val=self.inputVal.getSubValue(itemList)
@@ -664,8 +658,8 @@ class ActiveInstance(object):
     def getNamedType(self, direction, itemList):
         """Get the type of a specific named value."""
         # now change input values
-        log.debug("Processing new value for %s of fn %s"%
-                  (self.instance.getName(), self.function.getName()))
+        #log.debug("Processing new value for %s of fn %s"%
+        #          (self.instance.getName(), self.function.getName()))
         if direction==function_io.inputs:
             with self.inputLock:
                 tp=self.inputVal.getSubType(itemList)
@@ -719,16 +713,16 @@ class ActiveInstance(object):
              (self.function.genTasks) and
              (self.updated) ):
             ret=self.inputVal.haveAllRequiredValues()
-            log.debug("Checking whether instance %s can run: %s"%
-                      (self.getCanonicalName(), str(ret)))
+            #log.debug("Checking whether instance %s can run: %s"%
+            #          (self.getCanonicalName(), str(ret)))
             return ret
         return False
 
     def _genTask(self):
         """Generate a task.  Assumes self.inputLock is locked ."""
         # prepare inputs
-        log.debug("Generating task for %s (of fn %s)"%
-                  (self.getCanonicalName(), self.function.getName()))
+        #log.debug("Generating task for %s (of fn %s)"%
+        #          (self.getCanonicalName(), self.function.getName()))
         inputs=value.Value(self.inputVal, self.inputVal.type)
         subnetInputs=value.Value(self.subnetInputVal, self.subnetInputVal.type)
         # reset the status of the inputs, subnetInputs

@@ -87,8 +87,8 @@ class ActiveValue(value.Value):
         if newSeqNr is None:
             newSeqNr=self.seqNr
         if self.seqNr > newSeqNr:
-            log.debug("Rejecting update to %s because of sequence number: %d>%d."%
-                      (self.getFullName(), self.seqNr, newSeqNr))
+            #log.debug("Rejecting update to %s because of sequence number: %d>%d."%
+            #          (self.getFullName(), self.seqNr, newSeqNr))
             return
         if self.basetype!=srcVal.basetype:
             raise ActiveValError("Type mismatch in %s: expected %s, got %s"%
@@ -97,7 +97,6 @@ class ActiveValue(value.Value):
                                   srcVal.basetype.getName()))
         self.sourceTag=sourceTag
         if resetSourceTag:
-            log.debug("resetting source tag %s"%self.getFullName())
             srcVal.sourceTag=None
         self.seqNr=newSeqNr
         # keep the file value for later.
@@ -183,15 +182,13 @@ class ActiveValue(value.Value):
     
            Returns: a boolean telling whether an update has taken place."""
         ret=False
-        #log.debug("AcceptNewValue on %s: %s"%(self.getFullName(), 
-        #                                      sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                log.debug("Found update in %s, %s %s"%
-                          (self.getFullName(), resetSourceTag, 
-                           sourceValue.value))
+                #log.debug("Found update in %s, %s %s"%
+                #          (self.getFullName(), resetSourceTag, 
+                #           sourceValue.value))
                 self.update(sourceValue, sourceValue.seqNr, sourceTag,
                             resetSourceTag=resetSourceTag)
                 #sourceValue.updated=False

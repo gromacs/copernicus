@@ -86,10 +86,9 @@ class Task(object):
            seqNr = the task's sequence number
            """
            
-        log.debug("creating task")    
-        log.debug("Making task of instance %s of function %s"%
-                  (activeInstance.instance.getName(),
-                   activeInstance.instance.function.getName()))
+        #log.debug("creating task")    
+        log.debug("Making task of instance %s"%
+                  (activeInstance.getCanonicalName()) )
         self.activeInstance=activeInstance
         self.function=function
         self.priority=priority
@@ -127,9 +126,9 @@ class Task(object):
                 raise TaskNetError(self.activeInstance.instance.getName())
             imports=self.project.getImportList()
             for newInstance in out.newInstances:
-                log.debug("Making new instance %s (%s)"%
-                          (newInstance.name, 
-                           newInstance.functionName))
+                #log.debug("Making new instance %s (%s)"%
+                #          (newInstance.name, 
+                #           newInstance.functionName))
                 fn=imports.getFunctionByFullName(newInstance.functionName,
                                                  self.function.getLib())
                 inst=instance.Instance(newInstance.name, fn, 
@@ -139,8 +138,8 @@ class Task(object):
         if out.newSubnetInputs is not None:
             imports=self.project.getImportList()
             for newSubnetInput in out.newSubnetInputs:
-                log.debug("Making new subnet input %s (%s)"%
-                          (newSubnetInput.name, newSubnetInput.type))
+                #log.debug("Making new subnet input %s (%s)"%
+                #          (newSubnetInput.name, newSubnetInput.type))
                 tp=imports.getTypeByFullName(newSubnetInput.type,
                                              self.function.getLib())
                 #tp=self.project.getType(newSubnetInput.type)
@@ -150,12 +149,12 @@ class Task(object):
                 si=self.activeInstance.getStagedSubnetInputs()
                 si.addMember(newSubnetInput.name, tp, True, False)
         # and new subnet outputs
-        log.debug("new subnet outputs: %s"%str(out.newSubnetOutputs))
+        #log.debug("new subnet outputs: %s"%str(out.newSubnetOutputs))
         if out.newSubnetOutputs is not None:
             imports=self.project.getImportList()
             for newSubnetOutput in out.newSubnetOutputs:
-                log.debug("Making new subnet output %s (%s)"%
-                          (newSubnetOutput.name, newSubnetOutput.type))
+                #log.debug("Making new subnet output %s (%s)"%
+                #          (newSubnetOutput.name, newSubnetOutput.type))
                 tp=imports.getTypeByFullName(newSubnetOutput.type,
                                              self.function.getLib())
                 #tp=self.project.getType(newSubnetOutput.type)
@@ -172,8 +171,8 @@ class Task(object):
             # whether the task's ai is already locked
             selfLocked=False
             if out.newConnections is not None:
-                log.debug("Handling new connections for task of %s"%
-                          self.activeInstance.getCanonicalName())
+                #log.debug("Handling new connections for task of %s"%
+                #          self.activeInstance.getCanonicalName())
                 # we have new connections so we need to lock the global lock
                 self.project.networkLock.acquire()
                 imports=self.project.getImportList()
@@ -187,15 +186,15 @@ class Task(object):
                 conns=[]
                 for newConnection in out.newConnections:
                     if newConnection.srcStr is not None:
-                        log.debug("Making new connection %s -> %s)"%
-                                  (newConnection.srcStr, newConnection.dstStr))
+                        #log.debug("Making new connection %s -> %s)"%
+                        #          (newConnection.srcStr, newConnection.dstStr))
                         conn=connection.makeConnectionFromDesc(activeNet,
                                                            newConnection.srcStr,
                                                            newConnection.dstStr)
                     else:
-                        log.debug("Making assignment %s -> %s)"%
-                                  (newConnection.val.value, 
-                                   newConnection.dstStr))
+                        #log.debug("Making assignment %s -> %s)"%
+                        #          (newConnection.val.value, 
+                        #           newConnection.dstStr))
                         conn=connection.makeInitialValueFromDesc(activeNet,
                                                            newConnection.dstStr,
                                                            newConnection.val)
@@ -215,13 +214,13 @@ class Task(object):
             if not selfLocked:
                 self.activeInstance.outputLock.acquire()
                 selfLocked=True
-            log.debug("Handling output for task of %s"%
-                      self.activeInstance.getCanonicalName())
+            #log.debug("Handling output for task of %s"%
+            #          self.activeInstance.getCanonicalName())
             # we can do this safely because activeInstance.inputLock is an rlock
             self.activeInstance.handleTaskOutput(self, out.outputs, 
                                                  out.subnetOutputs)
-            log.debug("Handling new inputs for task of %s"%
-                      self.activeInstance.getCanonicalName())
+            #log.debug("Handling new inputs for task of %s"%
+            #          self.activeInstance.getCanonicalName())
             # now handle the input generated by making new connections
             if affectedInputAIs is not None:
                 for ai in affectedInputAIs:

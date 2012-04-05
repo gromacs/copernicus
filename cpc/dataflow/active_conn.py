@@ -151,8 +151,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
 
     def _propagateSpecificDest(self, dest, sourceTag, seqNr):
         """Propagate a value to a specific destination"""
-        log.debug("*Propagating new value %s to %s"%
-                  (self.value.value, dest.value.getFullName()))
+        #log.debug("*Propagating new value %s to %s"%
+        #          (self.value.value, dest.value.getFullName()))
         dest.value.update(self.value, seqNr, sourceTag=sourceTag)
         dest.propagate(sourceTag, seqNr)
 
@@ -165,16 +165,16 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # then handle other listeners to the same value
         for listener in self.listeners:
             # these listeners are in the same value tree, so no need to update
-            log.debug("Listener-propagating to %s"%
-                      (listener.value.getFullName()))
+            #log.debug("Listener-propagating to %s"%
+            #          (listener.value.getFullName()))
             listener._propagateDests(sourceTag, seqNr)
 
     def _propagateDests(self, sourceTag, seqNr):
         """Propagate an updated value to the direct destinations of this acp."""
         for dest in self.directDests:
             # because in it's another value tree, we first need to update it
-            log.debug("Propagating new value %s to %s"%
-                      (self.value.value, dest.acp.value.getFullName()))
+            #log.debug("Propagating new value %s to %s"%
+            #          (self.value.value, dest.acp.value.getFullName()))
             #dest.acp.value.acceptNewValue(self.value, sourceTag)
             dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
             dest.acp.propagate(sourceTag, seqNr)
@@ -201,8 +201,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Get the set of destination active instances for this source acp."""
         self.listeners=[]
         self.value.findListeners(self.listeners, self)
-        log.debug("%s: %d listeners"%(self.value.getFullName(), 
-                                      len(self.listeners)))
+        #log.debug("%s: %d listeners"%(self.value.getFullName(), 
+        #                              len(self.listeners)))
 
     def getListeners(self):
         """Return the pre-computed set listeners on the value of this acp."""
