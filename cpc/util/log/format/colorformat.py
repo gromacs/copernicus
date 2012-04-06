@@ -36,6 +36,7 @@ COLORS = {
     'WARNING': YELLOW,
     'INFO': CYAN,
     'DEBUG': GREEN,
+    'TRACE': MAGENTA,
     'CRITICAL': YELLOW,
     'ERROR': RED
 }

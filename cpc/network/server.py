@@ -123,6 +123,7 @@ def serveHTTPS(serverState):
         httpd = SecureServer(request_handler.handler, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
         log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))
+        log.log(5,"fsfs")
         httpd.serve_forever();
 
     except Exception:

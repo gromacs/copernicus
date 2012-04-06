@@ -28,10 +28,15 @@ MAXFILESIZE=4*1024*1024
 # number of logs to keep
 NBACKUPS=5
 
+#log level of for trace
+TRACE = 5
+
 # The format for output to files
 fileFormat="%(asctime)-20s - %(levelname)-7s - %(name)-15s: %(message)s"
 # The format for output to stdout
 stdoutFormat="%(levelname)-s, $BOLD%(name)-s$RESET: %(message)s"
+
+logging.addLevelName(TRACE,"TRACE")
 
 def initClientLog(debug=False):
     """Initialize a client log: in this case, a log that only displays to 
@@ -56,12 +61,14 @@ def initClientLog(debug=False):
     initErrorLog()
 
 
-def initServerLog(debug=False):
+def initServerLog(debug=False,trace=False):
     """Initialize a server log. This log outputs to the server log file 
        (usually ~/.copernicus/<hostname>/log/server.log)."""
-    logger=logging.getLogger('')
     conf=ServerConf()
-    if debug:
+    logger=logging.getLogger('')
+    if trace:
+        logger.setLevel(TRACE)
+    elif debug:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -81,9 +88,12 @@ def initServerLog(debug=False):
     initErrorLog()
 
 
-def initServerLogToStdout(debug=False):
+def initServerLogToStdout(debug=False,trace=False):
     logger=logging.getLogger('')
-    if debug:
+
+    if trace:
+        logger.setLevel(TRACE)
+    elif debug:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
