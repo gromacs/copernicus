@@ -22,6 +22,7 @@ Created on Apr 11, 2011
 
 @author: iman
 '''
+import socket
 
 from cpc.network.node import Nodes
 import cpc.util.conf.conf_base
@@ -36,7 +37,6 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
     classdocs
     '''
     __shared_state = {}
-#    CN_ID = "server"  #used to distinguish common names in certs
     CN_ID = "server"
     def __init__(self,conffile = "server.conf",confdir = None,
                  reload=False):
@@ -130,6 +130,9 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
                 #static configuration
         self._add('web_root', 'web',
                   "The directory where html,js and css files are located")
+
+        self._add('client_host', socket.getfqdn(),
+            "For when the server needs to connect to self ", True)  #FIXME this will be obsolete once server to server messages does not connect to self
         
         # assets
         self._add('local_assets_dir', "local_assets",
@@ -251,15 +254,26 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
     
     def getServerHost(self):
         return self.conf['server_host'].get()
-    def getClientHost(self):
-        return self.conf['client_host'].get()
-    def getServerHTTPSPort(self):        
+    def getServerHTTPSPort(self):
         return int(self.conf['server_https_port'].get())
     def getServerHTTPPort(self):        
         return int(self.conf['server_http_port'].get())
     def getHostName(self):
         return self.hostname
-    
+
+    #just a wrapper method to conform with clientConnection
+    def getClientHTTPSPort(self):
+        return int(self.get('server_https_port'))
+
+    #just a wrapper method to conform with clientConnection
+    def getClientHTTPPort(self):
+        return int(self.get('server_http_port'))
+
+    #just a wrapper method to conform with clientConnection
+    def getClientHost(self):
+        return self.conf['client_host'].get()
+
+
     def getDefaultServer(self):
         return self.conf['client_host'].get()
     

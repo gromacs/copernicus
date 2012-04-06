@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -16,23 +16,39 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+from cpc.test.functional.test_util import TestUtil
 
-'''
-Created on May 18, 2011
+__author__ = 'iman'
 
-@author: iman
-'''
 import unittest
-import test_conf
-import test_worker_conf
-import test_server_conf
-import test_client_conf
+
+class WorkerTest(unittest.TestCase):
+
+    def setUp(self):
+        self.util = TestUtil()
+        self.util.init()
 
 
-suite = unittest.TestSuite()
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_conf.TestConf))
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_server_conf.TestServerConf))
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(test_client_conf.TestClientConf))
 
+    def test_worker(self):
+        '''
+        Starts up one server, then starts up a worker and tries to connect to the server.
+        '''
+        self.util.initServers(1)
+        self.util.startupServers()
 
-unittest.TextTestRunner(verbosity=2).run(suite)
+#        //CREATE A BUNDLE
+#
+#        //START A WORKER
+#
+#        //KILL THE SERVER
+#
+#        //KILL THE WORKER
+
+        #TODO start worker
+
+    def tearDown(self):
+        self.util.shutDownServers()
+
+if __name__ == '__main__':
+    unittest.main()

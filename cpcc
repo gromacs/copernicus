@@ -27,16 +27,13 @@ import copy
 
 import cpc.util
 from cpc.util import cmd_line_utils
+from cpc.util.conf.connection_bundle import ConnectionBundle
 
-from cpc.worker.worker import WorkerMessage
 from cpc.client.view.cmdline import CmdLine
-from cpc.util.openssl import OpenSSL
 from cpc.network.com.client_base import ClientError
 from cpc.client import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
-from cpc.util.conf.client_conf import ClientConf
 import subprocess
-import tempfile
 
 
 def print_usage():
@@ -61,13 +58,8 @@ def print_usage():
     print "       cpcc queue|q"
     print "       cpcc running|r "
     print "       cpcc heartbeats|h "
-    print "       cpcc config-list"
-    print "       cpcc config-values"    
-    print "       cpcc config param value"    
     print "       cpcc worker-failed workerID"
     print "       cpcc command-failed commandID"
-    print "       cpcc trust-server host [http_port]"
-    print "       cpcc setup [name]"    
     print ""
     print "Server control commands"    
     print "       cpcc init-default-server"
@@ -84,7 +76,7 @@ def print_usage():
     print "       cpcc readconf"     
     print ""
     print "Common options:"
-    print "       cpcc [-c confdir]"
+    print "       cpcc [-c conffile]"
     sys.exit(1)
 
 # make a copy for later
@@ -95,7 +87,7 @@ if len(args)<2:
 
 # remove the 0th argument
 args.pop(0)
-confdir=None
+conffile=None
 
 debug=False
 # first parse common options
@@ -108,7 +100,7 @@ while len(args)>0:
             sys.stdout.write("ERROR: no value specified for global option '%s'\n"%
                              option)
             print_usage()
-        confdir=args.pop(0)
+        conffile=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
         debug=True
@@ -154,9 +146,9 @@ def getProjectArgs(args):
 
 cmd=args[0]
 
-if(cmd != 'setup'):
-    # read in common configuration
-    cf= ClientConf(confdir=confdir)
+
+# read in common configuration
+cf= cmd_line_utils.initiateConnectionBundle(conffile)
 
 
 try:
@@ -177,24 +169,6 @@ try:
         resp = clnt.listRequest("heartbeats")
         renderMethod = CmdLine.listHeartbeats
         ProcessedResponse(resp).pprint(renderMethod)
-    elif cmd == "config-list":
-        conf = ClientConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListDescriptions(configs)  
-    elif cmd == "config-values":
-        conf = ClientConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListValues(configs)  
-
-    elif cmd == "config":
-        param = args[1]
-        value = args[2]
-        
-        conf = ClientConf(confdir=confdir)
-        conf.set(param,value)
-    elif cmd == "readconf":
-        clnt = ClientMessage()
-        ProcessedResponse(clnt.readConfRequest()).pprint()
     elif cmd == "worker-failed":
         id=getArg(args, 1, "worker ID")
         clnt=ClientMessage()
@@ -204,31 +178,6 @@ try:
         #server=None
         clnt=ClientMessage()
         ProcessedResponse(clnt.commandFailedRequest(id)).pprint()
-    elif cmd== "trust-server":
-        host = getArg(args,1,"host")
-        
-        port = "14807"
-        if len(args)>2:
-            port = getArg(args,2,"port")        
-        clnt = ClientMessage(host,port)
-        cert = ProcessedResponse(clnt.addClientRequest(host,port)).getData()
-        
-              
-        #TODO some checks needed here.
-#        1. check if we have that ca in the chain
-#        2. check so we dont have two different certificates for same host in chain        
-        openssl = OpenSSL(ClientConf())
-        openssl.addCa(cert)
-
-        cf.set("client_host",host)
-        cf.set("client_http_port",port)
-        cf.set("client_https_port","13807")
-        
-        print "default server changed to %s"%host        
-# 
-        #save the certificate in the keychain
-
-        
         
     # dataflow application specific messages 
     elif cmd == "start": 
@@ -492,23 +441,11 @@ try:
         file.close()
             
         subprocess.call(["dot","-Tsvg",filename,'-o',filename+".svg"])
-        
-        
-        
+
     elif cmd == "readconf":
         clnt = ClientMessage()
         ProcessedResponse(clnt.readConfRequest()).pprint()
     
-    elif cmd == "setup":    
-        
-        # the -c option will be ignored here.
-        # by default we do a setup with the hostname as base config dir or a name defined by user input
-        cn=None
-        confdir =None
-        if(len(args)>1):
-            cn = getArg(args,1,"default setup name for the client")            
-   
-        cmd_line_utils.initiateClientToolSetup(cn)
     elif cmd == "stop-server":
         clnt=ClientMessage()
         ProcessedResponse(clnt.stopRequest()).pprint()

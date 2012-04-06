@@ -28,12 +28,12 @@ caConfTemplate ='[ ca ]\n\
 default_ca = copernicus_ca\n\
 \n\
 [ copernicus_ca ]\n\
-dir = CA_DIR\n\
+dir = $CA_DIR\n\
 certificate = $dir/cert.pem\n\
-database = $dir/index.txt\n\
-new_certs_dir = $dir/certs\n\
-private_key = $dir/keys/priv.pem\n\
-serial = $dir/serial\n\
+database = $$dir/index.txt\n\
+new_certs_dir = $$dir/certs\n\
+private_key = $$dir/keys/priv.pem\n\
+serial = $$dir/serial\n\
 \n\
 default_crl_days = 7\n\
 default_days = 365\n\
@@ -64,7 +64,7 @@ distinguished_name = copernicus_root_ca\n\
 x509_extensions  = copernicus_root_ca_extensions\n\
 \n\
 [ copernicus_root_ca ]\n\
-commonName = COMMON_NAME\n\
+commonName = $COMMON_NAME\n\
 stateOrProvinceName = test\n\
 countryName = SE\n\
 emailAddress = test@test.com\n\

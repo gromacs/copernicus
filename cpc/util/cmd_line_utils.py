@@ -18,13 +18,12 @@
 
 
 '''Very simple functions used by the command line tools'''
+from cpc.util.conf.connection_bundle import ConnectionBundle
 import cpc.util.openssl
 import os
 #from socket import gethostname
 import socket
 from cpc.util.conf.conf_base import Conf
-from cpc.util.conf.client_conf import ClientConf
-from cpc.util.conf.worker_conf import WorkerConf
 import cpc.util.conf.server_conf
 from cpc.network.com.client_base import ClientError
 
@@ -48,64 +47,50 @@ def printSortedConfigListValues(configs):
         print value.name + spaces + str(value.get()) + '\n'    
 
 
-def initiateClientToolSetup(configName=None):
+
+def initiateConnectionBundle(conffile=None):
+    '''
+    Tries to fetch a connectionbundle other via the provided file or via the default conf dir
+    @input String conffile : the path to a conffile
+    @returns ConnectionBundle
+    '''
+    if(conffile == None): # no conffile is provided we try to see if a file exists in our basic directory
+        cf = ConnectionBundle()
+        conffile =os.path.join(cf.getGlobaDir(),"client.cnx")
+        if(os.path.isfile(conffile)):
+            cf = ConnectionBundle(conffile = conffile,reload=True)
+
+    else:
+        cf=ConnectionBundle(conffile=conffile)
+
+    return cf
+
+
+
+def initiateWorkerSetup():
+    '''
+       Creates a connection bundle
+       @input configName String
+       @return ConnectionBundle
+    '''
+
+    configName = socket.getfqdn()
+    openssl = cpc.util.openssl.OpenSSL(cn = configName)
+    connectionBundle = openssl.setupClient()
+    return connectionBundle
+
+
+def initiateServerSetup(rundir,configName =None,confDir=None):
     ''' 
        @input configName String  
     '''
     if configName ==None:
         configName = socket.getfqdn()
-        
-    confdir = os.path.join(Conf.GLOBAL_DIR,configName)    
+
+    if(confDir==None):
+        confDir = os.path.join(Conf().getGlobaDir(),configName)
     
-    checkDir = os.path.join(confdir,"client")
-    if os.path.exists(checkDir)==True:
-        decision = raw_input("there already exists client configurations in %s do you wish to overwrite(y/n)?"%checkDir)
-        if decision !='y':
-            print "No new client setup generated"
-            return None
-        else:
-            shutil.rmtree(checkDir)#the config and ssl functions are smart they dont overwrite anything so we remove the folder explicitly
-            
-
-    cf=ClientConf(confdir=confdir,reload=True)
-    openssl = cpc.util.openssl.OpenSSL(cf,configName)
-    openssl.setupClient()
-
-def initiateWorkerSetup(configName=None):
-    ''' 
-       @input configName String  
-    '''
-    if configName ==None:
-        configName = socket.getfqdn()
-        
-    confdir = os.path.join(Conf.GLOBAL_DIR,configName)    
-    
-    checkDir = os.path.join(confdir,"worker")
-    if os.path.exists(checkDir)==True:
-        decision = raw_input("there already is a worker configuration in %s; do you want to overwrite it(y/n)?"%checkDir)
-        if decision !='y':
-            print "No new worker setup generated"
-            return None
-        else:
-            shutil.rmtree(checkDir)#the config and ssl functions are smart they dont overwrite anything so we remove the folder explicitly
-            
-
-    cf=WorkerConf(confdir=confdir,reload=True)
-    openssl = cpc.util.openssl.OpenSSL(cf,configName)
-    openssl.setupClient()
-
-
-
-def initiateServerSetup(rundir,configName =None):    
-    ''' 
-       @input configName String  
-    '''
-    if configName ==None:
-        configName = socket.getfqdn()
-    
-    confdir = os.path.join(Conf.GLOBAL_DIR,configName)
-    
-    checkDir = os.path.join(confdir,"server")
+    checkDir = os.path.join(confDir,"server")
     if os.path.exists(checkDir)==True:
         decision = raw_input("there already is a server configuration in %s; do you want to overwrite it(y/n)?"%checkDir)
         
@@ -115,8 +100,8 @@ def initiateServerSetup(rundir,configName =None):
         else:
             shutil.rmtree(checkDir)
             
-    cf=cpc.util.conf.server_conf.ServerConf(confdir=confdir,reload=True)
-    openssl = cpc.util.openssl.OpenSSL(cf,configName)
+    cf=cpc.util.conf.server_conf.ServerConf(confdir=confDir,reload=True)
+    openssl = cpc.util.openssl.OpenSSL(configName)
     setupCA(openssl,cf)
     openssl.setupServer()
     cf.setRunDir(rundir) 

@@ -28,7 +28,7 @@ from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
 from cpc.util import json_serializer
-from cpc.util.conf.worker_conf import WorkerConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
 import json
 from cpc.network.node_connect_request import NodeConnectRequest
 
@@ -39,7 +39,7 @@ class WorkerMessage(ClientBase):
     '''
     
     def __init__(self,host=None,port=None):
-        self.conf = WorkerConf()      
+        self.conf = ConnectionBundle()
         self.host = host
         self.port = port
         if self.host == None:

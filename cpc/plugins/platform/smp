@@ -38,7 +38,7 @@ sys.path.append(sys.argv[1])
 # now we can import copernicus stuff. This might be convenient for setting
 # paths.
 import cpc.util
-import cpc.util.plugin
+#import cpc.util.plugin
 
 
 try:

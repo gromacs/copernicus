@@ -22,6 +22,11 @@ import os
 #from socket import gethostname
 import re
 import shutil
+from string import Template
+import time
+from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
+
 '''
 Created on Oct 29, 2010
 
@@ -30,17 +35,17 @@ Created on Oct 29, 2010
 
 class OpenSSL(object):
     '''
-    classdocs
+    A class used by the server to generate CA and perform certificate signing
     '''
  
-    def __init__(self,conf,cn=None):
-        self.conf = conf
+    def __init__(self,cn=None):
+        self.conf = ServerConf()
         if cn == None:
             self.cn = self.conf.getHostName()
         else:            
             self.cn=cn  #always used for the CA
 
-            self.distinguished_cn = self.cn+"_"+conf.CN_ID
+
         
     def setupCA(self):
         '''creates keypair and certificate for the CA'''
@@ -61,14 +66,49 @@ class OpenSSL(object):
     
     
     def setupClient(self):
-        self.setupServer()
+        '''
+        Creates a connection bundle for the Client and worker
+        @returns ConnectionBundle
+        '''
+        connectionBundle = ConnectionBundle()  #FIXME //change name to ConnectionBundle
+        tempDir = "tmp"
+        privKeyFile = "%s/priv.pem"%tempDir
+        pubKeyFile = "%s/pub.pem"%tempDir
+        certReqConfigFile = "%s/cert_req.txt"%tempDir
+        certFile = "%s/cert.pem"%tempDir
+
+        # we remove any tempdir that might have been created and not removed perhaps due to an error during the setup
+        if os.path.isdir(tempDir):
+            shutil.rmtree(tempDir)
+        os.makedirs("tmp")  #we create a temp dir for intermediate files
+
+        self._generateKeyPair(privKeyFile=privKeyFile,pubKeyFile=pubKeyFile)
+
+        self._generateCertReqConf(distinguished_cn="%s_%s"%(connectionBundle.CN_ID,self.cn),
+                                  certReqConfigFile=certReqConfigFile)
+
+        self._generateCert(privKeyFile,certFile,certReqConfigFile)
+
+        #now we need to read everything in to the connection bundle
+        connectionBundle.setPrivateKey(open(privKeyFile,'r').read())
+        connectionBundle.setPublicKey(open(pubKeyFile,'r').read())
+        connectionBundle.setCert(open(certFile,'r').read())
+        connectionBundle.setCaCert(open(self.conf.getCACertFile(),"r").read())
+
+        shutil.rmtree(tempDir)
+        return connectionBundle
+
     def setupServer(self):
         if(not os.path.isdir(self.conf.getKeyDir())):
-            os.makedirs(self.conf.getKeyDir())    
-                 
-        self._generateKeyPair()   
-        self._generateCertReqConf()
-        self._generateCert() 
+            os.makedirs(self.conf.getKeyDir())
+
+        self._generateKeyPair()
+        self._generateCertReqConf(distinguished_cn=self.cn+"_"+self.conf.CN_ID,
+                                  certReqConfigFile=self.conf.getCertReqConfigFile() )
+
+        self._generateCert(self.conf.getPrivateKey(),
+                           self.conf.getCertFile(),
+                           certReqConfigFile=self.conf.getCertReqConfigFile())
 
         
         
@@ -91,32 +131,36 @@ class OpenSSL(object):
         file = open(self.conf.getCaChainFile(),"w")
         shutil.copyfile(self.conf.getCACertFile() ,self.conf.getCaChainFile())
     
-    def _generateCert(self):
+    def _generateCert(self,privateKeyFile,certFile,certReqConfigFile):
+        '''
+        generates and cert request based on the provided private key
+        writes a cert to the provided certFile path
+        @input String privateKeyFile: path to the private key
+        @Input String certFile: path to the cert file
+        @Input String certReqConfigFile: path to the certificate configuration file
+        '''
+
         args = [ "openssl", "req", "-outform", "PEM", "-new", "-key", \
-                self.conf.getPrivateKey(),
-                "-config",self.conf.getCertReqConfigFile(), 
-                "-out",self.conf.getCertRequestFile() ]
-        subprocess.call(args)    
+                privateKeyFile,
+                "-config",certReqConfigFile,
+                "-out",self.conf.getCertRequestFile() ] #FIXME the certRequest file should just be a tem
+        subprocess.call(args)
         
         args = ["openssl", "ca", "-in",
                self.conf.getCertRequestFile(),"-config",
                self.conf.getCaConfigFile(), "-keyfile", \
                self.conf.getCAPrivateKey(),                
-               "-out", self.conf.getCertFile()]
+               "-out", certFile]
 
-        
-        
-#        args = ["openssl", "x509", "-req", "-days", "365", "-in",\
-#               self.conf.getCertRequestFile(), "-signkey", \
-#               self.conf.getCAPrivateKey(), "-out", self.conf.getCertFile()]
-        #CONVERT TO PEM FORMAT
-        subprocess.call(args)
+
+        proc = subprocess.Popen(args,stdin=subprocess.PIPE)
+        proc.communicate("y\ny\n")
         os.remove(self.conf.getCertRequestFile())
-    
-        
+
+        #CONVERT TO PEM FORMAT
         args = ["openssl", "x509" ,
-                "-in", self.conf.getCertFile() ,
-                "-out",self.conf.getCertFile(),
+                "-in", certFile ,
+                "-out",certFile,
                  "-outform","PEM"] 
         subprocess.call(args)
     
@@ -140,25 +184,26 @@ class OpenSSL(object):
 
                 
     def _generateCaConf(self):
-        #file = open(self.conf.getCaConfTemplate())
-        #template = file.read()   
-        template = self.conf.getCaConfTemplate()         
-        template = re.sub("COMMON_NAME",self.cn,template)            
-        conf = re.sub("CA_DIR",self.conf.getCADir(),template)
-        #file.close()
+        template = Template(self.conf.getCaConfTemplate())
+        conf =template.safe_substitute(COMMON_NAME=self.cn,CA_DIR=self.conf.getCADir())
+
         confFile = open(self.conf.getCaConfigFile(),'w')
         confFile.write(conf)
         confFile.close()
         
         
-    def _generateCertReqConf(self):
+    def _generateCertReqConf(self,distinguished_cn,certReqConfigFile = None):
+
+        if certReqConfigFile==None:
+            certReqConfigFile = self.conf.getCertReqConfigFile()
+
         template =  self.conf.getCertReqConfigTemplate()
-        conf =  re.sub("COMMON_NAME",self.distinguished_cn,template)
+        conf =  re.sub("COMMON_NAME","%s_%d"%(distinguished_cn,int(time.time())),template)
         
-        
-        confFile = open(self.conf.getCertReqConfigFile(),'w')
+        confFile = open(certReqConfigFile,'w')
         confFile.write(conf)
-        confFile.close()  
+        confFile.close()
+
     def _generateKeyPair(self,privKeyFile=None,pubKeyFile=None):
         
         if privKeyFile == None:

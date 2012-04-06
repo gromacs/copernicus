@@ -20,13 +20,14 @@
 import httplib
 import mmap
 import logging
-
-from cpc.util.conf.client_conf import ClientConf
+import socket
 import cpc.util
 from cpc.network.com.client_response import ClientResponse
-from cpc.network.https_connection_pool import HTTPSConnectionPool 
+from cpc.network.https_connection_pool import HTTPSConnectionPool
+from cpc.util.conf.connection_bundle import ConnectionBundle
 
 log=logging.getLogger('cpc.client')
+
 
 class ClientError(cpc.util.CpcError):
     def __init__(self, exc):
@@ -37,7 +38,6 @@ class ClientError(cpc.util.CpcError):
 class ClientConnection:
     def __init__(self):
         """Connect as a client to a server, or spawn one if neccesary"""
-        #self.cnf=ClientConf()   
         self.connected=False
         self.httpsConnectionPool = HTTPSConnectionPool()        
 
@@ -50,8 +50,7 @@ class ClientConnection:
         cert = conf.getCertFile()
         
         if https:   
-            log.debug("Connecting HTTPS to host %s, port %s"%(self.host,self.port))    
-            #todo get a connection from the pool  
+            log.debug("Connecting HTTPS to host %s, port %s"%(self.host,self.port))
             self.conn = self.httpsConnectionPool.getConnection(self.host,
                                                 self.port,
                                                 privateKey,
@@ -70,7 +69,7 @@ class ClientConnection:
     def sendRequest(self,req,method="POST"):
         if not req.headers.has_key('Originating-Client') \
               and not req.headers.has_key('originating-client'):
-            req.headers['originating-client']=ClientConf().getHostName()
+            req.headers['originating-client']=socket.getfqdn()
         self.conn.request(method, "/copernicus",req.msg,req.headers)
                 
         response=self.conn.getresponse()
@@ -91,7 +90,7 @@ class ClientConnection:
                 raise ClientError("response has no length")
             log.debug("Response length is %s"%(length))
 
-            resp_mmap = mmap.mmap(-1, int(length), mmap.ACCESS_WRITE)
+            resp_mmap = mmap.mmap(-1, int(length), access=mmap.ACCESS_WRITE)
             
             # TODO: read in chunks
             resp_mmap.write(response.read(length))

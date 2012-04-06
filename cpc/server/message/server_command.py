@@ -143,7 +143,7 @@ class SCNetworkTopology(ServerCommand):
         for node in thisNode.nodes.nodes.itervalues():
             if topology.exists(node.getId()) == False:
                 #connect to correct node
-                clnt = ClientMessage(node.host,node.https_port) 
+                clnt = ClientMessage(node.host,node.https_port,conf=conf)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)
                 processedResponse=ProcessedResponse(rawresp)       

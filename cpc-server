@@ -39,7 +39,6 @@ from cpc.network.com.client_base import ClientError
 from cpc.client import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.client_conf import ClientConf
 from cpc.util import cmd_line_utils
 import os
 
@@ -48,7 +47,8 @@ def print_usage():
     print "Usage: cpc-server start [-d]"
     print "       cpc-server config-list"
     print "       cpc-server config param value"   
-    print "       cpcc setup default-project-directory"
+    print "       cpc-server setup default-project-directory"
+    print "       cpc-server create-connection-bundle"
     print ""
     print "Common options:"
     print "       cpc-server [-c confdir]"
@@ -99,7 +99,6 @@ cmd=args[0]
 if(cmd !='setup'):
     # read in common configuration
     cf=ServerConf(confdir=confdir)
-    clientConf=ClientConf(confdir=confdir)
 try:
     if cmd == "help":
         print_usage()
@@ -126,8 +125,7 @@ try:
     
     
         cmd_line_utils.initiateServerSetup(rundir, cn)
-        cmd_line_utils.initiateClientToolSetup(cn)
-        cmd_line_utils.initiateWorkerSetup(cn)
+
         sys.exit(0)
     
     # initialize the client log
@@ -151,10 +149,11 @@ try:
         value = args[2]
         
         conf = ServerConf()
-        conf.set(param,value)  
-    elif cmd == "stop":
-        clnt=ClientMessage()
-        ProcessedResponse(clnt.stopRequest()).pprint()    
+        conf.set(param,value)
+
+    elif cmd == "create-connection-bundle":
+        connectionBundle = cmd_line_utils.initiateWorkerSetup()
+        print connectionBundle.toJson()
     else: 
         print "ERROR: unknown command"
 except ClientError as e:
