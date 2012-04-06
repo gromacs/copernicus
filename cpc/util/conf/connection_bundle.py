@@ -202,3 +202,6 @@ class ConnectionBundle(Conf):
         @input ca_cert String, a pem formatted string
         '''
         self.conf["ca_cert"].set(caCert)
+
+    def setHostname(self,hostname):
+        self.conf["client_host"].set(hostname)
