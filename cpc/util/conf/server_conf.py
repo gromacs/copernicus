@@ -100,7 +100,7 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
 
         self._add('mode','prod',
                   "The run mode of the server",
-                  True,None,None,['debug','prod'])
+                  True,None,None,['trace','debug','prod'])
 
         # run options
         self._add('run_dir', None,

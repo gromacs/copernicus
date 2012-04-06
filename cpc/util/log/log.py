@@ -31,6 +31,9 @@ NBACKUPS=5
 #log level of for trace
 TRACE = 5
 
+MODE_DEBUG = "debug"
+MODE_TRACE = "trace"
+
 # The format for output to files
 fileFormat="%(asctime)-20s - %(levelname)-7s - %(name)-15s: %(message)s"
 # The format for output to stdout
@@ -61,14 +64,14 @@ def initClientLog(debug=False):
     initErrorLog()
 
 
-def initServerLog(debug=False,trace=False):
+def initServerLog(log_mode=None):
     """Initialize a server log. This log outputs to the server log file 
        (usually ~/.copernicus/<hostname>/log/server.log)."""
     conf=ServerConf()
     logger=logging.getLogger('')
-    if trace:
+    if log_mode == MODE_TRACE:
         logger.setLevel(TRACE)
-    elif debug:
+    elif log_mode == MODE_DEBUG:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -88,12 +91,12 @@ def initServerLog(debug=False,trace=False):
     initErrorLog()
 
 
-def initServerLogToStdout(debug=False,trace=False):
+def initServerLogToStdout(log_mode=None):
     logger=logging.getLogger('')
 
-    if trace:
+    if log_mode == MODE_TRACE:
         logger.setLevel(TRACE)
-    elif debug:
+    elif log_mode == MODE_DEBUG:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)

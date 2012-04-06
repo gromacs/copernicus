@@ -64,7 +64,7 @@ if len(args)<2:
 args.pop(0)
 confdir=None
 
-debug=False
+debug=None
 # first parse common options
 while len(args)>0:
     if args[0][0]!='-':
@@ -77,7 +77,7 @@ while len(args)>0:
         confdir=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
-        debug=True
+        debug=cpc.util.log.MODE_DEBUG
     else:
         sys.stdout.write("ERROR: no command or faulty global option '%s'"%
               args[0])
@@ -105,12 +105,17 @@ try:
     elif cmd == "start":
         if len(args)>1:
             if args[1] == "-d":
-                debug=True
-                cpc.util.log.initServerLogToStdout(debug)
+                debugMode=cpc.util.log.MODE_DEBUG
+                cpc.util.log.initServerLogToStdout(debugMode)
+            if args[1] == "-t":
+                debugMode=cpc.util.log.MODE_TRACE
+                cpc.util.log.initServerLogToStdout(debugMode)
             else:
                 print_usage()
+
+
         print "Starting server.."        
-        cpc.network.server.forkAndRun(cf, debug )
+        cpc.network.server.forkAndRun(cf, debugMode )
         sys.exit(0)
     elif cmd == "setup":    
         

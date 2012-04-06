@@ -123,7 +123,6 @@ def serveHTTPS(serverState):
         httpd = SecureServer(request_handler.handler, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
         log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))
-        log.log(5,"fsfs")
         httpd.serve_forever();
 
     except Exception:
@@ -135,7 +134,7 @@ def serveHTTPS(serverState):
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
 
-    cpc.util.log.initServerLog(ServerConf().isDebug())
+    cpc.util.log.initServerLog(ServerConf().getMode())
     th=Thread(target = serveHTTP,args=[serverState])
     th.daemon=True
     th.start()
@@ -149,16 +148,20 @@ def shutdownServer(self):
     self.httpd.shutdown
 
 
-def forkAndRun(conf, do_debug):
+def forkAndRun(conf, debugMode=None):
     """Fork & detach a process to run it as a daemon. Starts the server"""
     conf = ServerConf()       
-    if(do_debug):
+    if(debugMode == cpc.util.log.MODE_DEBUG):
         conf.setMode('debug')
+    if(debugMode == cpc.util.log.MODE_TRACE):
+        conf.setMode('trace')
     
     # do_debug comes from the cmd line 
     # we do not want to use the config setting debug here since we want to be able to set
     # production mode server conf to debug in order to trace logs
-    debug=do_debug  
+    debug = True
+    if debugMode:
+        debug=True
     # initialize the server state before forking.
     serverState = cpc.server.state.ServerState(conf)
     serverState.read()
