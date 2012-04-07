@@ -127,29 +127,29 @@ class ConnectionBundle(Conf):
             base_path,
             self.getHostName()),
             'The configuration directory',
-            userSettable=True)
+            userSettable=True,writable=False)
 
         self._add('plugin_path', "",
             "Colon-separated list of directories to search for plugins",
-            True)
+            True,writable=False)
 
         self._add('local_executables_dir', "executables",
             "Directory containing executables for the run client. Part of executables_path",
             False,
-            relTo='conf_dir')
+            relTo='conf_dir',writable=False)
         self._add('global_executables_dir', "executables",
             "The directory containing executables for the run client. Part of executables_path",
             False,
-            relTo='global_dir')
+            relTo='global_dir',writable=False)
         self._add('executables_path', "",
             "Colon-separated directory list to search for executables",
-            True)
+            True,writable=False)
 
         self._add('run_dir', os.path.join(os.environ["HOME"],
             "worker",
             "run"),
             "The run directory for the run client",
-            True)
+            True,writable=False)
 
 
 

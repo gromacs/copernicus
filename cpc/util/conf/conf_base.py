@@ -47,7 +47,7 @@ class ConfValue:
        default value. If the value is user settable, there can be a 
        set value."""
     def __init__(self, name, defaultValue, description, userSettable=False, 
-                 setValue=None, relTo=None,validation=None,allowedValues=None):
+                 setValue=None, relTo=None,validation=None,allowedValues=None,writable=True):
         self.name=name
         self.defaultValue=defaultValue
         self.description=description
@@ -55,7 +55,8 @@ class ConfValue:
         self.setValue=setValue
         self.relTo=relTo
         self.validation = validation  #a regexp that validates the correct input
-        self.allowedValues = allowedValues # list of allowed values for this config parameter        
+        self.allowedValues = allowedValues # list of allowed values for this config parameter
+        self.writable = writable
 
     def get(self):
         """Get the current value."""
@@ -238,12 +239,12 @@ class Conf:
 
     
     def _add(self, name, defaultValue, desc, userSettable=False, 
-             relTo=None,validation=None,allowedValues =None):
+             relTo=None,validation=None,allowedValues =None,writable=True):
         """Add a configuration value with a default value, description"""
         self.conf[name] = ConfValue(name, defaultValue, desc, 
                                     userSettable=userSettable,
                                     relTo=relTo,validation=validation,
-                                    allowedValues=allowedValues)
+                                    allowedValues=allowedValues,writable=writable)
        
     def tryRead(self,confname=None):
         
@@ -309,6 +310,7 @@ class Conf:
 
         conf = dict()
         for cf in self.conf.itervalues():
+            if cf.writable:
                 conf[cf.name] = cf.get()
 
         return json.dumps(conf,default = cpc.util.json_serializer.toJson,indent=4)
