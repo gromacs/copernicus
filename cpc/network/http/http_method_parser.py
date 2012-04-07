@@ -91,7 +91,6 @@ class HttpMethodParser(object):
     #handles singlepart POST messages  
     @staticmethod  
     def handleSinglePart(headers,message):
-
         contentLength = long(headers['content-length'])
         if headers['content-type'] == 'application/x-www-form-urlencoded' or headers['content-type'] == 'application/x-www-form-urlencoded; charset=UTF-8': #TODO generalize
             msg =  message.read(contentLength)
@@ -100,9 +99,7 @@ class HttpMethodParser(object):
             for k,v in parsedDict.iteritems():
                 params[k] = v[0]
 
-
             request = ServerRequest(headers,None,params)   #FIXME Right now we are assuming messages cannot be that big
-
 
         return request
     

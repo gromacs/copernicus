@@ -32,6 +32,7 @@ import mimetypes
 import re
 from cpc.network.http.http_method_parser import HttpMethodParser
 import cpc.server.message
+import cpc.util.log
 
 log=logging.getLogger('cpc.server.request_handler')
 
@@ -106,8 +107,8 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
     #PUT messages reserved for server to server messages, put supports message delegation
     def do_PUT(self):        
         conf = ServerConf()
-        log.info('%s %s'%(self.command,self.path))
-        log.debug("Headers are: '%s'\n"%self.headers)
+        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
+        log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
         
         if self.headers.has_key('end-node') and \
             ServerToServerMessage.connectToSelf(self.headers)==False:
@@ -122,17 +123,15 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             endNodePort = None
             if self.headers.has_key('end-node-port'):
                 endNodePort=self.headers['end-node-port']
-            
-            log.debug("Trying to reach end node %s:%s"%(endNode,endNodePort))
+
+            log.log(cpc.util.log.TRACE,"Trying to reach end node %s:%s"%(endNode,endNodePort))
 
             server_msg = ServerToServerMessage(endNode,endNodePort)
             server_msg.connect()
-            log.debug("connected")
             retresp = server_msg.delegateMessage(self.headers.dict,
                                                  self.rfile)
-            log.debug("delegated")
             #TODO send back the response with the headers received
-            log.debug("Done. Delegating back reply message of length %d."%
+            log.log(cpc.util.log.TRACE,"Done. Delegating back reply message of length %d."%
                       len(retresp.message))
             self.send_response(200)
             # the content-length is in the message.
@@ -140,7 +139,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             for (key, val) in retresp.headers.iteritems():
                 kl=key.lower()
                 if kl!="content-length" and kl!="server" and kl!="date":
-                    log.debug("Sending header '%s'='%s'"%(kl,val))
+                    log.log(cpc.util.log.TRACE,"Sending header '%s'='%s'"%(kl,val))
                     self.send_header(key,val)
             self.end_headers()
             retresp.message.seek(0)
@@ -167,6 +166,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             retmsg = retmsg=cpc.server.message.parse(scList,
                                                      request,
                                                      self.server.getState())
+
             self.sendResponse(retmsg)
 
         else:
@@ -175,17 +175,20 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_header("connection",  "close")
             self.end_headers()
 
+
         return False
     
     
     def sendResponse(self,retmsg):
         conf = ServerConf()
         rets = retmsg.render()
-        log.debug("Done. Reply message is: '%s'\n"%rets)
-        self.send_response(self.responseCode)  
+        log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
+
+        self.send_response(self.responseCode)
         self.send_header("content-length", len(rets))
         if 'originating-server' not in retmsg.headers:
             self.send_header("originating-server", conf.getHostName())
+
 
         for key,value in retmsg.headers.iteritems():
             self.send_header(key, value)

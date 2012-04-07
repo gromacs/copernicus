@@ -107,7 +107,7 @@ try:
             if args[1] == "-d":
                 debugMode=cpc.util.log.MODE_DEBUG
                 cpc.util.log.initServerLogToStdout(debugMode)
-            if args[1] == "-t":
+            elif args[1] == "-t":
                 debugMode=cpc.util.log.MODE_TRACE
                 cpc.util.log.initServerLogToStdout(debugMode)
             else:
