@@ -62,7 +62,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
     # With GET we can serve files and simple commands
     def do_GET(self):
 
-        log.info('%s %s'%(self.command,self.path))
+        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
     
         # if the path starts with application root + / or ?  we have a message to process
         #otherwise we should just strip any request params and keep the resource reference
@@ -91,7 +91,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         
     #with POST we only serve commands, post messages can also handle multipart messages
     def do_POST(self):
-        log.info('%s %s'%(self.command,self.path))
+        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
         #can handle single part and multipart messages
         #take the input and put it into a request object
         #process the message

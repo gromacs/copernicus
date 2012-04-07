@@ -325,5 +325,14 @@ class Worker(object):
         return True
 
     def shutdown(self):
-        log.info("Received shutdown signal")
+        log.log(cpc.util.log.TRACE,"Received shutdown signal")
         self.acceptCommands = False
+
+        th=threading.Thread(target=sendNotify, args=(self,self.runCondVar))
+        th.daemon=True
+        th.start()
+
+def sendNotify(worker,condVar):
+    condVar.acquire()
+    condVar.notify()
+    condVar.release()

@@ -30,7 +30,7 @@ import os
 import sys
 import logging
 
-log=logging.getLogger('cpc.server.log')
+log=logging.getLogger('cpc.util.conf.server_conf')
 
 class ServerConf(cpc.util.conf.conf_base.Conf):
     '''
@@ -198,7 +198,6 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         return True
 
     def getNodes(self):
-        log.info("nodes %s"%self.conf.get('nodes').get().nodes)
         return self.conf.get('nodes').get()
 
     def getNodeConnectRequests(self):

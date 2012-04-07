@@ -24,7 +24,7 @@ import socket
 import cpc.util
 from cpc.network.com.client_response import ClientResponse
 from cpc.network.https_connection_pool import HTTPSConnectionPool
-from cpc.util.conf.connection_bundle import ConnectionBundle
+import cpc.util.log
 
 log=logging.getLogger('cpc.client')
 
@@ -50,7 +50,7 @@ class ClientConnection:
         cert = conf.getCertFile()
         
         if https:   
-            log.debug("Connecting HTTPS to host %s, port %s"%(self.host,self.port))
+            log.log(cpc.util.log.TRACE,"Connecting HTTPS to host %s, port %s"%(self.host,self.port))
             self.conn = self.httpsConnectionPool.getConnection(self.host,
                                                 self.port,
                                                 privateKey,
@@ -59,7 +59,7 @@ class ClientConnection:
             
                                                       
         else:
-            log.debug("Connecting HTTP to host %s, port %s"%(host,port))
+            log.log(cpc.util.log.TRACE,"Connecting HTTP to host %s, port %s"%(host,port))
             self.conn = httplib.HTTPConnection(self.host,self.port)
             
         self.conn.connect()
@@ -82,13 +82,13 @@ class ClientConnection:
         else:
             headers=response.getheaders()
             for (key,val) in headers:
-                log.debug("Got header '%s'='%s'"%(key,val))
+                log.log(cpc.util.log.TRACE,"Got header '%s'='%s'"%(key,val))
             length=response.getheader('content-length', None)
             if length is None:
                 length=response.getheader('Content-Length', None)
             if length is None:
                 raise ClientError("response has no length")
-            log.debug("Response length is %s"%(length))
+            log.log(cpc.util.log.TRACE,"Response length is %s"%(length))
 
             resp_mmap = mmap.mmap(-1, int(length), access=mmap.ACCESS_WRITE)
             
