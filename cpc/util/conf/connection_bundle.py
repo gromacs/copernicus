@@ -60,7 +60,7 @@ class ConnectionBundle(Conf):
             self.execBasedir=os.path.abspath(dn)
 
         self._add('exec_base_dir', self.execBasedir,
-                'executable base directory')
+                'executable base directory',writable=False)
 
 
         self.tempfiles = dict()
@@ -151,7 +151,7 @@ class ConnectionBundle(Conf):
             "The run directory for the run client",
             True,writable=False)
 
-
+        self.conf['global_dir'].writable=False
 
 
     def getClientHost(self):
