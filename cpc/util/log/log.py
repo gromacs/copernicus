@@ -33,6 +33,7 @@ TRACE = 5
 
 MODE_DEBUG = "debug"
 MODE_TRACE = "trace"
+MODE_PRODUCTION = "prod"
 
 # The format for output to files
 fileFormat="%(asctime)-20s - %(levelname)-7s - %(name)-15s: %(message)s"

@@ -103,19 +103,17 @@ try:
     if cmd == "help":
         print_usage()
     elif cmd == "start":
+        serverMode=cpc.util.log.MODE_PRODUCTION
         if len(args)>1:
             if args[1] == "-d":
-                debugMode=cpc.util.log.MODE_DEBUG
-                cpc.util.log.initServerLogToStdout(debugMode)
+                serverMode=cpc.util.log.MODE_DEBUG
+                cpc.util.log.initServerLogToStdout(serverMode)
             elif args[1] == "-t":
-                debugMode=cpc.util.log.MODE_TRACE
-                cpc.util.log.initServerLogToStdout(debugMode)
-            else:
-                print_usage()
-
+                serverMode=cpc.util.log.MODE_TRACE
+                cpc.util.log.initServerLogToStdout(serverMode)
 
         print "Starting server.."        
-        cpc.network.server.forkAndRun(cf, debugMode )
+        cpc.network.server.forkAndRun(cf, serverMode )
         sys.exit(0)
     elif cmd == "setup":    
         

@@ -151,22 +151,18 @@ def shutdownServer(self):
 def forkAndRun(conf, debugMode=None):
     """Fork & detach a process to run it as a daemon. Starts the server"""
     conf = ServerConf()       
-    if(debugMode == cpc.util.log.MODE_DEBUG):
-        conf.setMode('debug')
-    if(debugMode == cpc.util.log.MODE_TRACE):
-        conf.setMode('trace')
-    
-    # do_debug comes from the cmd line 
+    conf.setMode(debugMode)
+    # debugMode comes from the cmd line
     # we do not want to use the config setting debug here since we want to be able to set
     # production mode server conf to debug in order to trace logs
-    debug = True
-    if debugMode:
+    if conf.getMode()==cpc.util.log.MODE_PRODUCTION:
+        debug=False
+    else:
         debug=True
     # initialize the server state before forking.
     serverState = cpc.server.state.ServerState(conf)
     serverState.read()
-    #raise cpc.util.CpcError("ADFSDSF")
-    
+
     pid=0
     try:
         # First fork so the parent can exit. 
