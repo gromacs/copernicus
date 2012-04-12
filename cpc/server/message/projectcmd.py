@@ -105,6 +105,28 @@ class SCProjectActivate(ServerCommand):
             response.add("All items in project %s activated."%prj.getName())
         else:
             response.add("%s in project %s activated."%(item, prj.getName()))
+
+class SCProjectClearError(ServerCommand):
+    """Clear an error in an active instance."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-clear-error")
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        if request.hasParam('item'):
+            item=request.getParam('item')
+        else:
+            item=""
+        if ( request.hasParam('recursive') and 
+             int(request.getParam('recursive')) == 1):
+            recursive=True
+        else:
+            recursive=False
+        outf=StringIO()
+        lst=prj.clearError(item, recursive, outf)
+        response.add(outf.getvalue())
         
 class SCProjectList(ServerCommand):
     """List named items in a project: instances or networks."""
@@ -121,6 +143,7 @@ class SCProjectList(ServerCommand):
             item=""
         lst=prj.getNamedItemList(item)
         response.add(lst)
+
 
 class SCProjectInfo(ServerCommand):
     """Get project item descriptions."""

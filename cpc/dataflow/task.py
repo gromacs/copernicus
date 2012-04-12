@@ -296,7 +296,7 @@ class Task(object):
                 if len(self.cmds) == 0:
                     self.fnInput.destroy()
             except cpc.util.CpcError as e:
-                self.activeInstance.markError(e.__str__())
+                self.activeInstance.markError(e.__unicode__())
                 return None
             except:
                 fo=StringIO()

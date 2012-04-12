@@ -704,6 +704,7 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
+           
 
     def _canRun(self):
         """Whether all inputs are there for the instance to be run.
@@ -768,12 +769,34 @@ class ActiveInstance(object):
     def markError(self, msg):
         """Mark active instance as being in error state."""
         with self.lock:
-            self.errmsg=msg
+            self.errmsg=unicode(msg, encoding="utf-8")
             self.state=ActiveInstance.error
-            print msg
-            log.error("Instance %s (fn %s): %s"%(self.instance.getName(), 
-                                                 self.function.getName(), msg))
-
+            #print msg
+            log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
+                                                  self.function.getName(), 
+                                                  unicode(msg, 
+                                                          encoding="utf-8")))
+    def clearError(self, recursive, outf=None):
+        """Clear the error state of this instance, and if recursive is set, 
+           for any subinstances. Returns the number of errors cleared"""
+        ret=0
+        with self.inputLock:
+            with self.lock:
+                if self.state == ActiveInstance.error:
+                    self.updated=True
+                    self.state=ActiveInstance.active
+                    log.debug("Clearing error on %s"%self.getCanonicalName())
+                    outf.write("Cleared error state on %s\n"%
+                               self.getCanonicalName())
+                    changed=True
+                    ret+=1
+                if recursive and (self.subnet is not None):
+                    ret+=self.subnet.clearError(recursive, outf)
+            if changed:
+                if self._canRun():
+                    self._genTask()
+        return ret
+ 
     def writeXML(self, outf, indent=0):
         """write out values as xml."""
         indstr=cpc.util.indStr*indent

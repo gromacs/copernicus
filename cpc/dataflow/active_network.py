@@ -355,6 +355,16 @@ class ActiveNetwork(network.Network):
             for inst in self.activeInstances.itervalues():
                 inst.activate()
 
+    def clearError(self, recursive, outf=None):
+        """Clear the error in all sub-instances if recursive is true
+           Returns the number of errors cleared"""
+        ret=0
+        if recursive:
+            with self.lock:
+                for inst in self.activeInstances.itervalues():
+                    ret+=inst.clearError(recursive, outf)
+        return ret
+
     def getCumulativeCputime(self):
         """Get the cumulative CPU time used (in seconds) for all active
            instances in this network and all subnets."""

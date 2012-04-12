@@ -369,6 +369,15 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
+    def projectClearErrorRequest(self, project, item):
+        """Clear an error."""
+        cmdstring="project-clear-error"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('item', item))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+ 
     def projectUploadRequest(self, project, file):
         """Upload project file"""
         cmdstring="project-upload"

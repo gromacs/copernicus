@@ -188,7 +188,7 @@ class CmdLine(object):
         if 'typename' in list:
             co.write("Type: %s\n"%list['typename'])
         if 'state' in list:
-            co.write("State: %s\n"%list['state'])
+            co.write("State: %s\n"%(list['state'].encode("utf-8")))
         if 'subitems' in list:
             co.write('Sub-items:\n')
             for item in list['subitems']:

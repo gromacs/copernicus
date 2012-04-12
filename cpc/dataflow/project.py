@@ -338,7 +338,7 @@ class Project(object):
                         if net is not None:
                             ret["instances" ]=net.getActiveInstanceList()
                         #ret["state" ]=str(item.getStateStr())
-                        ret["state"]=str(item.getPropagatedStateStr())
+                        ret["state"]=item.getPropagatedStateStr()
                         cputime=int(item.getCputime())
                         if cputime > 0:
                             ret["cputime" ]=str(cputime)
@@ -534,6 +534,14 @@ class Project(object):
             else:
                 item=self.active.getNamedActiveInstance(pathname)
                 item.activate()
+
+    def clearError(self, pathname, recursive, outf):
+        """Clear an error on an item."""
+        with self.networkLock:
+            item=self.active.getNamedActiveInstance(pathname)
+            ret=item.clearError(recursive, outf)
+            if ret==0:
+                outf.write("No errors cleared.")
 
     def getQueue(self):
         """Get the task queue."""

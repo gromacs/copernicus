@@ -51,6 +51,7 @@ def print_usage():
     print "       cpcc info     [-p projectname] function_name|module_name"
     print "       cpcc log      [-p projectname] instance_name"
     print "       cpcc activate [-p projectname] [item]"
+    print "       cpcc clear-error [-p projectname] [item]"
     print "       cpcc projects|p"
     print 
     print "Project manipulation commands."
@@ -260,6 +261,14 @@ try:
             item=""
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectActivateRequest(project, item)).pprint()
+    elif cmd == "clear-error":
+        project, pargs = getProjectArgs(args)
+        if len(pargs) > 1:
+            item=getArg(pargs, 1, "project item to list")
+        else:
+            item=""
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectClearErrorRequest(project, item)).pprint()
     elif cmd == "upload":
         project, pargs = getProjectArgs(args)
         filename=getArg(pargs, 1, "project XML file")

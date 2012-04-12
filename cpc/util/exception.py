@@ -25,6 +25,8 @@ class CpcError(Exception):
         self.str=str
     def __str__(self):
         return self.str
+    def __unicode__(self):
+        return self.str
 
 
 class CpcXMLError(CpcError):
@@ -32,4 +34,5 @@ class CpcXMLError(CpcError):
     def __init__(self, msg, locator):
         self.str = "line %d, column %d: %s"%(locator.getLineNumber(), \
                                              locator.getColumnNumber(), msg)
+
 

@@ -18,7 +18,8 @@
 ./cpcc set-file grompp:in.top  examples/mdrun-test/topol.top
 # 
 ./cpcc set grompp:in.settings[0].name nsteps
-./cpcc set grompp:in.settings[0].value 12500
+#./cpcc set grompp:in.settings[0].value 12500
+./cpcc set grompp:in.settings[0].value 1000
 ./cpcc set grompp:in.settings[1].name integrator
 ./cpcc set grompp:in.settings[1].value md
 # and commit this set of updates
