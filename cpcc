@@ -51,7 +51,6 @@ def print_usage():
     print "       cpcc info     [-p projectname] function_name|module_name"
     print "       cpcc log      [-p projectname] instance_name"
     print "       cpcc activate [-p projectname] [item]"
-    print "       cpcc clear-error [-p projectname] [item]"
     print "       cpcc projects|p"
     print 
     print "Project manipulation commands."
@@ -64,6 +63,7 @@ def print_usage():
     print "       cpcc commit   [-p projectname]"
     print "       cpcc rollback [-p projectname]"
     print "       cpcc upload   [-p projectname] upload.xml"
+    print "       cpcc clear-error [-p projectname] [item]"
     print 
     print "Worker and heartbeat monitoring commands."
     print "       cpcc queue|q"

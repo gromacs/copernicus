@@ -31,6 +31,9 @@ import subprocess
 import stat
 import threading
 
+import connection
+import value
+
 
 log=logging.getLogger('cpc.dataflow.transaction')
 
@@ -129,16 +132,40 @@ class TransactionItem(object):
 
 class Set(TransactionItem):
     """Transaction item for setting a value."""
-    def __init__(self, activeInstance, oldVal, newVal):
+    def __init__(self, itemname, activeInstance, direction, ioItemList, 
+                 literal, sourceType):
         """initialize based on the active instance, old value associated
            with the instance, and a new value."""
+        #instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
+        #self.activeInstance=self.active.getNamedActiveInstance(instanceName)
+        self.itemname=itemname
         self.activeInstance=activeInstance
-        self.oldVal=oldVal
-        self.newVal=newVal
+        self.direction=direction
+        self.ioItemList=ioItemList
+        self.literal=literal
+        self.sourceType=sourceType
 
     def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
         """Get the affected items of this transaction"""
         ## there are no affected output AIs: only input AIs change.
+        with self.activeInstance.lock:
+            oldVal=self.activeInstance.findNamedInput(self.direction, 
+                                                      self.ioItemList, 
+                                                      project)
+            # now we can extract the type.
+            tp=oldVal.getType()
+            if not isinstance(self.literal, value.Value):
+                newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
+                                              project.fileList)
+            else:
+                newVal=self.literal
+                if not (tp.isSubtype(rval.getType()) or
+                        rval.getType().isSubtype(tp) ):
+                    raise ActiveError(
+                              "Incompatible types in assignment: %s to %s"%
+                              (rval.getType().getName(), tp.getName()))
+        self.oldVal=oldVal
+        self.newVal=newVal
         self.activeInstance.getNamedInputAffectedAIs(self.oldVal, self.newVal,
                                                      affectedInputAIs)
 
@@ -155,19 +182,27 @@ class Set(TransactionItem):
         """Describe the item."""
         outf.write("set %s: %s to %s"%
                    (self.activeInstance.getCanonicalName(),
-                    self.oldVal.getFullName(),
-                    self.newVal.getDesc()))
+                    self.itemname, self.literal))
 
 class Connect(TransactionItem):
     """Transaction item for connecting a value"""
-    def __init__(self, connection):
-        self.connection=connection
+    #def __init__(self, connection):
+    #    self.connection=connection
+    def __init__(self, src, dst):
+        self.src=src
+        self.dst=dst
 
     def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
         """Get the affected items of this transaction"""
         # we can do this because the global lock prevents other updates
         # at the same time.
-        project.active.findConnectionSrcDest(self.connection, 
+        srcInstName,srcDir,srcItemName=connection.splitIOName(self.src, None)
+        dstInstName,dstDir,dstItemName=connection.splitIOName(self.dst, None)
+        cn=connection.makeConnection(project.active,
+                                     srcInstName, srcDir, srcItemName,
+                                     dstInstName, dstDir, dstItemName)
+        self.connection=cn
+        project.active.findConnectionSrcDest(cn,
                                              affectedInputAIs,
                                              affectedOutputAIs)
 
@@ -180,6 +215,5 @@ class Connect(TransactionItem):
 
     def describe(self, outf):
         """Describe the item."""
-        outf.write("connect %s to %s"%(self.connection.srcString(),
-                                         self.connection.dstString()))
+        outf.write("connect %s to %s"%(self.src, self.dst) )
 

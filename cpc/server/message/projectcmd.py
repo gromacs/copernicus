@@ -333,7 +333,7 @@ class SCProjectSet(ServerCommand):
         try:
             outf=StringIO()
             if upfile is None:
-                val=prj.scheduleSet(itemname, setval, outf)
+                prj.scheduleSet(itemname, setval, outf)
             else:
                 # write out the file 
                 dir=prj.getNewInputSubDir()
@@ -346,10 +346,10 @@ class SCProjectSet(ServerCommand):
                 outFile=open(setval, "w")
                 outFile.write(upfile.read())
                 outFile.close()
-                val=prj.scheduleSet(itemname, setval, outf, cpc.dataflow.fileType)
-            if val is None:
-                tpname='None'
-                outf.write("Item not found: %s"%(itemname))
+                prj.scheduleSet(itemname, setval, outf, cpc.dataflow.fileType)
+            #if val is None:
+            #    tpname='None'
+            #    outf.write("Item not found: %s"%(itemname))
                 #tpname=val.getType().getName()
                 #if ( request.hasParam('commit') and 
                 #     int(request.getParam('commit')) == 1):

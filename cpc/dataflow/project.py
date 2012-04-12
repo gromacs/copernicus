@@ -164,41 +164,16 @@ class Project(object):
         """Add an instance of a set in the transaction schedule."""
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
-        with instance.lock:
-            oval=instance.findNamedInput(direction, ioItemList)
-            # now we can extract the type.
-            tp=oval.getType()
-            if not isinstance(literal, value.Value):
-                newVal=value.interpretLiteral(literal, tp, sourceType, 
-                                              self.fileList)
-            else:
-                newVal=literal
-                if not (tp.isSubtype(rval.getType()) or 
-                        rval.getType().isSubtype(tp) ):
-                    raise ActiveError(
-                              "Incompatible types in assignment: %s to %s"%
-                              (rval.getType().getName(), tp.getName()))
-        lst=None 
-        lstItem=transaction.Set(instance, oval, newVal)
+        lstItem=transaction.Set(itemname, instance, direction, ioItemList, 
+                                literal, sourceType)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
-        #with self.transactionListLock:
-        #    self.transactionList.append(transaction.Set(instance, oval, 
-        #                                                 newVal))
-        return newVal
 
     def scheduleConnect(self, src, dst, outf):
         """Add an instance of a connect in the transaction schedule."""
-        srcInstName,srcDir,srcItemName=connection.splitIOName(src, None)
-        dstInstName,dstDir,dstItemName=connection.splitIOName(dst, None)
-        cn=connection.makeConnection(self.active,
-                                     srcInstName, srcDir, srcItemName,
-                                     dstInstName, dstDir, dstItemName)
-        lstItem=transaction.Connect(cn)
+        lstItem=transaction.Connect(src, dst)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
-        #with self.transactionListLock:
-        #    self.transactionList.append(transaction.Connect(cn))
 
 
     def beginTransaction(self, outf):
@@ -218,34 +193,6 @@ class Project(object):
                 self.transactionListStack.pop(li)
             else:
                 raise ProjectError("No transactions to commit.")
-        #affectedInputAIs=set()
-        #affectedOutputAIs=set()
-        ##inputsLocked=False
-        #outputsLocked=False
-        #outf.write("Committing scheduled changes:\n")
-        #with self.transactionListLock:
-        #    with self.networkLock:
-        #        try:
-        #            # first get all affected active instances.
-        #            for item in self.transactionList:
-        #                item.getAffected(self, affectedInputAIs, 
-        #                                 affectedOutputAIs)
-        #            # lock all affected I/O active instances
-        #            for ai in affectedOutputAIs:
-        #                ai.outputLock.acquire()
-        #            outputsLocked=True
-        #            # now run the transaction
-        #            for item in self.transactionList:
-        #                outf.write("- ")
-        #                item.run(self, self, outf)
-        #            for ai in affectedInputAIs:
-        #                ai.handleNewInput(self, 0)
-        #        finally:
-        #            # make sure everything is released.
-        #            if outputsLocked:
-        #                for ai in affectedOutputAIs:
-        #                    ai.outputLock.release()
-        #    self.transactionList=[]
 
     def rollback(self, outf):
         """Cancel a transaction."""
@@ -337,7 +284,6 @@ class Project(object):
                         net=item.getNet()
                         if net is not None:
                             ret["instances" ]=net.getActiveInstanceList()
-                        #ret["state" ]=str(item.getStateStr())
                         ret["state"]=item.getPropagatedStateStr()
                         cputime=int(item.getCputime())
                         if cputime > 0:

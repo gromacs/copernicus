@@ -2,7 +2,7 @@
 
 
 # start the project
-./cpcc start mdrun_test
+./cpcc start test
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import gromacs
 # add the grompp and mdrun function instances

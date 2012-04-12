@@ -79,7 +79,7 @@ class Value(object):
     """The class describing a data value. Value classes hold function input 
        and output data, and are used to transmit external i/o data."""
     def __init__(self, value, tp, parent=None, selfName=None, 
-                 createObject=None, fileList=None):
+                 createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
@@ -101,16 +101,16 @@ class Value(object):
         self.copy(value)
         self.selfName=selfName
         self.seqNr=0
+        self.sourceTag=sourceTag
 
-    def _create(self, value, tp, selfName):
+    def _create(self, value, tp, selfName, sourceTag):
         """create a new subvalue using a value or None (in which case tp
            is used as a type)."""
         if value is not None:
             tp=value.type
         return self.createObject(value, tp, parent=self, selfName=selfName, 
                                  createObject=self.createObject,
-                                 fileList=self.fileList)
-
+                                 fileList=self.fileList, sourceTag=sourceTag)
 
     #def getFullName(self):
     #    if self.parent is not None:
@@ -163,7 +163,7 @@ class Value(object):
                             subval = oval[name]
                         else:
                             subval = None
-                    self.value[name] = self._create(subval, memtp, name)
+                    self.value[name] = self._create(subval, memtp, name, None)
             elif self.type.isSubtype(vtype.arrayType):
                 # create an array. 
                 self.value=[]
@@ -172,7 +172,8 @@ class Value(object):
                         index=0
                         for item in oval:
                             self.value.append(self._create(item, 
-                                                           item.type, index))
+                                                           item.type, index,
+                                                           item.sourceTag))
                             index+=1
                     elif oval is not None:
                         raise ValError("Trying to assign array from non-array")
@@ -184,7 +185,8 @@ class Value(object):
                         for index, item in oval.iteritems():
                             self.value[index]=self._create(item, 
                                                     self.type.getMembers(),
-                                                    index)
+                                                    index,
+                                                    None)
             else:
                 raise ValError("Unknown compound type %s."%tp.getName())
         if rmref is not None:
@@ -237,7 +239,8 @@ class Value(object):
         subVal=self.value[itemList[0]]
         return subVal.hasSubValue(itemList[1:])
 
-    def getSubValue(self, itemList, create=False, createType=None):
+    def getSubValue(self, itemList, create=False, createType=None, 
+                    setCreateSourceTag=None):
         """Get or create (if create==True) a specific subvalue through a 
            list of subitems, or return None if not found.
            
@@ -263,7 +266,8 @@ class Value(object):
                         ntp=createType
                     # and make it
                     itemList[0]=len(self.value)
-                    nval=self._create(None, ntp, len(self.value))
+                    nval=self._create(None, ntp, len(self.value), 
+                                      setCreateSourceTag)
                     self.value.append(nval)
                 elif (itemList[0] > len(self.value)):
                     return None
@@ -291,19 +295,21 @@ class Value(object):
                             if createType.isSubtype(ntp):
                                 ntp=createType
                         # and make it
-                        nval=self._create(None, npt, itemList[0])
+                        nval=self._create(None, npt, itemList[0], 
+                                          setCreateSourceTag)
                         self.value[itemList[0]] = nval
                     else:
                         # it is a list. Only create a subitem if we know what
                         # type it should be (i.e. createType is set).
                         if createType is not None:
-                            nval=self._create(None, createType, itemList[0])
+                            nval=self._create(None, createType, itemList[0],
+                                              setCreateSourceTag)
                             self.value[itemList[0]] = nval
                         else:
                             return None
         subVal=self.value[itemList[0]]
-        return subVal.getSubValue(itemList[1:], create=create)
-
+        return subVal.getSubValue(itemList[1:], create=create, 
+                                  setCreateSourceTag=setCreateSourceTag)
 
     def getSubType(self, itemList):
         """Determine the type of a sub-item (even if it doesn't exist yet)."""

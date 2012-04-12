@@ -243,10 +243,10 @@ class ActiveInstance(object):
         self.lastUpdateSeqNr=-1
 
     def getStateStr(self):
-        """Get the current state."""
+        """Get the current state as a string."""
         with self.lock:
             if self.state != ActiveInstance.error:
-                return self.state
+                return str(self.state)
             else:
                 return "ERROR: %s"%self.errmsg
 
@@ -462,7 +462,8 @@ class ActiveInstance(object):
             for out in output:
                 outItems=vtype.parseItemList(out.name)
                 # now get the actual entry in the output value tree
-                oval=self.outputVal.getSubValue(outItems, create=True)
+                oval=self.outputVal.getSubValue(outItems, create=True,
+                                                setCreateSourceTag=task)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -479,7 +480,8 @@ class ActiveInstance(object):
         if subnetOutput is not None:
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
-                oval=self.subnetOutputVal.getSubValue(outItems, create=True)
+                oval=self.subnetOutputVal.getSubValue(outItems, create=True,
+                                                      setCreateSourceTag=task)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -588,7 +590,7 @@ class ActiveInstance(object):
 
 
 
-    def findNamedInput(self, direction, itemList):
+    def findNamedInput(self, direction, itemList, sourceTag):
         """Find the *staging* value object corresponding to the named item.
            direction = the input/output/subnetinput/subnetoutput direction
            itemList = a path gettable by value.getSubValue
@@ -605,7 +607,8 @@ class ActiveInstance(object):
         else:
             raise ActiveError("Trying to set output value %s"%
                               str(direction.name))
-        val=topval.getSubValue(itemList, create=True)
+        val=topval.getSubValue(itemList, create=True, 
+                               setCreateSourceTag=sourceTag)
         return val
 
     def getNamedInputAffectedAIs(self, val, newVal, affectedInputAIs):
@@ -632,9 +635,8 @@ class ActiveInstance(object):
            Normally, this is project.networkLock
           """
         newVal.setUpdated(True)
-        val.update(newVal, val.seqNr, sourceTag)
+        val.update(newVal, None, sourceTag=sourceTag)
         val.propagate(sourceTag, None)
-               
 
     def getNamedValue(self, direction, itemList):
         """Get a specific named value ."""

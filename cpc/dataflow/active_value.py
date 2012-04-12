@@ -53,7 +53,7 @@ class ActiveValue(value.Value):
        a <instance>:in or <instance>:out. ActiveValue trees have listeners:
        active connection points that connect values together."""
     def __init__(self, val, tp, parent=None, selfName=None, seqNr=0,
-                 createObject=None, fileList=None):
+                 createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
@@ -64,10 +64,10 @@ class ActiveValue(value.Value):
         if createObject is None:
             createObject=ActiveValue
         value.Value.__init__(self, val, tp, parent, selfName,
-                             createObject=createObject, fileList=fileList)
+                             createObject=createObject, fileList=fileList,
+                             sourceTag=sourceTag)
         self.seqNr=seqNr # sequence number.
         self.listener=None
-        self.sourceTag=None
 
     def setListener(self, listener):
         """Set a pointer to an associated listener (usually an active 
@@ -98,6 +98,8 @@ class ActiveValue(value.Value):
         self.sourceTag=sourceTag
         if resetSourceTag:
             srcVal.sourceTag=None
+        #log.debug("Updating new value for %s: %s."%
+        #          (self.getFullName(), self.sourceTag))
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
@@ -130,7 +132,8 @@ class ActiveValue(value.Value):
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None, 
                                                       self.type.getMember(name),
-                                                      members[name], name)
+                                                      name, sourceTag)
+                                                      #members[name], name)
                     self.value[name].update(item, newSeqNr, sourceTag,
                                             resetSourceTag)
             elif self.basetype == vtype.dictType:
@@ -138,7 +141,7 @@ class ActiveValue(value.Value):
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None,
                                                       self.type.getMembers(),
-                                                      name)
+                                                      name, sourceTag)
                     self.value[name].update(item, newSeqNr, sourceTag,
                                             resetSourceTag)
             elif self.basetype == vtype.arrayType:
@@ -149,7 +152,7 @@ class ActiveValue(value.Value):
                     if len(self.value) < i+1:
                         self.value.append(self._create(None, 
                                                        self.type.getMembers(), 
-                                                       i))
+                                                       i, sourceTag))
                     self.value[i].update(item, newSeqNr,sourceTag,
                                          resetSourceTag)
                     i+=1
@@ -168,7 +171,7 @@ class ActiveValue(value.Value):
            const = whether it should be constant."""
         if self.type.isSubtype(vtype.listType):
             self.type.addMember(name, tp, opt, const)
-            self.value[name]=self._create(None, tp, name)
+            self.value[name]=self._create(None, tp, name, None)
         else:
             raise ActiveValError("Tried to add member to non-list value")
 
@@ -203,12 +206,13 @@ class ActiveValue(value.Value):
                 else:
                     # only check the direct descendants
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        self.value[name]=self._create(None, 
-                                                      self.type.getMember(name),
-                                                      name)
-                        rt=self.value[name].acceptNewValue(val, sourceTag,
-                                                           resetSourceTag)
-                        ret=ret or rt
+                        nv=self._create(None, self.type.getMember(name), name,
+                                        sourceTag)
+                        #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
+                        nv.update(val, val.seqNr, sourceTag,
+                                  resetSourceTag=resetSourceTag)
+                        self.value[name]=nv
+                        ret=True
         elif isinstance(self.value, list):
             i=0
             for val in sourceValue.value:
@@ -218,13 +222,18 @@ class ActiveValue(value.Value):
                     ret=ret or rt
                 else:
                     # only check the direct descendants
+                    #log.debug("Checking new values for %s: %d, %s, %s."%
+                    #          (val.getFullName(), i, val.sourceTag, 
+                    #           self.sourceTag))
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        self.value.append(self._create(None, 
-                                                      self.type.getMembers(),
-                                                      i))
-                        rt=self.value[i].acceptNewValue(val, sourceTag,
-                                                        resetSourceTag)
-                        ret=ret or rt
+                        log.debug("New value")
+                        nv=self._create(None, self.type.getMembers(), i,
+                                        sourceTag)
+                        nv.update(val, val.seqNr, sourceTag,
+                                  resetSourceTag=resetSourceTag)
+                        #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
+                        self.value.append(nv)
+                        ret=True
                 i+=1
         return ret
 
