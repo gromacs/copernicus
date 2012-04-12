@@ -99,8 +99,10 @@ class Project(object):
             os.mkdir(self.inputDir)
         self.inputNr=0
         # a list of scheduled changes and its lock
-        self.transactionListLock=threading.Lock()
-        self.transactionList=[]
+        self.transactionListStackLock=threading.Lock()
+        tl=transaction.TransactionList(self.networkLock, True)
+        self.transactionListStack=[tl]
+
 
     def getName(self):
         """Return the project name. This is a const property"""
@@ -158,7 +160,7 @@ class Project(object):
         instance=self.active.getNamedActiveInstance(instanceName)
         return instance.getNamedValue(direction, ioItemList)
 
-    def scheduleSet(self, itemname, literal, sourceType=None):
+    def scheduleSet(self, itemname, literal, outf, sourceType=None):
         """Add an instance of a set in the transaction schedule."""
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
@@ -176,50 +178,85 @@ class Project(object):
                     raise ActiveError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
-        with self.transactionListLock:
-            self.transactionList.append(transaction.Set(instance, oval, newVal))
+        lst=None 
+        lstItem=transaction.Set(instance, oval, newVal)
+        with self.transactionListStackLock:
+            self.transactionListStack[-1].addItem(lstItem, self, outf)
+        #with self.transactionListLock:
+        #    self.transactionList.append(transaction.Set(instance, oval, 
+        #                                                 newVal))
         return newVal
 
-    def scheduleConnect(self, src, dst):
+    def scheduleConnect(self, src, dst, outf):
         """Add an instance of a connect in the transaction schedule."""
         srcInstName,srcDir,srcItemName=connection.splitIOName(src, None)
         dstInstName,dstDir,dstItemName=connection.splitIOName(dst, None)
         cn=connection.makeConnection(self.active,
                                      srcInstName, srcDir, srcItemName,
                                      dstInstName, dstDir, dstItemName)
-        with self.transactionListLock:
-            self.transactionList.append(transaction.Connect(cn))
+        lstItem=transaction.Connect(cn)
+        with self.transactionListStackLock:
+            self.transactionListStack[-1].addItem(lstItem, self, outf)
+        #with self.transactionListLock:
+        #    self.transactionList.append(transaction.Connect(cn))
 
-    def commitChanges(self, outf):
+
+    def beginTransaction(self, outf):
+        """Create a new transaction list."""
+        tl=transaction.TransactionList(self.networkLock, False)
+        with self.transactionListStackLock:
+            self.transactionListStack.append(tl)
+            outf.write("Beginning transaction level %d"%
+                       (len(self.transactionListStack)-1))
+
+    def commit(self, outf):
         """Commit a set of changes scheduled with scheduleSet()"""
-        affectedInputAIs=set()
-        affectedOutputAIs=set()
-        #inputsLocked=False
-        outputsLocked=False
-        outf.write("Committing scheduled changes:\n")
-        with self.transactionListLock:
-            with self.networkLock:
-                try:
-                    # first get all affected active instances.
-                    for item in self.transactionList:
-                        item.getAffected(self, affectedInputAIs, 
-                                         affectedOutputAIs)
-                    # lock all affected I/O active instances
-                    for ai in affectedOutputAIs:
-                        ai.outputLock.acquire()
-                    outputsLocked=True
-                    # now run the transaction
-                    for item in self.transactionList:
-                        outf.write("- ")
-                        item.run(self, self, outf)
-                    for ai in affectedInputAIs:
-                        ai.handleNewInput(self, 0)
-                finally:
-                    # make sure everything is released.
-                    if outputsLocked:
-                        for ai in affectedOutputAIs:
-                            ai.outputLock.release()
-            self.transactionList=[]
+        with self.transactionListStackLock:
+            li=len(self.transactionListStack) - 1
+            if li > 0:
+                self.transactionListStack[li].commit(self, outf)
+                self.transactionListStack.pop(li)
+            else:
+                raise ProjectError("No transactions to commit.")
+        #affectedInputAIs=set()
+        #affectedOutputAIs=set()
+        ##inputsLocked=False
+        #outputsLocked=False
+        #outf.write("Committing scheduled changes:\n")
+        #with self.transactionListLock:
+        #    with self.networkLock:
+        #        try:
+        #            # first get all affected active instances.
+        #            for item in self.transactionList:
+        #                item.getAffected(self, affectedInputAIs, 
+        #                                 affectedOutputAIs)
+        #            # lock all affected I/O active instances
+        #            for ai in affectedOutputAIs:
+        #                ai.outputLock.acquire()
+        #            outputsLocked=True
+        #            # now run the transaction
+        #            for item in self.transactionList:
+        #                outf.write("- ")
+        #                item.run(self, self, outf)
+        #            for ai in affectedInputAIs:
+        #                ai.handleNewInput(self, 0)
+        #        finally:
+        #            # make sure everything is released.
+        #            if outputsLocked:
+        #                for ai in affectedOutputAIs:
+        #                    ai.outputLock.release()
+        #    self.transactionList=[]
+
+    def rollback(self, outf):
+        """Cancel a transaction."""
+        with self.transactionListStackLock:
+            li=len(self.transactionListStack) - 1
+            if li > 0:
+                outf.write("Canceling transaction level %d"%(li+1))
+                self.transactionListStack.pop(li)
+            else:
+                raise ProjectError("No transactions to cancel.")
+
 
     def getNamedInstance(self, instname):
         item=self.active.getNamedActiveInstance(instname)

@@ -29,10 +29,63 @@ except ImportError:
 import traceback
 import subprocess
 import stat
+import threading
 
 
 log=logging.getLogger('cpc.dataflow.transaction')
 
+
+class TransactionList(object):
+    """A list of transaction items (TransactionItem objects)"""
+    def __init__(self, networkLock, autoCommit):
+        """Initialize, with autocommit flag.
+           networkLock = the projecct's network lock
+           autoCommit = whether to autocommit every added item immediately"""
+        self.lst=[]
+        self.lock=threading.Lock()
+        self.autoCommit=autoCommit
+        self.networkLock=networkLock
+
+    def addItem(self, transactionItem, project, outf):
+        """Add a single transaction item to the list."""
+        with self.lock:
+            self.lst.append(transactionItem)
+        if self.autoCommit:
+            self.commit(project, outf)
+        else:
+            outf.write("Scheduled ")
+            transactionItem.describe(outf)
+            outf.write(" at commit")
+
+    def commit(self, project, outf):
+        """Commit all items of the transaction in one step."""
+        affectedInputAIs=set()
+        affectedOutputAIs=set()
+        outputsLocked=False
+        outf.write("Committing scheduled changes:\n")
+        with self.lock:
+            with self.networkLock:
+                try:
+                    # first get all affected active instances.
+                    for item in self.lst:
+                        item.getAffected(project, affectedInputAIs, 
+                                         affectedOutputAIs)
+                    # lock all affected I/O active instances
+                    for ai in affectedOutputAIs:
+                        ai.outputLock.acquire()
+                    outputsLocked=True
+                    # now run the transaction
+                    for item in self.lst:
+                        outf.write("- ")
+                        item.run(project, project, outf)
+                    for ai in affectedInputAIs:
+                        ai.handleNewInput(project, 0)
+                finally:
+                    # make sure everything is released.
+                    if outputsLocked:
+                        for ai in affectedOutputAIs:
+                            ai.outputLock.release()
+                    self.lst=[]
 
 class TransactionItem(object):
     """Common base class for transaction item types. 
@@ -68,6 +121,11 @@ class TransactionItem(object):
                   to (or None)"""
         pass
 
+    def describe(self, outf):
+        """Describe the item to be committed later.
+           outf =  a file object to write the description to"""
+        pass
+
 
 class Set(TransactionItem):
     """Transaction item for setting a value."""
@@ -93,6 +151,13 @@ class Set(TransactionItem):
                         self.oldVal.getFullName(),
                         self.newVal.getDesc()))
 
+    def describe(self, outf):
+        """Describe the item."""
+        outf.write("set %s: %s to %s"%
+                   (self.activeInstance.getCanonicalName(),
+                    self.oldVal.getFullName(),
+                    self.newVal.getDesc()))
+
 class Connect(TransactionItem):
     """Transaction item for connecting a value"""
     def __init__(self, connection):
@@ -113,4 +178,8 @@ class Connect(TransactionItem):
             outf.write("Connected %s to %s\n"%(self.connection.srcString(),
                                                self.connection.dstString()))
 
+    def describe(self, outf):
+        """Describe the item."""
+        outf.write("connect %s to %s"%(self.connection.srcString(),
+                                         self.connection.dstString()))
 

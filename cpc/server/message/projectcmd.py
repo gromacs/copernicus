@@ -224,13 +224,15 @@ class SCProjectConnect(ServerCommand):
             prj=serverState.getProjectList().getDefault()
         src=request.getParam('source')
         dst=request.getParam('destination')
-        prj.scheduleConnect(src, dst)
-        response.add("Scheduled connecting %s to %s at commit\n"%(src, dst))
-        if ( request.hasParam('commit') and 
-             int(request.getParam('commit')) == 1):
-            outf=StringIO()
-            prj.commitChanges(outf)
-            response.add(outf.getvalue())
+        outf=StringIO()
+        prj.scheduleConnect(src, dst, outf)
+        response.add(outf.getvalue())
+        #response.add("Scheduled connecting %s to %s at commit\n"%(src, dst))
+        #if ( request.hasParam('commit') and 
+        #     int(request.getParam('commit')) == 1):
+        #    outf=StringIO()
+        #    prj.commitChanges(outf)
+        #    response.add(outf.getvalue())
 
 class SCProjectImport(ServerCommand):
     """Import a module (file/lib) to the project."""
@@ -306,8 +308,9 @@ class SCProjectSet(ServerCommand):
             prj=serverState.getProjectList().getDefault()
         itemname=request.getParam('item')
         try:
+            outf=StringIO()
             if upfile is None:
-                val=prj.scheduleSet(itemname, setval)
+                val=prj.scheduleSet(itemname, setval, outf)
             else:
                 # write out the file 
                 dir=prj.getNewInputSubDir()
@@ -320,26 +323,42 @@ class SCProjectSet(ServerCommand):
                 outFile=open(setval, "w")
                 outFile.write(upfile.read())
                 outFile.close()
-                val=prj.scheduleSet(itemname, setval, cpc.dataflow.fileType)
+                val=prj.scheduleSet(itemname, setval, outf, cpc.dataflow.fileType)
             if val is None:
                 tpname='None'
-                response.add("Item not found: %s"%(itemname))
-            else:
-                tpname=val.getType().getName()
-                if ( request.hasParam('commit') and 
-                     int(request.getParam('commit')) == 1):
-                    outf=StringIO()
-                    prj.commitChanges(outf)
-                    response.add(outf.getvalue())
-                    response.add(
-                       "Committed assignment (type=%s, value %s)"% 
-                       (tpname, val.getDesc()) )
-                else:
-                    response.add(
-                       "Scheduled assignment (type=%s, value %s) at commit"%
-                       (tpname, val.getDesc()) )
+                outf.write("Item not found: %s"%(itemname))
+                #tpname=val.getType().getName()
+                #if ( request.hasParam('commit') and 
+                #     int(request.getParam('commit')) == 1):
+                #    outf=StringIO()
+                #    prj.commitChanges(outf)
+                #    response.add(outf.getvalue())
+                #    response.add(
+                #       "Committed assignment (type=%s, value %s)"% 
+                #       (tpname, val.getDesc()) )
+                ##else:
+                ##    outf.write(
+                #    response.add(
+                #       "Scheduled assignment (type=%s, value %s) at commit"%
+                #       (tpname, val.getDesc()) )
+            response.add(outf.getvalue())
         except cpc.dataflow.ApplicationError as e:
             response.add("Item not found: %s"%(str(e)))
+
+class SCProjectTransact(ServerCommand):
+    """Start a transaction to be able to commit several project-set commands 
+       in a project."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-transact")
+
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        outf=StringIO()
+        prj.beginTransaction(outf)
+        response.add(outf.getvalue())
 
 class SCProjectCommit(ServerCommand):
     """Commit several project-set commands in a project."""
@@ -352,7 +371,21 @@ class SCProjectCommit(ServerCommand):
         else:
             prj=serverState.getProjectList().getDefault()
         outf=StringIO()
-        prj.commitChanges(outf)
+        prj.commit(outf)
+        response.add(outf.getvalue())
+
+class SCProjectRollback(ServerCommand):
+    """Cancel several project-set commands in a project."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-rollback")
+
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        outf=StringIO()
+        prj.rollback(outf)
         response.add(outf.getvalue())
 
 

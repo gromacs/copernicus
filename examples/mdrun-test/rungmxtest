@@ -9,6 +9,7 @@
 ./cpcc instance gromacs::grompp grompp
 ./cpcc instance gromacs::mdrun mdrun
 ./cpcc activate 
+./cpcc transact
 # connect the tpr output of grompp to the tpr input of mdrun
 ./cpcc connect grompp:out.tpr mdrun:in.tpr
 # set the grompp inputs

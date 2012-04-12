@@ -37,24 +37,34 @@ import subprocess
 
 
 def print_usage():
-
-    print "Usage  cpcc start       projectname"
+    print "Usage: cpcc [global-options] <command> [command-options]"
+    print 
+    print "Project start & stop commands:"
+    print "       cpcc start       projectname"
     print "       cpcc remove|rm   projectname"
     print "       cpcc set-default projectname"
-    print "       cpcc upload   [-p projectname] upload.xml"
+    print 
+    print "Project query commands."
     print "       cpcc list|ls  [-p projectname] [instance_name]"
     print "       cpcc get      [-p projectname] inst:in|out.ioname"
     print "       cpcc getf     [-p projectname] [-f filename] inst:in|out.ioname "
-    print "       cpcc set      [-p projectname] [-c] inst:in.ioname value"
-    print "       cpcc setf     [-p projectname] [-c] inst:in.ioname filename"
-    print "       cpcc commit   [-p projectname]"
-    print "       cpcc import   [-p projectname] modulename"
-    print "       cpcc instance [-p projectname] function_name instance_name"
-    print "       cpcc connect  [-p projectname] [-c] inst:out.item inst:in.item"
     print "       cpcc info     [-p projectname] function_name|module_name"
     print "       cpcc log      [-p projectname] instance_name"
     print "       cpcc activate [-p projectname] [item]"
     print "       cpcc projects|p"
+    print 
+    print "Project manipulation commands."
+    print "       cpcc import   [-p projectname] modulename"
+    print "       cpcc instance [-p projectname] function_name instance_name"
+    print "       cpcc connect  [-p projectname] inst:out.item inst:in.item"
+    print "       cpcc set      [-p projectname] inst:in.ioname value"
+    print "       cpcc setf     [-p projectname] inst:in.ioname filename"
+    print "       cpcc transact [-p projectname]"
+    print "       cpcc commit   [-p projectname]"
+    print "       cpcc rollback [-p projectname]"
+    print "       cpcc upload   [-p projectname] upload.xml"
+    print 
+    print "Worker and heartbeat monitoring commands."
     print "       cpcc queue|q"
     print "       cpcc running|r "
     print "       cpcc heartbeats|h "
@@ -105,7 +115,7 @@ while len(args)>0:
         args.pop(0)
         debug=True
     else:
-        sys.stdout.write("ERROR: no command or faulty global option '%s'\n"%
+        sys.stdout.write("ERROR: no command, or erroneous global option '%s'\n"%
                          args[0])
         print_usage()
 
@@ -297,38 +307,34 @@ try:
                 print "item %s saved in %s"%(item,output)
     elif cmd == "set":
         project, pargs = getProjectArgs(args)
-        if pargs[1] == "-c":
-            commit=True
-            item=getArg(pargs, 2, "name of input item to set")
-            value=getArg(pargs, 3, "value of input item to set")
-        else:
-            commit=False
-            item=getArg(pargs, 1, "name of input item to set")
-            value=getArg(pargs, 2, "value of input item to set")
+        item=getArg(pargs, 1, "name of input item to set")
+        value=getArg(pargs, 2, "value of input item to set")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, value,
-                                                 None, commit)).pprint()
-        if not commit:
-            print "Use cpcc commit to perform this assignment"
+                                                 None)).pprint()
+        #if not commit:
+        #    print "Use cpcc commit to perform this assignment"
     elif cmd == "set-file" or cmd == "setf":
         project, pargs = getProjectArgs(args)
-        if pargs[1] == "-c":
-            commit=True
-            item=getArg(pargs, 2, "name of input item to set")
-            filename=getArg(pargs, 3, "input file to set")
-        else:
-            commit=False
-            item=getArg(pargs, 1, "name of input item to set")
-            filename=getArg(pargs, 2, "input file to set")
+        item=getArg(pargs, 1, "name of input item to set")
+        filename=getArg(pargs, 2, "input file to set")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, None,
-                                                 filename, commit)).pprint()
-        if not commit:
-            print "Use cpcc commit to perform this assignment"
+                                                 filename)).pprint()
+        #if not commit:
+        #    print "Use cpcc commit to perform this assignment"
+    elif cmd == "transact":
+        project, pargs = getProjectArgs(args)
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectTransactRequest(project)).pprint()
     elif cmd == "commit":
         project, pargs = getProjectArgs(args)
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectCommitRequest(project)).pprint()
+    elif cmd == "rollback":
+        project, pargs = getProjectArgs(args)
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectRollbackRequest(project)).pprint()
     elif cmd == "import":
         project, pargs = getProjectArgs(args)
         module=getArg(pargs, 1, "name of module to import")

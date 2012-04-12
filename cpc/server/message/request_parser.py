@@ -101,7 +101,9 @@ scSecureList.add(projectcmd.SCProjectConnect())
 scSecureList.add(projectcmd.SCProjectGraph())
 scSecureList.add(projectcmd.SCProjectSet())
 scSecureList.add(projectcmd.SCProjectGet())
+scSecureList.add(projectcmd.SCProjectTransact())
 scSecureList.add(projectcmd.SCProjectCommit())
+scSecureList.add(projectcmd.SCProjectRollback())
 scSecureList.add(projectcmd.SCProjectLog())
 
 
