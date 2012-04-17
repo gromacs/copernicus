@@ -368,6 +368,19 @@
                 <desc>The total amount of trajectory time in ns</desc>
             </field>
         </outputs>
+        <subnet-inputs>
+            <field type="trajectory_array" id="trajectories" opt="true">
+                <desc>Trajectory array</desc>
+            </field>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="inp_trajectory_array" id="ext_trajectories" opt="true">
+                <desc>External trajectory array</desc>
+            </field>
+            <field type="desc_array" id="desc" opt="true">
+                <desc>Descriptions array</desc>
+            </field>
+        </subnet-outputs>
         <controller log="true" executable="traj_collect" 
                     access_outputs="true" access_subnet_outputs="true" />
     </function>
