@@ -292,8 +292,6 @@ class FunctionRunOutput(object):
        - outputs (a list of OutputItem objects)
        - subnetOutputs (a list of OutputItem objects)
        - cmds (a list of Commands)
-       - newSubnetInputs (a list of NewSubnetIOs)
-       - newSubnetOutputs (a list of NewSubnetIOs)
        - newInstances (a list of NewInstances)
        - newConnections (a list of NewConnections)
        """
@@ -310,10 +308,6 @@ class FunctionRunOutput(object):
         self.newInstances=None
         #newConnections = a list of new connections to make in the subnet
         self.newConnections=None
-        #newSubnetInputs = a list of new subnet input items to make.
-        self.newSubnetInputs=None
-        #newSubnetOutputs = a list of new subnet output items to make."""
-        self.newSubnetOutputs=None
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
@@ -326,24 +320,6 @@ class FunctionRunOutput(object):
             name = the output name
             outval = the output value (OutValue object) """
         self.subnetOutputs.append( OutputItem(ioitem, outval) )
-
-    def addSubnetInput(self, name, typename):
-        """Add a new subnet input.
-           name = the new subnet input's name
-           typename = the type name of the subnet input."""
-        # initialize if it doesn't exist
-        if self.newSubnetInputs is None:
-            self.newSubnetInputs=[]
-        self.newSubnetInputs.append(NewSubnetIO(name, typename))
-
-    def addSubnetOutput(self, name, typename):
-        """Add a new subnet output.
-           name = the new subnet output's name
-           typename = the type name of the subnet output."""
-        # initialize if it doesn't exist
-        if self.newSubnetOutputs is None:
-            self.newSubnetOutputs=[]
-        self.newSubnetOutputs.append(NewSubnetIO(name, typename))
 
     def hasOutputs(self):
         """Check whether there are outputs."""
@@ -400,16 +376,6 @@ class FunctionRunOutput(object):
                 output.val.writeXML(outf, indent+3)
                 outf.write('%s</value>\n'%(iiindstr))
             outf.write('%s</subnet-outputs>\n'%iindstr)
-        if self.newSubnetInputs is not None and len(self.newSubnetInputs)>0:
-            outf.write('%s<new-subnet-inputs>\n'%iindstr)
-            for ioitem in self.newSubnetInputs:
-                ioitem.writeXML(outf, indent+2)
-            outf.write('%s</new-subnet-inputs>\n'%iindstr)
-        if self.newSubnetOutputs is not None and len(self.newSubnetOutputs)>0:
-            outf.write('%s<new-subnet-outputs>\n'%iindstr)
-            for ioitem in self.newSubnetOutputs:
-                ioitem.writeXML(outf, indent+2)
-            outf.write('%s</new-subnet-outputs>\n'%iindstr)
         if self.newInstances is not None and len(self.newInstances)>0:
             outf.write('%s<new-instances>\n'%iindstr)
             for instance in self.newInstances:
@@ -426,16 +392,6 @@ class FunctionRunOutput(object):
                 self.cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
         outf.write('%s</function-output>\n'%indstr)
-
-class NewSubnetIO(object):
-    """A class describing a new subnet input."""
-    def __init__(self, name, type):
-        self.name=name
-        self.type=type
-    def writeXML(self, outf, indent=0):
-        indstr=cpc.util.indStr*indent
-        outf.write('%s<ioitem id="%s" type="%s" />\n'%(indstr, self.name, 
-                                                       self.type))
 
 class NewInstance(object):
     """A class describing a new instance for a function's subnet, as an 
@@ -574,11 +530,9 @@ class IOReader(xml.sax.handler.ContentHandler):
     outputs=3
     subnetInputs=4
     subnetOutputs=5
-    newSubnetInputs=6
-    newSubnetOutputs=7
-    newInstances=8
-    newConnections=9
-    cmd=10
+    newInstances=6
+    newConnections=7
+    cmd=8
 
     def __init__(self, isInput=True):
         """Initialize based on whether the reader is for input or output."""
@@ -717,17 +671,6 @@ class IOReader(xml.sax.handler.ContentHandler):
                 self.setValueReader(value.ValueReader(self.filename, val,
                                                       allowUnknownTypes=True), 
                                     name)
-
-        elif name == "new-subnet-inputs":
-            if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-subnet-inputs tag", 
-                                       self)
-            self.section=IOReader.newSubnetInputs
-        elif name == "new-subnet-outputs":
-            if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-subnet-outputs tag", 
-                                       self)
-            self.section=IOReader.newSubnetOutputs
         elif name == "new-instances":
             if (self.section != IOReader.none) or self.isInput:
                 raise IOReaderError("Misplaced new-instances tag", 
@@ -753,19 +696,6 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.setValueReader(value.ValueReader(self.filename, None, 
                                                   implicitTopItem=False,
                                                   allowUnknownTypes=True), name)
-        elif name == "ioitem":
-            if not attrs.has_key('id'):
-                raise IOReaderError("ioitem has no id", self)
-            if not attrs.has_key('type'):
-                raise IOReaderError("ioitem has no type", self)
-            name=attrs.getValue('id')
-            tp=attrs.getValue('type')
-            if self.section == IOReader.newSubnetInputs:
-                self.out.addSubnetInput(name, tp)
-            elif self.section == IOReader.newSubnetOutputs:
-                self.out.addSubnetOutput(name, tp)
-            else:
-                raise IOReaderError("Misplaced ioitem tag", self)
         elif name == "instance":
             if not attrs.has_key('id'):
                 raise IOReaderError("instance has no id", self)
@@ -850,8 +780,6 @@ class IOReader(xml.sax.handler.ContentHandler):
               name == "outputs" or 
               name == "subnet-inputs" or 
               name == "subnet-outputs" or
-              name == "new-subnet-inputs" or 
-              name == "new-subnet-outputs" or 
               name == "new-instances" or 
               name == "new-connections" or
               name == "env"):
