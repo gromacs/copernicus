@@ -4,7 +4,7 @@ import subprocess
 import re
 import sys
 
-def try_report_command(outf, name, cmd):
+def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     # try and report on a gromacs command. Assumes the '-version' flag
     # works
     try:
@@ -20,16 +20,19 @@ def try_report_command(outf, name, cmd):
             outf.write(
                 '<executable name="gromacs/%s" platform="smp" arch="" version="%s">\n'%
                 (name, version))
-            outf.write('    <run in_path="yes" cmdline="%s -rcon 0.7 -cpt 10 -maxh 1 -nt $NCORES" />\n'%
-                       (cmd))
-
+            if isMdrun:
+                nopts="%s -nt $NCORES"%(opts)
+            else:
+                nopts=opts
+            outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
+                       (cmd, nopts))
             outf.write('</executable>\n')
         elif par == "mpi" or par == "MPI":
             outf.write(
                 '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
                 (name, version))
-            outf.write('    <run in_path="yes" cmdline="$MPIRUN %s -rcon 0.7 -cpt 10 -maxh 1" />\n'%
-                       (cmd))
+            outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
+                       (cmd, opts))
             outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
             outf.write('</executable>\n')
         return True
@@ -39,7 +42,12 @@ def try_report_command(outf, name, cmd):
 
 sys.stdout.write('<?xml version="1.0"?>\n')
 sys.stdout.write('<executable-list>\n')
-try_report_command(sys.stdout, "mdrun", "mdrun")
-try_report_command(sys.stdout, "mdrun", "mdrun_mpi")
+try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
+# and the post/preprocessing commands
+try_report_command(sys.stdout, "grompp", "grompp")
+try_report_command(sys.stdout, "trjconv", "trjconv")
+try_report_command(sys.stdout, "trjcat", "trjcat")
+try_report_command(sys.stdout, "g_energy", "g_energy")
 sys.stdout.write('</executable-list>\n')
 
