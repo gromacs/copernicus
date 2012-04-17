@@ -272,18 +272,21 @@ class Project(object):
                     if isinstance(item, active_network.ActiveNetwork):
                         ret["type"]="network"
                         ret["name"]=pathname
-                        ret["instances"]=item.getActiveInstanceList()
+                        ret["instances"]=item.getActiveInstanceList(False, 
+                                                                    False)
                         cputime=int(item.getCumulativeCputime())
                         if cputime > 0:
                             ret["cumulative-cputime" ]=str(cputime)
                     else:
                         ret["type"]="instance"
                         ret["name"]=item.getCanonicalName()
+                        ret["fn_name"]=item.function.getFullName()
                         ret["inputs" ]=item.getInputs().getSubValueList()
                         ret["outputs" ]=item.getOutputs().getSubValueList()
                         net=item.getNet()
                         if net is not None:
-                            ret["instances" ]=net.getActiveInstanceList()
+                            ret["instances" ]=net.getActiveInstanceList(False,
+                                                                        False)
                         ret["state"]=item.getPropagatedStateStr()
                         cputime=int(item.getCputime())
                         if cputime > 0:

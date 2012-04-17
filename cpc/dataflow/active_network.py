@@ -173,31 +173,33 @@ class ActiveNetwork(network.Network):
         with self.lock:
             return self._getActiveInstance(name)
 
-    def getActiveInstanceList(self, listIO=False, listSelf=False):
+    def getActiveInstanceList(self, listIO, listSelf):
         """Return a dict of instance names. If listIO is true, each instance's
            IO items are listed as well"""
         ret=dict()
         with self.lock:
             for inst in self.activeInstances.itervalues():
-                if not listIO:
-                    il=str(inst.state)
-                else:
+                il={ "state" : str(inst.state),
+                     "fn_name" : str(inst.function.getFullName()) }
+                if listIO:
                     inps=inst.getInputs().getSubValueList() 
                     outs=inst.getOutputs().getSubValueList() 
                     il = { "state" : str(inst.state), 
+                           "fn_name" : str(inst.function.getFullName()),
                            "inputs": inps, 
                            "outputs" : outs }
                 ret[inst.name] = il
             if listSelf and (self.inActiveInstance is not None):
                 inst=self.inActiveInstance
-                if not listIO:
-                    il=str(inst.state)
-                else:
+                il={ "state" : str(inst.state),
+                     "fn_name" : str(inst.function.getFullName()) }
+                if listIO:
                     inps=inst.getInputs().getSubValueList() 
                     outs=inst.getOutputs().getSubValueList() 
                     subnet_inps=inst.getSubnetInputs().getSubValueList()
                     subnet_outs=inst.getSubnetOutputs().getSubValueList()
                     il = { "state" : str(inst.state), 
+                           "fn_name" : str(inst.function.getFullName()),
                            "inputs": inps, 
                            "outputs" : outs,
                            "subnet_inputs" : subnet_inps,
