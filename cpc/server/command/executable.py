@@ -138,16 +138,17 @@ class ExecutableList(object):
                 if (not os.path.isdir(basedir)) and os.access(basedir, os.X_OK):
                     plf=basedir
                     pl=cpc.util.plugin.ExecutablePlugin(
-                                                    specificLocation=basedir,conf=ServerConf())
+                                                    basedir,conf=ServerConf())
                 # or it contains a plugin
                 elif (not os.path.isdir(pfile)) and os.access(pfile, os.X_OK):
                     plf=basedir
                     pl=cpc.util.plugin.ExecutablePlugin(
-                                                    specificLocation=pfile,conf=ServerConf())
+                                                    pfile,conf=ServerConf())
                 if pl is not None:
                     # and run the plugin if it is one
                     for platform in platforms:
-                        (retcode, retst)=pl.run(plf, platform)
+                        (retcode, retst)=pl.run(plf, platform.getName())
+                        log.debug("returned: %s"%retst)
                         if retcode==0:
                             reader.readString(retst, "executable plugin output",
                                               basedir)
@@ -240,7 +241,9 @@ class ExecutableReader(xml.sax.handler.ContentHandler):
         self.loc=locator
 
     def startElement(self, name, attrs):
-        if name == 'executable':
+        if name == 'executable-list':
+            pass
+        elif name == 'executable':
             if self.curExec is not None:
                 raise ExecutableReaderError("second executable in reader", 
                                             self.loc)
