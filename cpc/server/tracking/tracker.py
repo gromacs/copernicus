@@ -23,6 +23,7 @@ from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.server.state.asset import Asset
 from cpc.util.conf.server_conf import ServerConf
+import cpc.util.log
 
 log=logging.getLogger('cpc.server.tracking.tracker')
 
