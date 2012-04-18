@@ -40,8 +40,8 @@ class SCPullAsset(ServerCommand):
                          status="ERROR")
         else:
             asset=serverState.getLocalAssets().getCmdOutputAsset(cmdID)
-            log.debug("Local asset cmdid=%s \nproject server=%s"%
-                      (asset.cmdID, asset.projectServer))        
+            log.log(cpc.util.log.TRACE,"Local asset cmdid=%s \nproject server=%s"%
+                                       (asset.cmdID, asset.projectServer))
             response.setFile(runfile,'application/x-tar')
 
 

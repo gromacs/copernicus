@@ -26,6 +26,8 @@ import logging
 import copy
 #Singleton
 #A simple cache that stores objects infinitely
+import cpc.util.log
+
 log=logging.getLogger('cpc.server.cache')
 
 
@@ -37,16 +39,16 @@ class Cache(object):
         if len(self.__shared_state)>0:
             return
         
-        log.debug("instantiation of cache")
+        log.log(cpc.util.log.TRACE,"instantiation of cache")
         self.cache = {}        
         
     def cleanAll(self):
         self.cache={}
-        log.debug('cleaning all objects from cache')    
+        log.log(cpc.util.log.TRACE,'cleaning all objects from cache')
     #removes a specific cached instance
     def remove(self,key): 
         if key in self.cache:  
-            log.debug('removing object %s from cache'%key)     
+            log.log(cpc.util.log.TRACE,'removing object %s from cache'%key)
             del(self.cache[key])
     
     def getCache(self):
@@ -54,16 +56,16 @@ class Cache(object):
     
     def add(self,key,value):  
         cacheVal = copy.deepcopy(value)
-        log.debug('adding object %s to cache'%key)
-        self.cache[key] = cacheVal    
+        log.log(cpc.util.log.TRACE,'adding object %s to cache'%key)
+        self.cache[key] = cacheVal
     def get(self,key): 
         val = False
         if key in self.cache:
             val = self.cache[key]
         if val == False:
-            log.debug('did not find object %s in cache'%key)
+            log.log(cpc.util.log.TRACE,'did not find object %s in cache'%key)
         else:
-            log.debug('getting object %s from cache'%key)
+            log.log(cpc.util.log.TRACE,'getting object %s from cache'%key)
         return copy.deepcopy(val)
     def size(self):
         return len(self.cache)

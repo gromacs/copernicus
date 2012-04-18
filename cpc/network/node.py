@@ -25,6 +25,8 @@ Created on Feb 2, 2011
 from operator import itemgetter
 import logging
 
+
+
 log=logging.getLogger('cpc.network.node')
 class Nodes(object):
     def __init__(self):
@@ -93,9 +95,9 @@ class Nodes(object):
     @staticmethod
     def findRoute(start,end,topology):
         # Dijkstras algorithm , we might need to change this once we need prioority based routing
-        log.debug("finding route %s %s"%(start,end))
-        log.debug("topology is %s"%topology)
-        
+        #log.log(cpc.util.log.TRACE,"finding route %s %s"%(start,end))
+        #log.log(cpc.util.log.TRACE,"topology is %s"%topology)
+
         distances = dict()
         previous = dict()  #key is a node values is a node visited prior
 

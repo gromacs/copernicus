@@ -29,6 +29,7 @@ import threading
 import cpc.server.command.platform_exec_reader
 import cpc.server.state.cmdlist
 import cpc.util
+import cpc.util.log
 
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
@@ -218,7 +219,8 @@ class SCWorkerReady(ServerCommand):
                     clientResponse = clnt.workerRequest(workerData,topology)
                     
                     if clientResponse.getType() == 'application/x-tar':
-                        log.debug('got work from %s'%(clientResponse.headers['originating-server']))
+
+                        log.log(cpc.util.log.TRACE,'got work from %s'%(clientResponse.headers['originating-server']))
                         hasJob=True
                         # we need to rewrap the message 
                         
@@ -267,7 +269,8 @@ class SCCommandFinishedForward(ServerCommand):
         runfile = None
         if rundata != None:
             runfile = rundata.getRawData()
-        log.debug("finished forward command %s"%cmdID)
+        log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
+
         serverState.getRunningCmdList().handleFinished(cmd)
         
         #TODO should be located elsewhere

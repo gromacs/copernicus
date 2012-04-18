@@ -43,7 +43,7 @@ class Tracker(object):
     
     @staticmethod
     def getCommandOutputData(cmdID, workerServer):
-        log.debug("Trying to pull command output from %s"%workerServer)
+        log.log(cpc.util.log.TRACE,"Trying to pull command output from %s"%workerServer)
         #FIXME need to specify port here also
         s2smsg=ServerToServerMessage(workerServer)  
         rundata_response = s2smsg.pullAssetRequest(cmdID, Asset.cmdOutput())
@@ -57,7 +57,7 @@ class Tracker(object):
                     log.error('Response from worker server not OK. Message was:\n%s'%errormsg)
         else:
             s2smsg.clearAssetRequest(cmdID)
-            log.debug("Successfully pulled command output data from %s."%workerServer)
+            log.log(cpc.util.log.TRACE,"Successfully pulled command output data from %s."%workerServer)
             return rundata_response
             #runfile = rundata_response.getRawData()
             #this doesnt work because the mmap closes as it is returned

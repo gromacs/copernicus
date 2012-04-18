@@ -24,7 +24,7 @@ import logging
 import tempfile
 import mmap
 import copy
-
+import cpc.util.log
 
 from cpc.client.message import ClientMessage
 from cpc.network.com.client_connection import ClientConnection
@@ -78,8 +78,8 @@ class ServerToServerMessage(ClientBase):
             #TODO caching mechanism  
           
         self.host = self.hostNode.host
-        self.port = self.hostNode.https_port    
-        log.debug("Server-to-server connecting to %s:%s"%(self.host,self.port))
+        self.port = self.hostNode.https_port
+        log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%(self.host,self.port))
 
 
     #NOTE might make sense to move this to requestHandler

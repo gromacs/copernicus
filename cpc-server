@@ -32,15 +32,15 @@ import cpc.util
 import cpc.util.log
 import cpc.server.tracking
 
-from cpc.worker.worker import WorkerMessage
-from cpc.client.view.cmdline import CmdLine
-from cpc.util.openssl import OpenSSL
+#from cpc.worker.worker import WorkerMessage
+#from cpc.client.view.cmdline import CmdLine
+#from cpc.util.openssl import OpenSSL
 from cpc.network.com.client_base import ClientError
-from cpc.client import ClientMessage
-from cpc.network.com.client_response import ProcessedResponse
+#from cpc.client import ClientMessage
+#from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util import cmd_line_utils
-import os
+#import os
 
 
 def print_usage():
