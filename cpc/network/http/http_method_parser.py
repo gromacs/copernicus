@@ -25,6 +25,7 @@ import logging
 import shutil
 import filecmp
 import os
+import cpc.util.log
 '''
 Created on Mar 7, 2011
 
@@ -119,8 +120,7 @@ class HttpMethodParser(object):
             headers = mimetools.Message(msgStream)
             
             terminateBoundary = ''
-            
-            log.debug('multipart headers are %s'%headers.headers)
+            log.log(cpc.util.log.TRACE,'multipart headers are %s'%headers.headers)
             
             if(ServerRequest.isFile(headers['Content-Disposition'])):
                 file = tempfile.TemporaryFile(mode="w+b")
@@ -140,7 +140,7 @@ class HttpMethodParser(object):
                     
                 else: 
                     line  = msgStream.read(bytes)
-                    log.debug("line is "+line)
+                    log.log(cpc.util.log.TRACE,"line is "+line)
                     params[name] = line  
                     
             msgStream.readline()    ## we will have a trailin CRLF that we just want to get rid of                     
