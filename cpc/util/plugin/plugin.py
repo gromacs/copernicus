@@ -226,8 +226,8 @@ class PlatformPlugin(Plugin):
 class ExecutablePlugin(Plugin):
     """Executable plugin type. Always called with specificLocation.
        Returns the location of executable binaries and how to invoke them."""
-    def __init__(self, location,conf):
-        Plugin.__init__(self, "executable", "",conf, specificLocation=location)
+    def __init__(self, location, conf):
+        Plugin.__init__(self, "executable", "", conf, specificLocation=location)
 
     def run(self, dir, platform):
         args=[platform]

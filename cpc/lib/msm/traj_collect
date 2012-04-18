@@ -41,12 +41,14 @@ def trajCollect(inp):
     out=inp.getFunctionOutput()
     if not inp.hasSubnetOutput('ext_trajectories'):
         # We make a subnet output to remember the original external trajectories
-        out.addSubnetOutput('ext_trajectories', 'inp_trajectory_array')
+        #out.addSubnetOutput('ext_trajectories', 'inp_trajectory_array')
+
         #out.addSubnetOutput('reference', 'file')
         #out.addSubnetOutput('grpname', 'string')
         #out.addSubnetOutput('ndx', 'file')
-        out.addSubnetInput('trajectories', 'trajectory_array')
-        out.addSubnetOutput('desc', 'desc_array')
+
+        #out.addSubnetInput('trajectories', 'trajectory_array')
+        #out.addSubnetOutput('desc', 'desc_array')
 
         if inp.hasInput('ext_trajectories'):
             out.setSubOut('ext_trajectories', 

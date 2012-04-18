@@ -119,8 +119,6 @@ def msm(inp, out):
 
         # initialize the trajectory collector
         out.addInstance('traj_collect', 'trajectory_collect')
-        #out.addSubnetInput('total_traj_ns', 'float')
-        #out.addSubnetInput('trajectories', 'trajectory_array')
         # from self to traj_collect
         out.addConnection('self:ext_in.reference',
                           'traj_collect:in.reference')
@@ -134,10 +132,6 @@ def msm(inp, out):
         out.addConnection('traj_collect:out.trajectories',
                           'self:sub_in.trajectories')
         # We set up two inputs, one with gen_vel and one without.
-        #out.addSubnetOutput("grompp_inp_gen_vel", "grompp_input")
-        #out.addSubnetOutput("grompp_inp_no_gen_vel", "grompp_input")
-        #out.addSubnetOutput("desc", "desc_array")
-
         out.setSubOut("grompp_inp_gen_vel.mdp", 
                       inp.getInputValue("grompp.mdp"))
         out.setSubOut("grompp_inp_gen_vel.top", 
@@ -158,8 +152,6 @@ def msm(inp, out):
                       inp.getInputValue("grompp.mdrun_cmdline_options"))
 
         # and the array of clustering inputs
-        #out.addSubnetOutput('msm_in', 'build_msm_in_array')
-        #out.addSubnetInput('msm_out', 'build_msm_out_array')
 
         settings=inp.getInput("grompp.settings")
         genVelSettings=[]
@@ -180,12 +172,6 @@ def msm(inp, out):
                       ArrayValue(genVelSettings) )
 
         # then we set up the configuration output array
-        #out.addSubnetOutput("confs", "conf_array")
-        #out.addSubnetOutput("ndx", "file")
-        #out.addSubnetOutput("priority", "priority_array")
-        #if inp.hasInput('ndx'):
-        #    out.setSubOut('ndx', inp.getInputValue('ndx'))
-        #out.addSubnetInput("trajs", "trajectory_array")
        
         num_sim=inp.getInput("num_sim")
         num_macro=inp.getInput("num_macrostates")

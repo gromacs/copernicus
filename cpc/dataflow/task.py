@@ -120,6 +120,8 @@ class Task(object):
     def _handleFnOutput(self, out):
         # handle addInstances
         addedInstances=[]
+        # new instances are always unconnected and inactive at first, so we
+        # don't need to lock them, etc. 
         if out.newInstances is not None:
             activeNet=self.activeInstance.getNet()
             if activeNet is None:
@@ -134,33 +136,6 @@ class Task(object):
                 inst=instance.Instance(newInstance.name, fn, 
                                        fn.getFullName())
                 addedInstances.append(activeNet.addInstance(inst))
-        # new subnet inputs
-        if out.newSubnetInputs is not None:
-            imports=self.project.getImportList()
-            for newSubnetInput in out.newSubnetInputs:
-                #log.debug("Making new subnet input %s (%s)"%
-                #          (newSubnetInput.name, newSubnetInput.type))
-                tp=imports.getTypeByFullName(newSubnetInput.type,
-                                             self.function.getLib())
-                #tp=self.project.getType(newSubnetInput.type)
-                #self.activeInstance.addNewSubnetInput(newSubnetInput.name, tp)
-                si=self.activeInstance.getSubnetInputs()
-                si.addMember(newSubnetInput.name, tp, True, False)
-                si=self.activeInstance.getStagedSubnetInputs()
-                si.addMember(newSubnetInput.name, tp, True, False)
-        # and new subnet outputs
-        #log.debug("new subnet outputs: %s"%str(out.newSubnetOutputs))
-        if out.newSubnetOutputs is not None:
-            imports=self.project.getImportList()
-            for newSubnetOutput in out.newSubnetOutputs:
-                #log.debug("Making new subnet output %s (%s)"%
-                #          (newSubnetOutput.name, newSubnetOutput.type))
-                tp=imports.getTypeByFullName(newSubnetOutput.type,
-                                             self.function.getLib())
-                #tp=self.project.getType(newSubnetOutput.type)
-                #self.activeInstance.addNewSubnetOutput(newSubnetOutput.name,tp)
-                so=self.activeInstance.getSubnetOutputs()
-                so.addMember(newSubnetOutput.name, tp, True, False)
         # we handle new network connnections and new output atomically: 
         # if the new network connection references newly outputted data,
         # that is all the instance sees.

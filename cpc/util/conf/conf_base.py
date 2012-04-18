@@ -441,6 +441,7 @@ class Conf:
                 retlist.append(str)
         retlist.append(self.getFile('global_executables_dir'))
         retlist.append(self.getFile('local_executables_dir'))
+        # now add the plugin path executables
         ppath=self.getPluginPaths()
         for p in ppath:
             retlist.append(os.path.join(p, "executables"))
