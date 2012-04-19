@@ -153,20 +153,6 @@ class Set(TransactionItem):
                                                           self.ioItemList, 
                                                           project,
                                                           True)
-            ## now we can extract the type.
-            #tp=oldVal.getType()
-            #if not isinstance(self.literal, value.Value):
-            #    newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
-            #                                  project.fileList)
-            #else:
-            #    newVal=self.literal
-            #    if not (tp.isSubtype(rval.getType()) or
-            #            rval.getType().isSubtype(tp) ):
-            #        raise ActiveError(
-            #                  "Incompatible types in assignment: %s to %s"%
-            #                  (rval.getType().getName(), tp.getName()))
-        #self.oldVal=oldVal
-        #self.newVal=newVal
         self.activeInstance.getNamedInputAffectedAIs(closestVal, 
                                                      affectedInputAIs)
 
@@ -190,10 +176,6 @@ class Set(TransactionItem):
                     raise ActiveError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
-        #self.oldVal=oldVal
-        #self.newVal=newVal
-        #self.activeInstance.getNamedInputAffectedAIs(oldVal, newVal,
-        #                                             affectedInputAIs)
         self.activeInstance.stageNamedInput(oldVal, newVal, sourceTag)
         if outf is not None:
             outf.write("Set %s:%s to %s\n"%

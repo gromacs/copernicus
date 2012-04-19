@@ -109,8 +109,8 @@ def msm(inp, out):
     # numbered runs and could get clashing number otherwise due to 
     # simulations ending simultaneously. The presence of a persistent 
     # directory means that only one controller can be running at a time.
-    #pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
-    #                                           "persistent.dat"))
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
     if init:
         sys.stderr.write("Initializing msm\n")
         # here we create an entirely new sampling set.
@@ -182,19 +182,19 @@ def msm(inp, out):
             conf=confs[i % len(confs)].value
             spawnNewSim(inp, out, i, conf, 0, True, "initial")
         #out.setOut('run_num', IntValue(num_sim))
-        #pers.set('running', start_sim)
-        #pers.set('cluster_gen', 0)
+        pers.set('running', start_sim)
+        pers.set('cluster_gen', 0)
         #pers.set('processed_cluster_gen', 0)
-        out.setSubOut('n_running', IntValue(start_sim))
-        out.setSubOut('cluster_gen', IntValue(0))
+        #out.setSubOut('n_running', IntValue(start_sim))
+        #out.setSubOut('cluster_gen', IntValue(0))
         #out.setOut('processed_cluster_gen', 0)
     else:
         # get these numbers from the (locked) persistence object
-        #run_num=pers.get('running')
-        #cluster_gen=pers.get('cluster_gen')
-        run_num=inp.getSubnetOutput('n_running')
-        cluster_gen=inp.getSubnetOutput('cluster_gen')
-        sys.stderr.write("\nRead run_num %d\n\n"%run_num)
+        run_num=pers.get('running')
+        cluster_gen=pers.get('cluster_gen')
+        #run_num=inp.getSubnetOutput('n_running')
+        #cluster_gen=inp.getSubnetOutput('cluster_gen')
+        #sys.stderr.write("\nRead run_num %d\n\n"%run_num)
         #processed_cluster_gen=pers.get('processed_cluster_gen')
 
         # check if a trajectory has finished and we can spawn a new run:
@@ -263,12 +263,15 @@ def msm(inp, out):
         # now process reclustering data.
         clust_in=inp.getSubnetInput('msm_out')
         if clust_in is not None and len(clust_in)>0:
-            last=len(clust_in)-1
-            lastnm='msm_out[%d]'%last
-            sys.stderr.write('checking %s: cluster round updated: %s\n'%
-                             (lastnm, clust_in[last].isUpdated()))
-            if clust_in[last].isUpdated():
-            #while processed_cluster_gen < cluster_gen:
+            last=None
+            for i in range(len(clust_in)):
+                if clust_in[i].isUpdated():
+                    last=i
+            if last is not None:
+                lastnm='msm_out[%d]'%last
+                sys.stderr.write('checking %s: cluster round updated: %s\n'%
+                                 (lastnm, last is not None) )
+                #if clust_in[last].isUpdated():
                 output_set=False
                 #sys.stderr.write('Checking individual items, such as %s; %s\n'%
                 #                (inp.getSubnetInput('%s.maxstate'%lastnm),
@@ -329,13 +332,13 @@ def msm(inp, out):
                 if output_set:
                     out.setOut('generation', cpc.dataflow.IntValue(last+1))
 
-        #pers.set('cluster_gen', cluster_gen)
+        pers.set('cluster_gen', cluster_gen)
         #pers.set('processed_cluster_gen', processed_cluster_gen)
-        #pers.set('running', run_num)
-        out.setSubOut('cluster_gen', IntValue(cluster_gen))
-        out.setSubOut('n_running', IntValue(run_num))
-        sys.stderr.write("\nwriting run_num %d\n\n"%run_num)
-    #pers.write()
+        pers.set('running', run_num)
+        #out.setSubOut('cluster_gen', IntValue(cluster_gen))
+        #out.setSubOut('n_running', IntValue(run_num))
+        #sys.stderr.write("\nwriting run_num %d\n\n"%run_num)
+    pers.write()
     return out
 
 

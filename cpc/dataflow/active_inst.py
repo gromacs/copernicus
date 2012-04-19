@@ -596,7 +596,8 @@ class ActiveInstance(object):
            itemList = a path gettable by value.getSubValue
            closestValue = boolean indicating whether to return the closest
                           value (for getNamedinputAffectedAIs) or the actual
-                          value (for stageNamedInput)
+                          value (for stageNamedInput). If False,
+                          the value will be created if needed.
            """
         if direction==function_io.inputs:
             topval=self.stagedInputVal
@@ -619,10 +620,6 @@ class ActiveInstance(object):
         for listener in listeners:
             #log.debug("   found listener: %s"%(listener.value.getFullName()))
             listener.findConnectedInputAIs(affectedInputAIs)
-            #destais=listener.getDestinationAIs()
-        #for ai in affectedInputAIs:
-            #log.debug("   add affected input: %s"%(ai.getCanonicalName()))
-            #affectedInputAIs.update(destais)
         affectedInputAIs.add(self)
 
     def stageNamedInput(self, val, newVal, sourceTag):
