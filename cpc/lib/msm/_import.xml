@@ -297,6 +297,15 @@
             <field type="build_msm_in_array" id="msm_in">
                 <desc>The array of MSM generation inputs</desc>
             </field>
+            <field type="int" id="n_running">
+                <desc>Number of simulations started</desc>
+            </field>
+            <field type="int" id="cluster_gen">
+                <desc>Number of clustering generations started</desc>
+            </field>
+            <!--<field type="int" id="processed_cluster_gen">
+                <desc>Number of clustering generations finished</desc>
+            </field>-->
         </subnet-outputs>
         <controller log="true" executable="msm" persistent_dir="true"
                     access_outputs="true" access_subnet_outputs="true" />

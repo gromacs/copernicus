@@ -247,7 +247,8 @@ class Value(object):
            If create==true, a subitem will be created for arrays/dicts
            if createType == a type, a subitem will be created with the given 
                             type
-           if markupdated = true, any created item will be marked as updated"""
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
 
         if len(itemList)==0:
             return self

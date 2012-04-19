@@ -771,13 +771,15 @@ class ActiveInstance(object):
     def markError(self, msg):
         """Mark active instance as being in error state."""
         with self.lock:
-            self.errmsg=unicode(msg, encoding="utf-8")
+            if isinstance(msg, str):
+                self.errmsg=unicode(msg, encoding="utf-8")
+            else:
+                self.errmsg=unicode(msg) #$, encoding="utf-8")
             self.state=ActiveInstance.error
             #print msg
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
                                                   self.function.getName(), 
-                                                  unicode(msg, 
-                                                          encoding="utf-8")))
+                                                  self.errmsg))
     def clearError(self, recursive, outf=None):
         """Clear the error state of this instance, and if recursive is set, 
            for any subinstances. Returns the number of errors cleared"""

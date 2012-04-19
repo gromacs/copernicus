@@ -226,7 +226,7 @@ class ActiveValue(value.Value):
                     #          (val.getFullName(), i, val.sourceTag, 
                     #           self.sourceTag))
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        log.debug("New value")
+                        #log.debug("New value")
                         nv=self._create(None, self.type.getMembers(), i,
                                         sourceTag)
                         nv.update(val, val.seqNr, sourceTag,

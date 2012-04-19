@@ -8,6 +8,7 @@
 # and start the function instance
 ./cpcc activate
 
+./cpcc transact
 # set its values. 
 # Descriptions can be obtained with cpcc info msm::msm_mgx_adaptive
 ./cpcc setf msm:in.grompp.top examples/msm-test/topol.top
