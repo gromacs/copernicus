@@ -149,9 +149,35 @@ class Set(TransactionItem):
         """Get the affected items of this transaction"""
         ## there are no affected output AIs: only input AIs change.
         with self.activeInstance.lock:
+            closestVal=self.activeInstance.findNamedInput(self.direction, 
+                                                          self.ioItemList, 
+                                                          project,
+                                                          True)
+            ## now we can extract the type.
+            #tp=oldVal.getType()
+            #if not isinstance(self.literal, value.Value):
+            #    newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
+            #                                  project.fileList)
+            #else:
+            #    newVal=self.literal
+            #    if not (tp.isSubtype(rval.getType()) or
+            #            rval.getType().isSubtype(tp) ):
+            #        raise ActiveError(
+            #                  "Incompatible types in assignment: %s to %s"%
+            #                  (rval.getType().getName(), tp.getName()))
+        #self.oldVal=oldVal
+        #self.newVal=newVal
+        self.activeInstance.getNamedInputAffectedAIs(closestVal, 
+                                                     affectedInputAIs)
+
+    def run(self, project, sourceTag, outf=None):
+        """Run the transaction item."""
+        ## there are no affected output AIs: only input AIs change.
+        with self.activeInstance.lock:
             oldVal=self.activeInstance.findNamedInput(self.direction, 
                                                       self.ioItemList, 
-                                                      project)
+                                                      project,
+                                                      False)
             # now we can extract the type.
             tp=oldVal.getType()
             if not isinstance(self.literal, value.Value):
@@ -164,19 +190,16 @@ class Set(TransactionItem):
                     raise ActiveError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
-        self.oldVal=oldVal
-        self.newVal=newVal
-        self.activeInstance.getNamedInputAffectedAIs(self.oldVal, self.newVal,
-                                                     affectedInputAIs)
-
-    def run(self, project, sourceTag, outf=None):
-        """Run the transaction item."""
-        self.activeInstance.stageNamedInput(self.oldVal, self.newVal, sourceTag)
+        #self.oldVal=oldVal
+        #self.newVal=newVal
+        #self.activeInstance.getNamedInputAffectedAIs(oldVal, newVal,
+        #                                             affectedInputAIs)
+        self.activeInstance.stageNamedInput(oldVal, newVal, sourceTag)
         if outf is not None:
             outf.write("Set %s:%s to %s\n"%
                        (self.activeInstance.getCanonicalName(),
-                        self.oldVal.getFullName(),
-                        self.newVal.getDesc()))
+                        oldVal.getFullName(),
+                        newVal.getDesc()))
 
     def describe(self, outf):
         """Describe the item."""

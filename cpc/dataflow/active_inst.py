@@ -590,16 +590,14 @@ class ActiveInstance(object):
 
 
 
-    def findNamedInput(self, direction, itemList, sourceTag):
+    def findNamedInput(self, direction, itemList, sourceTag, closestValue):
         """Find the *staging* value object corresponding to the named item.
            direction = the input/output/subnetinput/subnetoutput direction
            itemList = a path gettable by value.getSubValue
-
-           Assumes a locked self.inputLock
+           closestValue = boolean indicating whether to return the closest
+                          value (for getNamedinputAffectedAIs) or the actual
+                          value (for stageNamedInput)
            """
-        #log.debug("%s: Finding value for %s of fn %s"%
-        #          (self.getCanonicalName(), self.instance.getName(), 
-        #           self.function.getName()))
         if direction==function_io.inputs:
             topval=self.stagedInputVal
         elif direction==function_io.subnetInputs:
@@ -608,13 +606,14 @@ class ActiveInstance(object):
             raise ActiveError("Trying to set output value %s"%
                               str(direction.name))
         val=topval.getSubValue(itemList, create=True, 
-                               setCreateSourceTag=sourceTag)
+                               setCreateSourceTag=sourceTag,
+                               closestValue=closestValue)
         return val
 
-    def getNamedInputAffectedAIs(self, val, newVal, affectedInputAIs):
+    def getNamedInputAffectedAIs(self, closestVal, affectedInputAIs):
         """Get the affected input ais for setting a new value."""
         listeners=[]
-        val.findListeners(listeners)
+        closestVal.findListeners(listeners)
         log.debug("Finding affected inputs for %s"%self.getCanonicalName())
         for listener in listeners:
             #log.debug("   found listener: %s"%(listener.value.getFullName()))
