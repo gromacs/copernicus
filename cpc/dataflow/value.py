@@ -252,6 +252,7 @@ class Value(object):
            if closestValue is true, the closest relevant value will be
                                     returned """
 
+        #log.debug("getSubValue on on %s"%(self.getFullName()))
         if len(itemList)==0:
             return self
         # now get the first subitem
@@ -284,13 +285,13 @@ class Value(object):
             if itemList[0] not in self.value:
                 #log.debug("%s not in %s"%(itemList[0], self.value))
                 if not create:
-                    return None
                     if closestValue:
                         if ( (createType is not None) or 
                              (self.type.isSubtype(vtype.dictType) ) ):
                             # only return a closest value if we can actually
                             # create one if needed.
                             return self
+                    return None
                 else:
                     if self.type.isSubtype(vtype.dictType):
                         # choose the most specific type
@@ -314,7 +315,8 @@ class Value(object):
         # try to find the child value
         subVal=self.value[itemList[0]]
         return subVal.getSubValue(itemList[1:], create=create, 
-                                  setCreateSourceTag=setCreateSourceTag)
+                                  setCreateSourceTag=setCreateSourceTag,
+                                  closestValue=closestValue)
 
     def getSubType(self, itemList):
         """Determine the type of a sub-item (even if it doesn't exist yet)."""

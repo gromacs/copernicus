@@ -605,16 +605,17 @@ class ActiveInstance(object):
         else:
             raise ActiveError("Trying to set output value %s"%
                               str(direction.name))
-        val=topval.getSubValue(itemList, create=True, 
+        val=topval.getSubValue(itemList, create=(not closestValue), 
                                setCreateSourceTag=sourceTag,
                                closestValue=closestValue)
+        #log.debug("returning %s"%(val))
         return val
 
     def getNamedInputAffectedAIs(self, closestVal, affectedInputAIs):
         """Get the affected input ais for setting a new value."""
         listeners=[]
         closestVal.findListeners(listeners)
-        log.debug("Finding affected inputs for %s"%self.getCanonicalName())
+        #log.debug("Finding affected inputs for %s"%self.getCanonicalName())
         for listener in listeners:
             #log.debug("   found listener: %s"%(listener.value.getFullName()))
             listener.findConnectedInputAIs(affectedInputAIs)
