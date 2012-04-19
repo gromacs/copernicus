@@ -164,14 +164,14 @@ class Project(object):
         """Add an instance of a set in the transaction schedule."""
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
-        lstItem=transaction.Set(itemname, instance, direction, ioItemList, 
-                                literal, sourceType)
+        lstItem=transaction.Set(self, itemname, instance, direction, 
+                                ioItemList, literal, sourceType)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
 
     def scheduleConnect(self, src, dst, outf):
         """Add an instance of a connect in the transaction schedule."""
-        lstItem=transaction.Connect(src, dst)
+        lstItem=transaction.Connect(self, src, dst)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
 
