@@ -62,7 +62,7 @@ Technically, Copernicus is a platform for running multi-level sampling tasks; in
 When running, Copernicus is a network of servers; you as a user start servers, connect to these servers through clients (right now, that's the command line server <code>cpcc</code>), and present the servers with 'workers': special clients that do computational work. 
 </p>
 <p>
-Computational tasks are dividied into <em>projects</em> that can each host a complex set of simulations. Each project belongs to a server and its contents can only be accessed by accessing that server with a client.
+Computational tasks are divided into <em>projects</em> that can each host a complex set of simulations. Each project belongs to a server and its contents can only be accessed by accessing that server with a client.
 </p>
 
 <h3>Dataflow Network</h3>
@@ -116,59 +116,131 @@ Throughout the documentation we might sometimes use the symbols below to represe
 
 <a name="start"><h1>Getting started</h1></a>
 	<h2>Downloading and Installing</h2>
-	The first step is to download and install the copernicus distribution. To do so follow these steps
-	<ul>
-	<li>Checkout the code from our git repository
-	<code>git clone git@git.copernicus-computing.org:copernicus copernicus</code>
-	</li>
-	<li>Set the <code>COPERNICUS_HOME</code> environment variable to the location where you checked out copernicus
-		<ul>
-			<li>On UNIX/Linux systems this is usually done by adding <code>export COPERNICUS_HOME=path/to/copernicus</code> </li>
-			
-		</ul>
-	</li>
-	<li>Now add <code>COPERNICUS_HOME</code> to your <code>PATH variable</code>
-		<ul>
-			<li>On UNIX/Linux systems this is usually done by adding <code>export PATH=$PATH:$COPERNICUS_HOME</code> </li>
-		</ul>
-	</li>
-	<li>You should now be able to run the following three commands 
-		<ul>
-		<li><code>cpcc</code></li>
-		<li><code>cpc-server</code></li>
-		<li><code>cpc-worker</code></li>
-		</ul>
-	</li>
-	<li>Setup Copernicus by running <code>cpc-server setup &lt;project-base-directory&gt;</code>.
-	where <code>&lt;project-base-directory&gt;</code> is the directory all of your copernicus projects will reside in 
-	This will initialize the necessary configuration files under <code>~/.copernicus/<machine-name></code></li>	
-	</ul>
-		
-	To verify that everything is working correctly type <code>cpc-server start -d</code>.
-	You should be able to see an output similiar to the one below.
-	
-	<pre>
-Starting server..
-DEBUG, cpc.dataflow.task: Creating new task queue.
-INFO, cpc.heartbeat.server: No heartbeat file
-DEBUG, cpc.queue.exec_thread: Started task exec thread.
-DEBUG, cpc.queue.exec_thread: Trying to get queued task.
-INFO, cpc.server: Serving HTTP on 0.0.0.0 port 14807...
-INFO, cpc.server: Serving HTTPS on 0.0.0.0 port 13807...	
-	</pre>
-	
-	You can stop the server by typing <code>cpc-server stop</code>
-	
+        
+        <p>See the installation manual for detailed instructions on how to install Copernicus from a packaged version, or from the <code>git</code> repository. Once installed, you should be able to run <code>cpcc</code>, <code>cpc-server</code>, and <code>cpc-worker</code>.</p>
+
+        <h3>server setup</h3>
+        <p>To set up a server, it must generate an SSL keypair, and set some basic configurations. To start with this, make sure you've set the <code>COPERNICUS_HOME</code> environment variable so Copernicus can find itself. Then issue the command</p>
+       <pre>cpc-server help</pre>
+       <p>to check whether you can access the server. If that is successful, you should see something like</p>
+       <pre>
+Usage: cpc-server start [-d]
+       cpc-server config-list
+       cpc-server config param value
+       cpc-server setup default-project-directory
+       cpc-server create-connection-bundle
+
+Common options:
+       cpc-server [-c confdir]
+       </pre>
+       <p>Which means that you can run the server command <code>cpc-server</code>. Verify the same for <code>cpcc</code> and <code>cpc-worker</code>. Now set up the server with</p>
+       <pre>cpc-server setup &lt;data-directory&gt;</pre>
+       <p>
+       where <code>&lt;data-directory&gt;</code> is the name of a directory where Copernicus can store run data (such as the output of simulations); typically, this is is something like <code>~/copernicus</code>, or <code>/data/copernicus</code> if <code>/data</code> points to a writable volume. The output should look like this:</p>
+<pre>Generating RSA private key, 2048 bit long modulus
+...............+++
+.....................................+++
+e is 65537 (0x10001)
+writing RSA key
+Signature ok
+subject=/CN=debever2.local/ST=test/C=SE/emailAddress=test@test.com/O=copernicus
+Getting Private key
+Generating RSA private key, 2048 bit long modulus
+......................+++
+.............................................................+++
+e is 65537 (0x10001)
+writing RSA key
+Using configuration from /Users/sander/.copernicus/debever2.local/ca/caconf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+commonName            :T61STRING:'debever2.local_server_1334835570'
+stateOrProvinceName   :PRINTABLE:'test'
+countryName           :PRINTABLE:'SE'
+emailAddress          :IA5STRING:'test@test.com'
+organizationName      :PRINTABLE:'copernicus'
+Certificate is to be certified until Apr 19 11:39:30 2013 GMT (365 days)
+Sign the certificate? [y/n]:
+
+1 out of 1 certificate requests certified, commit? [y/n]Write out database with 1 new entries
+Data Base Updated
+</pre>
+<p>which tells you that a 2048-bit RSA key is being generated for encrypted communication; for technical reasons, it is hard to make this output more meaningful without suppressing any potential error messages that may occur.  The server is now ready to run, but we need to set up a client to talk to it. 
+</p>
+<p>
+First, we start the server with
+</p>
+<pre>
+cpc-server start
+</pre>
+<p>
+which should reply with <code>Starting server..</code> and return the prompt. The server is now running in the background.
+</p>
+
+<h3>Client configuration</h3>
+
+<p>
+Clients (<code>cpcc</code> and <code>cpc-worker</code>) need a <em>connection bundle</em> to connect to the server. This is a file, typically named <code>client.cnx</code> that contains a signed key that can be used to connect to the server, together with the server's address. To ceate a connection bundle, issue the command</p>
+<pre>
+cpc-server create-connection-bundle &gt; client.cnx
+</pre>
+<p>which outputs a file <code>client.cnx</code>, toghether with output:</p>
+<pre>
+Generating RSA private key, 2048 bit long modulus
+.............+++
+....+++
+e is 65537 (0x10001)
+writing RSA key
+Using configuration from /Users/sander/.copernicus/debever2.local/ca/caconf
+Check that the request matches the signature
+Signature ok
+The Subject's Distinguished Name is as follows
+commonName            :T61STRING:'worker_debever2.local_1334835845'
+stateOrProvinceName   :PRINTABLE:'test'
+countryName           :PRINTABLE:'SE'
+emailAddress          :IA5STRING:'test@test.com'
+organizationName      :PRINTABLE:'copernicus'
+Certificate is to be certified until Apr 19 11:44:05 2013 GMT (365 days)
+Sign the certificate? [y/n]:
+
+1 out of 1 certificate requests certified, commit? [y/n]Write out database with 1 new entries
+Data Base Updated
+</pre>
+<p>
+The connection bundle file can now be used to connect to a server, with a command such as 
+</p>
+<pre>
+cpcc -c client.cnx projects
+</pre>
+<p>Which lists the currently running projects (none): </p>
+<pre>
+Projects:
+</pre>
+<p>If the connection bundle is not the right one, it will give an error message:
+</p>
+<pre>KeyError: 'private_key'</pre>
+<p>
+The connection bundle can be installed by copying it into your </code>~/.copernicus</code> directory in your home directory (if you set up the server in your account, this directory should already exist, and you can do</p>
+<pre>
+cp client.cnx ~/.copernicus/client.cnx
+</pre>
+<p>which allows you to do
+</p>
+<pre>
+cpcc projects
+</pre>
+whithout specifying the connection bundle.
+
 	<h2>Running a project</h2>
 	To get a high level understanding of how to use copernicus, we'll first go through a simple example
 	where we start a copernicus server and worker on our local machine. We'll then submit a project to it and run it.
 	In later sections, we'll go through parts more detailed
 	
 	<ul>
-		<li>First, we need to install 'executables' for the workers: these are short descriptions on how to execute a particular type of command. In <code>$COPERNICUS_HOME/examples/executables</code> there are a few <code>gromacs</code> executables for different platforms. Simply copy over the whole executables directory to <code>.copernicus/</code>. Do <pre>cp -r examples/executables ~/.copernicus/</pre> to do this.
-	</li>
+		<!--<li>First, we need to install 'executables' for the workers: these are short descriptions on how to execute a particular type of command. In <code>$COPERNICUS_HOME/examples/executables</code> there are a few <code>gromacs</code> executables for different platforms. Simply copy over the whole executables directory to <code>.copernicus/</code>. Do <pre>cp -r examples/executables ~/.copernicus/</pre> to do this.
+	</li>-->
 	
-	<li>Start a copernicus server <pre>cpc-server start</pre></li>
+	<li>If you haven't already started a Copernicus server, start one with <pre>cpc-server start</pre></li>
 
 	<li>We will now set up a project on our copernicus server. 	
 	The script <pre>examples/mdrun-test/rungmxtest</pre> 

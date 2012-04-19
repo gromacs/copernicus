@@ -804,7 +804,7 @@ class ActiveInstance(object):
         iindstr=cpc.util.indStr*(indent+1)
         with self.lock:
             if self.state==ActiveInstance.error:
-                strn=str(self.errmsg)
+                strn=self.errmsg
                 msg='errmsg=%s'%str(xml.sax.saxutils.quoteattr(strn))
             else:
                 msg=""

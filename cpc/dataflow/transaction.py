@@ -31,6 +31,7 @@ import subprocess
 import stat
 import threading
 
+import apperror
 import connection
 import value
 
@@ -129,11 +130,14 @@ class TransactionItem(object):
            outf =  a file object to write the description to"""
         pass
 
+class SetError(apperror.ApplicationError):
+    def __init__(self, name):
+        self.str="Assignment: %s not found"%(name)
 
 class Set(TransactionItem):
     """Transaction item for setting a value."""
-    def __init__(self, itemname, activeInstance, direction, ioItemList, 
-                 literal, sourceType):
+    def __init__(self, project, itemname, activeInstance, direction, 
+                 ioItemList, literal, sourceType):
         """initialize based on the active instance, old value associated
            with the instance, and a new value."""
         #instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
@@ -144,6 +148,14 @@ class Set(TransactionItem):
         self.ioItemList=ioItemList
         self.literal=literal
         self.sourceType=sourceType
+        with self.activeInstance.lock:
+            closestVal=self.activeInstance.findNamedInput(self.direction, 
+                                                          self.ioItemList, 
+                                                          project,
+                                                          True)
+        if closestVal is None:
+            raise SetError(itemname)
+
 
     def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
         """Get the affected items of this transaction"""
@@ -193,7 +205,7 @@ class Connect(TransactionItem):
     """Transaction item for connecting a value"""
     #def __init__(self, connection):
     #    self.connection=connection
-    def __init__(self, src, dst):
+    def __init__(self, project, src, dst):
         self.src=src
         self.dst=dst
 
