@@ -57,7 +57,7 @@ class TransactionList(object):
         if self.autoCommit:
             self.commit(project, outf)
         else:
-            outf.write("Scheduled ")
+            outf.write("Scheduled to ")
             transactionItem.describe(outf)
             outf.write(" at commit")
 
@@ -137,7 +137,7 @@ class SetError(apperror.ApplicationError):
 class Set(TransactionItem):
     """Transaction item for setting a value."""
     def __init__(self, project, itemname, activeInstance, direction, 
-                 ioItemList, literal, sourceType):
+                 ioItemList, literal, sourceType, printName):
         """initialize based on the active instance, old value associated
            with the instance, and a new value."""
         #instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
@@ -148,6 +148,10 @@ class Set(TransactionItem):
         self.ioItemList=ioItemList
         self.literal=literal
         self.sourceType=sourceType
+        if printName is not None:
+            self.printName=printName
+        else:
+            self.printName=literal
         with self.activeInstance.lock:
             closestVal=self.activeInstance.findNamedInput(self.direction, 
                                                           self.ioItemList, 
@@ -197,9 +201,7 @@ class Set(TransactionItem):
 
     def describe(self, outf):
         """Describe the item."""
-        outf.write("set %s: %s to %s"%
-                   (self.activeInstance.getCanonicalName(),
-                    self.itemname, self.literal))
+        outf.write("set %s to %s"%(self.itemname, self.printName))
 
 class Connect(TransactionItem):
     """Transaction item for connecting a value"""

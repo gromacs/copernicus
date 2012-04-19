@@ -160,12 +160,13 @@ class Project(object):
         instance=self.active.getNamedActiveInstance(instanceName)
         return instance.getNamedValue(direction, ioItemList)
 
-    def scheduleSet(self, itemname, literal, outf, sourceType=None):
+    def scheduleSet(self, itemname, literal, outf, sourceType=None,
+                    printName=None):
         """Add an instance of a set in the transaction schedule."""
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
         lstItem=transaction.Set(self, itemname, instance, direction, 
-                                ioItemList, literal, sourceType)
+                                ioItemList, literal, sourceType, printName)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
 

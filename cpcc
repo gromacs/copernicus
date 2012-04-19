@@ -321,8 +321,6 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, value,
                                                  None)).pprint()
-        #if not commit:
-        #    print "Use cpcc commit to perform this assignment"
     elif cmd == "set-file" or cmd == "setf":
         project, pargs = getProjectArgs(args)
         item=getArg(pargs, 1, "name of input item to set")
@@ -330,8 +328,6 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, None,
                                                  filename)).pprint()
-        #if not commit:
-        #    print "Use cpcc commit to perform this assignment"
     elif cmd == "transact":
         project, pargs = getProjectArgs(args)
         clnt=ClientMessage()
@@ -359,19 +355,11 @@ try:
                                                          name)).pprint()
     elif cmd == "connect":
         project, pargs = getProjectArgs(args)
-        if pargs[1] == "-c":
-            commit=True
-            src=getArg(pargs, 2, "connection source")
-            dst=getArg(pargs, 3, "connection destination")
-        else:
-            commit=False
-            src=getArg(pargs, 1, "connection source")
-            dst=getArg(pargs, 2, "connection destination")
+        src=getArg(pargs, 1, "connection source")
+        dst=getArg(pargs, 2, "connection destination")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectConnectRequest(project, 
                                                      src, dst)).pprint()
-        if not commit:
-            print "Use cpcc commit to perform this connection"
     elif cmd == "init-default-server":
         cf.setClientHost(getArg(1, "server name"))
         print args[1] + " is now set as default server"
