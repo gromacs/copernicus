@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ ! -e examples/msm-test/equil0.gro ]; then
+    echo "This example script must be run from within the copernicus base       directory"
+    exit 1
+fi
+
+
 
 ./cpcc start test
 ./cpcc import msm

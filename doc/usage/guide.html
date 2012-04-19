@@ -56,7 +56,7 @@ Copernicus is a system that aims to take the scope of computer simulations from 
 Technically, Copernicus is a platform for running multi-level sampling tasks; in the field of molecular simulations, sampling algorithms such as Markov State Modeling and free energy perturbation methods rely on the results of individual simulations as samples to be processed by the higher level algorithm.
 </p>
 
-<h2>How does Copernicus work?</h2>
+<h2>What does it do?</h2>
 
 <p>
 When running, Copernicus is a network of servers; you as a user start servers, connect to these servers through clients (right now, that's the command line server <code>cpcc</code>), and present the servers with 'workers': special clients that do computational work. 
@@ -77,13 +77,15 @@ Functions have pre-defined inputs and outputs: for example, the <code>msm</code>
 As outputs and inputs of functions can be connected to each other, they define networks that are the execution model of Copernicus: internally, all non-trivial functions are themselves dataflow networks. This has the advantage that the internal state of all projects can be inspected while running, and that parts of the network can be executed in parallel.
 </p>
 
+<h2>How does it work?</h2>
+
 <h3>Server</h3>
 
 <p>
-At least one server nees to run to start executing projects: the server that hosts the project. Other servers can be added to serve as gateways for communication to the workers or host other projects (possibly by other users). 
+At least one server needs to run, to start executing projects: the server that hosts the project. Other servers can be added to serve as gateways for communication to the workers or host other projects (possibly by other users). 
 </p>
 <p>
-Servers are started and configured with the <code>cpc-server</code> command. Initial configuration can be done with <code>cpc-server setup &lt;dirname&gt;</code>, and the server is started (as a background process) with <code>cpc-server start</code>. 
+Servers are started and configured with the <code>cpc-server</code> command. Initial configuration can be done with <code>cpc-server setup &lt;data-dir-name&gt;</code>, and the server is started (as a background process) with <code>cpc-server start</code>. 
 </p>
 <p>
 All Copernicus communication happens through encrypted connections, where both sides need to trust each other. The <code>cpc-server</code> command has a set of commands to request and establish trust between servers.
@@ -120,7 +122,7 @@ Throughout the documentation we might sometimes use the symbols below to represe
         <p>See the installation manual for detailed instructions on how to install Copernicus from a packaged version, or from the <code>git</code> repository. Once installed, you should be able to run <code>cpcc</code>, <code>cpc-server</code>, and <code>cpc-worker</code>.</p>
 
         <h3>server setup</h3>
-        <p>To set up a server, it must generate an SSL keypair, and set some basic configurations. To start with this, make sure you've set the <code>COPERNICUS_HOME</code> environment variable so Copernicus can find itself. Then issue the command</p>
+        <p>To set up a server, it must generate an SSL keypair, and set some basic configurations. To start with this, make sure you've set the <code>$COPERNICUS_HOME</code> environment variable so Copernicus can find itself. Then issue the command</p>
        <pre>cpc-server help</pre>
        <p>to check whether you can access the server. If that is successful, you should see something like</p>
        <pre>
@@ -242,102 +244,160 @@ whithout specifying the connection bundle.
 	
 	<li>If you haven't already started a Copernicus server, start one with <pre>cpc-server start</pre></li>
 
-	<li>We will now set up a project on our copernicus server. 	
+	<li><p>We will now set up a project on our copernicus server. 	
 	The script <pre>examples/mdrun-test/rungmxtest</pre> 
 	is a simple script that sets up a project that will simulate water
 	(note that you will need to run this script from $COPERNICUS_HOME).
-	This example script executes several commands.
+	This example script executes several commands:
 	<ul>
 		<li>It initates a project.</li>
-		<li>It uploads a project definition containing the dataflow network this project uses</li>
+                <li>It imports the basic Copernicus gromacs library</li>
+                <li>It instantiates two functions: <code>grompp</code> and <code>mdrun</code>.</li>
+                <li>It starts a 'transaction': a grouping of set/connect commands that are executed at once.</li>
 		<li>It uploads the three input files necessary for this project</li>
-		<li>Finally it will activate the project. Upon project activation the server will start generating commands that can be executed by workers.
+		<li>It overrides a few settings from the <code>.mdp</code> file that is supplied.</li>
+                <li>Finished the transaction by committing the changes</li>
+		<li>Once the changes are committed, the server will start generating commands that can be executed by workers.
 		</li>
 	</ul>
-	
 	After running the script you will see output similar to: 
-	<pre>
-Project mdrun_test created
+	<pre>Project test created
 Imported module gromacs
 Added instance 'grompp' of function gromacs::grompp
 Added instance 'mdrun' of function gromacs::mdrun
-Connected grompp:out.tpr to mdrun:in.tpr
-Found item: Set type=file, value mdrun_test/_inputs/0000/conf.gro
-Found item: Set type=file, value mdrun_test/_inputs/0001/grompp.mdp
-Found item: Set type=file, value mdrun_test/_inputs/0002/topol.top
-Project mdrun_test activated.
-	</pre> 
-	<li>At this point the server should have a project named test
-	and it should have generated a command in the queue. The structure of the project is 
+All items in project test activated.
+Beginning transaction level 1
+Scheduled to connect grompp:out.tpr to mdrun:in.tpr at commit
+Scheduled to set grompp:in.conf to conf.gro at commit
+Scheduled to set grompp:in.mdp to grompp.mdp at commit
+Scheduled to set grompp:in.top to topol.top at commit
+Scheduled to set grompp:in.settings[0].name to nsteps at commit
+Scheduled to set grompp:in.settings[0].value to 1000 at commit
+Scheduled to set grompp:in.settings[1].name to integrator at commit
+Scheduled to set grompp:in.settings[1].value to md at commit
+Committing scheduled changes:
+- Connected grompp:out.tpr to mdrun:in.tpr
+- Set grompp:grompp:in.conf to _inputs/0000/conf.gro
+- Set grompp:grompp:in.mdp to _inputs/0001/grompp.mdp
+- Set grompp:grompp:in.top to _inputs/0002/topol.top
+- Set grompp:grompp:in.settings[0].name to nsteps
+- Set grompp:grompp:in.settings[0].value to 1000
+- Set grompp:grompp:in.settings[1].name to integrator
+- Set grompp:grompp:in.settings[1].value to md</pre> 
+        </p>
+	<li><p>At this point the server should have a project named 'test', and it should have generated a command in the queue. The structure of the project is 
         <div class="graph"> 
         <img src="mdrun_test.png" alt="Graph of mdrun_test project" />
         </div>
         so the <code>tpr</code> output of the <code>grompp</code> function is fed into the <code>tpr</code> input of the <code>mdrun</code> function. You can make this graph with <pre>cpcc graph</pre> and processing the output with <a href="http://www.graphviz.org">graphviz</a> (the <code>dot</code> tool).
+        </p>
         </li>
         <li>
+        <p>
 	Execute the command <pre>cpcc p</pre>
-        You should see this:
-	<pre> 
-Projects:
-    mdrun_test
-	</pre>
+        (short for <code>cpcc projects</code>). You should see this:
+	<pre>Projects:
+    test</pre>
 	
 	To see what's in the command queue we can now run 
         <pre>cpcc q</pre>
         The output should look like:
 	<pre>
 Queue:
-task mdrun.1: gromacs/mdrun in mdrun_test/mdrun/_persistence/run_001
+  0 mdrun.1: gromacs/mdrun
 	</pre>		
+        which means that there is one <code>gromacs/mdrun</code> command in the queue, which can be executed by a worker.
+        </p>
 	</li>
-	<li>Now we'll start up a worker. Once the worker starts up it will connect to the server and ask for work. The server will then send the 
-	generated command to the worker.
-	To start up a worker with 4 cores on a single machine, run the command 
+        <p>
+	<li>Now we can start a worker: once it starts, it will connect to the server and ask for work. The server will then send the queued command to the worker.  To start a worker with 4 cores on a single machine, run the command 
         <pre>cpc-worker smp -n 4</pre>
         As soon as the worker starts up the worker will receive a command from the server to execute. You should see: 
-	<pre>
-Available executables for platform smp:
-gromacs/mdrun 4.5.3
+	<pre>Available executables for platform smp:
+gromacs/mdrun 4.5.5
+gromacs/grompp 4.5.5
+gromacs/trjconv 4.5.5
+gromacs/trjcat 4.5.5
+gromacs/g_energy 4.5.5
 INFO, cpc.worker: Got 1 commands.
-INFO, cpc.worker: cmd ID=72ef60f6ef923d5e0d74b7f81d3255c2f59b2c7e
-	</pre>
-	
-	It will take about 10-30 seconds for the worker finishes it work after that you should see an output like 	
+INFO, cpc.worker: cmd ID=9ffd1b086437df92fb5bb157b3fe724a9d5ab196</pre>
+	It will take about 10-30 seconds for the worker finishes it work, after which, the worker should  be output
 	<pre>
-INFO, cpc.worker: Command id 72ef60f6ef923d5e0d74b7f81d3255c2f59b2c7e finished
+INFO, cpc.worker: Command id 9ffd1b086437df92fb5bb157b3fe724a9d5ab196 finished
 INFO, cpc.worker: Got 0 commands.
 INFO, cpc.worker: Have free resources. Waiting 30 seconds
 	</pre>
-	
-	The first line says that the worker has finished executing the command(s). The subsequent lines say that the worker has asked for a new command to exeute, but received nothing	
+	The first line says that the worker has finished executing the command(s). The subsequent lines say that the worker has asked for a new command to exeute, but received nothing. Exit the worker with ^C (control-c). 
 	<br/>
 	If you run <pre>cpcc q</pre> again, you will see that the queue is empty.	
+        </p>
 	</li>
-
 	<li>
-	At this stage we can take a look at the output the project has generated.
-	To see what outputs the mdrun function generates we can run the command 
+        <p>
+	At this stage we can take a look at the output the project has generated. To get a high-level overview of the dataflow network, type
+        <pre>cpcc list</pre>
+        which gives
+        <pre>
+Network function instances:
+    grompp (active)
+    mdrun (active)
+CPU-seconds used in this instance and its sub-instances: 47</pre> 
+        Showing that there is a <code>grompp</code> function running, and a <code>mdrun</code> function. To see what outputs the <code>mdrun</code> function generates, we can run the command 
         <pre>cpcc list mdrun</pre>
-	The corresponding output will look like the below
-	
+	which yields
 	<pre>
-Instance/network 'mdrun':
+Instance 'mdrun':
+Instance of: gromacs::mdrun
 State: active
 Inputs:
     tpr
+    priority
+    cmdline_options
 Outputs:
     conf
-    stdout
-    edr
-    xtc
     stderr
+    stdout
+    xtc
     trr
-Subnet function instances:	
-	</pre>	
-        and we can get the output configuration with the command 
-        <pre>cpcc get-file mdrun:out.conf out.gro</pre>
+    edr
+Subnet function instances:
+CPU-seconds used in this instance: 47
+CPU-seconds used in this instance and its sub-instances: 47</pre>
+        which means that the <code>mdrun</code> function has outputs that contain the output configruation (<code>conf</code>), a trajectory (<code>xtc</code>), standard output (<code>stdout</code>), etc.  We can get the output configuration with the command 
+        <pre>cpcc get-file mdrun:out.conf &gt; out.gro</pre>
         Similarly, we can get the stderr (which is where most output goes in mdrun) with 
-        <pre>cpcc get-file mdrun:out.stderr stderr</pre>
+        <pre>cpcc get-file mdrun:out.stderr | less</pre>
+which shows the familiar Gromacs output:
+<pre>
+....
+Starting 4 threads
+Making 2D domain decomposition 2 x 2 x 1
+starting mdrun 'Water'
+10000 steps,     20.0 ps.
+....
+               NODE (s)   Real (s)      (%)
+       Time:     11.742     11.742    100.0
+               (Mnbf/s)   (GFlops)   (ns/day)  (hour/ns)
+Performance:    266.476     14.504    147.184      0.163
+</pre>
+        It is also possible the take a look at the inputs of functions. To get some of the <code>mdp</code> settings used in the <code>grompp</code> function, use the command
+    <pre>cpcc get grompp:in.settings</pre>
+which gives only the two settings that were set to override the <code>.mdp</code> file that was also given; to view all settings, type
+    <pre>cpcc get grompp:in</pre>
+    which gives
+<pre>grompp:in: {
+  gen_vel : None,
+  settings : [
+    { name : nsteps, value : 10000 },
+    { name : integrator, value : md }
+  ],
+  top : _inputs/0002/topol.top,
+  ndx : None,
+  conf : _inputs/0000/conf.gro,
+  mdp : _inputs/0001/grompp.mdp,
+  include : [  ]
+}</pre>
+        It is worth taking a look now a the original script (<code>examples/mdrun-test/rungmxtest</code>; it consists merely of <code>cpcc</code> commands: mostly <code>cpcc set</code> to set a specific input value.</p>
 	</li>
 	</ul> 
         <h2>Running a Markov state modelling project</h2>
