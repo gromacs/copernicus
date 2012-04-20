@@ -40,6 +40,7 @@ def print_usage():
     print "Usage: cpcc [global-options] <command> [command-options]"
     print 
     print "Project start & stop commands:"
+    print "       cpcc projects|p"
     print "       cpcc start       projectname"
     print "       cpcc remove|rm   projectname"
     print "       cpcc set-default projectname"
@@ -50,12 +51,11 @@ def print_usage():
     print "       cpcc getf     [-p projectname] [-f filename] inst:in|out.ioname "
     print "       cpcc info     [-p projectname] function_name|module_name"
     print "       cpcc log      [-p projectname] instance_name"
-    print "       cpcc activate [-p projectname] [item]"
-    print "       cpcc projects|p"
     print 
     print "Project manipulation commands."
     print "       cpcc import   [-p projectname] modulename"
     print "       cpcc instance [-p projectname] function_name instance_name"
+    print "       cpcc activate [-p projectname] [item]"
     print "       cpcc connect  [-p projectname] inst:out.item inst:in.item"
     print "       cpcc set      [-p projectname] inst:in.ioname value"
     print "       cpcc setf     [-p projectname] inst:in.ioname filename"
