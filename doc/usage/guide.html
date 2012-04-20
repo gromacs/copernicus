@@ -35,8 +35,8 @@ color:red;
     <ol>
         <li><a href="#intro">Introduction</a></li>
         <li><a href="#start">Getting started</a></li>
+        <li><a href="#running">Running a project</a></li>        
         <li><a href="#conf">Configuration</a></li>        
-        <!--<li><a href="#project">Projects</a></li>-->
         <li><a href="#servers">Servers</a></li>
         <li><a href="#workers">Workers</a></li>
         <li><a href="#cmd-line">The command line client tool</a></li>
@@ -119,14 +119,13 @@ Throughout the documentation we might sometimes use the symbols below to represe
 <a name="start"><h1>Getting started</h1></a>
 	<h2>Downloading and Installing</h2>
         
-        <p>See the installation manual for detailed instructions on how to install Copernicus from a packaged version, or from the <code>git</code> repository. Once installed, you should be able to run <code>cpcc</code>, <code>cpc-server</code>, and <code>cpc-worker</code>.</p>
+        <p>See the installation manual for detailed instructions on how to install Copernicus from a packaged version, or from the <code>git</code> repository. Once installed, you should be able to run <code class="cmd">cpcc</code>, <code class="cmd">cpc-server</code>, and <code class="cmd">cpc-worker</code>.</p>
 
         <h3>server setup</h3>
         <p>To set up a server, it must generate an SSL keypair, and set some basic configurations. To start with this, make sure you've set the <code>$COPERNICUS_HOME</code> environment variable so Copernicus can find itself. Then issue the command</p>
-       <pre>cpc-server help</pre>
+       <pre class="cmd">cpc-server help</pre>
        <p>to check whether you can access the server. If that is successful, you should see something like</p>
-       <pre>
-Usage: cpc-server start [-d]
+       <pre>Usage: cpc-server start [-d]
        cpc-server config-list
        cpc-server config param value
        cpc-server setup default-project-directory
@@ -136,7 +135,7 @@ Common options:
        cpc-server [-c confdir]
        </pre>
        <p>Which means that you can run the server command <code>cpc-server</code>. Verify the same for <code>cpcc</code> and <code>cpc-worker</code>. Now set up the server with</p>
-       <pre>cpc-server setup &lt;data-directory&gt;</pre>
+       <pre class="cmd">cpc-server setup &lt;data-directory&gt;</pre>
        <p>
        where <code>&lt;data-directory&gt;</code> is the name of a directory where Copernicus can store run data (such as the output of simulations); typically, this is is something like <code>~/copernicus</code>, or <code>/data/copernicus</code> if <code>/data</code> points to a writable volume. The output should look like this:</p>
 <pre>Generating RSA private key, 2048 bit long modulus
@@ -172,9 +171,7 @@ Data Base Updated
 <p>
 First, we start the server with
 </p>
-<pre>
-cpc-server start
-</pre>
+<pre class="cmd">cpc-server start</pre>
 <p>
 which should reply with <code>Starting server..</code> and return the prompt. The server is now running in the background.
 </p>
@@ -183,12 +180,9 @@ which should reply with <code>Starting server..</code> and return the prompt. Th
 
 <p>
 Clients (<code>cpcc</code> and <code>cpc-worker</code>) need a <em>connection bundle</em> to connect to the server. This is a file, typically named <code>client.cnx</code> that contains a signed key that can be used to connect to the server, together with the server's address. To ceate a connection bundle, issue the command</p>
-<pre>
-cpc-server create-connection-bundle &gt; client.cnx
-</pre>
+<pre class="cmd">cpc-server create-connection-bundle &gt; client.cnx</pre>
 <p>which outputs a file <code>client.cnx</code>, toghether with output:</p>
-<pre>
-Generating RSA private key, 2048 bit long modulus
+<pre>Generating RSA private key, 2048 bit long modulus
 .............+++
 ....+++
 e is 65537 (0x10001)
@@ -211,37 +205,31 @@ Data Base Updated
 <p>
 The connection bundle file can now be used to connect to a server, with a command such as 
 </p>
-<pre>
-cpcc -c client.cnx projects
-</pre>
+<pre class="cmd">cpcc -c client.cnx projects</pre>
 <p>Which lists the currently running projects (none): </p>
-<pre>
-Projects:
+<pre>Projects:
 </pre>
 <p>If the connection bundle is not the right one, it will give an error message:
 </p>
 <pre>KeyError: 'private_key'</pre>
 <p>
 The connection bundle can be installed by copying it into your </code>~/.copernicus</code> directory in your home directory (if you set up the server in your account, this directory should already exist, and you can do</p>
-<pre>
-cp client.cnx ~/.copernicus/client.cnx
-</pre>
+<pre class="cmd">cp client.cnx ~/.copernicus/client.cnx</pre>
 <p>which allows you to do
 </p>
-<pre>
-cpcc projects
-</pre>
+<pre class="cmd">cpcc projects</pre>
 whithout specifying the connection bundle.
 
-	<h2>Running a project</h2>
+<a name="names"><h1>Projects, networks, functions, instances</h1></a>
+
+
+<a name="running"><h1>Running a project</h1></a>
 	To get a high level understanding of how to use copernicus, we'll first go through a simple example
 	where we start a copernicus server and worker on our local machine. We'll then submit a project to it and run it.
 	In later sections, we'll go through parts more detailed
 	
 	<h3>Starting a project</h3>
-		<!--<li>First, we need to install 'executables' for the workers: these are short descriptions on how to execute a particular type of command. In <code>$COPERNICUS_HOME/examples/executables</code> there are a few <code>gromacs</code> executables for different platforms. Simply copy over the whole executables directory to <code>.copernicus/</code>. Do <pre>cp -r examples/executables ~/.copernicus/</pre> to do this.
-	</li>-->
-	If you haven't already started a Copernicus server, start one with <pre>cpc-server start</pre>
+	If you haven't already started a Copernicus server, start one with <pre class="cmd">cpc-server start</pre>
 
 	<p>We will now set up a project on our copernicus server. 	
 	The commands here are summarized in the script <code>examples/mdrun-test/rungmxtest</code>, and consist of a project that will simulate water (note that you will need to run this script from $COPERNICUS_HOME).
@@ -260,13 +248,13 @@ whithout specifying the connection bundle.
                 <li>Inspect the output.</li>
 	</ul>
         We'll discuss the commands individually; the first is 
-        <pre>cpcc start test</pre>
+        <pre class="cmd">cpcc start test</pre>
         which starts the project. Next, we'll import the <code>gromacs</code> module with
-        <pre>cpcc import gromacs</pre>
+        <pre class="cmd">cpcc import gromacs</pre>
     <h3>Inspecting the gromacs library</h3>
         <p>
         We can inspect the imported library with
-        <pre>cpcc info gromacs</pre>
+        <pre class="cmd">cpcc info gromacs</pre>
         which gives an overview of available functions and types:
         <pre>library gromacs 
  Gromacs specific functions
@@ -283,7 +271,7 @@ whithout specifying the connection bundle.
         An array of grompp mdp settings</pre>
         so there are two functions: <code>grompp</code> and <code>mdrun</code>. 
     We can get more detailed information with
-    <pre>cpcc info gromacs::mdrun</pre>
+    <pre class="cmd">cpcc info gromacs::mdrun</pre>
     which gives
     <pre>function gromacs::mdrun 
  Runs an MD simulation.
@@ -312,14 +300,14 @@ whithout specifying the connection bundle.
     <h3>Instantiating functions</h3>
         <p>
             Now we can start instantiating functions, and connect them:
-            <pre>cpcc instance gromacs::grompp grompp
+            <pre class="cmd">cpcc instance gromacs::grompp grompp
             cpcc instance gromacs::mdrun mdrun
             cpcc activate</pre>
             will create an instance of the function <code>grompp</code> from the library </code>gromacs</code>, and an instance of the function <code>mdrun</code>. Both instance are the activated.
         </p> 
         <p>
             To get a functional dataflow program, we'll connect an output of the <code>grompp</code> function to an input of the <code>mdrun</code> function.
-            <pre>cpcc connect grompp:out.tpr mdrun:in.tpr</pre>
+            <pre class="cmd">cpcc connect grompp:out.tpr mdrun:in.tpr</pre>
             which responds with
             <pre>- Connected grompp:out.tpr to mdrun:in.tpr</pre>
         </p>
@@ -327,29 +315,29 @@ whithout specifying the connection bundle.
         <div class="graph"> 
         <img src="mdrun_test.png" alt="Graph of mdrun_test project" />
         </div>
-        so the <code>tpr</code> output of the <code>grompp</code> function is fed into the <code>tpr</code> input of the <code>mdrun</code> function. You can make this graph with <pre>cpcc graph</pre> and processing the output with <a href="http://www.graphviz.org">graphviz</a> (the <code>dot</code> tool).
+        so the <code>tpr</code> output of the <code>grompp</code> function is fed into the <code>tpr</code> input of the <code>mdrun</code> function. You can make this graph with <pre class="cmd">cpcc graph</pre> and processing the output with <a href="http://www.graphviz.org">graphviz</a> (the <code>dot</code> tool).
         </p>
 
 
     <h3>Supplying the input</h3>
         <p>
         To run, our dataflow network needs input. We'll supply that soon, but first we'll have to make sure that all new input becomes active at a single point in time. We do that with transactions (although not strictly neccessary for the simple dataflow network we have here). Start a transaction with
-        <pre>cpcc transact</pre>
+        <pre class="cmd">cpcc transact</pre>
         which replies with
         <pre>Beginning transaction level 1</pre>
         meaning: this is transaction of the first level. If you now do <code>cpcc transact</code> again, it will start a second level which you can commit before committing the first level. We're now ready to give our network actual input. First, set the input configuration file
-        <pre>cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro</pre>
+        <pre class="cmd">cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro</pre>
         Note that the input we're setting is named <code>grompp:in.conf</code>: the first part (before the colon <code>:</code>) is the name of the instance. The second part (<code>in</code>) is the top-most name of the input/output value: it's <code>in</code> or <code>out</code>. The last part (<code>conf</code>) is the name of the component that we want to set. 
         <br/> We also set the <code>mdp</code> file
-        <pre>cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp</pre>
+        <pre class="cmd">cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp</pre>
         and the topology file
-        <pre>cpcc set-file grompp:in.top  examples/mdrun-test/topol.top</pre>
+        <pre class="cmd">cpcc set-file grompp:in.top  examples/mdrun-test/topol.top</pre>
         Each of these will create output such ase
         <pre>Scheduled to set grompp:in.top to topol.top at commit</pre>
         </p>
         <p>
         We now override a few of the options in the <code>.mdp</code> file. To do this, we set values in an array named <code>grompp:in.settings</code>. The array is an array of settings: lists of <code>name</code>s and <code>value</code>s.
-        <pre>cpcc set grompp:in.settings[0].name nsteps
+        <pre class="cmd">cpcc set grompp:in.settings[0].name nsteps
 cpcc set grompp:in.settings[0].value 10000
 cpcc set grompp:in.settings[1].name integrator
 cpcc set grompp:in.settings[1].value md</pre>
@@ -357,7 +345,7 @@ cpcc set grompp:in.settings[1].value md</pre>
         </p>	
         <p>
         To commit the values we have set to the inputs, we issue the command
-        <pre>cpcc commit</pre>
+        <pre class="cmd">cpcc commit</pre>
         which lists all the operations that it performs as an atomic operation (i.e. without scheduling function runs between them). 
         <pre>Committing scheduled changes:
 - Connected grompp:out.tpr to mdrun:in.tpr
@@ -372,7 +360,7 @@ cpcc set grompp:in.settings[1].value md</pre>
         </p>
     <h3>Running the worker</h3>
 	To see what is in the command queue we can now run 
-        <pre>cpcc q</pre>
+        <pre class="cmd">cpcc q</pre>
         The output should look like:
 	<pre>
 Queue:
@@ -382,7 +370,7 @@ Queue:
         </p>
         <p>
 	Now we can start a worker: once it starts, it will connect to the server and ask for work. The server will then send the queued command to the worker.  To start a worker with 4 cores on a single machine, run the command 
-        <pre>cpc-worker smp -n 4</pre>
+        <pre class="cmd">cpc-worker smp -n 4</pre>
         As soon as the worker starts up the worker will receive a command from the server to execute. You should see: 
 	<pre>Available executables for platform smp:
 gromacs/mdrun 4.5.5
@@ -400,12 +388,12 @@ INFO, cpc.worker: Have free resources. Waiting 30 seconds
 	</pre>
 	The first line says that the worker has finished executing the command(s). The subsequent lines say that the worker has asked for a new command to exeute, but received nothing. Exit the worker with ^C (control-c). 
 	<br/>
-	If you run <pre>cpcc q</pre> again, you will see that the queue is empty.	
+	If you run <pre class="cmd">cpcc q</pre> again, you will see that the queue is empty.	
         </p>
     <h3>Examining the output</h3>
         <p>
 	At this stage we can take a look at the output the project has generated. To get an overview of the dataflow network, type
-        <pre>cpcc list</pre>
+        <pre class="cmd">cpcc list</pre>
         which gives
         <pre>
 Network function instances:
@@ -434,9 +422,9 @@ Subnet function instances:
 CPU-seconds used in this instance: 47
 CPU-seconds used in this instance and its sub-instances: 47</pre>
         which means that the <code>mdrun</code> function has outputs that contain the output configruation (<code>conf</code>), a trajectory (<code>xtc</code>), standard output (<code>stdout</code>), etc.  We can get the output configuration with the command 
-        <pre>cpcc get-file mdrun:out.conf &gt; out.gro</pre>
+        <pre class="cmd">cpcc get-file mdrun:out.conf &gt; out.gro</pre>
         Similarly, we can get the stderr (which is where most output goes in mdrun) with 
-        <pre>cpcc get-file mdrun:out.stderr | less</pre>
+        <pre class="cmd">cpcc get-file mdrun:out.stderr | less</pre>
 which shows the familiar Gromacs output:
 <pre>
 ....
@@ -451,9 +439,9 @@ starting mdrun 'Water'
 Performance:    266.476     14.504    147.184      0.163
 </pre>
         It is also possible the take a look at the inputs of functions. To get some of the <code>mdp</code> settings used in the <code>grompp</code> function, use the command
-    <pre>cpcc get grompp:in.settings</pre>
+    <pre class="cmd">cpcc get grompp:in.settings</pre>
 which gives only the two settings that were set to override the <code>.mdp</code> file that was also given; to view all settings, type
-    <pre>cpcc get grompp:in</pre>
+    <pre class="cmd">cpcc get grompp:in</pre>
     which gives
 <pre>grompp:in: {
   gen_vel : None,
@@ -525,16 +513,14 @@ Outputs:
     weights
         </pre>
 <p>
-    Explanations for the meanings of these inputs and outputs can be found with <pre>cpcc info gromacs::msm::msm</pre>
+    Explanations for the meanings of these inputs and outputs can be found with <pre class="cmd">cpcc info msm::msm</pre>
     Here <code>gromacs::msm::msm</code> is the full name of the Markov State Modeling function, with double colons (<code>::</code>) separating module names.
 </p>
 <p>
 The alanine dipeptide system is small, so the maximum number of cores each simulation should use is around 4. Workers can be limited to run jobs of that size by, for example
-<pre>
-./cpcc-worker smp -s 4 -n 24
-</pre>
+<pre class="cmd">./cpcc-worker smp -s 4 -n 24</pre>
 which starts a 24-core worker (be careful on machines that don't have that many cores!) but limits the size of each job to 4 cores. With 6 workers, the first generation of clustering should start in approximately 10 minutes on a modern machine. The macrostates can then be inspected with
-<pre>
+<pre class="cmd">
 ./cpcc get-file msm:out.macrostate_conf_0 macrostate_0.gro
 ./cpcc get-file msm:out.macrostate_conf_1 macrostate_1.gro
 ...
@@ -542,20 +528,6 @@ which starts a 24-core worker (be careful on machines that don't have that many 
 </pre>
 which gets some of the macrostate configurations and a file with the statistical weights associated with the first 10 macrostates. 
 </p>
-<!--<h3>The code behind Markov state modelling projects</h3>
-<p>
-The code for running MSM projects can be found in 
-<pre>
-cpc/lib/gromacs/msm
-</pre>
-where
-<dl>
-<dt><code>_import.xml</code></dt><dd>contains the input and output definitions of the <code>gromacs::msm</code> function</dd>
-<dt><code>msm</code></dt><dd>contains the top-level code for the <code>gromacs::msm</code> function. This code spawns a continuation run for every trajectory that finishes, and spawns additional runs whenever a clustering round is finished, based on msmbuilder's adaptive sampling.</dd>
-<dt><code>project.py</code></dt><dd>contains the code that calls msmbuilder's CopernicusProject and other objects.</dd>
-<dt><code>tolh5.py</code></dt><dd>contains code that converts <code>xtc</code> trajectory files to <code>lh5</code> files without solvent.</dd>
-</dl>
-</p> -->
 
 	
 	<h2>Setting up a small copernicus network</h2>
@@ -578,18 +550,18 @@ where
 	</div>
 	
 	<ul>
-	<li>Begin by starting the copernicus server on each machine; this is done with the command <code>cpc-server start</code>.</li>
+	<li>Begin by starting the copernicus server on each machine; this is done with the command <code class="cmd">cpc-server start</code>.</li>
 	<li>To establish connection between two servers we will send a connection request from machine <em>A</em> to machine <em>B</em>.
 	The order doesn't matter but we need to keep track of who sent the request and who received it.<br/>
-	A connection request is <em>sent</em> with the command <pre>cpc-server add-node &lt;hostname&gt;</pre>	
+	A connection request is <em>sent</em> with the command <pre class="cmd">cpc-server add-node &lt;hostname&gt;</pre>	
 	If everything went OK, you will see a message notifying you that a node connection request has been sent.  You can always check to what nodes requests has been sent by running the 
-	command <pre>cpc-server list-sent-node-requests</pre>
+	command <pre class="cmd">cpc-server list-sent-node-requests</pre>
 	</li>
 	<li>	
 	Node <em>B</em> should now have received a node connection request from node <em>A</em>.
 	We can check this by running the command <code>cpc-server list-node-requests</code> on Node <em>B</em>.
-	To grant the request sent from Node <em>A</em>, we run the command <pre>cpc-server trust-all</pre>
-	To verify that a connection has been established we can now run the command <pre>cpc-server list-nodes</pre>
+	To grant the request sent from Node <em>A</em>, we run the command <pre class="cmd">cpc-server trust-all</pre>
+	To verify that a connection has been established we can now run the command <pre class="cmd">cpc-server list-nodes</pre>
 	on either node <em>A</em> or node <em>B</em>.  	 	 
 	</li>			
 	</ul>
@@ -620,14 +592,14 @@ where
 	
 	<a name="server-conf"><h2>Configuration</h2></a>
         <p>
-	To list available configuration parameters run the command <pre>cpc-server config-list</pre>. This lets you see a list of all available configuration parameters.</p>	
+	To list available configuration parameters run the command <pre class="cmd">cpc-server config-list</pre>. This lets you see a list of all available configuration parameters.</p>	
         <p>
-	To see the configuration parameters and their respective values run <pre>cpc-server config-values</pre></p>
+	To see the configuration parameters and their respective values run <pre class="cmd">cpc-server config-values</pre></p>
         <p>
 	To change change a value you can run the command 
-        <pre>cpc-server config &lt;param&gt; &lt;value&gt;</pre>
+        <pre class="cmd">cpc-server config &lt;param&gt; &lt;value&gt;</pre>
         For example, to change the <code>https</code> port the server listens on to 11111, you could run
-	<pre>cpc-server config server_https_port 11111</pre> (by default, the <code>https</code> port is 13807)</p> 
+	<pre class="cmd">cpc-server config server_https_port 11111</pre> (by default, the <code>https</code> port is 13807)</p> 
 	
 	<h2>Connecting copernicus servers</h2>
         <p>
@@ -653,7 +625,7 @@ where
 	<h2>Network Topology</h2>
         <p>
 	As you start to connect more copernicus servers together you might want to have an easy overview of the network topology. This can be achieved with 
-the command <pre>cpcc network-topology</pre> 
+the command <pre class="cmd">cpcc network-topology</pre> 
         </p>
 
 	<h2>Worker delegation</h2>
@@ -696,7 +668,7 @@ the command <pre>cpcc network-topology</pre>
 	
 	<h2>Server logs</h2>
         <p>
-        If a function produces an error, it can be obtained with <pre>cpcc ls &lt;function-instance&gt;</pre>
+        If a function produces an error, it can be obtained with <pre class="cmd">cpcc ls &lt;function-instance&gt;</pre>
         The server also maintains logs, that can be checked for debugging purposes. These logs are located in <code>&lt;CONFIG_HOME&gt;/server/log</code>
 	The two existing log files are <code>error.log</code> and <code>server.log</code>
 	The easisest way to read these logs is to use <code>tail</code>: for example <code>tail -f server.log</code>
@@ -717,21 +689,16 @@ Workers are started with the command <code>cpc-worker &lt;workertype&gt; &lt;wor
 </p>
 
 <a name="worker-conf"><h2>Configuration</h2></a>	
-	To list available configuration parameters run the command <pre>cpc-worker config-list</pre>
+	To list available configuration parameters run the command <pre class="cmd">cpc-worker config-list</pre>
         This gives a list of all available configuration parameters.	
-	To see the configuration parameters and their respective values, run <pre>cpc-worker config-values</pre>
-	To change change a value, run the command <pre>cpc-worker config &lt;param&gt; &lt;value&gt;</pre>
+	To see the configuration parameters and their respective values, run  class="cmd"<pre>cpc-worker config-values</pre>
+	To change change a value, run the command <pre class="cmd">cpc-worker config &lt;param&gt; &lt;value&gt;</pre>
         For example to change the https port the worker connects to 11111, run
-	<pre>cpc-worker config client_https_port 11111</pre>	
+	<pre class="cmd">cpc-worker config client_https_port 11111</pre>	
 
 
 
 <a name="cmd-line"><h1>The command line client tool</h1></a>
-<!--what is it?
-
-
-Connecting a command line client to a server
-Installing it separatley on your laptop-->
 
 <p>
 The copernicus client allows you to connect to a server and issue commands. There are serveral types of commands:
@@ -834,27 +801,6 @@ The Copernicus client has commands to inspect the active network: <code>cpcc lis
 <p>
 All current projects can be listed with <code>cpcc p</code>. The command queue can be queried with <code>cpcc q</code>, while a running list of commands can be obtained with <code>cpcc r</code>, and a list of heartbeat items with <code>cpcc h</code>.
 </p>
-
-<h2><a name="client-conf">Configuration</a></h2>
-	To list available configuration parameters run the command <pre>cpcc config-list</pre>. This lets you see a list of all available configuration parameters. To see the configuration parameters and their respective values run <pre>cpcc config-values</pre>
-	To change change a value you can run the command <pre>cpcc config &lt;param&gt; &lt;value&gt;</pre>
-       <!-- for example to change the https port the client connects to you can run
-	<code>cpcc config client_https_port 11111</code>	-->
-
-<!--
-<a name="#dataflow"><h1>Dataflow network</h1></a>
-<ul>
-<li><span class="comment">How do we build one up?</span></li>
-
-</ul>
-
-</div>
-</div>
--->
-<!-- <div id="rightcol">
-<h2>Command line reference</h2>
-
-</div> -->
 
 
 </body>

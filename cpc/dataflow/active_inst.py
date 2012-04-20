@@ -329,6 +329,9 @@ class ActiveInstance(object):
     def getInputs(self):
         """Get the input value object."""
         return self.inputVal
+    def getStagedInputs(self):
+        """Get the staged input value object."""
+        return self.stagedInputVal
     def getOutputs(self):
         """Get the output value object."""
         return self.outputVal
@@ -505,7 +508,7 @@ class ActiveInstance(object):
         self.outputVal.setUpdated(False)
         self.subnetOutputVal.setUpdated(False)
 
-    def handleNewInput(self, sourceTag, seqNr):
+    def handleNewInput(self, sourceTag, seqNr, noNewTasks=False):
         """Process new input based on the changing of values.
            
            sourceTag =  the source to look for 
@@ -513,11 +516,13 @@ class ActiveInstance(object):
            if source is None, all the active connections that have 
            newSetValue set are updated. The seqNr is then ignored.
 
+           if noNewTasks == true, no new tasks will be generated
+
            NOTE: If sourceAI is None, this function assumes that there is 
                  some global lock preventing concurrent updates, and 
                  that it is locked. This normally is project.networkLock.
            """
-        #log.debug("handleNewInput on  %s"%self.getCanonicalName())
+        log.debug("handleNewInput on  %s"%self.getCanonicalName())
         with self.inputLock:
             # first check whether we've already checked this
             #self.updated=False
@@ -551,11 +556,16 @@ class ActiveInstance(object):
                 #          (self.getCanonicalName(), self.instance.getName(), 
                 #           self.function.getName()))
                 # only continue if we're active
-                if self.state != ActiveInstance.active:
+                if self.state != ActiveInstance.active or noNewTasks:
                     return
                 # and make it run.
                 if self._canRun():
                     self._genTask()
+
+
+    #def resetUpdated(self):
+    #    """Reset the updated tag."""
+    #    self.updated=False
 
     def handleNewConnections(self):
         """Process a new output connection. 

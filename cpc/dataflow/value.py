@@ -573,7 +573,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
     """XML reader for values."""
     def __init__(self, filename, startValue, importList=None, 
                  currentImport=None, implicitTopItem=True,
-                 allowUnknownTypes=False, valueType=Value):
+                 allowUnknownTypes=False, valueType=Value,
+                 sourceTag=None):
         """Initialize based on
            filename = the filename to report in error messages
            importList = the ImportList object of the project. If None, 
@@ -583,7 +584,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
            implicitTopItem = whether the top item of the start value is 
                              implicit.
            allowUnknownTypes = whether to allow unknown list types
-           valueType = the value class to allocate if startValue is none"""
+           valueType = the value class to allocate if startValue is none
+           sourceTag =  the source tag to set"""
         self.value=startValue
         self.valueType=valueType
         self.importList=importList
@@ -601,6 +603,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
             self.lastDepth=0
         self.loc=None
         self.allowUnknownTypes = allowUnknownTypes
+        self.sourceTag=sourceTag
 
     def setDocumentLocator(self, locator):
         self.loc=locator
@@ -646,7 +649,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                         if self.allowUnknownTypes:
                             createType=tp
                         subVal=subVal.getSubValue([itemStackAdd], create=True,
-                                                  createType=createType)
+                                            createType=createType,
+                                            setCreateSourceTag=self.sourceTag)
                         if subVal is None:
                             raise ValXMLError("Did not find field '%s'"%
                                               attrs.getValue('field'), self)
@@ -656,7 +660,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 elif 'subitem' in attrs:
                     # this is a single, directly addressed sub-item
                     subitems=vtype.parseItemList(attrs.getValue('subitem'))
-                    subVal=subVal.getSubValue(subitems, create=True)
+                    subVal=subVal.getSubValue(subitems, create=True,
+                                              setCreateSourceTag=self.sourceTag)
                 elif ( len(self.typeStack) > 0 and 
                        (self.typeStack[-1] == vtype.arrayType) ):
                     itemStackAdd=self.subCounters[self.depth]
@@ -664,7 +669,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     if self.allowUnknownTypes:
                         createType=tp
                     subVal=subVal.getSubValue([itemStackAdd], create=True,
-                                              createType=createType)
+                                              createType=createType,
+                                              setCreateSourceTag=self.sourceTag)
             else:
                 # this is the top-level value
                 self.value=self.valueType(None, tp)
@@ -695,7 +701,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 updated=cpc.util.getBooleanAttribute(attrs, "updated")
                 if updated:
                     subVal.markUpdated(updated)
-                    #subVal.updated=updated
+            subVal.sourceTag=self.sourceTag
             self.lastDepth=self.depth
             self.depth+=1
             self.typeStack.append(basicType)

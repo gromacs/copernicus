@@ -185,11 +185,14 @@ class ActiveValue(value.Value):
     
            Returns: a boolean telling whether an update has taken place."""
         ret=False
+        #log.debug("Checking for update in %s, %s=%s reset=%s %s"%
+        #          (self.getFullName(), sourceTag, sourceValue.sourceTag, 
+        #           resetSourceTag, sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                #log.debug("Found update in %s, %s %s"%
+                #log.debug("**Found update in %s, %s %s"%
                 #          (self.getFullName(), resetSourceTag, 
                 #           sourceValue.value))
                 self.update(sourceValue, sourceValue.seqNr, sourceTag,
@@ -197,6 +200,8 @@ class ActiveValue(value.Value):
                 #sourceValue.updated=False
                 sourceValue.setUpdated(False)
                 return True
+            #else:
+            #   log.debug("Rejecting acceptNewValue because of sequence number")
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:
@@ -222,17 +227,26 @@ class ActiveValue(value.Value):
                     ret=ret or rt
                 else:
                     # only check the direct descendants
-                    #log.debug("Checking new values for %s: %d, %s, %s."%
-                    #          (val.getFullName(), i, val.sourceTag, 
-                    #           self.sourceTag))
+                    log.debug("Checking new values for %s: %d, %s, %s."%
+                              (val.getFullName(), i, val.sourceTag, 
+                               self.sourceTag))
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
                         #log.debug("New value")
-                        nv=self._create(None, self.type.getMembers(), i,
-                                        sourceTag)
+                        j=len(self.value)
+                        while j <= i:
+                            # create as many empty values as needed. Set the
+                            # source tag only for the one we update.
+                            if i==j:
+                                srct=sourceTag
+                            else:
+                                srct=None
+                            nv=self._create(None, self.type.getMembers(), j,
+                                            srct)
+                            self.value.append(nv)
+                            j+=1
                         nv.update(val, val.seqNr, sourceTag,
                                   resetSourceTag=resetSourceTag)
                         #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
-                        self.value.append(nv)
                         ret=True
                 i+=1
         return ret
