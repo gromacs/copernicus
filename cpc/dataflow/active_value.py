@@ -221,15 +221,15 @@ class ActiveValue(value.Value):
         elif isinstance(self.value, list):
             i=0
             for val in sourceValue.value:
-                if i+1 < len(self.value):
+                if i < len(self.value):
                     rt=self.value[i].acceptNewValue(val, sourceTag,
                                                     resetSourceTag)
                     ret=ret or rt
                 else:
                     # only check the direct descendants
-                    log.debug("Checking new values for %s: %d, %s, %s."%
-                              (val.getFullName(), i, val.sourceTag, 
-                               self.sourceTag))
+                    #log.debug("Checking new values for %s: %d, %s, %s."%
+                    #          (val.getFullName(), i, val.sourceTag, 
+                    #           self.sourceTag))
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
                         #log.debug("New value")
                         j=len(self.value)
