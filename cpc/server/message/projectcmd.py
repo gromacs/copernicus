@@ -106,6 +106,26 @@ class SCProjectActivate(ServerCommand):
         else:
             response.add("%s in project %s activated."%(item, prj.getName()))
 
+class SCProjectDeactivate(ServerCommand):
+    """De-activate all elements in a project."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-deactivate")
+
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        if request.hasParam('item'):
+            item=request.getParam('item')
+        else:
+            item=""
+        prj.deactivate(item)
+        if item == "":
+            response.add("All items in project %s de-activated."%prj.getName())
+        else:
+            response.add("%s in project %s de-activated."%(item, prj.getName()))
+
 class SCProjectClearError(ServerCommand):
     """Clear an error in an active instance."""
     def __init__(self):

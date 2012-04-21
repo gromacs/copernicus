@@ -369,6 +369,17 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
+    def projectHoldRequest(self, project, item):
+        """List all projects"""
+        cmdstring="project-deactivate"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        if project is not None:
+            fields.append(Input('project', project))
+        fields.append(Input('item', item))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+
     def projectClearErrorRequest(self, project, item):
         """Clear an error."""
         cmdstring="project-clear-error"

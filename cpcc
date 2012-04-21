@@ -46,23 +46,24 @@ def print_usage():
     print "       cpcc set-default projectname"
     print 
     print "Project query commands."
-    print "       cpcc list|ls  [-p projectname] [instance_name]"
-    print "       cpcc get      [-p projectname] inst:in|out.ioname"
-    print "       cpcc getf     [-p projectname] [-f filename] inst:in|out.ioname "
-    print "       cpcc info     [-p projectname] function_name|module_name"
-    print "       cpcc log      [-p projectname] instance_name"
+    print "       cpcc list|ls     [-p projectname] [instance_name]"
+    print "       cpcc get         [-p projectname] inst:in|out.ioname"
+    print "       cpcc getf        [-p projectname] [-f filename] inst:in|out.ioname "
+    print "       cpcc info        [-p projectname] function_name|module_name"
+    print "       cpcc log         [-p projectname] instance_name"
     print 
     print "Project manipulation commands."
-    print "       cpcc import   [-p projectname] modulename"
-    print "       cpcc instance [-p projectname] function_name instance_name"
-    print "       cpcc activate [-p projectname] [item]"
-    print "       cpcc connect  [-p projectname] inst:out.item inst:in.item"
-    print "       cpcc set      [-p projectname] inst:in.ioname value"
-    print "       cpcc setf     [-p projectname] inst:in.ioname filename"
-    print "       cpcc transact [-p projectname]"
-    print "       cpcc commit   [-p projectname]"
-    print "       cpcc rollback [-p projectname]"
-    print "       cpcc upload   [-p projectname] upload.xml"
+    print "       cpcc import      [-p projectname] modulename"
+    print "       cpcc instance    [-p projectname] function_name instance_name"
+    print "       cpcc activate    [-p projectname] [item]"
+    print "       cpcc deactivate  [-p projectname] [item]"
+    print "       cpcc connect     [-p projectname] inst:out.item inst:in.item"
+    print "       cpcc set         [-p projectname] inst:in.ioname value"
+    print "       cpcc setf        [-p projectname] inst:in.ioname filename"
+    print "       cpcc transact    [-p projectname]"
+    print "       cpcc commit      [-p projectname]"
+    print "       cpcc rollback    [-p projectname]"
+    print "       cpcc upload      [-p projectname] upload.xml"
     print "       cpcc clear-error [-p projectname] [item]"
     print 
     print "Worker and heartbeat monitoring commands."
@@ -261,6 +262,14 @@ try:
             item=""
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectActivateRequest(project, item)).pprint()
+    elif cmd == "deactivate" or cmd == "hold":
+        project, pargs = getProjectArgs(args)
+        if len(pargs) > 1:
+            item=getArg(pargs, 1, "project item to list")
+        else:
+            item=""
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectHoldRequest(project, item)).pprint()
     elif cmd == "clear-error":
         project, pargs = getProjectArgs(args)
         if len(pargs) > 1:

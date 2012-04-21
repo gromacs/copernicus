@@ -485,6 +485,15 @@ class Project(object):
                 item=self.active.getNamedActiveInstance(pathname)
                 item.activate()
 
+    def deactivate(self, pathname):
+        """De-activate all active instances."""
+        with self.networkLock:
+            if pathname.strip() == "":
+                self.active.deactivateAll()
+            else:
+                item=self.active.getNamedActiveInstance(pathname)
+                item.deactivate()
+
     def clearError(self, pathname, recursive, outf):
         """Clear an error on an item."""
         with self.networkLock:

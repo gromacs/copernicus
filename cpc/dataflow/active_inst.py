@@ -700,6 +700,18 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
+    def deactivate(self):
+        """Set the state of this active instance to held, if active."""
+        log.debug("Activating active instance %s of fn %s"%
+                  (self.instance.getName(),
+                   self.function.getName()))
+        with self.inputLock:
+            with self.lock:
+                if self.state == ActiveInstance.active:
+                    if self.subnet is not None:
+                        self.subnet.deactivateAll()            
+                    self.state=ActiveInstance.held
+
     def unblock(self):
         """Unblock a task, forcing it to run"""
         changed=False
