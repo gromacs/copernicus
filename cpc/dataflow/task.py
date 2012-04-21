@@ -223,6 +223,7 @@ class Task(object):
            the task should continue existining until its corresponding 
            run() call is called. """
         with self.lock:
+            locked=False
             try:
                 log.debug("Running function %s"%
                           self.activeInstance.instance.getName())
@@ -231,11 +232,13 @@ class Task(object):
 
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.acquire()
+                locked=True
                 # now actually run
                 ret=self.function.run(self.fnInput)
                 # and we're done.
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.release()
+                locked=False
 
                 self.fnInput.cmd=None
                 if cmd is not None:
@@ -271,9 +274,15 @@ class Task(object):
                 if len(self.cmds) == 0:
                     self.fnInput.destroy()
             except cpc.util.CpcError as e:
+                if locked:
+                    if self.activeInstance.runLock is not None:
+                        self.activeInstance.runLock.release()
                 self.activeInstance.markError(e.__unicode__())
                 return None
             except:
+                if locked:
+                    if self.activeInstance.runLock is not None:
+                        self.activeInstance.runLock.release()
                 fo=StringIO()
                 traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
                                           sys.exc_info()[2], file=fo)
