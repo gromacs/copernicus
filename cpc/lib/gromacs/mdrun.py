@@ -99,6 +99,7 @@ def grompp(inp):
                 shutil.copy(filename, nname)
     # and execute grompp
     cmdlist=[ "grompp", "-f", mdpfile,
+              "-quiet",
               "-c", inp.getInput('conf'),
               "-p", 'topol.top', # we made sure it's there
               "-o", "topol.tpr" ]
@@ -134,13 +135,27 @@ def mdrun(inp):
         cpc.util.plugin.testCommand("eneconv -version")
         cpc.util.plugin.testCommand("gmxdump -version")
         return 
-    if inp.cmd is None:
-        # there was no previous command. 
-        # TODO: purge the persistent directory
-        pass
     persDir=inp.getPersistentDir()
     outDir=inp.getOutputDir()
     fo=inp.getFunctionOutput()
+    # check whether we need to reinit
+    if inp.cmd is None or inp.getInputValue('tpr').isUpdated():
+        # there was no previous command. 
+        # purge the persistent directory, by moving the confout files to a
+        # backup directory
+        confout=glob.glob(os.path.join(persDir, "run_???"))
+        if len(confout)>0:
+            backupDir=os.path.join(persDir, "backup")
+            try:
+                os.mkdir(backupDir)    
+            except:
+                pass
+            for conf in confout:
+                try:
+                    os.rename(conf, os.path.join(backupDir, 
+                                                 os.path.split(conf)[-1]))
+                except:
+                    pass
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
@@ -369,10 +384,11 @@ def mdrun(inp):
             # now the priority ranges from 1 to 4, depending on how
             # far along the simulation is.
             prio += 1+int(3*(float(stepnr)/float(nsteps)))
-            log.debug("Setting new priority to %d because it's in progress"%prio)
+            log.debug("Setting new priority to %d because it's in progress"%
+                      prio)
         shutil.copy(src,dst)
         # we can always add state.cpt, even if it doesn't exist.
-        args=["-s", "topol.tpr", "-noappend", "-cpi", "state.cpt" ]
+        args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt" ]
         args.extend(cmdlineOpts)
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
@@ -383,6 +399,8 @@ def mdrun(inp):
                                  addPriority=prio)
         log.debug("Adding command")
         fo.addCommand(cmd)
+        if inp.getInputValue('tpr').isUpdated():
+            fo.cancelPrevCommands()
     return fo
 
 

@@ -23,6 +23,7 @@ log=logging.getLogger('cpc.dataflow.active_inst')
 
 import threading
 import os
+import copy
 import os.path
 import xml.sax.saxutils
 
@@ -725,7 +726,22 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
-           
+          
+    def cancelTasks(self, seqNr):
+        """Cancel all tasks (and commands) with sequence number before 
+           the given seqNr. 
+           Returns a list of cancelled commands."""
+        with self.lock:
+            tsk=copy.copy(self.tasks)
+            ret=[]
+            for task in tsk:
+                if task.seqNr < seqNr:
+                    cmds=task.getCommands()
+                    if cmds is not None:
+                        ret.extend(cmds)
+                    task.cancel()
+                    self.tasks.remove(task)
+            return ret
 
     def _canRun(self):
         """Whether all inputs are there for the instance to be run.

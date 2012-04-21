@@ -166,11 +166,15 @@ class TaskExecThread(object):
                 task=self.taskQueue.get()
                 if task is not None:
                     #log.debug("Got queued task.")
-                    cmds=task.run()
-                    if cmds is not None:
-                        for cmd in cmds:
+                    (newcmds, cancelcmds)=task.run()
+                    if newcmds is not None:
+                        for cmd in newcmds:
                             log.debug("Queuing command")
                             self.cmdQueue.add(cmd)
+                    if cancelcmds is not None:
+                        for cmd in cancelcmds:
+                            log.debug("Canceling command")
+                            self.cmdQueue.remove(cmd)
             except:
                 fo=StringIO()
                 traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],

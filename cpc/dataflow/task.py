@@ -100,6 +100,7 @@ class Task(object):
         self.fnInput=fnInput
         self.cmds=[]
         self.cputime=0
+        self.canceled=False
 
     def setFnInput(self, fnInput):
         """Replace the fnInput object. Only for readxml"""
@@ -116,6 +117,11 @@ class Task(object):
 
     def getCommands(self):
         return self.cmds
+
+
+    def cancel(self):
+        with self.lock:
+            self.canceled=True
 
     def _handleFnOutput(self, out):
         # handle addInstances
@@ -223,7 +229,10 @@ class Task(object):
            the task should continue existining until its corresponding 
            run() call is called. """
         with self.lock:
+            if self.canceled:
+                return
             locked=False
+            canceled=None
             try:
                 log.debug("Running function %s"%
                           self.activeInstance.instance.getName())
@@ -236,6 +245,9 @@ class Task(object):
                 # now actually run
                 ret=self.function.run(self.fnInput)
                 # and we're done.
+                if ret.cancelCmds:
+                    # cancel all outstanding commands.
+                    canceled=self.activeInstance.cancelTasks(self.seqNr)
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.release()
                 locked=False
@@ -253,11 +265,19 @@ class Task(object):
                    
                 if ( (ret.hasOutputs() or ret.hasSubnetOutputs()) and
                      ( haveRetcmds or len(self.cmds)>0 ) ):
-                    raise TaskError("Task returned both outputs: %s, %s and commands %s,%s"%
-                                    (str(ret.outputs), str(ret.subnetOutputs), 
-                                     str(self.cmds),str(ret.cmds)))
+                    raise TaskError(
+                       "Task returned both outputs: %s, %s and commands %s,%s"%
+                       (str(ret.outputs), str(ret.subnetOutputs), 
+                       str(self.cmds),str(ret.cmds)))
 
                 self._handleFnOutput(ret)
+
+                #if ret.cancelCmds:
+                #    log.debug("Canceling %d existing commands"%(len(self.cmds)))
+                #    canceled=self.cmds
+                #    for cmd in canceled:
+                #        cmd.setTask(None)
+                #    self.cmds=[]
 
                 if ret.cmds is not None: 
                     for cmd in ret.cmds:
@@ -266,6 +286,8 @@ class Task(object):
                 else:
                     # the task is done.
                     self.activeInstance.removeTask(self)
+
+                    
 
                 # everything went OK; we got results
                 log.debug("Ran fn %s, got %s"%(self.function.getName(), 
@@ -278,7 +300,7 @@ class Task(object):
                     if self.activeInstance.runLock is not None:
                         self.activeInstance.runLock.release()
                 self.activeInstance.markError(e.__unicode__())
-                return None
+                return (None, canceled)
             except:
                 if locked:
                     if self.activeInstance.runLock is not None:
@@ -288,9 +310,8 @@ class Task(object):
                                           sys.exc_info()[2], file=fo)
                 errmsg="Run error: %s"%(fo.getvalue())
                 self.activeInstance.markError(errmsg)
-                return None
-
-            return ret.cmds
+                return (None, canceled)
+            return (ret.cmds, canceled)
 
     def getID(self):
         return "%s.%s"%(self.activeInstance.getCanonicalName(), self.seqNr)
