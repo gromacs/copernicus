@@ -31,5 +31,9 @@ fi
 ./cpcc set grompp:in.settings[1].name integrator
 ./cpcc set grompp:in.settings[1].value md
 # and commit this set of updates
+
+
+./cpcc set mdrun:in.resources.max.cores 4
+
 ./cpcc commit
 

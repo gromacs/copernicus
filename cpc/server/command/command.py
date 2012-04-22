@@ -352,6 +352,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
         self.inMaxAllowed=False
         self.inReserved=False
         self.resourceReader=None
+        self.loc=None
 
     def getCommands(self):
         return self.commands
@@ -385,7 +386,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
             self.resourceReader.setDocumentLocator(locator)
 
     def startElement(self, name, attrs):
-        if self.inMinRequired or self.inReserved:
+        if self.inMinRequired or self.inReserved or self.inMaxAllowed:
             self.resourceReader.startElement(name, attrs)
         elif name == 'command-list':
             pass # ignore
@@ -454,7 +455,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
             self.inReserved=True
             self.resourceReader=resource.ResourceReader()
         else:
-            raise CommandReaderError("Unknown xml tag %s"%name, self.loc)
+            raise CommandReaderError("Unknown xml tag '%s'"%name, self.loc)
 
     def endElement(self, name):
         if self.inMinRequired:

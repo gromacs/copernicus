@@ -295,6 +295,14 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     #members=self.project.getType(attrs.getValue("members"))
                     self.type.setMembers(members)
                     log.debug("new array(%s) type %s"%(members.name, name))
+            elif basetype.isSubtype(vtype.dictType):
+                if attrs.has_key("member-type"):
+                    tnm=attrs.getValue("member-type")
+                    members=self.importList.getTypeByFullName(tnm, 
+                                                              self.thisImport)
+                    #members=self.project.getType(attrs.getValue("members"))
+                    self.type.setMembers(members)
+                    log.debug("new dict(%s) type %s"%(members.name, name))
             elif basetype.isSubtype(vtype.fileType):
                 if attrs.has_key("extension"):
                     self.type.setExtension(attrs.getValue("extension"))

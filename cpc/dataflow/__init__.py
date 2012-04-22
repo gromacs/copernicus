@@ -28,5 +28,6 @@ from task import *
 from value import *
 from vtype import *
 from run import *
+from resource import *
 from persistence import *
 

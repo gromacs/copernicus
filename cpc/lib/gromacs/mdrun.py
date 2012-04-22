@@ -36,6 +36,7 @@ from cpc.dataflow import Value
 from cpc.dataflow import FileValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
+from cpc.dataflow import Resources
 import cpc.server.command
 import cpc.util
 
@@ -394,11 +395,13 @@ def mdrun(inp):
         args.extend(cmdlineOpts)
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
-            #args.append("-cpi")
-            #args.append("state.cpt")
         cmd=cpc.server.command.Command(newdirname, "gromacs/mdrun",args,
                                  minVersion=cpc.server.command.Version("4.5"),
                                  addPriority=prio)
+        if inp.hasInput("resources") and inp.getInput("resources") is not None:
+            log.debug("resources is %s"%(inp.getInput("resources")))
+            rsrc=Resources(inp.getInputValue("resources"))
+            rsrc.updateCmd(cmd)
         log.debug("Adding command")
         fo.addCommand(cmd)
         if inp.getInputValue('tpr').isUpdated():

@@ -137,7 +137,7 @@ class ActiveValue(value.Value):
                     self.value[name].update(item, newSeqNr, sourceTag,
                                             resetSourceTag)
             elif self.basetype == vtype.dictType:
-                for name, item in srcVal.value:
+                for name, item in srcVal.value.iteritems():
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None,
                                                       self.type.getMembers(),
@@ -211,11 +211,21 @@ class ActiveValue(value.Value):
                 else:
                     # only check the direct descendants
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        nv=self._create(None, self.type.getMember(name), name,
-                                        sourceTag)
-                        #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
-                        nv.update(val, val.seqNr, sourceTag,
-                                  resetSourceTag=resetSourceTag)
+                        if self.basetype == vtype.recordType:
+                            nv=self._create(None, self.type.getMember(name), 
+                                            name, sourceTag)
+                            nv.update(val, val.seqNr, sourceTag,
+                                      resetSourceTag=resetSourceTag)
+                        elif self.basetype == vtype.dictType:
+                            nv=self._create(None, self.type.getMembers(), name,
+                                            sourceTag)
+                            nv.update(val, val.seqNr, sourceTag,
+                                      resetSourceTag=resetSourceTag)
+                        else:
+                            raise ActiveValError(
+                                        "Unknown base type for dict: %s"%
+                                        (self.getFullName()) )
+
                         self.value[name]=nv
                         ret=True
         elif isinstance(self.value, list):

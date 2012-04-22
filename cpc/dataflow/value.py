@@ -304,7 +304,7 @@ class Value(object):
                             if createType.isSubtype(ntp):
                                 ntp=createType
                         # and make it
-                        nval=self._create(None, npt, itemList[0], 
+                        nval=self._create(None, ntp, itemList[0], 
                                           setCreateSourceTag)
                         self.value[itemList[0]] = nval
                     else:

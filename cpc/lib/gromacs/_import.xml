@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <cpc>
     <desc>Gromacs specific functions</desc>
+    <import name="resource" />
+
     <type id="grompp-include-array" base="array" member-type="file" />
 
     <!-- individual settings -->
@@ -60,6 +62,9 @@
             <field type="string" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for mdrun 
                       to use</desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for tuning this run.</desc>
             </field>
         </inputs>
         <outputs>

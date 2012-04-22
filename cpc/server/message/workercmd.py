@@ -113,10 +113,14 @@ class CommandWorkerMatcher(object):
             platformMax = self.usePlatform.getMaxResource(rsrc.name)
             platformPref = self.usePlatform.getPrefResource(rsrc.name)
             cmdMinRsrc = cmd.getMinRequired(rsrc.name)
+            cmdMaxRsrc = cmd.getMaxAllowed(rsrc.name)
             if cmdMinRsrc is not None:
+                # the total amount of resources left on the current platform:
                 rsrcLeft = platformMax - rsrc.value
-                if (platformPref is not None and rsrcLeft>platformPref):
+                if platformPref is not None and rsrcLeft>platformPref:
                     value=platformPref
+                elif cmdMaxRsrc is not None and rsrcLeft>cmdMaxRsrc:
+                    value=cmdMaxRsrc
                 else:
                     value=rsrcLeft
                 # now we know how many
