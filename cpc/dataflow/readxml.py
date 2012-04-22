@@ -397,7 +397,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     self.type.setMembers(tp)
                 elif self.type.isSubtype(vtype.dictType):
                     self.type.setMembers(tp)
-                elif self.type.isSubtype(vtype.listType):
+                elif self.type.isSubtype(vtype.recordType):
                     if not attrs.has_key("id"):
                         raise ProjectXMLError("No id in list field", self)
                     const=cpc.util.getBooleanAttribute(attrs,"const")
@@ -668,11 +668,11 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             # A description. First find out what it describes.
             if self.type is not None:
                 if ( len(self.typeStack) > 1 and 
-                     self.typeStack[-2][0].isSubtype(vtype.listType)):
+                     self.typeStack[-2][0].isSubtype(vtype.recordType)):
                     # if it is a field, describe it as a field
                     tp=self.typeStack[-2][0]
                     field=self.typeStack[-1][1]
-                    lstm=tp.getListMember(field)
+                    lstm=tp.getRecordMember(field)
                     self.setDescReader(description.DescriptionReader(lstm,
                                                              self.filename),
                                        name)

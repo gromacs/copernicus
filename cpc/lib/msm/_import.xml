@@ -4,7 +4,7 @@
 
     <type id="conf_array" base="array" member-type="file" />
 
-    <type id="inp_trajectory" base="list">
+    <type id="inp_trajectory" base="record">
         <desc>Input trajectory data</desc>
         <field type="file" id="xtc">
             <desc>Input xtc compress trajectory</desc>
@@ -24,7 +24,7 @@
     <type id="desc_array" base="array" member-type="string" />
 
 
-    <type id="grompp_input" base="list">
+    <type id="grompp_input" base="record">
         <desc>Partial grompp input</desc>
         <field type="file" id="mdp" ><desc>A .mpp settings file</desc></field>
         <field type="file" id="top" ><desc>A .top topology file</desc></field>
@@ -40,7 +40,7 @@
     </type>
 
     <!-- output trajectories -->
-    <type id="trajectory" base="list">
+    <type id="trajectory" base="record">
         <desc>Output trajectory type</desc>
         <field type="file" id="xtc" >
             <desc>A .xtc output trajectory file</desc>

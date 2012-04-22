@@ -124,7 +124,7 @@ class ActiveValue(value.Value):
                 self.value=srcVal.value
         else:
             #self.updated=srcVal.updated
-            if self.basetype == vtype.listType:
+            if self.basetype == vtype.recordType:
                 for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
                         raise ActiveValError("Unknown member item '%s'"%name)
@@ -169,7 +169,7 @@ class ActiveValue(value.Value):
            tp = the member type
            opt = whether it is optional
            const = whether it should be constant."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             self.type.addMember(name, tp, opt, const)
             self.value[name]=self._create(None, tp, name, None)
         else:

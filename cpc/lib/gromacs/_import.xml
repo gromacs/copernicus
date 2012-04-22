@@ -4,16 +4,15 @@
     <type id="grompp-include-array" base="array" member-type="file" />
 
     <!-- individual settings -->
-    <type id="setting" base="list">
+    <type id="setting" base="record">
+        <desc>An individual grompp mdp setting</desc>
         <field id="name" type="string" />
         <field id="value" type="string" />
-        <desc>An individual grompp mdp setting</desc>
     </type>
     <type id="mdp-array" base="array" member-type="setting">
         <desc>An array of grompp mdp settings</desc>
     </type>
 
-    <!-- gromacs mdrun controller function -->
     <function id="grompp" type="python-extended">
         <desc>The gromacs pre-processor: prepares run files for mdrun</desc>
         <inputs>
@@ -26,11 +25,6 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <!-- for now, a hack: an optional input on whether to generate
-                 velocities. -->
-            <!--<field type="int" id="gen_vel" opt="true">
-                <desc>here for backward compatibility</desc>
-            </field>-->
             <field type="grompp-include-array" id="include" opt="true">
                 <desc>array of files to include</desc>
             </field>

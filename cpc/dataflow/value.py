@@ -148,7 +148,7 @@ class Value(object):
                 oval=val.value
                 valtp=val.type
                 self.updated=val.updated
-            if self.type.isSubtype(vtype.listType):
+            if self.type.isSubtype(vtype.recordType):
                 # create all list elements as sub-values
                 self.value=dict()
                 mems=self.type.getMemberKeys()
@@ -342,13 +342,13 @@ class Value(object):
                 except vtype.TypeErr:
                     return None
                 return stp
-            elif self.type.isSubtype(vtype.listType):
+            elif self.type.isSubtype(vtype.recordType):
                 return None # we don't know what it is
         return self.value[itemList[0]].getSubType(itemList[1:])
 
     def getSubValueList(self):
         """Return a list of addressable subvalues."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
             return self.val.keys()
@@ -359,7 +359,7 @@ class Value(object):
 
     def getSubValueIterList(self):
         """Return an iterable list of addressable subvalues."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
             return self.val.iterkeys()
@@ -371,16 +371,16 @@ class Value(object):
     def haveAllRequiredValues(self):
         """Return a boolean indicating whether this value and all of its
            subvalues are present (if they're not optional)."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             kv=self.type.getMemberKeys()
             for item in kv:
-                if not self.type.getListMember(item).opt:
+                if not self.type.getRecordMember(item).opt:
                     if (not item in self.value) or (self.value[item].value 
                                                     is None):
                         return False
                     if not self.value[item].haveAllRequiredValues():
                         return False
-                    #if self.value[item].type.isSubtype(vtype.listType):
+                    #if self.value[item].type.isSubtype(vtype.recordType):
                     #    # check whether it's a list: then check the list
                     #elif (isinstance(self.value[item].value, list) or
                     #      isinstance(self.value[item].value, dict)):
@@ -409,7 +409,7 @@ class Value(object):
             parentName=self.parent.getFullName()
             if parentName is None:
                 parentName=""
-            if self.parent.basetype == vtype.listType:
+            if self.parent.basetype == vtype.recordType:
                 return "%s.%s"%(parentName, self.selfName)
             elif (self.parent.basetype == vtype.dictType or
                   self.parent.basetype == vtype.arrayType):

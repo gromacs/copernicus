@@ -139,10 +139,11 @@ def mdrun(inp):
     outDir=inp.getOutputDir()
     fo=inp.getFunctionOutput()
     # check whether we need to reinit
-    if inp.cmd is None or inp.getInputValue('tpr').isUpdated():
+    if inp.cmd is None and inp.getInputValue('tpr').isUpdated():
         # there was no previous command. 
         # purge the persistent directory, by moving the confout files to a
         # backup directory
+        log.debug("Initializing mdrun")
         confout=glob.glob(os.path.join(persDir, "run_???"))
         if len(confout)>0:
             backupDir=os.path.join(persDir, "backup")
@@ -159,6 +160,7 @@ def mdrun(inp):
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
+        log.debug("Extracting data")
         # confout exists. we're finished. Concatenate all the runs if
         # we need to, but first create the output dict
         #outputs=dict()

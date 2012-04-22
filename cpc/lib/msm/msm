@@ -40,7 +40,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FileValue
 from cpc.dataflow import StringValue
 from cpc.dataflow import ArrayValue
-from cpc.dataflow import ListValue
+from cpc.dataflow import RecordValue
 from cpc.dataflow import FloatValue
 #import cpc.server.command
 #import cpc.util
@@ -162,9 +162,9 @@ def msm(inp, out):
             if name != "gen_vel":
                 genVelSettings.append(setting) 
                 noGenVelSettings.append(setting)
-        genVelSettings.append(ListValue( { 'name': StringValue('gen_vel') ,
+        genVelSettings.append(RecordValue( { 'name': StringValue('gen_vel') ,
                                            'value' : StringValue('yes') } ) )
-        noGenVelSettings.append(ListValue( { 'name': StringValue('gen_vel') ,
+        noGenVelSettings.append(RecordValue( { 'name': StringValue('gen_vel') ,
                                              'value' : StringValue('no') } ) )
         out.setSubOut("grompp_inp_no_gen_vel.settings", 
                       ArrayValue(noGenVelSettings) )
@@ -232,7 +232,7 @@ def msm(inp, out):
             while ( (total_traj_ns - recluster*cluster_gen > recluster) or
                     recluster_now):
                 sys.stderr.write("\nCreating new build_msm instance\n\n")
-                nclust=ListValue( { } )
+                nclust=RecordValue( { } )
                 nclust.addItem('ndx', inp.getInputValue('ndx'))
                 nclust.addItem('num_microstates', 
                                inp.getInputValue('num_microstates'))

@@ -282,11 +282,14 @@ class SCCommandFinishedForward(ServerCommand):
                 cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
         
         task = cmd.getTask()
-        commands = task.run(cmd)
+        (newcmds, cancelcmds) = task.run(cmd)
             
         cmdQueue = serverState.getProjectList().getCmdQueue()
-        if commands is not None:
-            for cmd in commands:
+        if cancelcmds is not None:
+            for cmd in cancelcmds:
+                cmdQueue.remove(cmd)
+        if newcmds is not None:
+            for cmd in newcmds:
                 cmdQueue.add(cmd)
         
         #TODO handle persistence

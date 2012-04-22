@@ -240,11 +240,11 @@ class Project(object):
                         ret["typename"]=tp.getName()
                     else:
                         ret["typename"]="Not found"
-                    if tp.isSubtype(vtype.listType):
+                    if tp.isSubtype(vtype.recordType):
                         ret["subitems"]=[]
                         keys=tp.getMemberKeys()
                         for key in keys:
-                            mem=tp.getListMember(key)
+                            mem=tp.getRecordMember(key)
                             subi=dict()
                             subi["name"]=key
                             subi["type"]=mem.type.getName()
@@ -377,7 +377,7 @@ class Project(object):
                     retd=dict()
                     retd["name"]=key
                     retd["type"]=ioitems.getMember(key).getName()
-                    desc=ioitems.getListMember(key).getDescription()
+                    desc=ioitems.getRecordMember(key).getDescription()
                     if desc is not None:
                         retd["desc"]=desc.get()
                     else:
@@ -390,7 +390,7 @@ class Project(object):
                     retd=dict()
                     retd["name"]=key
                     retd["type"]=ioitems.getMember(key).getName()
-                    desc=ioitems.getListMember(key).getDescription()
+                    desc=ioitems.getRecordMember(key).getDescription()
                     if desc is not None:
                         retd["desc"]=desc.get()
                     else:

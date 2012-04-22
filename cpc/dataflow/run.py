@@ -516,10 +516,10 @@ class DictValue(value.Value):
         value.Value.__init__(self, None, vtype.dictType)
         self.value=val
 
-class ListValue(value.Value):
-    """OutValue for lists. Assumes a dict of Values"""
+class RecordValue(value.Value):
+    """OutValue for records. Assumes a dict of Values"""
     def __init__(self, val):
-        value.Value.__init__(self, None, vtype.listType)
+        value.Value.__init__(self, None, vtype.recordType)
         if val is not None:
             self.value=val
         else:
@@ -650,14 +650,14 @@ class IOReader(xml.sax.handler.ContentHandler):
             if (self.section != IOReader.none) or not self.isInput:
                 raise IOReaderError("Misplaced inputs tag", self)
             self.section=IOReader.inputs
-            val=value.Value(None, vtype.listType)
+            val=value.Value(None, vtype.recordType)
             self.setValueReader(value.ValueReader(self.filename, val,
                                                   allowUnknownTypes=True), name)
         elif name == "subnet-inputs":
             if (self.section != IOReader.none) or not self.isInput:
                 raise IOReaderError("Misplaced subnet-inputs tag", self)
             self.section=IOReader.subnetInputs
-            val=value.Value(None, vtype.listType)
+            val=value.Value(None, vtype.recordType)
             self.setValueReader(value.ValueReader(self.filename, val,
                                                   allowUnknownTypes=True), name)
         elif name == "outputs":
@@ -666,7 +666,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.section=IOReader.outputs
             if self.isInput:
                 # read it in as a value
-                val=value.Value(None, vtype.listType)
+                val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
                                                       allowUnknownTypes=True), 
                                     name)
@@ -677,7 +677,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.section=IOReader.subnetOutputs
             if self.isInput:
                 # read it in as a value
-                val=value.Value(None, vtype.listType)
+                val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
                                                       allowUnknownTypes=True), 
                                     name)
