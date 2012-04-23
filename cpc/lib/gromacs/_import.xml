@@ -22,7 +22,7 @@
                 <desc>A .gro configuration file</desc>
             </field>
             <field type="file" id="mdp" >
-                <desc>A .mpp settings file</desc>
+                <desc>A .mdp settings file</desc>
             </field>
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
@@ -88,6 +88,41 @@
             </field>
         </outputs>
         <controller function="cpc.lib.gromacs.mdrun" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
+    <function id="mdrun_tune" type="python-extended">
+        <desc>Optimize an MD simulation (for the available run resources).</desc>
+        <inputs>
+            <field type="file" id="conf">
+                <desc>A .gro configuration file</desc>
+            </field>
+            <field type="file" id="mdp" >
+                <desc>A .mdp settings file</desc>
+            </field>
+            <field type="file" id="top" >
+                <desc>A .top topology file</desc>
+            </field>
+            <field type="grompp-include-array" id="include" opt="true">
+                <desc>array of files to include</desc>
+            </field>
+            <field type="mdp-array" id="settings" opt="true">
+                <desc>array of settings</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An .ndx index file</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="mdp" >
+                <desc>A processed .mdp settings file</desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for this run.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.tune_fn" 
                     import="cpc.lib.gromacs" 
                     persistent_dir="true" />
     </function>

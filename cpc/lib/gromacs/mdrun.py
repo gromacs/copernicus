@@ -40,35 +40,50 @@ from cpc.dataflow import Resources
 import cpc.server.command
 import cpc.util
 
+import tune
+
 
 class GromacsError(cpc.util.CpcError):
     pass
 
+def extractConf(tprFile, confFile):
+    """Extract a configuration to confFile from tprFile."""
+    cmdlist=['editconf', '-f', tprFile, '-o', confFile]
+    proc=subprocess.Popen(cmdlist, 
+                          stdin=None,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=os.path.split(confFile)[0])
+    proc.communicate(None)
+    if proc.returncode != 0:
+        raise GromacsError("Error running editconf: %s"%
+                           (open(stdoutfn,'r').read()))
 
-def grompp(inp):
-    if inp.testing(): 
-        # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("grompp -version")
-        return 
+
+
+
+def procSettings(inp, outMdpDir):
+    """Process settings into a new mdp file, or return the old mdp file if
+       there are no additional settings."""
     mdpfile=inp.getInput('mdp')
-    outfname=os.path.join(inp.outputDir, "grompp.mdp")
-    if inp.hasInput('gen_vel') or ( inp.hasInput('settings') and 
-                                    len(inp.getInput('settings'))>0 ):
+    if ( inp.hasInput('settings') and len(inp.getInput('settings'))>0 ):
         repl=dict()
-        if inp.hasInput('gen_vel'):
-            gen_vel=inp.getInput('gen_vel')
-            if gen_vel == 0:
-                genvelst='no'
-            else:
-                genvelst='yes'
-            repl['gen_vel'] = genvelst
+        #if inp.hasInput('gen_vel'):
+        #    gen_vel=inp.getInput('gen_vel')
+        #    if gen_vel == 0:
+        #        genvelst='no'
+        #    else:
+        #        genvelst='yes'
+        #    repl['gen_vel'] = genvelst
         if inp.hasInput('settings'):
             settings=inp.getInput('settings')
             for setting in settings:
                 if ("name" in setting.value) and ("value" in setting.value):
-                    repl[setting.value["name"].value] = setting.value["value"].value
+                    val = setting.value["value"].value
+                    repl[setting.value["name"].value] = val
         # now set the gen_vel option
-        outf=open(outfname, "w")
+        outMdpName=os.path.join(outMdpDir, "grompp.mdp")
+        outf=open(outMdpName, "w")
         inf=open(mdpfile, "r")
         for line in inf:
             sp=line.split('=')
@@ -83,10 +98,18 @@ def grompp(inp):
         for key, value in repl.iteritems():
             outf.write('%s = %s\n'%(key, str(value)))
         outf.close()
-        mdpfile=outfname
-    #else:
-        #shutil.copy(mdpfile, outfname)
-    #mdpfile=outfname
+        return outMdpName
+    else:
+        return mdpfile
+
+
+def grompp(inp):
+    if inp.testing(): 
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("grompp -version")
+        return 
+    #outfname=os.path.join(inp.outputDir, "grompp.mdp")
+    mdpfile=procSettings(inp, inp.outputDir)
     # copy the topology and include files 
     topfile=os.path.join(inp.outputDir, 'topol.top')
     shutil.copy(inp.getInput('top'), topfile)
@@ -117,8 +140,7 @@ def grompp(inp):
                           stdin=None,
                           stdout=stdoutf,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir,
-                          close_fds=True)
+                          cwd=inp.outputDir)
     proc.communicate(None)
     stdoutf.close()
     if proc.returncode != 0:
@@ -139,6 +161,8 @@ def mdrun(inp):
     persDir=inp.getPersistentDir()
     outDir=inp.getOutputDir()
     fo=inp.getFunctionOutput()
+    rsrc=Resources(inp.getInputValue("resources"))
+    rsrcFilename=os.path.join(persDir, 'rsrc.dat')
     # check whether we need to reinit
     if inp.cmd is None and inp.getInputValue('tpr').isUpdated():
         # there was no previous command. 
@@ -158,6 +182,13 @@ def mdrun(inp):
                                                  os.path.split(conf)[-1]))
                 except:
                     pass
+        if rsrc.max.get('cores') is None:
+            confFile=os.path.join(persDir, 'conf.gro')
+            extractConf(inp.getInput('tpr'), confFile)
+            tune.tune(rsrc, confFile, inp.getInput('tpr'))
+    else:
+        if rsrc.max.get('cores') is None:
+            rsrc.load(rsrcFilename)
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
@@ -400,12 +431,58 @@ def mdrun(inp):
                                  addPriority=prio)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
             log.debug("resources is %s"%(inp.getInput("resources")))
-            rsrc=Resources(inp.getInputValue("resources"))
+            #rsrc=Resources(inp.getInputValue("resources"))
             rsrc.updateCmd(cmd)
         log.debug("Adding command")
         fo.addCommand(cmd)
         if inp.getInputValue('tpr').isUpdated():
             fo.cancelPrevCommands()
+    # and save for further invocations
+    rsrc.save(rsrcFilename)
     return fo
 
+def tune_fn(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        #cpc.util.plugin.testCommand("grompp -version")
+        #cpc.util.plugin.testCommand("mdrun -version")
+        return
+    fo=inp.getFunctionOutput()
+    persDir=inp.getPersistentDir()
+    mdpfile=procSettings(inp, inp.outputDir)
+    # copy the topology and include files 
+    topfile=os.path.join(inp.outputDir, 'topol.top')
+    shutil.copy(inp.getInput('top'), topfile)
+    incl=inp.getInput('include')
+    if incl is not None and len(incl)>0:
+        for i in range(len(incl)):
+            filename=inp.getInput('include[%d]'%i)
+            if filename is not None:
+                # same name, but in one directory.
+                nname=os.path.join(inp.outputDir, os.path.split(filename)[1])
+                shutil.copy(filename, nname)
+    # and execute grompp
+    cmdlist=[ "grompp", "-f", mdpfile,
+              "-quiet",
+              "-c", inp.getInput('conf'),
+              "-p", 'topol.top', # we made sure it's there
+              "-o", "topol.tpr" ]
+    if inp.hasInput('ndx'):
+        cmdlist.append('-n')
+        cmdlist.append(inp.getInput('ndx'))
+    proc=subprocess.Popen(cmdlist, 
+                          stdin=None,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.outputDir)
+    (stdo, stde) = proc.communicate(None)
+    if proc.returncode != 0:
+        raise GromacsError("Error running grompp: %s, %s"%
+                           (stdo, stde))
+    rsrc=Resources()
+    tune.tune(rsrc, inp.getInput('conf'), os.path.join(inp.outputDir, 
+                                                       'topol.tpr'))
+    fo.setOut('mdp', FileValue(mdpfile))
+    fo.setOut('resources', rsrc.setOutputValue())
+    return fo
 

@@ -19,10 +19,9 @@
 
 
 import logging
-import collections
 import os
 import os.path
-import xml.sax
+import json
 
 
 log=logging.getLogger('cpc.dataflow.resource')
@@ -43,16 +42,19 @@ class ResourceList:
         self.rsrc[name]=value
     def get(self, name):
         """Get a value with a specific name."""
-        return self.rsrc[name]
-
+        return self.rsrc.get(name)
     def getValue(self):
+        """Return a Value object with all settings."""
         retDict=dict()
-        for name, item in self.rsrc:
-            retDict[name] = IntValue(item)
+        for name, item in self.rsrc.iteritems():
+            retDict[name] = run.IntValue(item)
         return run.DictValue(retDict)
 
     def iteritems(self):
         return self.rsrc.iteritems()
+
+    def empty(self):
+        return len(self.rsrc) == 0
 
 class Resources:
     """Class describing minimum, maximum, and optimal command resources.
@@ -96,8 +98,31 @@ class Resources:
         for name, item in self.max.iteritems():
            cmd.addMaxAllowed(cpc.server.command.Resource(name, item))
 
-            
+    def save(self,filename):
+        svf=dict()
+        svf['min']=self.min.rsrc
+        svf['max']=self.max.rsrc
+        wrkrs=dict()
+        for name, w in self.workers.iteritems():
+            wrkrs[name] = w.rsrc
+        svf['workers']=wrkrs
+        fout=open(filename, 'w')
+        fout.write(json.dumps(svf))
+        fout.write('\n')
+        fout.close()
 
-
+    def load(self, filename):
+        fin=open(filename, 'r')
+        svf=json.loads(fin.read())
+        fin.close()
+        for name, value in svf['min'].iteritems():
+            self.min.set(name, int(value))
+        for name, value in svf['max'].iteritems():
+            self.max.set(name, int(value))
+        for name, w in svf['workers'].iteritems():
+            if name not in self.workers:
+                self.workers[name] = ResourceList()
+            for itemname, value in w:
+                self.workers[name].set(itemname, int(value))
 
 
