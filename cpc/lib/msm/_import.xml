@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <cpc>
+    <import name="resource" />
     <import name="gromacs" />
 
     <type id="conf_array" base="array" member-type="file" />
@@ -275,6 +276,12 @@
             <field type="build_msm_out_array" id="msm_out">
                 <desc>The array of MSM generation outputs</desc>
             </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resrources for a typical run</desc>
+            </field>
+            <field type="file" id="tuned_mdp">
+                <desc>The tuned mdp file.</desc>
+            </field>
         </subnet-inputs>
         <subnet-outputs>
             <field type="grompp_input" id="grompp_inp_gen_vel">
@@ -419,6 +426,9 @@
                 <desc>(automatically generated) description of the 
                        simulation</desc>
             </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for this run.</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="trajectory" id="trajectory">
@@ -445,6 +455,7 @@
             <!-- connections to mdrun -->
             <connection src="grompp:out.tpr" dest="mdrun:in.tpr" />
             <connection src="self:ext_in.priority" dest="mdrun:in.priority" />
+            <connection src="self:ext_in.resources" dest="mdrun:in.resources" />
             <connection src="self:ext_in.grompp_input.mdrun_cmdline_options" 
                         dest="mdrun:in.cmdline_options" />
 

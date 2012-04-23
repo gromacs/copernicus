@@ -84,6 +84,7 @@ def spawnNewSim(inp, out, i, confFile, priority, gen_vel, desc):
     out.addConnection("self:ext_in.ndx", "sim_%d:in.ndx"%i)
     out.addConnection("self:ext_in.reference", "sim_%d:in.reference"%i)
     out.addConnection("self:ext_in.grpname", "sim_%d:in.grpname"%i)
+    out.addConnection("mdrun_tune:out.resources", "sim_%d:in.resources"%i)
     out.addConnection("sim_%d:out.trajectory"%i, 
                       "traj_collect:in.trajectories[%d]"%i)
 
@@ -97,6 +98,7 @@ def msm(inp, out):
 
     # first check if we're initializing
     init=False
+    init2=False
     #if ( (not inp.hasSubnetOutput("grompp_inp_gen_vel")) or
     #     (not inp.hasSubnetOutput("grompp_inp_no_gen_vel")) or
     #     (not inp.hasSubnetOutput("msm_in") ) ):
@@ -105,6 +107,9 @@ def msm(inp, out):
     if inp.isInputUpdated("grompp"):
         # we must initialize
         init=True
+    elif inp.isSubnetInputUpdated("tuned_mdp"):
+        init2=True
+        
 
     # set up the persistence object. We need it because we must spawn
     # numbered runs and could get clashing number otherwise due to 
@@ -117,6 +122,21 @@ def msm(inp, out):
         # here we create an entirely new sampling set.
 
         # set up the run environment. 
+
+        # Tune the runs:
+        out.addInstance('mdrun_tune', 'gromacs::mdrun_tune')
+        out.addConnection('self:ext_in.grompp.mdp', 'mdrun_tune:in.mdp')
+        out.addConnection('self:ext_in.grompp.top', 'mdrun_tune:in.top')
+        out.addConnection('self:ext_in.grompp.include', 'mdrun_tune:in.include')
+        out.addConnection('self:ext_in.grompp.settings', 
+                          'mdrun_tune:in.settings')
+        out.addConnection('self:ext_in.ndx', 'mdrun_tune:in.ndx')
+        out.addConnection('self:ext_in.confs[0]', 'mdrun_tune:in.conf')
+        out.addConnection('mdrun_tune:out.resources', 'self:sub_in.resources')
+        out.addConnection('mdrun_tune:out.mdp', 'self:sub_in.tuned_mdp')
+    elif init2:
+        #initializing stage 2
+        sys.stderr.write("Initializing stage 2 of msm\n")
 
         # initialize the trajectory collector
         out.addInstance('traj_collect', 'trajectory_collect')
@@ -134,7 +154,7 @@ def msm(inp, out):
                           'self:sub_in.trajectories')
         # We set up two inputs, one with gen_vel and one without.
         out.setSubOut("grompp_inp_gen_vel.mdp", 
-                      inp.getInputValue("grompp.mdp"))
+                      inp.getSubnetInputValue("tuned_mdp"))
         out.setSubOut("grompp_inp_gen_vel.top", 
                       inp.getInputValue("grompp.top"))
         out.setSubOut("grompp_inp_gen_vel.include", 
@@ -144,7 +164,7 @@ def msm(inp, out):
 
         
         out.setSubOut("grompp_inp_no_gen_vel.mdp", 
-                      inp.getInputValue("grompp.mdp"))
+                      inp.getSubnetInputValue("tuned_mdp"))
         out.setSubOut("grompp_inp_no_gen_vel.top", 
                       inp.getInputValue("grompp.top"))
         out.setSubOut("grompp_inp_no_gen_vel.include", 

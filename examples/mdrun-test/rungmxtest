@@ -33,7 +33,5 @@ fi
 # and commit this set of updates
 
 
-#./cpcc set mdrun:in.resources.max.cores 4
-
 ./cpcc commit
 

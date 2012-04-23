@@ -113,6 +113,10 @@
             <field type="file" id="ndx" opt="true">
                 <desc>An .ndx index file</desc>
             </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun 
+                      to use</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="file" id="mdp" >
