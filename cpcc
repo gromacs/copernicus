@@ -212,7 +212,7 @@ try:
         clnt=ClientMessage()
         renderMethod = CmdLine.listProjects
         ProcessedResponse(clnt.projectsRequest()).pprint(renderMethod)
-    elif cmd == "project-set-default":
+    elif cmd == "set-default":
         project=getArg(args, 1, "project name")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetDefaultRequest(project)).pprint()
