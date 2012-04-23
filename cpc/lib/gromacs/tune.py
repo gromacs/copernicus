@@ -58,7 +58,21 @@ def primefactors(x):
     return factorlist
 
 
-def tune(rsrc, confFile, tprFile):
+def tryRun(tprFile, runDir, Ncores):
+    """Try to run mdrun with Ncores cores."""
+    cmdlist=[ "mdrun", "-nt", "%d"%Ncores, "-s", tprFile, "-rcon", "0.7",
+              "-maxh", "0.0005" ]
+    proc=subprocess.Popen(cmdlist, 
+                          stdin=None,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=runDir)
+    (stdo, stde) = proc.communicate(None)
+    if proc.returncode != 0:
+        return (False, stdo)
+    return (True, stdo)
+
+def tune(rsrc, confFile, tprFile, testRunDir):
     """Set max. run based on configuration file."""
     # TODO: fix this. For now, only count the number of particles and
     # the system size.
@@ -80,6 +94,7 @@ def tune(rsrc, confFile, tprFile):
     NN = int(N/250)
     # the max number of processors to use should be the minimum of these
     Nmax = min(Nsize, NN)
+    Nmax = max(1, Nmax)
 
     while True:
         # make sure we return a sane number:
@@ -87,21 +102,13 @@ def tune(rsrc, confFile, tprFile):
         if (Nmax < 5 or Nmax == 6 or 
             (Nmax < 32 and len(primefactors(Nmax)) > 2) or
             (Nmax < 32 and len(primefactors(Nmax)) > 3) ): 
-            break
+            canRun, stdo=tryRun(tprFile, testRunDir, Nmax)
+            if canRun:
+                break
         Nmax -= 1 
+        if Nmax < 1:
+            raise GromacsError("Can't run simulation: %s"%stdo)
     rsrc.min.set('cores', 1)
     rsrc.max.set('cores', Nmax)
 
-#def tune_fn(inp):
-#    if inp.testing(): 
-#        # if there are no inputs, we're testing wheter the command can run
-#        #cpc.util.plugin.testCommand("grompp -version")
-#        #cpc.util.plugin.testCommand("mdrun -version")
-#        return 
-#    fo=inp.getFunctionOutput()
-#    fo.setOut('settings', inp.getInputValue('settings'))
-#    rsrc=Resources()
-#    tune(rsrc, inp.getInput('conf'))
-#    fo.setOut('resources', rsrc.setOutputValue())
-#    return fo
 

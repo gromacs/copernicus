@@ -42,8 +42,8 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
 
 sys.stdout.write('<?xml version="1.0"?>\n')
 sys.stdout.write('<executable-list>\n')
-try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1 -rcon 0.7", True)
-try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1 -rcon 0.7", True)
+try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
 # and the post/preprocessing commands
 try_report_command(sys.stdout, "grompp", "grompp")
 try_report_command(sys.stdout, "trjconv", "trjconv")

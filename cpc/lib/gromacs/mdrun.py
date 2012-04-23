@@ -185,7 +185,7 @@ def mdrun(inp):
         if rsrc.max.get('cores') is None:
             confFile=os.path.join(persDir, 'conf.gro')
             extractConf(inp.getInput('tpr'), confFile)
-            tune.tune(rsrc, confFile, inp.getInput('tpr'))
+            tune.tune(rsrc, confFile, inp.getInput('tpr'), persDir)
     else:
         if rsrc.max.get('cores') is None:
             rsrc.load(rsrcFilename)
@@ -422,7 +422,8 @@ def mdrun(inp):
                       prio)
         shutil.copy(src,dst)
         # we can always add state.cpt, even if it doesn't exist.
-        args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt" ]
+        args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt",
+               "-rcon", "0.7"  ]
         args.extend(cmdlineOpts)
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
@@ -480,8 +481,8 @@ def tune_fn(inp):
         raise GromacsError("Error running grompp: %s, %s"%
                            (stdo, stde))
     rsrc=Resources()
-    tune.tune(rsrc, inp.getInput('conf'), os.path.join(inp.outputDir, 
-                                                       'topol.tpr'))
+    tune.tune(rsrc, inp.getInput('conf'), 
+              os.path.join(inp.outputDir, 'topol.tpr'), persDir)
     fo.setOut('mdp', FileValue(mdpfile))
     fo.setOut('resources', rsrc.setOutputValue())
     return fo
