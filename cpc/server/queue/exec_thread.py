@@ -24,6 +24,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 import sys
+import os
 import traceback
 
 
@@ -37,7 +38,7 @@ class ExecThreadError(cpc.util.CpcError):
 
 class TaskExecThreads(object):
     """A collection of taskexec threads."""
-    def __init__(self, N, taskQueue, cmdQueue):
+    def __init__(self, conf, N, taskQueue, cmdQueue):
         self.taskQueue=taskQueue
         self.cmdQueue=cmdQueue
         self.threads=[]
@@ -46,6 +47,10 @@ class TaskExecThreads(object):
             self.threads.append(te)
         self.lock=threading.Lock()
         self.tw=None
+        nc=conf.getServerCores()
+        if nc>0:
+            log.debug("Setting max. nr. of OpenMP cores to %d"%nc)
+            os.environ['OMP_NUM_THREADS']=str(nc)
 
     def pause(self):
         """Pause all task exec threads. Returns when they have
@@ -161,11 +166,15 @@ class TaskExecThread(object):
                 task=self.taskQueue.get()
                 if task is not None:
                     #log.debug("Got queued task.")
-                    cmds=task.run()
-                    if cmds is not None:
-                        for cmd in cmds:
+                    (newcmds, cancelcmds)=task.run()
+                    if newcmds is not None:
+                        for cmd in newcmds:
                             log.debug("Queuing command")
                             self.cmdQueue.add(cmd)
+                    if cancelcmds is not None:
+                        for cmd in cancelcmds:
+                            log.debug("Canceling command")
+                            self.cmdQueue.remove(cmd)
             except:
                 fo=StringIO()
                 traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],

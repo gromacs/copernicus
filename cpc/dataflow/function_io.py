@@ -50,7 +50,7 @@ outputs =    IODir(keywords.Out, False, False)
 subnetInputs =  IODir(keywords.SubIn, True, True)
 subnetOutputs = IODir(keywords.SubOut, False, True)
 
-class IOType(vtype.ListType):
+class IOType(vtype.RecordType):
     """The list type specific for instance inputs/outputs/subnetinputs/...
        """
     def __init__(self, direction, instName, parentType):
@@ -59,7 +59,7 @@ class IOType(vtype.ListType):
         name="%s%s%s"%(instName,
                        keywords.InstSep,
                        direction.name)
-        vtype.ListType.__init__(self, name, parentType)
+        vtype.RecordType.__init__(self, name, parentType)
 
     def getDir(self):
         return self.direction

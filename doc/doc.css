@@ -87,3 +87,8 @@ text-align:center
 .figure-text{
 padding: 0px 100px 0px 100px;
 }
+
+.cmd {
+    font-weight: bold;
+}
+

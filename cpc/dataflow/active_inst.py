@@ -23,6 +23,7 @@ log=logging.getLogger('cpc.dataflow.active_inst')
 
 import threading
 import os
+import copy
 import os.path
 import xml.sax.saxutils
 
@@ -329,6 +330,9 @@ class ActiveInstance(object):
     def getInputs(self):
         """Get the input value object."""
         return self.inputVal
+    def getStagedInputs(self):
+        """Get the staged input value object."""
+        return self.stagedInputVal
     def getOutputs(self):
         """Get the output value object."""
         return self.outputVal
@@ -505,7 +509,7 @@ class ActiveInstance(object):
         self.outputVal.setUpdated(False)
         self.subnetOutputVal.setUpdated(False)
 
-    def handleNewInput(self, sourceTag, seqNr):
+    def handleNewInput(self, sourceTag, seqNr, noNewTasks=False):
         """Process new input based on the changing of values.
            
            sourceTag =  the source to look for 
@@ -513,11 +517,13 @@ class ActiveInstance(object):
            if source is None, all the active connections that have 
            newSetValue set are updated. The seqNr is then ignored.
 
+           if noNewTasks == true, no new tasks will be generated
+
            NOTE: If sourceAI is None, this function assumes that there is 
                  some global lock preventing concurrent updates, and 
                  that it is locked. This normally is project.networkLock.
            """
-        #log.debug("handleNewInput on  %s"%self.getCanonicalName())
+        log.debug("handleNewInput on  %s"%self.getCanonicalName())
         with self.inputLock:
             # first check whether we've already checked this
             #self.updated=False
@@ -551,11 +557,16 @@ class ActiveInstance(object):
                 #          (self.getCanonicalName(), self.instance.getName(), 
                 #           self.function.getName()))
                 # only continue if we're active
-                if self.state != ActiveInstance.active:
+                if self.state != ActiveInstance.active or noNewTasks:
                     return
                 # and make it run.
                 if self._canRun():
                     self._genTask()
+
+
+    #def resetUpdated(self):
+    #    """Reset the updated tag."""
+    #    self.updated=False
 
     def handleNewConnections(self):
         """Process a new output connection. 
@@ -590,16 +601,15 @@ class ActiveInstance(object):
 
 
 
-    def findNamedInput(self, direction, itemList, sourceTag):
+    def findNamedInput(self, direction, itemList, sourceTag, closestValue):
         """Find the *staging* value object corresponding to the named item.
            direction = the input/output/subnetinput/subnetoutput direction
            itemList = a path gettable by value.getSubValue
-
-           Assumes a locked self.inputLock
+           closestValue = boolean indicating whether to return the closest
+                          value (for getNamedinputAffectedAIs) or the actual
+                          value (for stageNamedInput). If False,
+                          the value will be created if needed.
            """
-        #log.debug("%s: Finding value for %s of fn %s"%
-        #          (self.getCanonicalName(), self.instance.getName(), 
-        #           self.function.getName()))
         if direction==function_io.inputs:
             topval=self.stagedInputVal
         elif direction==function_io.subnetInputs:
@@ -607,22 +617,20 @@ class ActiveInstance(object):
         else:
             raise ActiveError("Trying to set output value %s"%
                               str(direction.name))
-        val=topval.getSubValue(itemList, create=True, 
-                               setCreateSourceTag=sourceTag)
+        val=topval.getSubValue(itemList, create=(not closestValue), 
+                               setCreateSourceTag=sourceTag,
+                               closestValue=closestValue)
+        #log.debug("returning %s"%(val))
         return val
 
-    def getNamedInputAffectedAIs(self, val, newVal, affectedInputAIs):
+    def getNamedInputAffectedAIs(self, closestVal, affectedInputAIs):
         """Get the affected input ais for setting a new value."""
         listeners=[]
-        val.findListeners(listeners)
-        log.debug("Finding affected inputs for %s"%self.getCanonicalName())
+        closestVal.findListeners(listeners)
+        #log.debug("Finding affected inputs for %s"%self.getCanonicalName())
         for listener in listeners:
             #log.debug("   found listener: %s"%(listener.value.getFullName()))
             listener.findConnectedInputAIs(affectedInputAIs)
-            #destais=listener.getDestinationAIs()
-        #for ai in affectedInputAIs:
-            #log.debug("   add affected input: %s"%(ai.getCanonicalName()))
-            #affectedInputAIs.update(destais)
         affectedInputAIs.add(self)
 
     def stageNamedInput(self, val, newVal, sourceTag):
@@ -693,6 +701,18 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
+    def deactivate(self):
+        """Set the state of this active instance to held, if active."""
+        log.debug("Activating active instance %s of fn %s"%
+                  (self.instance.getName(),
+                   self.function.getName()))
+        with self.inputLock:
+            with self.lock:
+                if self.state == ActiveInstance.active:
+                    if self.subnet is not None:
+                        self.subnet.deactivateAll()            
+                    self.state=ActiveInstance.held
+
     def unblock(self):
         """Unblock a task, forcing it to run"""
         changed=False
@@ -706,7 +726,22 @@ class ActiveInstance(object):
                 if self._canRun():
                     self._genTask()
 
-           
+          
+    def cancelTasks(self, seqNr):
+        """Cancel all tasks (and commands) with sequence number before 
+           the given seqNr. 
+           Returns a list of cancelled commands."""
+        with self.lock:
+            tsk=copy.copy(self.tasks)
+            ret=[]
+            for task in tsk:
+                if task.seqNr < seqNr:
+                    cmds=task.getCommands()
+                    if cmds is not None:
+                        ret.extend(cmds)
+                    task.cancel()
+                    self.tasks.remove(task)
+            return ret
 
     def _canRun(self):
         """Whether all inputs are there for the instance to be run.
@@ -771,13 +806,15 @@ class ActiveInstance(object):
     def markError(self, msg):
         """Mark active instance as being in error state."""
         with self.lock:
-            self.errmsg=unicode(msg, encoding="utf-8")
+            if isinstance(msg, str):
+                self.errmsg=unicode(msg, encoding="utf-8")
+            else:
+                self.errmsg=unicode(msg) #$, encoding="utf-8")
             self.state=ActiveInstance.error
             #print msg
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
                                                   self.function.getName(), 
-                                                  unicode(msg, 
-                                                          encoding="utf-8")))
+                                                  self.errmsg))
     def clearError(self, recursive, outf=None):
         """Clear the error state of this instance, and if recursive is set, 
            for any subinstances. Returns the number of errors cleared"""
@@ -805,7 +842,7 @@ class ActiveInstance(object):
         iindstr=cpc.util.indStr*(indent+1)
         with self.lock:
             if self.state==ActiveInstance.error:
-                strn=str(self.errmsg)
+                strn=self.errmsg
                 msg='errmsg=%s'%str(xml.sax.saxutils.quoteattr(strn))
             else:
                 msg=""

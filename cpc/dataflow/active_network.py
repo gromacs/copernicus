@@ -357,6 +357,12 @@ class ActiveNetwork(network.Network):
             for inst in self.activeInstances.itervalues():
                 inst.activate()
 
+    def deactivateAll(self):
+        """De-activate all activeinstances in this network, starting them."""
+        with self.lock:
+            for inst in self.activeInstances.itervalues():
+                inst.deactivate()
+
     def clearError(self, recursive, outf=None):
         """Clear the error in all sub-instances if recursive is true
            Returns the number of errors cleared"""

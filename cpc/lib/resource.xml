@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<cpc>
+    <desc>Run resource data types</desc>
+
+    <type id="resource_list" base="dict" member-type="int">
+        <desc>A list (dict) of resources. Each resource lists an integer by 
+              a key name</desc>
+    </type>
+
+    <type id="worker_type_resource" base="dict" member-type="resource_list">
+        <desc>A dictionary of ideal resources for each worker type.</desc>
+    </type>
+    
+    <type id="run_desc" base="record">
+        <desc>A run description, with minimum and maximum resources,
+              and an dict of optimal resources for each separate 
+              available worker type</desc>
+        <field type="resource_list" id="min">
+            <desc>The minimum required resources</desc>
+        </field>
+        <field type="resource_list" id="max">
+            <desc>The maximum allowed resources</desc>
+        </field>
+        <field type="worker_type_resource" id="workers">
+            <desc>The ideal amount of resources for each worker type.</desc>
+        </field>  
+    </type>
+</cpc>
+

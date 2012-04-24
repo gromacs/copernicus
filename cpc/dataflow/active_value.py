@@ -124,7 +124,7 @@ class ActiveValue(value.Value):
                 self.value=srcVal.value
         else:
             #self.updated=srcVal.updated
-            if self.basetype == vtype.listType:
+            if self.basetype == vtype.recordType:
                 for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
                         raise ActiveValError("Unknown member item '%s'"%name)
@@ -137,7 +137,7 @@ class ActiveValue(value.Value):
                     self.value[name].update(item, newSeqNr, sourceTag,
                                             resetSourceTag)
             elif self.basetype == vtype.dictType:
-                for name, item in srcVal.value:
+                for name, item in srcVal.value.iteritems():
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None,
                                                       self.type.getMembers(),
@@ -169,7 +169,7 @@ class ActiveValue(value.Value):
            tp = the member type
            opt = whether it is optional
            const = whether it should be constant."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             self.type.addMember(name, tp, opt, const)
             self.value[name]=self._create(None, tp, name, None)
         else:
@@ -185,11 +185,14 @@ class ActiveValue(value.Value):
     
            Returns: a boolean telling whether an update has taken place."""
         ret=False
+        #log.debug("Checking for update in %s, %s=%s reset=%s %s"%
+        #          (self.getFullName(), sourceTag, sourceValue.sourceTag, 
+        #           resetSourceTag, sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                #log.debug("Found update in %s, %s %s"%
+                #log.debug("**Found update in %s, %s %s"%
                 #          (self.getFullName(), resetSourceTag, 
                 #           sourceValue.value))
                 self.update(sourceValue, sourceValue.seqNr, sourceTag,
@@ -197,6 +200,8 @@ class ActiveValue(value.Value):
                 #sourceValue.updated=False
                 sourceValue.setUpdated(False)
                 return True
+            #else:
+            #   log.debug("Rejecting acceptNewValue because of sequence number")
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:
@@ -206,17 +211,27 @@ class ActiveValue(value.Value):
                 else:
                     # only check the direct descendants
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        nv=self._create(None, self.type.getMember(name), name,
-                                        sourceTag)
-                        #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
-                        nv.update(val, val.seqNr, sourceTag,
-                                  resetSourceTag=resetSourceTag)
+                        if self.basetype == vtype.recordType:
+                            nv=self._create(None, self.type.getMember(name), 
+                                            name, sourceTag)
+                            nv.update(val, val.seqNr, sourceTag,
+                                      resetSourceTag=resetSourceTag)
+                        elif self.basetype == vtype.dictType:
+                            nv=self._create(None, self.type.getMembers(), name,
+                                            sourceTag)
+                            nv.update(val, val.seqNr, sourceTag,
+                                      resetSourceTag=resetSourceTag)
+                        else:
+                            raise ActiveValError(
+                                        "Unknown base type for dict: %s"%
+                                        (self.getFullName()) )
+
                         self.value[name]=nv
                         ret=True
         elif isinstance(self.value, list):
             i=0
             for val in sourceValue.value:
-                if i+1 < len(self.value):
+                if i < len(self.value):
                     rt=self.value[i].acceptNewValue(val, sourceTag,
                                                     resetSourceTag)
                     ret=ret or rt
@@ -226,13 +241,22 @@ class ActiveValue(value.Value):
                     #          (val.getFullName(), i, val.sourceTag, 
                     #           self.sourceTag))
                     if ( (val.sourceTag == sourceTag) or (sourceTag is None) ):
-                        log.debug("New value")
-                        nv=self._create(None, self.type.getMembers(), i,
-                                        sourceTag)
+                        #log.debug("New value")
+                        j=len(self.value)
+                        while j <= i:
+                            # create as many empty values as needed. Set the
+                            # source tag only for the one we update.
+                            if i==j:
+                                srct=sourceTag
+                            else:
+                                srct=None
+                            nv=self._create(None, self.type.getMembers(), j,
+                                            srct)
+                            self.value.append(nv)
+                            j+=1
                         nv.update(val, val.seqNr, sourceTag,
                                   resetSourceTag=resetSourceTag)
                         #rt=nv.acceptNewValue(val, sourceTag, resetSourceTag)
-                        self.value.append(nv)
                         ret=True
                 i+=1
         return ret

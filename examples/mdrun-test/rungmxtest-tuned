@@ -13,6 +13,7 @@ fi
 # add the grompp and mdrun function instances
 ./cpcc instance gromacs::grompp grompp
 ./cpcc instance gromacs::mdrun mdrun
+./cpcc instance gromacs::mdrun_tune tune
 # activate the function instance
 ./cpcc activate 
 
@@ -23,15 +24,24 @@ fi
 ./cpcc connect grompp:out.tpr mdrun:in.tpr
 # set the grompp inputs
 ./cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro
-./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp
+#./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp
 ./cpcc set-file grompp:in.top  examples/mdrun-test/topol.top
-# 
-./cpcc set grompp:in.settings[0].name nsteps
-./cpcc set grompp:in.settings[0].value 10000
-./cpcc set grompp:in.settings[1].name integrator
-./cpcc set grompp:in.settings[1].value md
-# and commit this set of updates
 
+
+
+./cpcc set-file tune:in.conf examples/mdrun-test/conf.gro
+./cpcc set-file tune:in.mdp  examples/mdrun-test/grompp.mdp
+./cpcc set-file tune:in.top  examples/mdrun-test/topol.top
+# 
+./cpcc set tune:in.settings[0].name nsteps
+./cpcc set tune:in.settings[0].value 10000
+./cpcc set tune:in.settings[1].name integrator
+./cpcc set tune:in.settings[1].value md
+
+./cpcc connect tune:out.mdp grompp:in.mdp
+./cpcc connect tune:out.resources mdrun:in.resources
+
+#./cpcc set mdrun:in.resources.max.cores 4
 
 ./cpcc commit
 

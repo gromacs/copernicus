@@ -113,10 +113,14 @@ class CommandWorkerMatcher(object):
             platformMax = self.usePlatform.getMaxResource(rsrc.name)
             platformPref = self.usePlatform.getPrefResource(rsrc.name)
             cmdMinRsrc = cmd.getMinRequired(rsrc.name)
+            cmdMaxRsrc = cmd.getMaxAllowed(rsrc.name)
             if cmdMinRsrc is not None:
+                # the total amount of resources left on the current platform:
                 rsrcLeft = platformMax - rsrc.value
-                if (platformPref is not None and rsrcLeft>platformPref):
+                if platformPref is not None and rsrcLeft>platformPref:
                     value=platformPref
+                elif cmdMaxRsrc is not None and rsrcLeft>cmdMaxRsrc:
+                    value=cmdMaxRsrc
                 else:
                     value=rsrcLeft
                 # now we know how many
@@ -282,11 +286,14 @@ class SCCommandFinishedForward(ServerCommand):
                 cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
         
         task = cmd.getTask()
-        commands = task.run(cmd)
+        (newcmds, cancelcmds) = task.run(cmd)
             
         cmdQueue = serverState.getProjectList().getCmdQueue()
-        if commands is not None:
-            for cmd in commands:
+        if cancelcmds is not None:
+            for cmd in cancelcmds:
+                cmdQueue.remove(cmd)
+        if newcmds is not None:
+            for cmd in newcmds:
                 cmdQueue.add(cmd)
         
         #TODO handle persistence

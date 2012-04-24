@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <cpc>
+    <import name="resource" />
     <import name="gromacs" />
 
     <type id="conf_array" base="array" member-type="file" />
 
-    <type id="inp_trajectory" base="list">
+    <type id="inp_trajectory" base="record">
         <desc>Input trajectory data</desc>
         <field type="file" id="xtc">
             <desc>Input xtc compress trajectory</desc>
@@ -24,7 +25,7 @@
     <type id="desc_array" base="array" member-type="string" />
 
 
-    <type id="grompp_input" base="list">
+    <type id="grompp_input" base="record">
         <desc>Partial grompp input</desc>
         <field type="file" id="mdp" ><desc>A .mpp settings file</desc></field>
         <field type="file" id="top" ><desc>A .top topology file</desc></field>
@@ -40,7 +41,7 @@
     </type>
 
     <!-- output trajectories -->
-    <type id="trajectory" base="list">
+    <type id="trajectory" base="record">
         <desc>Output trajectory type</desc>
         <field type="file" id="xtc" >
             <desc>A .xtc output trajectory file</desc>
@@ -275,6 +276,12 @@
             <field type="build_msm_out_array" id="msm_out">
                 <desc>The array of MSM generation outputs</desc>
             </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resrources for a typical run</desc>
+            </field>
+            <field type="file" id="tuned_mdp">
+                <desc>The tuned mdp file.</desc>
+            </field>
         </subnet-inputs>
         <subnet-outputs>
             <field type="grompp_input" id="grompp_inp_gen_vel">
@@ -297,6 +304,15 @@
             <field type="build_msm_in_array" id="msm_in">
                 <desc>The array of MSM generation inputs</desc>
             </field>
+            <field type="int" id="n_running">
+                <desc>Number of simulations started</desc>
+            </field>
+            <field type="int" id="cluster_gen">
+                <desc>Number of clustering generations started</desc>
+            </field>
+            <!--<field type="int" id="processed_cluster_gen">
+                <desc>Number of clustering generations finished</desc>
+            </field>-->
         </subnet-outputs>
         <controller log="true" executable="msm" persistent_dir="true"
                     access_outputs="true" access_subnet_outputs="true" />
@@ -410,6 +426,9 @@
                 <desc>(automatically generated) description of the 
                        simulation</desc>
             </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for this run.</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="trajectory" id="trajectory">
@@ -436,6 +455,7 @@
             <!-- connections to mdrun -->
             <connection src="grompp:out.tpr" dest="mdrun:in.tpr" />
             <connection src="self:ext_in.priority" dest="mdrun:in.priority" />
+            <connection src="self:ext_in.resources" dest="mdrun:in.resources" />
             <connection src="self:ext_in.grompp_input.mdrun_cmdline_options" 
                         dest="mdrun:in.cmdline_options" />
 

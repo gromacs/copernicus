@@ -139,7 +139,11 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
                   "Directory containing local assets such as command output files",
                   True,
                   relTo='conf_dir')
-        
+
+
+        self._add('server_cores', -1,
+                  "Number of cores to use on the server (for OpenMP tasks).",
+                  userSettable=True, validation='\d+')
         
         dn=os.path.dirname(sys.argv[0])
         self.execBasedir = ''
@@ -221,6 +225,9 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         return int(self.conf['heartbeat_time'].get())
     def getHeartbeatFile(self):
         return self.getFile('heartbeat_file')
+
+    def getServerCores(self):
+        return int(self.conf['server_cores'].get())
  
     def setMode(self,mode):
         self.conf['mode'].set(mode)

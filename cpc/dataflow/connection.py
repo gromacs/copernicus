@@ -360,7 +360,7 @@ class Connection(object):
                                 str(self.dstIO.direction.isInSubnet())))
             if self.srcInstance is not None:
                 if self.srcIO.direction.isInput():
-                    raise ConnError("Trying to connect an output as source")
+                    raise ConnError("Trying to connect an input as source")
                 if self.srcIO.direction.isInSubnet():
                     if not self.srcInstance.getName() == keywords.Self:
                         raise ConnError("Trying to connect to non-self subnet")

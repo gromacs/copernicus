@@ -31,6 +31,7 @@ import subprocess
 import stat
 import threading
 
+import apperror
 import connection
 import value
 
@@ -56,7 +57,7 @@ class TransactionList(object):
         if self.autoCommit:
             self.commit(project, outf)
         else:
-            outf.write("Scheduled ")
+            outf.write("Scheduled to ")
             transactionItem.describe(outf)
             outf.write(" at commit")
 
@@ -129,11 +130,14 @@ class TransactionItem(object):
            outf =  a file object to write the description to"""
         pass
 
+class SetError(apperror.ApplicationError):
+    def __init__(self, name):
+        self.str="Assignment: %s not found"%(name)
 
 class Set(TransactionItem):
     """Transaction item for setting a value."""
-    def __init__(self, itemname, activeInstance, direction, ioItemList, 
-                 literal, sourceType):
+    def __init__(self, project, itemname, activeInstance, direction, 
+                 ioItemList, literal, sourceType, printName):
         """initialize based on the active instance, old value associated
            with the instance, and a new value."""
         #instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
@@ -144,14 +148,38 @@ class Set(TransactionItem):
         self.ioItemList=ioItemList
         self.literal=literal
         self.sourceType=sourceType
+        if printName is not None:
+            self.printName=printName
+        else:
+            self.printName=literal
+        with self.activeInstance.lock:
+            closestVal=self.activeInstance.findNamedInput(self.direction, 
+                                                          self.ioItemList, 
+                                                          project,
+                                                          True)
+        if closestVal is None:
+            raise SetError(itemname)
+
 
     def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
         """Get the affected items of this transaction"""
         ## there are no affected output AIs: only input AIs change.
         with self.activeInstance.lock:
+            closestVal=self.activeInstance.findNamedInput(self.direction, 
+                                                          self.ioItemList, 
+                                                          project,
+                                                          True)
+        self.activeInstance.getNamedInputAffectedAIs(closestVal, 
+                                                     affectedInputAIs)
+
+    def run(self, project, sourceTag, outf=None):
+        """Run the transaction item."""
+        ## there are no affected output AIs: only input AIs change.
+        with self.activeInstance.lock:
             oldVal=self.activeInstance.findNamedInput(self.direction, 
                                                       self.ioItemList, 
-                                                      project)
+                                                      project,
+                                                      False)
             # now we can extract the type.
             tp=oldVal.getType()
             if not isinstance(self.literal, value.Value):
@@ -164,31 +192,22 @@ class Set(TransactionItem):
                     raise ActiveError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
-        self.oldVal=oldVal
-        self.newVal=newVal
-        self.activeInstance.getNamedInputAffectedAIs(self.oldVal, self.newVal,
-                                                     affectedInputAIs)
-
-    def run(self, project, sourceTag, outf=None):
-        """Run the transaction item."""
-        self.activeInstance.stageNamedInput(self.oldVal, self.newVal, sourceTag)
+        self.activeInstance.stageNamedInput(oldVal, newVal, sourceTag)
         if outf is not None:
             outf.write("Set %s:%s to %s\n"%
                        (self.activeInstance.getCanonicalName(),
-                        self.oldVal.getFullName(),
-                        self.newVal.getDesc()))
+                        oldVal.getFullName(),
+                        newVal.getDesc()))
 
     def describe(self, outf):
         """Describe the item."""
-        outf.write("set %s: %s to %s"%
-                   (self.activeInstance.getCanonicalName(),
-                    self.itemname, self.literal))
+        outf.write("set %s to %s"%(self.itemname, self.printName))
 
 class Connect(TransactionItem):
     """Transaction item for connecting a value"""
     #def __init__(self, connection):
     #    self.connection=connection
-    def __init__(self, src, dst):
+    def __init__(self, project, src, dst):
         self.src=src
         self.dst=dst
 

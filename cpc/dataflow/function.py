@@ -65,12 +65,14 @@ class Function(description.Describable):
         self.name=name
 
         # the I/O items are types (lists)
-        self.inputs=vtype.ListType("%s:in"%self.name, vtype.listType, lib=lib)
-        self.outputs=vtype.ListType("%s:out"%self.name, vtype.listType, lib=lib)
-        self.subnetInputs=vtype.ListType("%s:sub-in"%self.name, 
-                                         vtype.listType, lib=lib)
-        self.subnetOutputs=vtype.ListType("%s:sub-out"%self.name, 
-                                          vtype.listType, lib=lib)
+        self.inputs=vtype.RecordType("%s:in"%self.name, 
+                                     vtype.recordType, lib=lib)
+        self.outputs=vtype.RecordType("%s:out"%self.name, 
+                                      vtype.recordType, lib=lib)
+        self.subnetInputs=vtype.RecordType("%s:sub-in"%self.name, 
+                                           vtype.recordType, lib=lib)
+        self.subnetOutputs=vtype.RecordType("%s:sub-out"%self.name, 
+                                            vtype.recordType, lib=lib)
         self.inputs.markImplicit()
         self.outputs.markImplicit()
         self.subnetInputs.markImplicit()
@@ -175,19 +177,19 @@ class Function(description.Describable):
 
 
     def getInputs(self):
-        """Get a list of all inputs."""
+        """Get a the type of all inputs."""
         return self.inputs
 
     def getOutputs(self):
-        """Get a list of all outputs."""
+        """Get a the type of all outputs."""
         return self.outputs
 
     def getSubnetInputs(self):
-        """Get a list of all subnet inputs."""
+        """Get a the type of all subnet inputs."""
         return self.subnetInputs
 
     def getSubnetOutputs(self):
-        """Get a list list of all subnet outputs."""
+        """Get a the type of all subnet outputs."""
         return self.subnetOutputs
 
     def getSubnet(self):

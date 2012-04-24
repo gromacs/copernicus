@@ -32,7 +32,9 @@ class CpcError(Exception):
 class CpcXMLError(CpcError):
     """Base Copernicus XML exception class."""
     def __init__(self, msg, locator):
-        self.str = "line %d, column %d: %s"%(locator.getLineNumber(), \
-                                             locator.getColumnNumber(), msg)
-
+        if locator is not None:
+            self.str = "line %d, column %d: %s"%(locator.getLineNumber(), \
+                                                 locator.getColumnNumber(), msg)
+        else:
+            self.str = msg
 

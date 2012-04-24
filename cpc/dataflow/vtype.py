@@ -295,8 +295,8 @@ class FileType(Type):
         return self.mimeType
 
 
-class ListMember(description.Describable):
-    """Class containing information about a list member."""
+class RecordMember(description.Describable):
+    """Class containing information about a record member."""
     def __init__(self, tp, name, opt=False, const=False):
         """Initialize based on type, name, description.
            tp = the type
@@ -317,70 +317,70 @@ class ListMember(description.Describable):
         return self.const
 
 
-class ListType(Type):
-    """Base class describing a named list."""
+class RecordType(Type):
+    """Base class describing a named list with fixed membership."""
     def __init__(self, name, parent, lib=None):
         Type.__init__(self, name, parent, lib=lib)
         self.compound=True
-        self.listMembers=OrderedDict()  #ordered dict of ListMembers
+        self.recordMembers=OrderedDict()  #ordered dict of RecordMembers
     def hasMembers(self):
         """Returns whether the type has member variables"""
-        if self.parent.isSubtype(listType) and self.parent.hasMembers():
+        if self.parent.isSubtype(recordType) and self.parent.hasMembers():
             return True
-        return len(self.listMembers) > 0
+        return len(self.recordMembers) > 0
     def getMemberKeys(self):
-        """Get a list with the members keys of the list."""
-        if self.parent.isSubtype(listType) and self.parent.hasMembers():
+        """Get a list with the member keys of the record."""
+        if self.parent.isSubtype(recordType) and self.parent.hasMembers():
             ret=self.parent.getMemberKeys()
         else:
             ret=[]
-        ret.extend(self.listMembers.keys())
+        ret.extend(self.recordMembers.keys())
         return ret
     def getMember(self, name):
         """Get a specific member type."""
-        if name in self.listMembers:
-            return self.listMembers[name].type
+        if name in self.recordMembers:
+            return self.recordMembers[name].type
         return self.parent.getMember(name)
-    def getListMember(self, name):
-        """Get a specific ListMember object"""
-        if name in self.listMembers:
-            return self.listMembers[name]
-        return self.parent.listMembers[name]
-    def copyMembers(self, listType):
-        """Set the members of the list according to a another list type."""
-        for name, mem in listType.listMembers.iteritems():
-            self.listMembers[name] = copy.copy(mem)
+    def getRecordMember(self, name):
+        """Get a specific RecordMember object"""
+        if name in self.recordMembers:
+            return self.recordMembers[name]
+        return self.parent.recordMembers[name]
+    def copyMembers(self, recordType):
+        """Set the members of the record according to a another record type."""
+        for name, mem in recordType.recordMembers.iteritems():
+            self.recordMembers[name] = copy.copy(mem)
     def hasMember(self, name):
         """Return whether the member with name 'name' exists."""
-        if name in self.listMembers:
+        if name in self.recordMembers:
             return True
-        if self.parent.isSubtype(listType):
+        if self.parent.isSubtype(recordType):
             return self.parent.hasMember(name) 
     def addMember(self, name, type, opt, const):
-        """Add/override a new member to the list.
+        """Add/override a new member to the record.
            opt = whether the member is optional
            const = hwehter the member is const"""
-        if name in self.listMembers:
-            self.listMembers[name].type=type
-            self.listMembers[name].opt=opt
-            self.listMembers[name].const=const
+        if name in self.recordMembers:
+            self.recordMembers[name].type=type
+            self.recordMembers[name].opt=opt
+            self.recordMembers[name].const=const
         else:
-            self.listMembers[name]=ListMember(type, name, opt, const)
+            self.recordMembers[name]=RecordMember(type, name, opt, const)
     def addDescription(self, name, desc):
-        """Add a description of a member to the list"""
+        """Add a description of a member to the record"""
         self.descs[name]=desc
     def getMemberDesc(self, name):
         """Get a specific member description."""
-        return self.listMembers[name].desc
+        return self.recordMembers[name].desc
     def setMemberDesc(self, name, desc):
         """Get a specific member description."""
-        self.listMembers[name].desc=desc
+        self.recordMembers[name].desc=desc
 
     def writePartsXML(self, outf, indent=0):
         """Write the xml of the constituent parts of the type for compound
             types."""
         indstr=cpc.util.indStr*indent
-        for name, mem in self.listMembers.iteritems():
+        for name, mem in self.recordMembers.iteritems():
             tp=mem.type
             if tp.lib is None:
                 tpname=tp.name
@@ -417,7 +417,7 @@ class ListType(Type):
     def containsBasetype(self, basetype):
         """Check whether the type or one of its members contains an instance
            of basetype."""
-        for subtype in self.listMembers.itervalues():
+        for subtype in self.recordMembers.itervalues():
             if subtype.type.containsBasetype(basetype):
                 return True
         return False
@@ -532,7 +532,7 @@ floatType    = FloatType("float", valueType)
 stringType  = StringType("string", valueType)
 fileType    = FileType("file", valueType)
 # compound types
-listType    = ListType("list", valueType)
+recordType    = RecordType("record", valueType)
 arrayType   = ArrayType("array", valueType, valueType)
 dictType    = ArrayType("dict", valueType, valueType)
 
@@ -542,7 +542,7 @@ boolType.builtin=True
 intType.builtin=True
 floatType.builtin=True
 stringType.builtin=True
-listType.builtin=True
+recordType.builtin=True
 arrayType.builtin=True
 dictType.builtin=True
 
@@ -556,11 +556,11 @@ basicTypes = { valueType.getName() : valueType,
                floatType.getName() : floatType,
                stringType.getName() : stringType,
                fileType.getName() : fileType,
-               listType.getName() : listType,
+               recordType.getName() : recordType,
                arrayType.getName() : arrayType,
                dictType.getName() : dictType }
 
 basicTypeList = [valueType,  nullType,  boolType, intType,  floatType,
-                 stringType, fileType, listType, arrayType, dictType ]
+                 stringType, fileType, recordType, arrayType, dictType ]
 
 

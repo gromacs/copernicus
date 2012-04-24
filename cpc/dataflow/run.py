@@ -308,6 +308,8 @@ class FunctionRunOutput(object):
         self.newInstances=None
         #newConnections = a list of new connections to make in the subnet
         self.newConnections=None
+        # whether to cancel all existing commands.
+        self.cancelCmds=False
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
@@ -355,6 +357,10 @@ class FunctionRunOutput(object):
             self.cmds=[]
         self.cmds.append(cmd)
 
+    def cancelPrevCommands(self):
+        """Cancel any previous commands."""
+        self.cancelCmds=True
+
     def writeXML(self, outf, indent=0):
         """Write the contents of this object in XML form to a file."""
         indstr=cpc.util.indStr*indent
@@ -386,8 +392,12 @@ class FunctionRunOutput(object):
             for conn in self.newConnections:
                 conn.writeXML(outf, indent+2)
             outf.write('%s</new-connections>\n'%iindstr)
-        if self.cmds is not None and len(self.cmds)>0:
-            outf.write('%s<commands>\n'%iindstr)
+        if self.cmds is not None and len(self.cmds)>0 or self.cancelCmds:
+            if self.cancelCmds:
+                cancelStr='cancel_prev="1"'
+            else:
+                cancelStr=''
+            outf.write('%s<commands %s>\n'%(iindstr, cancelStr))
             for cmd in self.cmds:
                 self.cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
@@ -506,10 +516,10 @@ class DictValue(value.Value):
         value.Value.__init__(self, None, vtype.dictType)
         self.value=val
 
-class ListValue(value.Value):
-    """OutValue for lists. Assumes a dict of Values"""
+class RecordValue(value.Value):
+    """OutValue for records. Assumes a dict of Values"""
     def __init__(self, val):
-        value.Value.__init__(self, None, vtype.listType)
+        value.Value.__init__(self, None, vtype.recordType)
         if val is not None:
             self.value=val
         else:
@@ -640,14 +650,14 @@ class IOReader(xml.sax.handler.ContentHandler):
             if (self.section != IOReader.none) or not self.isInput:
                 raise IOReaderError("Misplaced inputs tag", self)
             self.section=IOReader.inputs
-            val=value.Value(None, vtype.listType)
+            val=value.Value(None, vtype.recordType)
             self.setValueReader(value.ValueReader(self.filename, val,
                                                   allowUnknownTypes=True), name)
         elif name == "subnet-inputs":
             if (self.section != IOReader.none) or not self.isInput:
                 raise IOReaderError("Misplaced subnet-inputs tag", self)
             self.section=IOReader.subnetInputs
-            val=value.Value(None, vtype.listType)
+            val=value.Value(None, vtype.recordType)
             self.setValueReader(value.ValueReader(self.filename, val,
                                                   allowUnknownTypes=True), name)
         elif name == "outputs":
@@ -656,7 +666,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.section=IOReader.outputs
             if self.isInput:
                 # read it in as a value
-                val=value.Value(None, vtype.listType)
+                val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
                                                       allowUnknownTypes=True), 
                                     name)
@@ -667,7 +677,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.section=IOReader.subnetOutputs
             if self.isInput:
                 # read it in as a value
-                val=value.Value(None, vtype.listType)
+                val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
                                                       allowUnknownTypes=True), 
                                     name)
@@ -685,8 +695,14 @@ class IOReader(xml.sax.handler.ContentHandler):
             if (self.section != IOReader.none): 
                 raise IOReaderError("Misplaced commands tag", self)
             self.section=IOReader.cmd
+            cancel=cpc.util.getBooleanAttribute(attrs,"cancel_prev")
+            if cancel:
+                if self.out is not None:
+                    self.out.cancelPrevCommands()
+                else:
+                    raise IOReaderError("Can't cancel commands in input", self)
             if self.cmdReader is not None:
-                self.cmdReader=cpc.sercer.command.CommandReader()
+                self.cmdReader=cpc.server.command.CommandReader()
         elif name == "value":
             if not attrs.has_key('id'):
                 raise IOReaderError("no id for value", self)

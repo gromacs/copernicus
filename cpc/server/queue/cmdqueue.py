@@ -77,6 +77,23 @@ class CmdQueue():
             dq.append(command)
             ret=True
         return ret
+
+
+    def remove(self, cmd):
+        """Remove a specific command.
+           NOTE: this is an O(N) operation for N=number of items in the queue"""
+        nremoved=0
+        with self.lock:
+            for dq in self.queue:
+                n=len(dq)
+                for i in range(n):
+                    if dq[0] == cmd:
+                        nremoved+=1
+                        dq.popleft()
+                    else:
+                        dq.rotate(-1)
+                if nremoved > 0:
+                    return
        
     def get(self):
         """ description: gets a single element with the highest priority from 
@@ -161,6 +178,8 @@ class CmdQueue():
                     else:
                         dq.rotate(-1)     
         return nremoved
+
+
 
     #Helper function for unit tests
     def indexOfCommand(self,command):

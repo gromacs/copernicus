@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ ! -e examples/msm-test/equil0.gro ]; then
+    echo "This example script must be run from within the copernicus base       directory"
+    exit 1
+fi
+
+
 
 ./cpcc start test
 ./cpcc import msm
@@ -8,6 +14,7 @@
 # and start the function instance
 ./cpcc activate
 
+./cpcc transact
 # set its values. 
 # Descriptions can be obtained with cpcc info msm::msm_mgx_adaptive
 ./cpcc setf msm:in.grompp.top examples/msm-test/topol.top

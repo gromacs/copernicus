@@ -148,7 +148,7 @@ class Value(object):
                 oval=val.value
                 valtp=val.type
                 self.updated=val.updated
-            if self.type.isSubtype(vtype.listType):
+            if self.type.isSubtype(vtype.recordType):
                 # create all list elements as sub-values
                 self.value=dict()
                 mems=self.type.getMemberKeys()
@@ -240,26 +240,33 @@ class Value(object):
         return subVal.hasSubValue(itemList[1:])
 
     def getSubValue(self, itemList, create=False, createType=None, 
-                    setCreateSourceTag=None):
+                    setCreateSourceTag=None, closestValue=False):
         """Get or create (if create==True) a specific subvalue through a 
            list of subitems, or return None if not found.
            
            If create==true, a subitem will be created for arrays/dicts
            if createType == a type, a subitem will be created with the given 
                             type
-           if markupdated = true, any created item will be marked as updated"""
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created.
+           if closestValue is true, the closest relevant value will be
+                                    returned """
 
+        #log.debug("getSubValue on on %s"%(self.getFullName()))
         if len(itemList)==0:
             return self
         # now get the first subitem
         if not (isinstance(self.value,dict) or isinstance(self.value,list)):
-            #raise ValError("Trying to find sub-item in base value.")
+            #raise ValError("Trying to find sub-item in primitive value.")
             return None
         if isinstance(self.value, list):
             if self.type.isSubtype(vtype.arrayType):
                 if (itemList[0] == "+") or (len(self.value) == itemList[0]):
                     if not create:
-                        return None
+                        if closestValue:
+                            return self
+                        else:
+                            return None
                     # choose the most specific type
                     ntp=self.type.getMembers()
                     if createType is not None and createType.isSubtype(ntp):
@@ -270,24 +277,26 @@ class Value(object):
                                       setCreateSourceTag)
                     self.value.append(nval)
                 elif (itemList[0] > len(self.value)):
-                    return None
+                    # the list is too long, but in the context of a transaction
+                    # might be OK
+                    if closestValue:
+                        return self
+                    else:
+                        return None
             else:
                 raise ValError("Array type not a list.")
         else:
             if itemList[0] not in self.value:
                 #log.debug("%s not in %s"%(itemList[0], self.value))
                 if not create:
+                    if closestValue:
+                        if ( (createType is not None) or 
+                             (self.type.isSubtype(vtype.dictType) ) ):
+                            # only return a closest value if we can actually
+                            # create one if needed.
+                            return self
                     return None
                 else:
-                    #if self.type.isSubtype(vtype.arrayType):
-                    #    # choose the most specific type
-                    #    ntp=self.type.getMembers()
-                    #    if createType is not None:
-                    #        if createType.isSubtype(ntp):
-                    #            ntp=createType
-                    #    # and make it
-                    #    self.value[itemList[0]] = self._create(None, ntp, 
-                    #                                           itemList[0])
                     if self.type.isSubtype(vtype.dictType):
                         # choose the most specific type
                         ntp=self.type.getMembers()
@@ -295,7 +304,7 @@ class Value(object):
                             if createType.isSubtype(ntp):
                                 ntp=createType
                         # and make it
-                        nval=self._create(None, npt, itemList[0], 
+                        nval=self._create(None, ntp, itemList[0], 
                                           setCreateSourceTag)
                         self.value[itemList[0]] = nval
                     else:
@@ -307,9 +316,11 @@ class Value(object):
                             self.value[itemList[0]] = nval
                         else:
                             return None
+        # try to find the child value
         subVal=self.value[itemList[0]]
         return subVal.getSubValue(itemList[1:], create=create, 
-                                  setCreateSourceTag=setCreateSourceTag)
+                                  setCreateSourceTag=setCreateSourceTag,
+                                  closestValue=closestValue)
 
     def getSubType(self, itemList):
         """Determine the type of a sub-item (even if it doesn't exist yet)."""
@@ -331,13 +342,13 @@ class Value(object):
                 except vtype.TypeErr:
                     return None
                 return stp
-            elif self.type.isSubtype(vtype.listType):
+            elif self.type.isSubtype(vtype.recordType):
                 return None # we don't know what it is
         return self.value[itemList[0]].getSubType(itemList[1:])
 
     def getSubValueList(self):
         """Return a list of addressable subvalues."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
             return self.val.keys()
@@ -348,7 +359,7 @@ class Value(object):
 
     def getSubValueIterList(self):
         """Return an iterable list of addressable subvalues."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
             return self.val.iterkeys()
@@ -360,16 +371,16 @@ class Value(object):
     def haveAllRequiredValues(self):
         """Return a boolean indicating whether this value and all of its
            subvalues are present (if they're not optional)."""
-        if self.type.isSubtype(vtype.listType):
+        if self.type.isSubtype(vtype.recordType):
             kv=self.type.getMemberKeys()
             for item in kv:
-                if not self.type.getListMember(item).opt:
+                if not self.type.getRecordMember(item).opt:
                     if (not item in self.value) or (self.value[item].value 
                                                     is None):
                         return False
                     if not self.value[item].haveAllRequiredValues():
                         return False
-                    #if self.value[item].type.isSubtype(vtype.listType):
+                    #if self.value[item].type.isSubtype(vtype.recordType):
                     #    # check whether it's a list: then check the list
                     #elif (isinstance(self.value[item].value, list) or
                     #      isinstance(self.value[item].value, dict)):
@@ -398,7 +409,7 @@ class Value(object):
             parentName=self.parent.getFullName()
             if parentName is None:
                 parentName=""
-            if self.parent.basetype == vtype.listType:
+            if self.parent.basetype == vtype.recordType:
                 return "%s.%s"%(parentName, self.selfName)
             elif (self.parent.basetype == vtype.dictType or
                   self.parent.basetype == vtype.arrayType):
@@ -562,7 +573,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
     """XML reader for values."""
     def __init__(self, filename, startValue, importList=None, 
                  currentImport=None, implicitTopItem=True,
-                 allowUnknownTypes=False, valueType=Value):
+                 allowUnknownTypes=False, valueType=Value,
+                 sourceTag=None):
         """Initialize based on
            filename = the filename to report in error messages
            importList = the ImportList object of the project. If None, 
@@ -572,7 +584,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
            implicitTopItem = whether the top item of the start value is 
                              implicit.
            allowUnknownTypes = whether to allow unknown list types
-           valueType = the value class to allocate if startValue is none"""
+           valueType = the value class to allocate if startValue is none
+           sourceTag =  the source tag to set"""
         self.value=startValue
         self.valueType=valueType
         self.importList=importList
@@ -590,6 +603,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
             self.lastDepth=0
         self.loc=None
         self.allowUnknownTypes = allowUnknownTypes
+        self.sourceTag=sourceTag
 
     def setDocumentLocator(self, locator):
         self.loc=locator
@@ -635,7 +649,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                         if self.allowUnknownTypes:
                             createType=tp
                         subVal=subVal.getSubValue([itemStackAdd], create=True,
-                                                  createType=createType)
+                                            createType=createType,
+                                            setCreateSourceTag=self.sourceTag)
                         if subVal is None:
                             raise ValXMLError("Did not find field '%s'"%
                                               attrs.getValue('field'), self)
@@ -645,7 +660,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 elif 'subitem' in attrs:
                     # this is a single, directly addressed sub-item
                     subitems=vtype.parseItemList(attrs.getValue('subitem'))
-                    subVal=subVal.getSubValue(subitems, create=True)
+                    subVal=subVal.getSubValue(subitems, create=True,
+                                              setCreateSourceTag=self.sourceTag)
                 elif ( len(self.typeStack) > 0 and 
                        (self.typeStack[-1] == vtype.arrayType) ):
                     itemStackAdd=self.subCounters[self.depth]
@@ -653,7 +669,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     if self.allowUnknownTypes:
                         createType=tp
                     subVal=subVal.getSubValue([itemStackAdd], create=True,
-                                              createType=createType)
+                                              createType=createType,
+                                              setCreateSourceTag=self.sourceTag)
             else:
                 # this is the top-level value
                 self.value=self.valueType(None, tp)
@@ -684,7 +701,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 updated=cpc.util.getBooleanAttribute(attrs, "updated")
                 if updated:
                     subVal.markUpdated(updated)
-                    #subVal.updated=updated
+            subVal.sourceTag=self.sourceTag
             self.lastDepth=self.depth
             self.depth+=1
             self.typeStack.append(basicType)

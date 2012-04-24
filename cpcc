@@ -40,29 +40,30 @@ def print_usage():
     print "Usage: cpcc [global-options] <command> [command-options]"
     print 
     print "Project start & stop commands:"
+    print "       cpcc projects|p"
     print "       cpcc start       projectname"
     print "       cpcc remove|rm   projectname"
     print "       cpcc set-default projectname"
     print 
     print "Project query commands."
-    print "       cpcc list|ls  [-p projectname] [instance_name]"
-    print "       cpcc get      [-p projectname] inst:in|out.ioname"
-    print "       cpcc getf     [-p projectname] [-f filename] inst:in|out.ioname "
-    print "       cpcc info     [-p projectname] function_name|module_name"
-    print "       cpcc log      [-p projectname] instance_name"
-    print "       cpcc activate [-p projectname] [item]"
-    print "       cpcc projects|p"
+    print "       cpcc list|ls     [-p projectname] [instance_name]"
+    print "       cpcc get         [-p projectname] inst:in|out.ioname"
+    print "       cpcc getf        [-p projectname] [-f filename] inst:in|out.ioname "
+    print "       cpcc info        [-p projectname] function_name|module_name"
+    print "       cpcc log         [-p projectname] instance_name"
     print 
     print "Project manipulation commands."
-    print "       cpcc import   [-p projectname] modulename"
-    print "       cpcc instance [-p projectname] function_name instance_name"
-    print "       cpcc connect  [-p projectname] inst:out.item inst:in.item"
-    print "       cpcc set      [-p projectname] inst:in.ioname value"
-    print "       cpcc setf     [-p projectname] inst:in.ioname filename"
-    print "       cpcc transact [-p projectname]"
-    print "       cpcc commit   [-p projectname]"
-    print "       cpcc rollback [-p projectname]"
-    print "       cpcc upload   [-p projectname] upload.xml"
+    print "       cpcc import      [-p projectname] modulename"
+    print "       cpcc instance    [-p projectname] function_name instance_name"
+    print "       cpcc activate    [-p projectname] [item]"
+    print "       cpcc deactivate  [-p projectname] [item]"
+    print "       cpcc connect     [-p projectname] inst:out.item inst:in.item"
+    print "       cpcc set         [-p projectname] inst:in.ioname value"
+    print "       cpcc setf        [-p projectname] inst:in.ioname filename"
+    print "       cpcc transact    [-p projectname]"
+    print "       cpcc commit      [-p projectname]"
+    print "       cpcc rollback    [-p projectname]"
+    print "       cpcc upload      [-p projectname] upload.xml"
     print "       cpcc clear-error [-p projectname] [item]"
     print 
     print "Worker and heartbeat monitoring commands."
@@ -211,7 +212,7 @@ try:
         clnt=ClientMessage()
         renderMethod = CmdLine.listProjects
         ProcessedResponse(clnt.projectsRequest()).pprint(renderMethod)
-    elif cmd == "project-set-default":
+    elif cmd == "set-default":
         project=getArg(args, 1, "project name")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetDefaultRequest(project)).pprint()
@@ -261,6 +262,14 @@ try:
             item=""
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectActivateRequest(project, item)).pprint()
+    elif cmd == "deactivate" or cmd == "hold":
+        project, pargs = getProjectArgs(args)
+        if len(pargs) > 1:
+            item=getArg(pargs, 1, "project item to list")
+        else:
+            item=""
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectHoldRequest(project, item)).pprint()
     elif cmd == "clear-error":
         project, pargs = getProjectArgs(args)
         if len(pargs) > 1:
@@ -321,8 +330,6 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, value,
                                                  None)).pprint()
-        #if not commit:
-        #    print "Use cpcc commit to perform this assignment"
     elif cmd == "set-file" or cmd == "setf":
         project, pargs = getProjectArgs(args)
         item=getArg(pargs, 1, "name of input item to set")
@@ -330,8 +337,6 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetRequest(project, item, None,
                                                  filename)).pprint()
-        #if not commit:
-        #    print "Use cpcc commit to perform this assignment"
     elif cmd == "transact":
         project, pargs = getProjectArgs(args)
         clnt=ClientMessage()
@@ -359,19 +364,11 @@ try:
                                                          name)).pprint()
     elif cmd == "connect":
         project, pargs = getProjectArgs(args)
-        if pargs[1] == "-c":
-            commit=True
-            src=getArg(pargs, 2, "connection source")
-            dst=getArg(pargs, 3, "connection destination")
-        else:
-            commit=False
-            src=getArg(pargs, 1, "connection source")
-            dst=getArg(pargs, 2, "connection destination")
+        src=getArg(pargs, 1, "connection source")
+        dst=getArg(pargs, 2, "connection destination")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectConnectRequest(project, 
                                                      src, dst)).pprint()
-        if not commit:
-            print "Use cpcc commit to perform this connection"
     elif cmd == "init-default-server":
         cf.setClientHost(getArg(1, "server name"))
         print args[1] + " is now set as default server"
