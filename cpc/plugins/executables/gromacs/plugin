@@ -7,6 +7,8 @@ import sys
 def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     # try and report on a gromacs command. Assumes the '-version' flag
     # works
+    par=None
+    version=None
     try:
         np=subprocess.Popen([cmd, "-version"], stdin=None, 
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -16,25 +18,27 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
             if re.match(r"Version", line):
                 version=re.sub(r'.*([0-9][.][0-9]*[.][0-9]*).*', r'\1',
                                line.split()[-1])
-        if par == "thread_mpi":
-            outf.write(
-                '<executable name="gromacs/%s" platform="smp" arch="" version="%s">\n'%
-                (name, version))
-            if isMdrun:
-                nopts="%s -nt $NCORES"%(opts)
-            else:
-                nopts=opts
-            outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
-                       (cmd, nopts))
-            outf.write('</executable>\n')
-        elif par == "mpi" or par == "MPI":
-            outf.write(
-                '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
-                (name, version))
-            outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
-                       (cmd, opts))
-            outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
-            outf.write('</executable>\n')
+        np.communicate(None)
+        if np.returncode == 0:
+            if par == "thread_mpi":
+                outf.write(
+                    '<executable name="gromacs/%s" platform="smp" arch="" version="%s">\n'%
+                    (name, version))
+                if isMdrun:
+                    nopts="%s -nt $NCORES"%(opts)
+                else:
+                    nopts=opts
+                outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
+                           (cmd, nopts))
+                outf.write('</executable>\n')
+            elif par == "mpi" or par == "MPI":
+                outf.write(
+                    '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
+                    (name, version))
+                outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
+                           (cmd, opts))
+                outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
+                outf.write('</executable>\n')
         return True
     except OSError:
         return False
