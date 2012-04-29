@@ -138,7 +138,7 @@ def matchCommandWorker(matcher, command):
     # whether to use this command: make sure we only have a single type
     use=False
     execID=matcher.getExecID(command)
-    log.debug('exec id is %s'%execID)
+    log.log(cpc.util.log.TRACE,'exec id is %s'%execID)
     if execID is not None:
         use=matcher.checkType(command.getTask().getFunctionName())
     if use:

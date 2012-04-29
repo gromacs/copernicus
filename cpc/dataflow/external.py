@@ -121,7 +121,7 @@ class ExternalFunction(atomic.AtomicFunction):
         # construct full argument list
         nargs=[ self.fullpath ]
 
-        log.debug(outs.getvalue())
+        log.log(cpc.util.log.TRACE,outs.getvalue())
 
         proc=subprocess.Popen(nargs,
                               stdin=subprocess.PIPE,
