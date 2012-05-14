@@ -35,7 +35,7 @@ import cpc.server.message
 
 # Default daemon parameters.
 # File mode creation mask of the daemon.
-server_umask = 0
+# server_umask = 022
 # Default working directory for the daemon.
 server_workdir = "/"
 # maximum file descriptor
@@ -191,7 +191,7 @@ def forkAndRun(conf, debugMode=None):
             # go to the root directory to  make sure we're not interfering
             # with unmount fses etc.
             os.chdir(server_workdir)
-            os.umask(server_umask)
+            #os.umask(server_umask)
         else:
             # we don't want to doubly flush stuff, so we use _exit().
             os._exit(0)
