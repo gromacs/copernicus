@@ -131,6 +131,33 @@ def grompp_multi(inp):
     return out
      #pers.write()
 
+def mdrun_multi(inp):
+    if inp.testing():
+    # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("trjcat -version")
+        cpc.util.plugin.testCommand("eneconv -version")
+        cpc.util.plugin.testCommand("gmxdump -version")
+        return
+
+    arr_tpr = inp.getInput("tpr")
+    out = inp.getFunctionOutput()
+    for i in range(len(arr_tpr)):
+        out.addInstance("mdrun_%d"%i,"mdrun")
+        out.addConnection("self:ext_in.tpr[%d]"%i,"mdrun_%d:in.tpr"%i)
+        out.addConnection("self:ext_in.priority[%d]"%i,"mdrun_%d:in.priority"%i)
+        out.addConnection("self:ext_in.cmdline_options[%d]"%i,"mdrun_%d:in.cmdline_options"%i)
+
+        out.addConnection("mdrun_%d:out.conf"%i,"self:ext_out.result[%d].conf"%i)
+        out.addConnection("mdrun_%d:out.stderr"%i,"self:ext_out.result[%d].stderr"%i)
+        out.addConnection("mdrun_%d:out.stdout"%i,"self:ext_out.result[%d].stdout"%i)
+        out.addConnection("mdrun_%d:out.xtc"%i,"self:ext_out.result[%d].xtc"%i)
+        out.addConnection("mdrun_%d:out.trr"%i,"self:ext_out.result[%d].trr"%i)
+        out.addConnection("mdrun_%d:out.edr"%i,"self:ext_out.result[%d].edr"%i)
+
+    return out
+
+
+
 
 def grompp(inp):
     if inp.testing(): 
