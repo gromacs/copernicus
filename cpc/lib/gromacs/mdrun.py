@@ -123,8 +123,9 @@ def grompp_multi(inp):
         out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
         out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
 
-        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d].tpr"%i)
-        out.addConnection("grompp_%d:out.stdout"%i, "self:ext_out.result[%d].stdout"%i)
+        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
+#        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d].tpr"%i)
+#        out.addConnection("grompp_%d:out.stdout"%i, "self:ext_out.result[%d].stdout"%i)
 
 #connect mdp top and conf to this grompp instance!
 
@@ -220,8 +221,10 @@ def mdrun(inp):
     rsrc=Resources(inp.getInputValue("resources"))
     rsrcFilename=os.path.join(persDir, 'rsrc.dat')
     # check whether we need to reinit
-    if inp.cmd is None and inp.getInputValue('tpr').isUpdated():
-        # there was no previous command. 
+
+    #if inp.cmd is None and inp.getInputValue('tpr').isUpdated():
+    if inp.cmd is None:
+        # there was no previous command.
         # purge the persistent directory, by moving the confout files to a
         # backup directory
         log.debug("Initializing mdrun")

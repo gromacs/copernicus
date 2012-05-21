@@ -77,9 +77,12 @@
             </field>
         </inputs>
         <outputs>
-            <field type="out-grompp-multi-array" id="result">
-                <desc>the tpr file for mdrun and stdout out generated during grompp</desc>
+            <field type="tpr-array" id="result">
+            <desc>the tpr file for mdrun</desc>
             </field>
+            <!--<field type="out-grompp-multi-array" id="result">-->
+                <!--<desc>the tpr file for mdrun and stdout out generated during grompp</desc>-->
+            <!--</field>-->
         </outputs>
         <controller function="cpc.lib.gromacs.grompp_multi"
                     import="cpc.lib.gromacs"
