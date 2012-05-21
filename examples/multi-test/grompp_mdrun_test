@@ -23,11 +23,22 @@ fi
 #./cpcc connect grompp:out.tpr mdrun:in.tpr
 # set the grompp inputs
 
-./cpcc connect grompp_multi:out.result.tpr mdrun_multi:in.tpr
+./cpcc connect grompp_multi:out.result mdrun_multi:in.tpr
 #NOTE WE CAN LOOP OVER THIS
 ./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
 ./cpcc set-file grompp_multi:in.mdp[+]  examples/multi-test/grompp.mdp
 ./cpcc set-file grompp_multi:in.top[+]  examples/multi-test/topol.top
+
+
+./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
+./cpcc set-file grompp_multi:in.mdp[+]  examples/multi-test/grompp.mdp
+./cpcc set-file grompp_multi:in.top[+]  examples/multi-test/topol.top
+
+./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
+./cpcc set-file grompp_multi:in.mdp[+]  examples/multi-test/grompp.mdp
+./cpcc set-file grompp_multi:in.top[+]  examples/multi-test/topol.top
+
+
 # 
 
 #NOTE these ones cannot be set with +
