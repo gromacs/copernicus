@@ -5,6 +5,22 @@
 
     <type id="grompp-include-array" base="array" member-type="file" />
 
+    <type id="out-grompp-multi" base="record">
+        <desc>tpr file</desc>
+        <field type="file" id="tpr">
+            <desc>generated tpr file</desc>
+        </field>
+        <field type="file" id="stdout">
+            <desc>log file </desc>
+        </field>
+    </type>
+
+    <type id="mdp-file-array" base="array" member-type="file" />
+    <type id="conf-array" base="array" member-type="file" />
+    <type id="top-array" base="array" member-type="file" />
+    <type id="ndx-array" base="array" member-type="file" />
+    <type id="out-grompp-multi-array" base="array" member-type="out-grompp-multi" />
+
     <!-- individual settings -->
     <type id="setting" base="record">
         <desc>An individual grompp mdp setting</desc>
@@ -14,6 +30,38 @@
     <type id="mdp-array" base="array" member-type="setting">
         <desc>An array of grompp mdp settings</desc>
     </type>
+
+
+
+    <function id="grompp_multi" type="python-extended">
+        <desc>can handle multiple input files</desc>
+        <inputs>
+            <field type="conf-array" id="conf">
+                <desc>An array of .gro configuration files</desc>
+            </field>
+            <field type="mdp-file-array" id="mdp" >
+                <desc>An array of .mdp settings files</desc>
+            </field>
+            <field type="top-array" id="top" >
+                <desc>An array of .top topology files</desc>
+            </field>
+            <field type="ndx-array" id="ndx" opt="true">
+                <desc>An array of .ndx index files</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="out-grompp-multi-array" id="result">
+                <desc>the tpr file for mdrun and stdout out generated during grompp</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.grompp_multi"
+                    import="cpc.lib.gromacs"
+                    log="true" persistent_dir="true"
+                    access_outputs="true"
+                />
+    </function>
+
+
 
     <function id="grompp" type="python-extended">
         <desc>The gromacs pre-processor: prepares run files for mdrun</desc>
