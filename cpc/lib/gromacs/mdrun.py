@@ -103,7 +103,6 @@ def procSettings(inp, outMdpDir):
         return mdpfile
 
 def grompp_multi(inp):
-    #print "IIIIMAN"
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("grompp -version")
@@ -120,12 +119,12 @@ def grompp_multi(inp):
     for i in range(len(arr_mdp)):
 
         out.addInstance("grompp_%d"%i, "grompp")
-        out.addConnection("self:in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
-        out.addConnection("self:in.top[%d]"%i, "grompp_%d:in.top"%i)
-        out.addConnection("self:in.conf[%d]"%i, "grompp_%d:in.conf"%i)
+        out.addConnection("self:ext_in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
+        out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
+        out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
 
-        out.addConnection("grompp_%d:out.tpr"%i, "self:out.result[%d].tpr"%i)
-        out.addConnection("grompp_%d:out.stderr"%i, "self:out.result[%d].stderr"%i)
+        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d].tpr"%i)
+        out.addConnection("grompp_%d:out.stdout"%i, "self:ext_out.result[%d].stdout"%i)
 
 #connect mdp top and conf to this grompp instance!
 
