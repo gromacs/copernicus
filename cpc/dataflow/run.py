@@ -109,6 +109,8 @@ class FunctionRunInput(object):
         retv=self.inputs.getSubValue(items)
         return retv
 
+    def getInputNames(self):
+        return vtype.parseItemList(" ")
     def isInputUpdated(self, itemname):
         """Check whether a particular subnet input has been updated."""
         items=vtype.parseItemList(itemname)

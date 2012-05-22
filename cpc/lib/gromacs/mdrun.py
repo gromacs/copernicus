@@ -36,6 +36,7 @@ from cpc.dataflow import Value
 from cpc.dataflow import FileValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
+from sets import Set
 from cpc.dataflow import Resources
 import cpc.server.command
 import cpc.util
@@ -108,29 +109,57 @@ def grompp_multi(inp):
         cpc.util.plugin.testCommand("grompp -version")
         return
 
-    #simple case first
-    #for each mdp file
-    arr_mdp = inp.getInput("mdp")
-#    arr_top = inp.getInput("top")
-#    arr_conf = inp.getInput("conf")
-#    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
-#        "persistent.dat"))
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+        "persistent.dat"))
+
+    inputs = ['mdp','top','conf']
+    runningGrompp=0
+    if(pers.get("running_grompp")):
+        runningGrompp=pers.get("running_grompp")
+
+    if(pers.get("iterate_over")):
+        iterateOver = pers.get("iterate_over")
+    else:
+        #find out what to iterate over
+        inputTuples = [(name,len(inp.getInput(name))) for name in inputs]
+        inputTuples.sort(key=lambda elem:elem[1],reverse=True)
+
+        #if all have same length
+        if all(inputTuples[0][1]==elem[1] for elem in inputTuples):
+            iterateOver="all"
+        else:
+            iterateOver = inputTuples[0][0]
+        pers.set('iterate_over',iterateOver)
+
     out=inp.getFunctionOutput()
-    for i in range(len(arr_mdp)):
+    if(iterateOver=='all'):
+        arr_input = inp.getInput('mdp')
+        for i in range(runningGrompp,len(arr_input)):
+            out.addInstance("grompp_%d"%i, "grompp")
+            out.addConnection("self:ext_in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
+            out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
+            out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
+            out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
+            runningGrompp+=1
 
-        out.addInstance("grompp_%d"%i, "grompp")
-        out.addConnection("self:ext_in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
-        out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
-        out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
+    else:
+        arr_input= inp.getInput(iterateOver)
+        inputs.remove(iterateOver)
+        for i in range(runningGrompp,len(arr_input)):
+            out.addInstance("grompp_%d"%i, "grompp")
+            out.addConnection("self:ext_in.%s[%d]"%(iterateOver,i), "grompp_%d:in.%s"%(i,iterateOver))
+            for input in inputs:
+                out.addConnection("self:ext_in.%s[0]"%input, "grompp_%d:in.%s"%(i,input))
 
-        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
-#        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d].tpr"%i)
-#        out.addConnection("grompp_%d:out.stdout"%i, "self:ext_out.result[%d].stdout"%i)
+            out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
+            runningGrompp+=1
 
-#connect mdp top and conf to this grompp instance!
 
+
+    pers.set("running_grompp",runningGrompp)
+    pers.write()
     return out
-     #pers.write()
+
 
 def mdrun_multi(inp):
     if inp.testing():
@@ -140,9 +169,19 @@ def mdrun_multi(inp):
         cpc.util.plugin.testCommand("gmxdump -version")
         return
 
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+        "persistent.dat"))
+
+    if(pers.get('running')):
+        running_sims = pers.get('running')
+
+    else:
+        running_sims=0
+
     arr_tpr = inp.getInput("tpr")
+
     out = inp.getFunctionOutput()
-    for i in range(len(arr_tpr)):
+    for i in range(running_sims,len(arr_tpr)):
         out.addInstance("mdrun_%d"%i,"mdrun")
         out.addConnection("self:ext_in.tpr[%d]"%i,"mdrun_%d:in.tpr"%i)
         out.addConnection("self:ext_in.priority[%d]"%i,"mdrun_%d:in.priority"%i)
@@ -154,7 +193,10 @@ def mdrun_multi(inp):
         out.addConnection("mdrun_%d:out.xtc"%i,"self:ext_out.result[%d].xtc"%i)
         out.addConnection("mdrun_%d:out.trr"%i,"self:ext_out.result[%d].trr"%i)
         out.addConnection("mdrun_%d:out.edr"%i,"self:ext_out.result[%d].edr"%i)
+        running_sims+=1
 
+    pers.set("running",running_sims)
+    pers.write()
     return out
 
 
