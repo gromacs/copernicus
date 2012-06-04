@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# check whether all input files will be available:
+if [ ! -e examples/mdrun-test/conf.gro ]; then
+    echo "This example script must be run from within the copernicus base directory"
+    exit 1
+fi
+
+# start the project
+./cpcc start test
+# import the gromacs module with grompp and mdrun functions
+./cpcc import gromacs
+# add the grompp and mdrun function instances
+./cpcc instance gromacs::grompp_multi grompp_multi
+./cpcc instance gromacs::mdrun_multi mdrun_multi
+# activate the function instance
+./cpcc activate 
+
+# start a transaction: all the 'set' and 'connect' commands following this
+# will be executed as one atomic operation upon the cpcc commit command.
+./cpcc transact
+# connect the tpr output of grompp to the tpr input of mdrun
+#./cpcc connect grompp:out.tpr mdrun:in.tpr
+# set the grompp inputs
+
+./cpcc connect grompp_multi:out.result mdrun_multi:in.tpr
+#NOTE WE CAN LOOP OVER THIS
+./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
+./cpcc set-file grompp_multi:in.mdp[+]  examples/multi-test/grompp.mdp
+./cpcc set-file grompp_multi:in.top[+]  examples/multi-test/topol.top
+
+./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
+
+#NOTE these ones cannot be set with +
+#./cpcc set grompp_multi:in.settings[0].name nsteps
+#./cpcc set grompp_multi:in.settings[0].value 10000
+#./cpcc set grompp_multi:in.settings[1].name integrator
+#./cpcc set grompp_multi:in.settings[1].value md
+# and commit this set of updates
+
+
+./cpcc commit
+

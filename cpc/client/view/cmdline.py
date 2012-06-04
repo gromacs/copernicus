@@ -22,6 +22,7 @@ Created on Mar 18, 2011
 
 @author: iman
 '''
+import re
 
 import textwrap
 try:
@@ -302,38 +303,108 @@ class CmdLine(object):
         list=messageStr['message']
         co=StringIO()
         co.write('digraph f {\n')
+        co.write('rankdir=LR\n'
+                'node[shape=box height=1.0]\n'+\
+                'edge[arrowsize=0.5]\n'+\
+                'start[label="" ,color=white]\n')
+
+
         # first write out instances
-        for name, inst in list['instances'].iteritems():
-            if name != "self":
-                CmdLine.writeDotInstance(co, name, name, inst['inputs'], 
-                                 inst['outputs'])
+        #print list['instances']
+
+        #print list['connections']
+        prevNode="start"
+        createdEdges = dict()
+        for conn in list['connections']:  #6 elements in this list
+            #which is in and which is out
+            if(re.search('^in.*',conn[4])):
+                node1 = conn[0]
+                connLabel = conn[4].replace("in.","")
+                node2 = conn[3]
+
             else:
-                CmdLine.writeDotInstance(co, "self_in", list['name'], 
-                                         inst['subnet_inputs'], 
-                                         inst['inputs']) 
-                CmdLine.writeDotInstance(co, "self_out", list['name'],  
-                                         inst['outputs'], 
-                                         inst['subnet_outputs'] )
+                node1 = conn[3]
+                connLabel = conn[1].replace("in.","")
+                node2 = conn[0]
+
+            co.write("%s->%s [label=\"%s\"]\n"%(node1,node2,connLabel))
+
+
+
+        #now we only need to care about the ones that are note connected or ins and outs of the project
+        count = 0
+        for name, inst in list['instances'].iteritems():
+            curNode = name
+            co.write('%s[label="" ,color=white]\n'%count)
+            for input in inst['inputs']:
+                if(InputIsNotConnected(input,name,list['connections'])):
+                    co.write("%d->%s [label=%s]\n"%(count,curNode,input))
+            count+=1
+
+        for name, inst in list['instances'].iteritems():
+            curNode = name
+            co.write('%s[label="" ,color=white]\n'%count)
+            for output in inst['outputs']:
+                if(outputIsNotConnected(output,name,list['connections'])):
+                    co.write("%s->%d [label=%s]\n"%(curNode,count,output))
+            count+=1
+
+
+
+        dummies = ''
+        for i in range(count):
+            dummies+='%d '%i
+
+        co.write('%s[label="" ,color=white]\n'%dummies)
+#            if name != "self":
+#                CmdLine.writeDotInstance(co, name, name, inst['inputs'],
+#                                 inst['outputs'])
+#            else:
+#                CmdLine.writeDotInstance(co, "self_in", list['name'],
+#                                         inst['subnet_inputs'],
+#                                         inst['inputs'])
+#                CmdLine.writeDotInstance(co, "self_out", list['name'],
+#                                         inst['outputs'],
+#                                         inst['subnet_outputs'] )
         # then write values/connections
-        for conn in list['connections']:
-            if not (conn[0] == "self" and conn[3] == "self"):
-                dst="%s:%s_in"%(conn[3], conn[4])
-                dsti="%s_%s_in"%(conn[3], conn[4])
-                if conn[3] == "self":
-                    dst="self_in:%s_in"%conn[4]
-                    dsti="self_in_%s_in"%conn[4]
-                if conn[0] == None:
-                    tmpinst="%s_%s_val"%(dsti, conn[4])
-                    co.write('    %s [ style="invisible" ];\n'%(tmpinst))
-                    co.write('    %s -> %s [ label="%s" ];\n'%
-                             (tmpinst, dst, conn[6]))
-                else:
-                    src="%s:%s_out"%(conn[0], conn[1])
-                    if conn[0] == "self":
-                        src="self_out:%s_out"%(conn[1])
-                    co.write('    %s -> %s;\n'%(src,dst))
+#        for conn in list['connections']:
+#            if not (conn[0] == "self" and conn[3] == "self"):
+#                dst="%s:%s_in"%(conn[3], conn[4])
+#                dsti="%s_%s_in"%(conn[3], conn[4])
+#                if conn[3] == "self":
+#                    dst="self_in:%s_in"%conn[4]
+#                    dsti="self_in_%s_in"%conn[4]
+#                if conn[0] == None:
+#                    tmpinst="%s_%s_val"%(dsti, conn[4])
+#                    co.write('    %s [ style="invisible" ];\n'%(tmpinst))
+#                    co.write('    %s -> %s [ label="%s" ];\n'%
+#                             (tmpinst, dst, conn[6]))
+#                else:
+#                    src="%s:%s_out"%(conn[0], conn[1])
+#                    if conn[0] == "self":
+#                        src="self_out:%s_out"%(conn[1])
+#                    co.write('    %s -> %s;\n'%(src,dst))
         co.write('}\n')
         return co.getvalue()
+def InputIsNotConnected(input,name,connections):
+
+    #check if we have any connections for name
+    for conn in connections:
+        index =conn.index(name)
+        if re.search('^in.%s'%input,conn[index+1]):
+            return False
+
+    return True
+
+def outputIsNotConnected(output,name,connections):
+    #check if we have any connections for name
+    for conn in connections:
+        index =conn.index(name)
+        if re.search('^out.%s'%output,conn[index+1]):
+            return False
+
+    return True
+
 
     
     @staticmethod   
