@@ -131,7 +131,7 @@ class Conf:
 #                  'The global configuration directory',
 #                  userSettable=True)
 
-        base_path = 'copernicus'
+        base_path = '.copernicus'
         self._add('global_dir', os.path.join(os.environ["HOME"],
                     base_path),
                   'The global configuration directory',
