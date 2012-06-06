@@ -64,8 +64,8 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
             tp=sourceType
         else:
             raise ValError(
-                    "Source type %s is not compatible with resulting type %s."%
-                    (sourceType.getName(), destType.getName()))
+                    "Source type %s is not compatible with resulting type %s for literal '%s'."%
+                    (sourceType.getName(), destType.getName(), literal))
     else:
         tp=destType
     if tp.getBaseType().simpleLiteral:
@@ -269,6 +269,8 @@ class Value(object):
                             return None
                     # choose the most specific type
                     ntp=self.type.getMembers()
+                    #log.debug("ntp=%s"%ntp)
+                    #log.debug("type=%s, name=%s"%(self.type, self.type.name))
                     if createType is not None and createType.isSubtype(ntp):
                         ntp=createType
                     # and make it

@@ -426,7 +426,7 @@ class RecordType(Type):
 
 class ArrayType(Type):
     """Base class describing an array."""
-    def __init__(self, name, parent, memberType, lib=None):
+    def __init__(self, name, parent, lib=None, memberType=None):
         Type.__init__(self, name, parent, lib=lib)
         self.compound=True
         self.memberType=memberType
@@ -474,7 +474,7 @@ class ArrayType(Type):
 
 class DictType(Type):
     """Base class describing a dict object: an associative array."""
-    def __init__(self, name, parent, memberType, lib=None):
+    def __init__(self, name, parent, lib=None, memberType=None):
         Type.__init__(self, name, parent, lib=lib)
         self.compound=True
         self.memberType=memberType
@@ -533,8 +533,8 @@ stringType  = StringType("string", valueType)
 fileType    = FileType("file", valueType)
 # compound types
 recordType    = RecordType("record", valueType)
-arrayType   = ArrayType("array", valueType, valueType)
-dictType    = ArrayType("dict", valueType, valueType)
+arrayType   = ArrayType("array", valueType, memberType=valueType)
+dictType    = DictType("dict", valueType, memberType=valueType)
 
 valueType.builtin=True
 nullType.builtin=True

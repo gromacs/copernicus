@@ -42,6 +42,7 @@ import cpc.server.command
 import cpc.util
 
 import tune
+import iterate
 
 
 class GromacsError(cpc.util.CpcError):
@@ -103,6 +104,7 @@ def procSettings(inp, outMdpDir):
     else:
         return mdpfile
 
+
 def grompp_multi(inp):
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
@@ -110,94 +112,131 @@ def grompp_multi(inp):
         return
 
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
-        "persistent.dat"))
+                                               "persistent.dat"))
 
     inputs = ['mdp','top','conf']
-    runningGrompp=0
-    if(pers.get("running_grompp")):
-        runningGrompp=pers.get("running_grompp")
-
-    if(pers.get("iterate_over")):
-        iterateOver = pers.get("iterate_over")
-    else:
-        #find out what to iterate over
-        inputTuples = [(name,len(inp.getInput(name))) for name in inputs]
-        inputTuples.sort(key=lambda elem:elem[1],reverse=True)
-
-        #if all have same length
-        if all(inputTuples[0][1]==elem[1] for elem in inputTuples):
-            iterateOver="all"
-        else:
-            iterateOver = inputTuples[0][0]
-        pers.set('iterate_over',iterateOver)
-
+    outputs = [ 'tpr' ]
+    running=0
+    if(pers.get("running")):
+        running=pers.get("running")
+    it=iterate.iterations(inp, inputs, outputs, pers)
     out=inp.getFunctionOutput()
-    if(iterateOver=='all'):
-        arr_input = inp.getInput('mdp')
-        for i in range(runningGrompp,len(arr_input)):
-            out.addInstance("grompp_%d"%i, "grompp")
-            out.addConnection("self:ext_in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
-            out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
-            out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
-            out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
-            runningGrompp+=1
-
-    else:
-        arr_input= inp.getInput(iterateOver)
-        inputs.remove(iterateOver)
-        for i in range(runningGrompp,len(arr_input)):
-            out.addInstance("grompp_%d"%i, "grompp")
-            out.addConnection("self:ext_in.%s[%d]"%(iterateOver,i), "grompp_%d:in.%s"%(i,iterateOver))
-            for input in inputs:
-                out.addConnection("self:ext_in.%s[0]"%input, "grompp_%d:in.%s"%(i,input))
-
-            out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
-            runningGrompp+=1
-
-
-
-    pers.set("running_grompp",runningGrompp)
+    for i in range(running, it.getN()):
+        instName="grompp_%d"%i
+        out.addInstance(instName, "grompp")
+        it.connect(out, i, instName)
+        out.addConnection("%s:out.tpr"%instName, "self:ext_out.tpr[%d]"%i)
+        running+=1
+    pers.set("running", running)
     pers.write()
     return out
 
 
+    #if(pers.get("iterate_over")):
+    #    iterateOver = pers.get("iterate_over")
+    #else:
+    #    #find out what to iterate over
+    #    inputTuples = [(name,len(inp.getInput(name))) for name in inputs]
+    #    inputTuples.sort(key=lambda elem:elem[1],reverse=True)
+    #
+    #    #if all have same length
+    #    if all(inputTuples[0][1]==elem[1] for elem in inputTuples):
+    #        iterateOver="all"
+    #    else:
+    #        iterateOver = inputTuples[0][0]
+    #    pers.set('iterate_over',iterateOver)
+    #
+    #out=inp.getFunctionOutput()
+    #if(iterateOver=='all'):
+    #    arr_input = inp.getInput('mdp')
+    #    for i in range(runningGrompp,len(arr_input)):
+    #        out.addInstance("grompp_%d"%i, "grompp")
+    #        out.addConnection("self:ext_in.mdp[%d]"%i, "grompp_%d:in.mdp"%i)
+    #        out.addConnection("self:ext_in.top[%d]"%i, "grompp_%d:in.top"%i)
+    #        out.addConnection("self:ext_in.conf[%d]"%i, "grompp_%d:in.conf"%i)
+    #        out.addConnection("grompp_%d:out.tpr"%i, "self:ext_out.result[%d]"%i)
+    #        runningGrompp+=1
+    #
+    #else:
+    #    arr_input= inp.getInput(iterateOver)
+    #    inputs.remove(iterateOver)
+    #    for i in range(runningGrompp,len(arr_input)):
+    #        out.addInstance("grompp_%d"%i, "grompp")
+    #        out.addConnection("self:ext_in.%s[%d]"%(iterateOver,i), 
+    #                          "grompp_%d:in.%s"%(i,iterateOver))
+    #        for input in inputs:
+    #            out.addConnection("self:ext_in.%s[0]"%input, 
+    #                              "grompp_%d:in.%s"%(i,input))
+    #
+    #        out.addConnection("grompp_%d:out.tpr"%i, 
+    #                          "self:ext_out.result[%d]"%i)
+    #        runningGrompp+=1
+    #
+    #pers.set("running_grompp",runningGrompp)
+    #pers.write()
+    #return out
+
+
 def mdrun_multi(inp):
     if inp.testing():
-    # if there are no inputs, we're testing wheter the command can run
+        # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjcat -version")
         cpc.util.plugin.testCommand("eneconv -version")
         cpc.util.plugin.testCommand("gmxdump -version")
         return
 
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
-        "persistent.dat"))
+                                               "persistent.dat"))
 
-    if(pers.get('running')):
-        running_sims = pers.get('running')
-
-    else:
-        running_sims=0
-
-    arr_tpr = inp.getInput("tpr")
-
-    out = inp.getFunctionOutput()
-    for i in range(running_sims,len(arr_tpr)):
-        out.addInstance("mdrun_%d"%i,"mdrun")
-        out.addConnection("self:ext_in.tpr[%d]"%i,"mdrun_%d:in.tpr"%i)
-        out.addConnection("self:ext_in.priority[%d]"%i,"mdrun_%d:in.priority"%i)
-        out.addConnection("self:ext_in.cmdline_options[%d]"%i,"mdrun_%d:in.cmdline_options"%i)
-
-        out.addConnection("mdrun_%d:out.conf"%i,"self:ext_out.result[%d].conf"%i)
-        out.addConnection("mdrun_%d:out.stderr"%i,"self:ext_out.result[%d].stderr"%i)
-        out.addConnection("mdrun_%d:out.stdout"%i,"self:ext_out.result[%d].stdout"%i)
-        out.addConnection("mdrun_%d:out.xtc"%i,"self:ext_out.result[%d].xtc"%i)
-        out.addConnection("mdrun_%d:out.trr"%i,"self:ext_out.result[%d].trr"%i)
-        out.addConnection("mdrun_%d:out.edr"%i,"self:ext_out.result[%d].edr"%i)
-        running_sims+=1
-
-    pers.set("running",running_sims)
+    inputs = ['tpr','priority','cmdline_options','resources']
+    outputs = [ 'conf', 'xtc', 'trr', 'edr' ]
+    running=0
+    if(pers.get("running")):
+        running=pers.get("running")
+    it=iterate.iterations(inp, inputs, outputs, pers)
+    out=inp.getFunctionOutput()
+    for i in range(running, it.getN()):
+        instName="mdrun_%d"%i
+        out.addInstance(instName, "mdrun")
+        it.connect(out, i, instName)
+        running+=1
+    pers.set("running", running)
     pers.write()
     return out
+
+
+    #if(pers.get('running')):
+    #    running_sims = pers.get('running')
+    #else:
+    #    running_sims=0
+    #
+    #arr_tpr = inp.getInput("tpr")
+    #
+    #out = inp.getFunctionOutput()
+    #for i in range(running_sims,len(arr_tpr)):
+    #    out.addInstance("mdrun_%d"%i,"mdrun")
+    #    out.addConnection("self:ext_in.tpr[%d]"%i,"mdrun_%d:in.tpr"%i)
+    #    out.addConnection("self.ext_in.resources[%d]"%i, 
+    #                      "mdrun_%d:in.resources"%i)
+    #
+    #    out.addConnection("self:ext_in.priority[%d]"%i,"mdrun_%d:in.priority"%i)
+    #    out.addConnection("self:ext_in.cmdline_options[%d]"%i,
+    #                      "mdrun_%d:in.cmdline_options"%i)
+
+    #    out.addConnection("mdrun_%d:out.conf"%i,
+    #                      "self:ext_out.conf[%d]"%i)
+    #    out.addConnection("mdrun_%d:out.stderr"%i,
+    #                      "self:ext_out.stderr[%d]"%i)
+    #    out.addConnection("mdrun_%d:out.stdout"%i,
+    #                      "self:ext_out.result[%d].stdout"%i)
+    #    out.addConnection("mdrun_%d:out.xtc"%i,"self:ext_out.xtc[%d]"%i)
+    #    out.addConnection("mdrun_%d:out.trr"%i,"self:ext_out.trr[%d]"%i)
+    #    out.addConnection("mdrun_%d:out.edr"%i,"self:ext_out.edr[%d]"%i)
+    #    running_sims+=1
+
+    #pers.set("running",running_sims)
+    #pers.write()
+    #return out
 
 
 
