@@ -92,6 +92,8 @@ class MSMProject(object):
         self.grpname       = inp.getInput('grpname')
         #self.num_sim       = inp.getInput('num_to_start')
         self.lag_time      = inp.getInput('lag_time')
+
+        #TODO IMAN get input weights
         if self.lag_time is not None and self.lag_time <= 0:
             sys.stderr("Error: lag_time=%g: invalid number\n"%self.lag_time)
 
@@ -190,7 +192,8 @@ class MSMProject(object):
         ''' Build a micro-state MSM '''
         sys.stderr.write("Creating msm project, ref_conf=%s.\n"%
                          str(self.ref_conf))
-        # Create the msm project from the reference conformation        
+        # Create the msm project from the reference conformation
+        #TODO IMAN provide weighting here
         Proj = CreateCopernicusProject(self.ref_conf, self.filelist)
         self.Proj = Proj
         C1   = Conformation.Conformation.LoadFromPDB(self.ref_conf)
