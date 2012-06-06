@@ -80,7 +80,7 @@ def initiateWorkerSetup():
     return connectionBundle
 
 
-def initiateServerSetup(rundir,configName =None,confDir=None):
+def initiateServerSetup(rundir,configName =None,confDir=None,forceReset=False):
     ''' 
        @input configName String  
     '''
@@ -91,7 +91,9 @@ def initiateServerSetup(rundir,configName =None,confDir=None):
         confDir = os.path.join(Conf().getGlobaDir(),configName)
     
     checkDir = os.path.join(confDir,"server")
-    if os.path.exists(checkDir)==True:
+    if forceReset:
+        shutil.rmtree(checkDir)
+    elif os.path.exists(checkDir)==True:
         decision = raw_input("there already is a server configuration in %s; do you want to overwrite it(y/n)?"%checkDir)
         
         if decision != 'y':
@@ -102,15 +104,17 @@ def initiateServerSetup(rundir,configName =None,confDir=None):
             
     cf=cpc.util.conf.server_conf.ServerConf(confdir=confDir,reload=True)
     openssl = cpc.util.openssl.OpenSSL(configName)
-    setupCA(openssl,cf)
+    setupCA(openssl,cf,forceReset)
     openssl.setupServer()
     cf.setRunDir(rundir) 
 
 
-def setupCA(openssl,conf):
+def setupCA(openssl,conf,forceReset=False):
     
     checkDir = conf.getCADir()
-    if os.path.exists(checkDir)== True:
+    if forceReset:
+        shutil.rmtree(checkDir)
+    elif os.path.exists(checkDir)== True:
         decision = raw_input("there already is a CA in %s; do you want to overwrite it (y/n)?"%checkDir)
         
         if decision != 'y':
