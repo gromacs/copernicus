@@ -136,7 +136,6 @@ def g_bar(inp):
                           stderr=subprocess.STDOUT,
                           cwd=inp.outputDir,
                           close_fds=True)
-    log.debug("cmdline: %s"%cmdline)
     (stdout, stderr)=proc.communicate()
     if proc.returncode != 0:
         raise GromacsError("ERROR: g_bar returned %s"%(stdout))
@@ -169,7 +168,6 @@ def g_bar(inp):
                     rs=res(lam_A, lam_B, dG, dG_err, s_A, s_A_err, s_B, s_B_err,
                            stdev, stdev_err)
                     results.append(rs)
-                    log.debug("found kT lambda val")
         elif phase == 2:
             spl=line.split()
             if len(spl) >= 8 and spl[0] == "lambda":
@@ -177,11 +175,9 @@ def g_bar(inp):
                 dG_err=float(spl[7])
                 results[i].setdG(dG, dG_err)
                 i+=1
-                log.debug("found lambda val")
             elif len(spl) >= 8 and spl[0] == "total":
                 total_dG=float(spl[5])
                 total_dG_err=float(spl[7])
-                log.debug("found dG")
     # now fill the results array
     resValArray=[]
     for rs in results:
