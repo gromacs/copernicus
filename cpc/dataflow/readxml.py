@@ -297,7 +297,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     log.debug("new array(%s) type %s"%(members.name, name))
                 else:
                     raise ProjectXMLError("Array type %s has no member type"%
-                                          name)
+                                          name, self)
             elif basetype.isSubtype(vtype.dictType):
                 if attrs.has_key("member-type"):
                     tnm=attrs.getValue("member-type")

@@ -63,6 +63,17 @@
     <type id="mdp-array" base="array" member-type="setting">
         <desc>An array of grompp mdp settings</desc>
     </type>
+    <type id="mdp-array-array" base="array" member-type="mdp-array">
+        <desc>An array of arrays of grompp mdp settings</desc>
+    </type>
+
+    <type id="meas" base="record">
+        <desc>A measurement value with error estimate.</desc>
+        <field id="value" type="float"/>
+        <field id="error" type="float"/>
+    </type>
+
+
 
 
     <function id="grompp" type="python-extended">
@@ -217,6 +228,61 @@
     </function>
 
 
+    <!-- g_bar -->
+    <type id="bar_detailed_values" base="record">
+        <desc>Detailed output values in kT from BAR</desc>
+        <field id="lambda_A" type="float">
+            <desc>Lambda value of start point (A) of sub-interval</desc> 
+        </field>
+        <field id="lambda_B" type="float">
+            <desc>Lambda value of end point (B) of sub-interval</desc> 
+        </field>
+        <field id="dG" type="meas">
+            <desc>Free energy difference of the sub-interval in kJ/mol</desc> 
+        </field>
+        <field id="dG_kT" type="meas">
+            <desc>Free energy difference of the sub-interval in kT</desc> 
+        </field>
+        <field id="s_A" type="meas">
+            <desc>Relative entropy of B in A in kT</desc> 
+        </field>
+        <field id="s_B" type="meas">
+            <desc>Relative entropy of A in B in kT</desc> 
+        </field>
+        <field id="stdev" type="meas">
+            <desc>expected per-sample standard deviation in kT</desc> 
+        </field>
+    </type>
+    <type id="bar_detailed_value_array" 
+          base="array" 
+          member-type="bar_detailed_values" />
+
+    <function id="g_bar" type="python-extended">
+        <inputs>
+            <field type="edr-array" id="edr">
+                <desc>An array of .edr files with free energy data.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas" id="dG">
+                <desc>The free energy difference</desc>
+            </field>
+            <field type="file" id="histogram">
+                <desc>The BAR histogram</desc>
+            </field>
+            <field type="file" id="dG_lambda">
+                <desc>The free energy plot as a function of lambda</desc>
+            </field>
+            <field type="bar_detailed_value_array" id="bar_values">
+                <desc>The array of detailed BAR values.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.g_bar" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
+
     <function id="grompp_multi" type="python-extended">
         <desc>can handle multiple input files</desc>
         <inputs>
@@ -231,6 +297,9 @@
             </field>
             <field type="ndx-array" id="ndx" opt="true">
                 <desc>An array of .ndx index files</desc>
+            </field>
+            <field type="mdp-array-array" id="settings" opt="true">
+                <desc>An array of arrays of settings</desc>
             </field>
         </inputs>
         <outputs>
@@ -288,8 +357,4 @@
                     log="true" persistent_dir="true"
                     access_outputs="true" />
     </function>
-
-
-
-
 </cpc>

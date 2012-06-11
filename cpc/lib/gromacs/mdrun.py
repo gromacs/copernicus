@@ -114,7 +114,7 @@ def grompp_multi(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
-    inputs = ['mdp','top','conf']
+    inputs = ['mdp','top','conf', 'settings']
     outputs = [ 'tpr' ]
     running=0
     if(pers.get("running")):
