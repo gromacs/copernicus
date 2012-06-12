@@ -153,8 +153,29 @@
                     persistent_dir="true" />
     </function>
 
+    <function id="merge_mdp" type="python-extended">
+        <desc>Merge an mdp file and a mdp-array into an output mdp file</desc>
+        <inputs>
+            <field type="file" id="mdp">
+                <desc>The .mdp file</desc>
+            </field>
+            <field type="mdp-array" id="settings" opt="true">
+                <desc>Array of settings</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="mdp">
+                <desc>Output .mdp file</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.merge_mdp" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="false" />
+    </function>
+
     <function id="mdrun_tune" type="python-extended">
-        <desc>Optimize an MD simulation (for the available run resources).</desc>
+        <desc>Optimize an MD simulation (for the available run resources).
+        </desc>
         <inputs>
             <field type="file" id="conf">
                 <desc>A .gro configuration file</desc>
