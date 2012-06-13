@@ -80,7 +80,9 @@ def procSettings(inp, outMdpDir):
             for setting in settings:
                 if ("name" in setting.value) and ("value" in setting.value):
                     val = setting.value["value"].value
-                    repl[setting.value["name"].value] = val
+                    name = setting.value["name"].value
+                    name = name.strip().replace('-', '_').lower()
+                    repl[name] = val
         # now set the gen_vel option
         outMdpName=os.path.join(outMdpDir, "grompp.mdp")
         outf=open(outMdpName, "w")
@@ -167,12 +169,23 @@ def mdrun(inp):
     rsrcFilename=os.path.join(persDir, 'rsrc.dat')
     # check whether we need to reinit
 
+    #log.debug("tpr updated: %s"%(inp.getInputValue('tpr').isUpdated()))
+    #log.debug("resources updated: %s"%
+    #          (inp.getInputValue('resources').isUpdated()))
+    #log.debug("cmdline_options updated: %s"%
+    #          (inp.getInputValue('cmdline_options').isUpdated()))
+    #log.debug("priority updated: %s"%
+    #          (inp.getInputValue('priority').isUpdated()))
     #if inp.cmd is None and inp.getInputValue('tpr').isUpdated():
-    if inp.cmd is None:
+
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    init=False
+    if inp.getInputValue('tpr').isUpdated():
         # there was no previous command.
         # purge the persistent directory, by moving the confout files to a
         # backup directory
-        log.debug("Initializing mdrun")
+        log.debug("Re-initializing mdrun")
         confout=glob.glob(os.path.join(persDir, "run_???"))
         if len(confout)>0:
             backupDir=os.path.join(persDir, "backup")
@@ -186,10 +199,20 @@ def mdrun(inp):
                                                  os.path.split(conf)[-1]))
                 except:
                     pass
+        init=True
+    elif inp.cmd is None:
+        if pers.get('initialized') is None:
+            init=True    
+        else:
+            return fo
+    if init:
         if rsrc.max.get('cores') is None:
             confFile=os.path.join(persDir, 'conf.gro')
             extractConf(inp.getInput('tpr'), confFile)
             tune.tune(rsrc, confFile, inp.getInput('tpr'), persDir)
+        if inp.cmd is not None:
+            fo.cancelPrevCommands()
+        pers.set('initialized', True)
     else:
         if rsrc.max.get('cores') is None:
             rsrc.load(rsrcFilename)
@@ -374,6 +397,8 @@ def mdrun(inp):
                     # TODO fix unicode
                     errmsg=unicode(stdef.read(), errors='ignore')
                     stdef.close()
+                else:
+                    errmsg=""
                 raise GromacsError("Error running mdrun. No trajectories: %s"%
                                    errmsg)
         # Make a new directory with the continuation of this run
@@ -435,7 +460,7 @@ def mdrun(inp):
                                  minVersion=cpc.server.command.Version("4.5"),
                                  addPriority=prio)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
-            log.debug("resources is %s"%(inp.getInput("resources")))
+            #log.debug("resources is %s"%(inp.getInput("resources")))
             #rsrc=Resources(inp.getInputValue("resources"))
             rsrc.updateCmd(cmd)
         log.debug("Adding command")
@@ -444,6 +469,7 @@ def mdrun(inp):
             fo.cancelPrevCommands()
     # and save for further invocations
     rsrc.save(rsrcFilename)
+    pers.write()
     return fo
 
 
@@ -511,7 +537,7 @@ def grompp_multi(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
-    inputs = ['mdp','top','conf', 'settings']
+    inputs = ['mdp','top','conf', 'settings', 'include']
     outputs = [ 'tpr' ]
     running=0
     if(pers.get("running")):

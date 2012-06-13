@@ -23,6 +23,7 @@ import os
 import tarfile
 import tempfile
 import threading
+import time
 
 
 
@@ -156,6 +157,10 @@ class SCWorkerReady(ServerCommand):
         ServerCommand.__init__(self, "worker-ready")
 
     def run(self, serverState, request, response):
+        # now sleep for 2 seconds to give the dataflow time to react to any 
+        # new state. This also serves as a rate limiter for incoming requests
+        # if many new workers start simultaneously.
+        time.sleep(2)
         # first read platform capabilities and executables
         rdr=cpc.server.command.platform_exec_reader.PlatformExecutableReader()
         workerData=request.getParam('worker')
@@ -169,7 +174,8 @@ class SCWorkerReady(ServerCommand):
         else:
             originating = ServerConf().getHostName() #FIXME this cannot be correct ever
         log.debug("worker identified %s"%request.headers['originating-client'] )
-        serverState.setWorkerState("idle",workerData,request.headers['originating-client'])    
+        serverState.setWorkerState("idle",workerData,
+                                   request.headers['originating-client'])    
         
         if len(cmds) > 0:
             # construct the tar file.

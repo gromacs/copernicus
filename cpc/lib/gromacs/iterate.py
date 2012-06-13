@@ -49,21 +49,26 @@ class iterations:
         self.N=0
         self.inputs={}
         for inputName in inputs:
-            Ncur=len(inp.getInput(inputName)) # the number of inputs 
+            inpval=inp.getInput(inputName)
+            if inpval is not None:
+                Ncur=len(inp.getInput(inputName)) # the number of inputs 
+            else:
+                Ncur=0
             it=False # whether to iterate this one
             if Ncur > 1:
                 it=True
-                if self.N == 0:
+                if self.N == 0 or self.N == 1:
                     self.N=Ncur
                 elif self.N != Ncur:
-                    raise IterateError("Inconsistent number of items in %s: must be 1 or %d"%
-                                       (inputName, self.N))
+                    raise IterateError(
+                        "Inconsistent number of items in %s: must be 1 or %d"%
+                        (inputName, self.N))
             elif Ncur == 1:
                 # set it to be at least 1
                 if self.N == 0:
                     self.N=1
             self.inputs[inputName]=it
-            self.outputs=outputs
+        self.outputs=outputs
 
     def getN(self):
         """Get the number of iterations."""

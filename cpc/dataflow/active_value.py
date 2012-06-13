@@ -192,13 +192,13 @@ class ActiveValue(value.Value):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                #log.debug("**Found update in %s, %s %s"%
+                #log.debug("**Found update in %s, %s %s %s"%
                 #          (self.getFullName(), resetSourceTag, 
-                #           sourceValue.value))
+                #           sourceValue.value, sourceValue.updated))
                 self.update(sourceValue, sourceValue.seqNr, sourceTag,
                             resetSourceTag=resetSourceTag)
                 #sourceValue.updated=False
-                sourceValue.setUpdated(False)
+                #sourceValue.setUpdated(False)
                 return True
             #else:
             #   log.debug("Rejecting acceptNewValue because of sequence number")

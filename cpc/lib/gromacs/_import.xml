@@ -4,8 +4,10 @@
     <import name="resource" />
 
     <type id="grompp-include-array" base="array" member-type="file" />
+    <type id="grompp-include-array-array" base="array" 
+           member-type="grompp-include-array" />
 
-    <type id="out-grompp-multi" base="record">
+    <!--<type id="out-grompp-multi" base="record">
         <desc>tpr file</desc>
         <field type="file" id="tpr">
             <desc>generated tpr file</desc>
@@ -13,36 +15,17 @@
         <field type="file" id="stdout">
             <desc>log file </desc>
         </field>
-    </type>
-
-
-    <!--<type id="out-mdrun-multi" base="record">
-        <field type="file" id="conf">
-            <desc>Output configuration (.gro) file</desc>
-        </field>
-        <field type="file" id="stderr">
-            <desc>mdrun's standard error output</desc>
-        </field>
-        <field type="file" id="stdout">
-            <desc>mdrun's standard output output</desc>
-        </field>
-        <field type="file" id="xtc" optional="1">
-            <desc>compressed (xtc) trajectory file</desc>
-        </field>
-        <field type="file" id="trr" optional="1">
-            <desc>full-precision (trr) trajectory file</desc>
-        </field>
-        <field type="file" id="edr">
-            <desc>energy+measurements output file</desc>
-        </field>
     </type>-->
+
 
     <type id="mdp-file-array" base="array" member-type="file" />
     <type id="conf-array" base="array" member-type="file" />
     <type id="top-array" base="array" member-type="file" />
     <type id="ndx-array" base="array" member-type="file" />
-    <type id="out-grompp-multi-array" base="array" member-type="out-grompp-multi" />
-    <!--<type id="out-mdrun-multi-array" base="array" member-type="out-mdrun-multi" />-->
+    <!--<type id="out-grompp-multi-array" base="array" 
+          member-type="out-grompp-multi" />-->
+    <!--<type id="out-mdrun-multi-array" base="array" 
+          member-type="out-mdrun-multi" />-->
 
     <type id="tpr-array" base="array" member-type="file" />
     <type id="prio-array" base="array" member-type="int" />
@@ -321,6 +304,9 @@
             </field>
             <field type="mdp-array-array" id="settings" opt="true">
                 <desc>An array of arrays of settings</desc>
+            </field>
+            <field type="grompp-include-array-array" id="include" opt="true">
+                <desc>An array of .ndx index files</desc>
             </field>
         </inputs>
         <outputs>

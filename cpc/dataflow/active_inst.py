@@ -543,13 +543,9 @@ class ActiveInstance(object):
             # same at the same time.
             upd1=self.inputVal.acceptNewValue(self.stagedInputVal,sourceTag,
                                               True)
-            if upd1:
-                self.stagedInputVal.setUpdated(False)
             # also check the subnet input values
             upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
                                                     sourceTag, True)
-            if upd2:
-                self.stagedSubnetInputVal.setUpdated(False)
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
             if self.updated:
@@ -562,6 +558,10 @@ class ActiveInstance(object):
                 # and make it run.
                 if self._canRun():
                     self._genTask()
+            if upd1:
+                self.stagedInputVal.setUpdated(False)
+            if upd2:
+                self.stagedSubnetInputVal.setUpdated(False)
 
 
     #def resetUpdated(self):

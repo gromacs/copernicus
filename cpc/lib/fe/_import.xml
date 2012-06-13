@@ -1,0 +1,252 @@
+<?xml version="1.0"?>
+<cpc>
+    <!-- a module for free energy calculations.-->
+    <import name="resource" />
+    <import name="gromacs" />
+    <import name="int" />
+
+    <type id="grompp_input" base="record">
+        <desc>Partial grompp input</desc>
+        <field type="file" id="mdp" ><desc>A .mpp settings file</desc></field>
+        <field type="file" id="top" ><desc>A .top topology file</desc></field>
+        <field type="file" id="ndx" opt="true">
+            <desc>A .ndx index file</desc>
+        </field>
+        <field type="gromacs::grompp-include-array" id="include" opt="true">
+            <desc>array of files to include</desc>
+        </field>
+        <field type="gromacs::mdp-array" id="settings" opt="true">
+            <desc>array of settings</desc>
+        </field>
+        <field type="string" id="mdrun_cmdline_options" opt="true">
+            <desc>mdrun command line options</desc>
+        </field>
+    </type>
+
+    <type id="measurement_value" base="record">
+        <desc>A measurement value with error estimate</desc>
+        <field type="float" id="val">
+            <desc>The estimate for the measurement value</desc>
+        </field>
+        <field type="float" id="err">
+            <desc>The estimate for the error in the measurement value</desc>
+        </field>
+    </type>
+
+    <!--<function id="fe_solvation" type="external">
+        <desc>Calculates a free energy of solvation. Takes a simulation with
+              a molecule that is solvated, and de-solvates it in steps, 
+              calculating the free energy difference between the solvated
+              and de-solvated states with the Bennett acceptance ratio 
+              method. 
+        </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with the solvent.</desc>
+            </field>
+            <field type="file" id="conf_decoupled" opt="true">
+                <desc>A configuration with the solvent decoupled, for
+                      faster equilibration.</desc>
+            </field>
+             <field type="string" id="coupled">
+                <desc>The name/group number of the molecule to desolvate.
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 0.1 ns should be good for water.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="measurement_value" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="fe_solvation" 
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function>-->
+
+
+    <!-- internal functions -->
+    <!--<type id="lambda_value" base="record">
+        <desc>A point along the decoupling route. 
+                For compatibility with gromacs 4.5, lambda_coulomb and 
+                lambda_vdw must either be both equal, or one of them must be 
+                0 or 1.</desc>
+        <field type="float" id="coulomb">
+            <desc>The coulomb lambda value</desc>
+        </field>
+        <field type="float" id="vdw">
+            <desc>The vdw lambda value</desc>
+        </field>
+    </type>
+ 
+    <type id="lambda_array" base="array" member-type="lambda_value">
+        <desc>Array of lambda values to simulate at.</desc>
+    </type>
+
+
+    <type id="conf_lambda" base="record">
+        <desc>A combination of configuration and lambda value</desc>
+        <field type="file" id="conf"><desc>The configuration</desc></field>
+        <field type="lambda_value" id="lambda">
+            <desc>The lambda value</desc>
+        </field>
+    </type>
+    <type id="conf_lambda_array" base="array" member-type="conf_lambda" />-->
+
+
+
+    <type id="conf_lambda" base="record">
+        <desc>A combination of configuration and lambda value</desc>
+        <field type="file" id="conf"><desc>The configuration</desc></field>
+        <field type="float" id="lambda"><desc>The lambda value</desc></field>
+    </type>
+    <type id="conf_lambda_array" base="array" member-type="conf_lambda">
+        <desc>An array of conf_lambdas forming an FE path.</desc>
+    </type>
+
+
+    <type id="fe_path" base="record">
+        <desc>An array of lambda values and a description of the endpoints
+        </desc>
+        <field type="string" id="a">
+            <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="string" id="b">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="conf_lambda_array" id="lambdas">
+            <desc>The FE path.</desc>
+        </field>
+    </type>
+    <type id="fe_path_array" base="array" member-type="fe_path" />
+
+    <function id="fe_init" type="external">
+        <desc>Initialize a free energy run, by generating a set of 
+              </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with the fully coupled molecule</desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="string" id="coupled_mol">
+                <desc>The name/group number of the lambda-coupled molecule
+                </desc>
+            </field>
+            <field type="int" id="n_lambdas">
+                <desc>The number of lambda values to simulate at per 
+                      coulomb/vdw step</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                </desc>
+            </field>
+        </inputs>
+        <outputs>
+            <!--<field type="conf_lambda_array" id="confs">
+                <desc>An array of configurations with the ligand, 
+                       at various lambda values.</desc>
+            </field>-->
+            <field type="fe_path_array" id="paths">
+                <desc>Free energy path arrays, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="file" id="mdp">
+                <desc>The tuned and prepared mdp</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp-array" id="settings"/>
+            <field type="gromacs::mdp-array-array" id="settings_array"/>
+        </subnet-outputs>
+        <controller log="true" executable="fe_init" persistent_dir="true"
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function>
+
+    <!--<function id="fe_iteration" type="external">
+        <desc>Do one iteration of a free energy calculation. 
+              Takes a system ready to run with a set of lambda paramters,
+              and  calculate an estimate for the free energy and a new set 
+              of lambda parameters.</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
+            </field>
+            <field type="conf_lambda_array" id="confs">
+                <desc>An array of configurations with the ligand, 
+                       at various lambda values.</desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="string" id="coupled">
+                <desc>The name/group number of the lambda-coupled molecule
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas">
+                <desc>The lambda values to simulate at</desc>
+            </field>
+            <field type="int" id="vdw">
+                <desc>Whether to couple the vdw (0), coulomb (1) or both (2)
+                      parts of the interactions.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="measurement_value" id="delta_f">
+                <desc>The free energy difference</desc>
+            </field>
+            <field type="lambda_array" id="lambdas">
+                <desc>New set of lambda values for the next iteration.</desc>
+            </field>
+            <field type="conf_lambda_array" id="confs">
+                <desc>An array of configurations with the ligand, 
+                       at various lambda values.</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="resource::run_desc" id="resources" />
+            <field type="file" id="tuned_mdp" />
+        </subnet-inputs>
+        <controller log="true" executable="fe_iteration" 
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function> -->
+</cpc>
+
