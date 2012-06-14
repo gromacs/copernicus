@@ -97,4 +97,24 @@ class iterations:
                               "self:ext_out.%s[%d]"%(outputName,i))
 
 
+    def connectOnly(self, inputs, outputs, out, i, instName):
+        """Connect only given inputs and outputs with their corresponding 
+           input name in a given new instance. 
+          
+           inputs = the inputs to connect 
+           outputs = the outputs to connect 
+           out = the runOutput object
+           i = the instance counter
+           instName = the name of the new instance"""
+        for inpName in inputs:
+            iterate=self.inputs[inpName]
+            if iterate:
+                out.addConnection("self:ext_in.%s[%d]"%(inpName, i),
+                                  "%s:in.%s"%(instName, inpName))
+            else:
+                out.addConnection("self:ext_in.%s[0]"%(inpName),
+                                  "%s:in.%s"%(instName, inpName))
+        for outputName in outputs:
+            out.addConnection("%s:out.%s"%(instName, outputName),
+                              "self:ext_out.%s[%d]"%(outputName,i))
 

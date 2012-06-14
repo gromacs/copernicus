@@ -169,55 +169,55 @@ def fe_init(inp, out):
         else:
             raise FEError("Change in n_lambdas not yet implemented")
         # these are the multiple runs
-        out.addInstance('grompps', 'gromacs::grompp_multi')
-        out.addInstance('mdruns', 'gromacs::mdrun_multi')
+        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        #out.addInstance('mdruns', 'gromacs::mdrun_multi')
         # connect the tpr, mdp and resources
-        out.addConnection('grompps:out.tpr', 'mdruns:in.tpr')
-        out.addConnection('self:ext_in.grompp.top', 'grompps:in.top[0]')
-        out.addConnection('self:ext_in.grompp.ndx', 'grompps:in.ndx[0]')
-        out.addConnection('self:ext_in.grompp.include', 'grompps:in.include[0]')
+        #out.addConnection('runs:out.tpr', 'mdruns:in.tpr')
+        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
-                          'mdruns:in.cmdline_options[0]')
+                          'runs:in.cmdline_options[0]')
         if not notune:
             out.addConnection('mdrun_tune:out.resources', 
-                              'mdruns:in.resources[0]')
-            out.addConnection('mdrun_tune:out.mdp', 'grompps:in.mdp[0]')
+                              'runs:in.resources[0]')
+            out.addConnection('mdrun_tune:out.mdp', 'runs:in.mdp[0]')
         else:
             out.addConnection('self:ext_in.resources', 
-                              'mdruns:in.resources[0]')
-            out.addConnection('merge_mdp:out.mdp', 'grompps:in.mdp[0]')
+                              'runs:in.resources[0]')
+            out.addConnection('merge_mdp:out.mdp', 'runs:in.mdp[0]')
         out.addConnection('self:sub_out.settings_array', 
-                          'grompps:in.settings')
+                          'runs:in.settings')
         # set the individual configurations and connect the outputs
         # coulomb first
         for i in range(0, npoints_init-1):
             # connect the confs
             if i == 0:
-                out.addConnection('self:ext_in.conf', 'grompps:in.conf[0]')
+                out.addConnection('self:ext_in.conf', 'runs:in.conf[0]')
             else:
-                out.addConnection('mdruns:out.conf[%d]'%(i-1), 
-                                  'grompps:in.conf[%d]'%i)
+                out.addConnection('runs:out.conf[%d]'%(i-1), 
+                                  'runs:in.conf[%d]'%i)
             # and the outputs
             if i == 0:
                 # add the fixed one
                 out.addConnection('self:ext_in.conf', 
                                   'self:ext_out.paths[0].lambdas[0].conf')
-            out.addConnection('mdruns:out.conf[%d]'%i, 
+            out.addConnection('runs:out.conf[%d]'%i, 
                               'self:ext_out.paths[0].lambdas[%d].conf'%(i+1))
             # the last of the coulombs is the first of the vdw
             if i == npoints_init-2:
-                out.addConnection('mdruns:out.conf[%d]'%i, 
+                out.addConnection('runs:out.conf[%d]'%i, 
                                   'self:ext_out.paths[1].lambdas[0].conf')
         for j in range(0, npoints_init-1):
             #npoints_init-1, 2*(npoints_init-1)):
             i=j+npoints_init-1
-            out.addConnection('mdruns:out.conf[%d]'%(i-1), 
-                              'grompps:in.conf[%d]'%i)
+            out.addConnection('runs:out.conf[%d]'%(i-1), 
+                              'runs:in.conf[%d]'%i)
             #if j == 0:
             #    out.addConnection('mdruns:out.conf[%d]'%(i-1), 
             #                      'self:ext_out.paths[1].lambdas[%d].conf'%
             #                      (j+1))
-            out.addConnection('mdruns:out.conf[%d]'%i, 
+            out.addConnection('runs:out.conf[%d]'%i, 
                               'self:ext_out.paths[1].lambdas[%d].conf'%(j+1))
 
         # Set the lambda values.

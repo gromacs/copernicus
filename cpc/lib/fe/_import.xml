@@ -81,33 +81,6 @@
 
 
     <!-- internal functions -->
-    <!--<type id="lambda_value" base="record">
-        <desc>A point along the decoupling route. 
-                For compatibility with gromacs 4.5, lambda_coulomb and 
-                lambda_vdw must either be both equal, or one of them must be 
-                0 or 1.</desc>
-        <field type="float" id="coulomb">
-            <desc>The coulomb lambda value</desc>
-        </field>
-        <field type="float" id="vdw">
-            <desc>The vdw lambda value</desc>
-        </field>
-    </type>
- 
-    <type id="lambda_array" base="array" member-type="lambda_value">
-        <desc>Array of lambda values to simulate at.</desc>
-    </type>
-
-
-    <type id="conf_lambda" base="record">
-        <desc>A combination of configuration and lambda value</desc>
-        <field type="file" id="conf"><desc>The configuration</desc></field>
-        <field type="lambda_value" id="lambda">
-            <desc>The lambda value</desc>
-        </field>
-    </type>
-    <type id="conf_lambda_array" base="array" member-type="conf_lambda" />-->
-
 
 
     <type id="conf_lambda" base="record">
@@ -173,10 +146,6 @@
             </field>
         </inputs>
         <outputs>
-            <!--<field type="conf_lambda_array" id="confs">
-                <desc>An array of configurations with the ligand, 
-                       at various lambda values.</desc>
-            </field>-->
             <field type="fe_path_array" id="paths">
                 <desc>Free energy path arrays, describing the path taken
                       (in lambda coupling) with lambda points and corresponding 
@@ -210,23 +179,23 @@
                         (except configuration).
                 </desc>
             </field>
-            <field type="conf_lambda_array" id="confs">
-                <desc>An array of configurations with the ligand, 
-                       at various lambda values.</desc>
+            <field type="file" id="mdp">
+                <desc>The tuned and prepared mdp</desc>
             </field>
-            <field type="resource::run_desc" id="resources">
-                <desc>The run resources for a typical run</desc>
-            </field>
-            <field type="string" id="coupled">
+            <field type="string" id="coupled_mol">
                 <desc>The name/group number of the lambda-coupled molecule
                 </desc>
             </field>
-            <field type="lambda_array" id="lambdas">
-                <desc>The lambda values to simulate at</desc>
+            <field type="fe_path_array" id="paths">
+                <desc>Free energy path arrays, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
             </field>
-            <field type="int" id="vdw">
-                <desc>Whether to couple the vdw (0), coulomb (1) or both (2)
-                      parts of the interactions.</desc>
+            <field type="lambda_array" id="lambdas" opt="true">
+                <desc>New lambda values to simulate at</desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for a typical run</desc>
             </field>
         </inputs>
         <outputs>
@@ -236,17 +205,21 @@
             <field type="lambda_array" id="lambdas">
                 <desc>New set of lambda values for the next iteration.</desc>
             </field>
-            <field type="conf_lambda_array" id="confs">
-                <desc>An array of configurations with the ligand, 
-                       at various lambda values.</desc>
+            <field type="fe_path_array" id="paths">
+                <desc>Free energy path arrays, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
             </field>
         </outputs>
         <subnet-inputs>
             <field type="resource::run_desc" id="resources" />
             <field type="file" id="tuned_mdp" />
         </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp-array-array" id="settings_array"/>
+        </subnet-outputs>
         <controller log="true" executable="fe_iteration" 
                     access_outputs="true" access_subnet_outputs="true" />
-    </function> -->
+    </function>-->
 </cpc>
 

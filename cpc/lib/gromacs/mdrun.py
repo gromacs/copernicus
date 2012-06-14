@@ -585,5 +585,37 @@ def mdrun_multi(inp):
     return out
 
 
+def grompp_mdrun_multi(inp):
+    if inp.testing():
+    # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("grompp -version")
+        return
 
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+
+    grompp_inputs = ['mdp','top','conf', 'settings', 'include' ]
+    mdrun_inputs = [ 'priority', 'cmdline_options', 'resources']
+    inputs = grompp_inputs + mdrun_inputs
+    grompp_outputs = [ 'tpr' ]
+    mdrun_outputs = [ 'conf', 'xtc', 'trr', 'edr' ]
+    outputs = grompp_outputs + mdrun_outputs
+    running=0
+    if(pers.get("running")):
+        running=pers.get("running")
+    it=iterate.iterations(inp, inputs, outputs, pers)
+    out=inp.getFunctionOutput()
+    for i in range(running, it.getN()):
+        gromppInstName="grompp_%d"%i
+        mdrunInstName="mdrun_%d"%i
+        out.addInstance(gromppInstName, "grompp")
+        out.addInstance(mdrunInstName, "mdrun")
+        out.addConnection('%s:out.tpr'%gromppInstName, 
+                          '%s:in.tpr'%mdrunInstName)
+        it.connectOnly(grompp_inputs, grompp_outputs, out, i, gromppInstName)
+        it.connectOnly(mdrun_inputs, mdrun_outputs, out, i, mdrunInstName)
+        running+=1
+    pers.set("running", running)
+    pers.write()
+    return out
 
