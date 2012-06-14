@@ -40,15 +40,38 @@ from cpc.dataflow import ArrayValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
+
+def findClosest(path_lambdas, lam):
+    """Find the index of the closest lambda value."""
+    mindif=2
+    mini=-1
+    i=0
+    for plam in path_lambdas:
+        dif=(plam-lam)*(plam-lam) #math.fabs(plam-lam)
+        if dif < mindif:
+            mini=i
+            mindif=dif
+        i+=1     
+    return mini
+
 def fe_iteration(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
     fe_path=inp.getInput('path.lambdas')
-    nlambdas=len(fe_path)
-    lambdas=[]
-    for i in range(nlambdas):
-        lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
+    #nlambdas=len(fe_path)
+    path_lambdas=[]
+    for i in range(len(fe_path)):
+        path_lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
+
+    # by default, the lambdas are the same as the path lambdas
+    lambdas=path_lambdas
+
+    lambdas_in=inp.getInput('lambdas')
+    if lambdas_in is not None and len(lambdas_in) > 0:
+        lambdas=[]
+        for i in range(len(lambdas_in)):
+            lambdas.append(inp.getInput('lambdas[%d]'%i))
 
     g_bar=pers.get('g_bar')
     if g_bar is None:
@@ -74,33 +97,37 @@ def fe_iteration(inp, out):
         out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
         out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
 
-    if mdruns != nlambdas:
+    if mdruns != len(lambdas):
         foreignLambdas=""
         for lmb in lambdas:
             foreignLambdas += "%g "%lmb
         settings_array=[]
-        for i in range(nlambdas):
-            lam=float(i)/float(nlambdas-1)
+        i=0
+        for lam in lambdas:
+            #lam=float(i)/float(len(lambdas)-1)
             mdp=[]
             mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                       'value' : StringValue('%g'%lam)}))
+                                      'value' : StringValue('%g'%lam)}))
             nsteps=inp.getInput('nsteps')
             mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
-                                       'value' : StringValue('%d'%nsteps) }))
+                                      'value' : StringValue('%d'%nsteps) }))
             mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
-                                       'value' : StringValue(foreignLambdas)}))
+                                      'value' : StringValue(foreignLambdas)}))
             settings_array.append(ArrayValue(mdp))
-        for i in range(mdruns, nlambdas):
-            lam=float(i)/float(nlambdas-1)
+            i+=1
+        for i in range(mdruns, len(lambdas)):
+            lam=lambdas[i]
+            #lam=float(i)/float(len(lambdas)-1)
             # for now, connect directly to runs
-            out.addConnection('self:ext_in.path.lambdas[%d].conf'%i,
+            lami=findClosest(path_lambdas, lam)
+            out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
                               'runs:in.conf[%d]'%i)
             out.addConnection('runs:out.conf[%d]'%i, 
                               'self:ext_out.path.lambdas[%d].conf'%i)
             out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
             out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         out.setSubOut('settings_array', ArrayValue(settings_array))
-        mdruns=nlambdas
+        mdruns=len(lambdas)
     pers.set('mdruns', mdruns)
 
     pers.write()

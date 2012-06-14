@@ -54,7 +54,7 @@ def fe_init(inp, out):
                                                "persistent.dat"))
 
     # TODO: relaxation time
-    relax_time_value=inp.getInputValue('solvation_relaxation_time')
+    relax_time_value=inp.getInputValue('nsteps')
     relax_time=relax_time_value.value
     npoints_init_value=inp.getInputValue('n_lambdas')
     npoints_init=npoints_init_value.value

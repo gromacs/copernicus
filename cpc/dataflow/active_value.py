@@ -127,7 +127,8 @@ class ActiveValue(value.Value):
             if self.basetype == vtype.recordType:
                 for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
-                        raise ActiveValError("Unknown member item '%s'"%name)
+                        raise ActiveValError("Unknown member item '%s' in %s"%
+                                             (name, self.getFullName()))
                     # make the value if it doesn't exist
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None, 

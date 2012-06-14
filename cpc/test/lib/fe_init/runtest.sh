@@ -30,7 +30,7 @@ fi
 ./cpcc set fe_init:in.coupled_mol ethanol
 
 ./cpcc set fe_init:in.n_lambdas 10
-./cpcc set fe_init:in.solvation_relaxation_time 2000
+./cpcc set fe_init:in.nsteps 2000
 
 ./cpcc set fe_init:in.a vdwq
 ./cpcc set fe_init:in.b vdw

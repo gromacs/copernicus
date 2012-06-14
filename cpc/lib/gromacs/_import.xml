@@ -2,6 +2,7 @@
 <cpc>
     <desc>Gromacs specific functions</desc>
     <import name="resource" />
+    <import name="meas" />
 
     <type id="grompp-include-array" base="array" member-type="file" />
     <type id="grompp-include-array-array" base="array" 
@@ -49,14 +50,6 @@
     <type id="mdp-array-array" base="array" member-type="mdp-array">
         <desc>An array of arrays of grompp mdp settings</desc>
     </type>
-
-    <type id="meas" base="record">
-        <desc>A measurement value with error estimate.</desc>
-        <field id="value" type="float"/>
-        <field id="error" type="float"/>
-    </type>
-
-
 
 
     <function id="grompp" type="python-extended">
@@ -241,19 +234,19 @@
         <field id="lambda_B" type="float">
             <desc>Lambda value of end point (B) of sub-interval</desc> 
         </field>
-        <field id="dG" type="meas">
+        <field id="dG" type="meas::meas">
             <desc>Free energy difference of the sub-interval in kJ/mol</desc> 
         </field>
-        <field id="dG_kT" type="meas">
+        <field id="dG_kT" type="meas::meas">
             <desc>Free energy difference of the sub-interval in kT</desc> 
         </field>
-        <field id="s_A" type="meas">
+        <field id="s_A" type="meas::meas">
             <desc>Relative entropy of B in A in kT</desc> 
         </field>
-        <field id="s_B" type="meas">
+        <field id="s_B" type="meas::meas">
             <desc>Relative entropy of A in B in kT</desc> 
         </field>
-        <field id="stdev" type="meas">
+        <field id="stdev" type="meas::meas">
             <desc>expected per-sample standard deviation in kT</desc> 
         </field>
     </type>
@@ -268,7 +261,7 @@
             </field>
         </inputs>
         <outputs>
-            <field type="meas" id="dG">
+            <field type="meas::meas" id="dG">
                 <desc>The free energy difference</desc>
             </field>
             <field type="file" id="histogram">

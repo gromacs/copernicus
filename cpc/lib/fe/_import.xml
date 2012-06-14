@@ -3,6 +3,7 @@
     <!-- a module for free energy calculations.-->
     <import name="resource" />
     <import name="gromacs" />
+    <import name="meas" />
     <import name="int" />
 
     <type id="grompp_input" base="record">
@@ -23,18 +24,8 @@
         </field>
     </type>
 
-    <type id="measurement_value" base="record">
-        <desc>A measurement value with error estimate</desc>
-        <field type="float" id="val">
-            <desc>The estimate for the measurement value</desc>
-        </field>
-        <field type="float" id="err">
-            <desc>The estimate for the error in the measurement value</desc>
-        </field>
-    </type>
-
     <!--<function id="fe_solvation" type="external">
-        <desc>Calculates a free energy of solvation. Takes a simulation with
+        <desc>Calculates a free energy of solvation. Takes a configuration with
               a molecule that is solvated, and de-solvates it in steps, 
               calculating the free energy difference between the solvated
               and de-solvated states with the Bennett acceptance ratio 
@@ -53,7 +44,7 @@
                 <desc>A configuration with the solvent decoupled, for
                       faster equilibration.</desc>
             </field>
-             <field type="string" id="coupled">
+            <field type="string" id="molecule_name">
                 <desc>The name/group number of the molecule to desolvate.
                 </desc>
             </field>
@@ -66,9 +57,13 @@
                       This time should not be too short, but can be too long. 
                       A value of 0.1 ns should be good for water.</desc>
             </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
         </inputs>
         <outputs>
-            <field type="measurement_value" id="delta_f">
+            <field type="meas::meas" id="delta_f">
                 <desc>The free energy difference with error estimate 
                 (this is a Helmholtz free energy if pressure coupling is off 
                  in the mdp parameters, and a Gibbs free energy if pressure 
@@ -77,8 +72,8 @@
         </outputs>
         <controller log="true" executable="fe_solvation" 
                     access_outputs="true" access_subnet_outputs="true" />
-    </function>-->
-
+    </function>
+    -->
 
     <!-- internal functions -->
 
@@ -158,7 +153,7 @@
                 <desc>The number of lambda values to simulate at per 
                       coulomb/vdw step</desc>
             </field>
-            <field type="int" id="solvation_relaxation_time">
+            <field type="int" id="nsteps">
                 <desc>Estimate for the relaxation time for solvation (i.e. of 
                       the solvent configuration) in simulation time steps. 
                 </desc>
@@ -201,11 +196,6 @@
                         (except configuration).
                 </desc>
             </field>
-            <!--<field type="file" id="mdp">
-                <desc>The tuned and prepared mdp. This must have all the
-                      appropriate settings for FE calculations, except
-                      lambda values.</desc>
-            </field>-->
             <field type="string" id="coupled_mol">
                 <desc>The name/group number of the lambda-coupled molecule
                 </desc>
@@ -215,9 +205,9 @@
                       (in lambda coupling) with lambda points and corresponding 
                       configurations.</desc>
             </field>
-            <!--<field type="lambda_array" id="lambdas" opt="true">
+            <field type="lambda_array" id="lambdas" opt="true">
                 <desc>New lambda values to simulate at</desc>
-            </field>-->
+            </field>
             <field type="resource::run_desc" id="resources">
                 <desc>The run resources for a typical run</desc>
             </field>
@@ -226,7 +216,7 @@
             </field>
         </inputs>
         <outputs>
-            <field type="measurement_value" id="dG">
+            <field type="meas::meas" id="dG">
                 <desc>The free energy difference</desc>
             </field>
             <field type="lambda_array" id="lambdas">
