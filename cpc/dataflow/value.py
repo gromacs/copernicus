@@ -379,8 +379,12 @@ class Value(object):
                 if not self.type.getRecordMember(item).opt:
                     if (not item in self.value) or (self.value[item].value 
                                                     is None):
+                        #log.debug('%s: missing record value %s'%
+                        #          (self.getFullName(), item))
                         return False
                     if not self.value[item].haveAllRequiredValues():
+                        #log.debug('%s: * missing record value %s'%
+                        #          (self.getFullName(), item))
                         return False
                     #if self.value[item].type.isSubtype(vtype.recordType):
                     #    # check whether it's a list: then check the list

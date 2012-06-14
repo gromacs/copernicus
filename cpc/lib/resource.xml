@@ -21,7 +21,7 @@
         <field type="resource_list" id="max">
             <desc>The maximum allowed resources</desc>
         </field>
-        <field type="worker_type_resource" id="workers">
+        <field type="worker_type_resource" id="workers" opt="true">
             <desc>The ideal amount of resources for each worker type.</desc>
         </field>  
     </type>

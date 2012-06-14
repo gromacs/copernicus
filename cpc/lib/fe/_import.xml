@@ -7,7 +7,7 @@
 
     <type id="grompp_input" base="record">
         <desc>Partial grompp input</desc>
-        <field type="file" id="mdp" ><desc>A .mpp settings file</desc></field>
+        <field type="file" id="mdp" ><desc>A .mdp settings file</desc></field>
         <field type="file" id="top" ><desc>A .top topology file</desc></field>
         <field type="file" id="ndx" opt="true">
             <desc>A .ndx index file</desc>
@@ -116,6 +116,9 @@
     </type>
     <type id="fe_path_array" base="array" member-type="fe_path" />
 
+
+    <type id="lambda_array" base="array" member-type="float" />
+
     <function id="fe_init" type="external">
         <desc>Initialize a free energy run, by generating a set of 
               </desc>
@@ -135,6 +138,22 @@
                 <desc>The name/group number of the lambda-coupled molecule
                 </desc>
             </field>
+            <field type="string" id="a">
+                <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' 
+                      for:
+                      vdwq: full coupling,
+                      vdw: only vdw interactions,
+                      none: no interactions.
+                </desc>
+            </field>
+            <field type="string" id="b">
+                <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' 
+                      for:
+                      vdwq: full coupling,
+                      vdw: only vdw interactions,
+                      none: no interactions.
+                </desc>
+            </field>
             <field type="int" id="n_lambdas">
                 <desc>The number of lambda values to simulate at per 
                       coulomb/vdw step</desc>
@@ -146,10 +165,14 @@
             </field>
         </inputs>
         <outputs>
-            <field type="fe_path_array" id="paths">
+            <field type="fe_path" id="path">
                 <desc>Free energy path arrays, describing the path taken
                       (in lambda coupling) with lambda points and corresponding 
                       configurations.</desc>
+            </field>
+            <field type="file" id="conf_b">
+                <desc>The configuration at point B, for stringing paths together
+                </desc>
             </field>
             <field type="resource::run_desc" id="resources">
                 <desc>The run resources for a typical run</desc>
@@ -164,11 +187,10 @@
             <field type="gromacs::mdp-array" id="settings"/>
             <field type="gromacs::mdp-array-array" id="settings_array"/>
         </subnet-outputs>
-        <controller log="true" executable="fe_init" persistent_dir="true"
-                    access_outputs="true" access_subnet_outputs="true" />
+        <controller log="true" executable="fe_init" persistent_dir="true" />
     </function>
 
-    <!--<function id="fe_iteration" type="external">
+    <function id="fe_iteration" type="external">
         <desc>Do one iteration of a free energy calculation. 
               Takes a system ready to run with a set of lambda paramters,
               and  calculate an estimate for the free energy and a new set 
@@ -179,47 +201,49 @@
                         (except configuration).
                 </desc>
             </field>
-            <field type="file" id="mdp">
-                <desc>The tuned and prepared mdp</desc>
-            </field>
+            <!--<field type="file" id="mdp">
+                <desc>The tuned and prepared mdp. This must have all the
+                      appropriate settings for FE calculations, except
+                      lambda values.</desc>
+            </field>-->
             <field type="string" id="coupled_mol">
                 <desc>The name/group number of the lambda-coupled molecule
                 </desc>
             </field>
-            <field type="fe_path_array" id="paths">
-                <desc>Free energy path arrays, describing the path taken
+            <field type="fe_path" id="path">
+                <desc>Free energy path, describing the path taken
                       (in lambda coupling) with lambda points and corresponding 
                       configurations.</desc>
             </field>
-            <field type="lambda_array" id="lambdas" opt="true">
+            <!--<field type="lambda_array" id="lambdas" opt="true">
                 <desc>New lambda values to simulate at</desc>
-            </field>
+            </field>-->
             <field type="resource::run_desc" id="resources">
                 <desc>The run resources for a typical run</desc>
             </field>
+            <field type="int" id="nsteps">
+                <desc>Number of simulation steps to take.</desc>
+            </field>
         </inputs>
         <outputs>
-            <field type="measurement_value" id="delta_f">
+            <field type="measurement_value" id="dG">
                 <desc>The free energy difference</desc>
             </field>
             <field type="lambda_array" id="lambdas">
                 <desc>New set of lambda values for the next iteration.</desc>
             </field>
-            <field type="fe_path_array" id="paths">
-                <desc>Free energy path arrays, describing the path taken
+            <field type="fe_path" id="path">
+                <desc>Free energy path, describing the path taken
                       (in lambda coupling) with lambda points and corresponding 
                       configurations.</desc>
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="resource::run_desc" id="resources" />
-            <field type="file" id="tuned_mdp" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="gromacs::mdp-array-array" id="settings_array"/>
         </subnet-outputs>
-        <controller log="true" executable="fe_iteration" 
-                    access_outputs="true" access_subnet_outputs="true" />
-    </function>-->
+        <controller log="true" executable="fe_iteration" persistent_dir="true"/>
+    </function>
 </cpc>
 

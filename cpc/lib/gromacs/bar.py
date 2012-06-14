@@ -121,6 +121,7 @@ def g_bar(inp):
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("g_bar -version")
         return 
+    fo=inp.getFunctionOutput()
     outDir=inp.getOutputDir()
     nedrfiles=len(inp.getInput('edr'))
     baroutname=os.path.join(outDir, "bar.xvg")
@@ -128,6 +129,10 @@ def g_bar(inp):
     #item=inp.getInput('item')
     cmdline=["g_bar", "-g"]
     for i in range(nedrfiles):
+        edrfile=inp.getInput('edr[%d]'%i)
+        if edrfile is None:
+            # there is an incomplete set of inputs. Return immediately
+            return fo
         cmdline.append(inp.getInput('edr[%d]'%i))
     cmdline.extend( [ "-o", baroutname, "-oh", histoutname ] )
     proc=subprocess.Popen(cmdline,
@@ -188,7 +193,6 @@ def g_bar(inp):
     dgValDict['error']=FloatValue(total_dG_err)
     dgVal=RecordValue( dgValDict )
 
-    fo=inp.getFunctionOutput()
 
     fo.setOut('dG', dgVal)
     fo.setOut('histogram', FileValue(histoutname))

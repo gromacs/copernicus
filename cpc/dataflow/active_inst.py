@@ -549,12 +549,12 @@ class ActiveInstance(object):
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
             if self.updated:
-                #log.debug("%s: Processing new input for %s of fn %s"%
-                #          (self.getCanonicalName(), self.instance.getName(), 
-                #           self.function.getName()))
                 # only continue if we're active
                 if self.state != ActiveInstance.active or noNewTasks:
                     return
+                #log.debug("%s: Processing new input for %s of fn %s"%
+                #          (self.getCanonicalName(), self.instance.getName(), 
+                #           self.function.getName()))
                 # and make it run.
                 if self._canRun():
                     self._genTask()

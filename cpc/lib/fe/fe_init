@@ -89,37 +89,17 @@ def fe_init(inp, out):
         valarray.append(RecordValue( { 'name' : StringValue('nsteps'),
                                         'value' : 
                                         StringValue('%d'%(relax_time) )}))
+        valarray.append(RecordValue( { 'name' : StringValue('couple-lambda0'),
+                                       'value' : inp.getInputValue('a')}))
+        valarray.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
+                                       'value' : inp.getInputValue('b') }))
         out.setSubOut('settings', ArrayValue(valarray))
 
         settings_array=[]
         for i in range(npoints_init-1):
             lam_start=float(i+1)/float(npoints_init-1)
             # specific settings for relaxation
-            # coulomb
             mdp=[]
-            mdp.append(RecordValue( { 'name' : StringValue('couple-lambda0'),
-                                       'value' : StringValue('vdwq')}))
-            mdp.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
-                                       'value' : StringValue('vdw') }))
-            #mdp.append(RecordValue( { 'name' : StringValue('delta-lambda'),
-            #                          'value' : 
-            #                          StringValue('%g'%(1/total_relax_time))}))
-            mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                       'value' : StringValue('%g'%lam_start)}))
-            settings_array.append(ArrayValue(mdp))
-        for i in range(npoints_init-1):
-            lam_start=float(i+1)/float(npoints_init-1)
-            # specific settings for relaxation
-            # coulomb
-            mdp=[]
-            # vdw
-            mdp.append(RecordValue( { 'name' : StringValue('couple-lambda0'),
-                                       'value' : StringValue('vdw') }))
-            mdp.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
-                                       'value' : StringValue('none') }))
-            #mdp.append(RecordValue( { 'name' : StringValue('delta-lambda'),
-            #                          'value' : 
-            #                          StringValue('%g'%(1/total_relax_time))}))
             mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
                                        'value' : StringValue('%g'%lam_start)}))
             settings_array.append(ArrayValue(mdp))
@@ -201,39 +181,20 @@ def fe_init(inp, out):
             if i == 0:
                 # add the fixed one
                 out.addConnection('self:ext_in.conf', 
-                                  'self:ext_out.paths[0].lambdas[0].conf')
+                                  'self:ext_out.path.lambdas[0].conf')
             out.addConnection('runs:out.conf[%d]'%i, 
-                              'self:ext_out.paths[0].lambdas[%d].conf'%(i+1))
-            # the last of the coulombs is the first of the vdw
+                              'self:ext_out.path.lambdas[%d].conf'%(i+1))
+            # the last of the confs is the conf_b
             if i == npoints_init-2:
-                out.addConnection('runs:out.conf[%d]'%i, 
-                                  'self:ext_out.paths[1].lambdas[0].conf')
-        for j in range(0, npoints_init-1):
-            #npoints_init-1, 2*(npoints_init-1)):
-            i=j+npoints_init-1
-            out.addConnection('runs:out.conf[%d]'%(i-1), 
-                              'runs:in.conf[%d]'%i)
-            #if j == 0:
-            #    out.addConnection('mdruns:out.conf[%d]'%(i-1), 
-            #                      'self:ext_out.paths[1].lambdas[%d].conf'%
-            #                      (j+1))
-            out.addConnection('runs:out.conf[%d]'%i, 
-                              'self:ext_out.paths[1].lambdas[%d].conf'%(j+1))
+                out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.conf_b')
 
         # Set the lambda values.
         # set lambda array outputs for coulomb + vdw
-        out.setOut('paths[0].a', StringValue('vdwq'))
-        out.setOut('paths[0].b', StringValue('vdw'))
-        out.setOut('paths[1].a', StringValue('vdw'))
-        out.setOut('paths[1].b', StringValue('none'))
+        out.addConnection('self:ext_in.a', 'self:ext_out.path.a')
+        out.addConnection('self:ext_in.b', 'self:ext_out.path.b')
         for i in range(npoints_init):
             lam=float(i)/float(npoints_init-1)
-            out.setOut('paths[0].lambdas[%d].lambda'%i, FloatValue(lam))
-        for i in range(npoints_init):
-            lam=float(i)/float(npoints_init-1)
-            out.setOut('paths[1].lambdas[%d].lambda'%i, FloatValue(lam))
-            #out.setOut('confs[%d].lambda.coulomb'%j, FloatValue(1))
-            #out.setOut('confs[%d].lambda.vdw'%j, FloatValue(lam))
+            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         mdrun=npoints_init
         pers.set("mdrun", mdrun)
 
