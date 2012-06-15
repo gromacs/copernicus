@@ -138,18 +138,21 @@ def g_bar(inp):
     proc=subprocess.Popen(cmdline,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
+                          stderr=subprocess.PIPE,
                           cwd=inp.outputDir,
                           close_fds=True)
     (stdout, stderr)=proc.communicate()
     if proc.returncode != 0:
-        raise GromacsError("ERROR: g_bar returned %s"%(stdout))
+        raise GromacsError("ERROR: g_bar returned %s, %s"%(stdout, stderr))
     detailedStart=re.compile(r".*lam_A[ ]*lam_B")
     finalStart=re.compile(r"Final results in kJ/mol")
+    lambdaReg=re.compile(r".*lambda.*")
+    totalReg=re.compile(r".*total.*")
     results=[] # the array of detailed results in kT
     phases=[ "start", "detailed_results", "final" ]
     phase=0
     i=0
+    #log.debug(stdout)
     for line in iter(stdout.splitlines()):
         if phase == 0:
             if detailedStart.match(line):
@@ -175,12 +178,13 @@ def g_bar(inp):
                     results.append(rs)
         elif phase == 2:
             spl=line.split()
-            if len(spl) >= 8 and spl[0] == "lambda":
+            #log.debug("phase 2 line: %s, %s"%(line, spl))
+            if len(spl) >= 8 and lambdaReg.match(spl[0]):
                 dG=float(spl[5])
                 dG_err=float(spl[7])
                 results[i].setdG(dG, dG_err)
                 i+=1
-            elif len(spl) >= 8 and spl[0] == "total":
+            elif len(spl) >= 8 and totalReg.match(spl[0]):
                 total_dG=float(spl[5])
                 total_dG_err=float(spl[7])
     # now fill the results array

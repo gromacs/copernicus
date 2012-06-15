@@ -181,11 +181,16 @@ def mdrun(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
     init=False
-    if inp.getInputValue('tpr').isUpdated():
+
+    lasttpr=pers.get('lasttpr')
+    newtpr=inp.getInput('tpr')
+    #if inp.getInputValue('tpr').isUpdated():
+    if newtpr!= lasttpr: 
+        lasttpr=newtpr
         # there was no previous command.
         # purge the persistent directory, by moving the confout files to a
         # backup directory
-        log.debug("Re-initializing mdrun")
+        log.debug("(Re)initializing mdrun")
         confout=glob.glob(os.path.join(persDir, "run_???"))
         if len(confout)>0:
             backupDir=os.path.join(persDir, "backup")
@@ -200,16 +205,17 @@ def mdrun(inp):
                 except:
                     pass
         init=True
+        pers.set('lasttpr', lasttpr)
     elif inp.cmd is None:
-        if pers.get('initialized') is None:
-            init=True    
-        else:
-            return fo
+        #if pers.get('initialized') is None:
+        #    init=True    
+        #else:
+        return fo
     if init:
         if rsrc.max.get('cores') is None:
             confFile=os.path.join(persDir, 'conf.gro')
-            extractConf(inp.getInput('tpr'), confFile)
-            tune.tune(rsrc, confFile, inp.getInput('tpr'), persDir)
+            extractConf(newtpr, confFile)
+            tune.tune(rsrc, confFile, newtpr, persDir)
         if inp.cmd is not None:
             fo.cancelPrevCommands()
         pers.set('initialized', True)
@@ -407,7 +413,7 @@ def mdrun(inp):
             os.mkdir(newdirname)
         except OSError:
             pass
-        tpr=inp.getInput('tpr')
+        tpr=newtpr #inp.getInput('tpr')
         src=os.path.join(inp.getBaseDir(), tpr)
         dst=os.path.join(newdirname,"topol.tpr")
         if inp.getInput('cmdline_options') is not None:
