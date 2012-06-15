@@ -24,7 +24,11 @@
         </field>
     </type>
 
-    <!--<function id="fe_solvation" type="external">
+    <type id="string_array" base="array" member-type="string" />
+    <type id="meas_array" base="array" member-type="meas::meas" />
+    <type id="meas_array_array" base="array" member-type="meas_array" />
+
+    <function id="fe_solvation" type="external">
         <desc>Calculates a free energy of solvation. Takes a configuration with
               a molecule that is solvated, and de-solvates it in steps, 
               calculating the free energy difference between the solvated
@@ -70,10 +74,18 @@
                  coupling is on).</desc>
             </field>
         </outputs>
+        <subnet-inputs>
+            <field type="meas_array_array" id="dG_array">
+                <desc>The free energy difference</desc>
+            </field>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="string_array" id="endpoint_array"/>
+            <field type="int" id="n_lambdas_init"/>
+        </subnet-outputs>
         <controller log="true" executable="fe_solvation" 
-                    access_outputs="true" access_subnet_outputs="true" />
+                    persistent_dir="true" />
     </function>
-    -->
 
     <!-- internal functions -->
 
@@ -105,6 +117,13 @@
                   none: no interactions.
             </desc>
         </field>
+        <field type="string" id="molecule_name">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
         <field type="conf_lambda_array" id="lambdas">
             <desc>The FE path.</desc>
         </field>
@@ -129,7 +148,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="string" id="coupled_mol">
+            <field type="string" id="molecule_name">
                 <desc>The name/group number of the lambda-coupled molecule
                 </desc>
             </field>
@@ -172,9 +191,17 @@
             <field type="resource::run_desc" id="resources">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="file" id="mdp">
-                <desc>The tuned and prepared mdp</desc>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
             </field>
+
+            <!--<field type="file" id="mdp">
+                <desc>A full set of input values for grompp 
+                      (except configuration), with tuned and prepared mdp.
+                </desc>
+            </field>-->
         </outputs>
         <subnet-inputs>
         </subnet-inputs>
@@ -194,10 +221,6 @@
             <field type="grompp_input" id="grompp">
                 <desc>A full set of input values for grompp 
                         (except configuration).
-                </desc>
-            </field>
-            <field type="string" id="coupled_mol">
-                <desc>The name/group number of the lambda-coupled molecule
                 </desc>
             </field>
             <field type="fe_path" id="path">

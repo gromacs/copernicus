@@ -79,7 +79,7 @@ def fe_init(inp, out):
                                        'value' : StringValue('0')}))
         valarray.append(RecordValue( { 'name' : StringValue('couple_moltype'),
                                        'value' : 
-                                        inp.getInputValue('coupled_mol')}))
+                                        inp.getInputValue('molecule_name')}))
         valarray.append(RecordValue( { 'name' : StringValue('sc-alpha'),
                                        'value' : StringValue('1.0') } ))
         valarray.append(RecordValue( { 'name' : StringValue('sc-power'),
@@ -107,6 +107,7 @@ def fe_init(inp, out):
 
     # here we create an entirely new sampling set.
     notune=True
+    connectGrompp=False
     tune=pers.get('tune')
     #sys.stderr.write("%s, %s"%(len(inp.getInput('resources.min')), 
     #                           len(inp.getInput('resources.max'))))
@@ -127,7 +128,9 @@ def fe_init(inp, out):
         out.addConnection('self:ext_in.conf', 'mdrun_tune:in.conf')
         # connect its output to the subnet inputs of self
         out.addConnection('mdrun_tune:out.resources', 'self:ext_out.resources')
-        out.addConnection('mdrun_tune:out.mdp', 'self:ext_out.mdp')
+        out.addConnection('mdrun_tune:out.mdp', 'self:ext_out.grompp.mdp')
+        # connect the output grompp settings
+        connectGrompp=True
         pers.set("tune", tune)
         notune=False
 
@@ -138,8 +141,19 @@ def fe_init(inp, out):
         out.addInstance('merge_mdp', 'gromacs::merge_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'merge_mdp:in.mdp')
         out.addConnection('self:sub_out.settings', 'merge_mdp:in.settings')
-        out.addConnection('merge_mdp:out.mdp', 'self:ext_out.mdp')
+        out.addConnection('merge_mdp:out.mdp', 'self:ext_out.grompp.mdp')
+        # connect the output grompp settings
+        connectGrompp=True
         pers.set("merge_mdp", merge_mdp)
+
+    if connectGrompp:
+        # connect the output grompp settings
+        out.addConnection('self:ext_in.grompp.top', 'self:ext_out.grompp.top')
+        out.addConnection('self:ext_in.grompp.ndx', 'self:ext_out.grompp.ndx')
+        out.addConnection('self:ext_in.grompp.include', 
+                          'self:ext_out.grompp.include')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'self:ext_out.grompp.mdrun_cmdline_options')
 
     # now create the runs.
     mdrun=pers.get('mdrun')
@@ -192,6 +206,8 @@ def fe_init(inp, out):
         # set lambda array outputs for coulomb + vdw
         out.addConnection('self:ext_in.a', 'self:ext_out.path.a')
         out.addConnection('self:ext_in.b', 'self:ext_out.path.b')
+        out.addConnection('self:ext_in.molecule_name', 
+                          'self:ext_out.path.molecule_name')
         for i in range(npoints_init):
             lam=float(i)/float(npoints_init-1)
             out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))

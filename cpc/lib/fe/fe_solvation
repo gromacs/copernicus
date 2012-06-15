@@ -1,0 +1,304 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+def addIteration(inp, out, i):
+    """Add one fe calc iteration."""
+    out.addInstance('iter_q_%d'%i, 'fe_iteration')
+    out.addInstance('iter_lj_%d'%i, 'fe_iteration')
+    # connect shared inputs
+    # q
+    out.addConnection('init_q:out.resources',
+                      'iter_q_%d:in.resources'%i)
+    out.addConnection('init_q:out.grompp',
+                      'iter_q_%d:in.grompp'%i)
+    # lj
+    out.addConnection('init_lj:out.resources',
+                      'iter_lj_%d:in.resources'%i)
+    out.addConnection('init_lj:out.grompp',
+                      'iter_lj_%d:in.grompp'%i)
+    if i==0:
+        # connect the inits
+        # q
+        out.addConnection('init_q:out.path', 
+                          'iter_q_%d:in.path'%i )
+        # lj
+        out.addConnection('init_lj:out.path', 
+                          'iter_lj_%d:in.path'%i )
+
+    else:
+        # connect the previous iteration
+        # q
+        out.addConnection('iter_q_%d:out.path'%(i-1), 
+                          'iter_q_%d:in.path'%i )
+        out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
+                          'iter_q_%d:in.lambdas'%i )
+        # lj
+        out.addConnection('iter_lj_%d:out.path'%(i-1), 
+                          'iter_lj_%d:in.path'%i )
+        out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
+                          'iter_lj_%d:in.lambdas'%i )
+    # connect the outputs
+    out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_array[%d][0]'%i)
+    out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_array[%d][1]'%i)
+
+def fe_solvation(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+
+    init=pers.get('init')
+    if init is None:
+        init=1
+        out.addInstance('init_q', 'fe_init')
+        out.addInstance('init_lj', 'fe_init')
+        # connect them together
+        out.addConnection('init_q:out.conf_b', 'init_lj:in.conf')
+        # set inputs
+        out.setSubOut('endpoint_array[0]', StringValue('vdwq'))
+        out.setSubOut('endpoint_array[1]', StringValue('vdw'))
+        out.setSubOut('endpoint_array[2]', StringValue('none'))
+        out.setSubOut('n_lambdas_init', IntValue(10))
+
+        out.addConnection('self:ext_in.conf', 'init_q:in.conf')
+        out.addConnection('self:ext_in.grompp', 'init_q:in.grompp')
+        out.addConnection('self:ext_in.resources', 'init_q:in.resources')
+        out.addConnection('self:ext_in.solvation_relaxation_time', 
+                          'init_q:in.nsteps')
+        out.addConnection('self:ext_in.molecule_name', 
+                          'init_q:in.molecule_name')
+        out.addConnection('self:sub_out.endpoint_array[0]',
+                          'init_q:in.a')
+        out.addConnection('self:sub_out.endpoint_array[1]',
+                          'init_q:in.b')
+        out.addConnection('self:sub_out.n_lambdas_init', 
+                          'init_q:in.n_lambdas')
+
+        out.addConnection('self:ext_in.grompp', 'init_lj:in.grompp')
+        out.addConnection('self:ext_in.resources', 'init_lj:in.resources')
+        out.addConnection('self:ext_in.solvation_relaxation_time', 
+                          'init_lj:in.nsteps')
+        out.addConnection('self:ext_in.molecule_name', 
+                          'init_lj:in.molecule_name')
+        out.addConnection('self:sub_out.endpoint_array[1]',
+                          'init_lj:in.a')
+        out.addConnection('self:sub_out.endpoint_array[2]',
+                          'init_lj:in.b')
+        out.addConnection('self:sub_out.n_lambdas_init', 
+                          'init_lj:in.n_lambdas')
+        pers.set('init', init)
+
+    nruns=pers.get('nruns')
+    if nruns is None or nruns==0:
+        # make the first two. The first one is simply an equilibration run
+        nruns=2
+        addIteration(inp, out, 0)
+        addIteration(inp, out, 1)
+
+    dgOutputsHandled=pers.get('dg_outputs_handled')
+    # read in the dG inputs.
+    dgArray=inp.getSubnetInput('dG_array')
+    dGl=[]
+    end=False
+    if dgArray is not None:
+        nOutputs=0
+        for i in range(len(dgArray)):
+            sublist=inp.getSubInput('dG_array[%d]'%i)
+            if sublist is not None:
+                dGsl=[]
+                for j in range(len(sublist)):
+                    val=inp.getSubInput('dG_array[%d][%d].value'%(i, j))
+                    err=inp.getSubInput('dG_array[%d][%d].error'%(i, j))
+                    if val is not None and err is not None:
+                        dGsl.append( (val, err) )
+                    else:
+                        end=True
+                        break
+                dGl.append(dGsl)
+            else:
+                break
+            if end:
+                break
+    # now count the number of valid inputs
+    ndgOutputs=len(dGl)
+    nSubVal=0
+    if ndgOutputs > 0:
+        nSubVal=len(dGl[0])
+        for i in range(1, ndgOutputs):
+            if len(dGl[i]) != len(dGl[0]):
+                ndgOutputs=i
+                break
+    if ndgOutputs != dgOutputsHandled:
+        val=nSubVal*[0.]
+        err=nSubVal*[0.]
+        totVal=None
+        totErr=None
+        N=ndgOutputs
+        if N>1: # we ignore the first one, as it is an equilibration run
+            for i in range(1, ndgOutputs):
+                for j in range(nSubVal):
+                    val[j] += dGl[i][j][0]
+                    err[j] += dGl[i][j][1]*dGl[i][j][1]
+            for j in range(nSubVal):
+                totVal += val[j]
+                totErr += err[j]
+                val[j] = val[j]/N
+                err[j] = math.sqrt(err[j] / N)
+            totVal /= (N*nSubVal)
+            totErr = math.sqrt(totErr/(N*nSubVal))
+        dgOutputsHandled=ndgOutputs
+        precision=inp.getInput('precision')
+        if precision is None:
+            precision = 1 # default of 1 kJ/mol
+        if totErr > precision:
+            addIteration(inp, out, nruns)
+            nruns += 1
+    pers.set('dg_outputs_handled', dgOutputsHandled)
+    pers.set('nruns', nruns)
+        
+    
+'''
+    fe_path=inp.getInput('path.lambdas')
+    #nlambdas=len(fe_path)
+    path_lambdas=[]
+    for i in range(len(fe_path)):
+        path_lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
+
+    # by default, the lambdas are the same as the path lambdas
+    lambdas=path_lambdas
+
+    lambdas_in=inp.getInput('lambdas')
+    if lambdas_in is not None and len(lambdas_in) > 0:
+        lambdas=[]
+        for i in range(len(lambdas_in)):
+            lambdas.append(inp.getInput('lambdas[%d]'%i))
+
+    g_bar=pers.get('g_bar')
+    if g_bar is None:
+        g_bar=1
+        out.addInstance('g_bar', 'gromacs::g_bar')
+        out.addConnection('g_bar:out.dG', 'self:ext_out.dG')
+    pers.set('g_bar', g_bar)
+
+    mdruns=pers.get('mdruns')
+    if mdruns is None:
+        mdruns=0
+        # these are the multiple runs
+        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        # connect the mdp and resources
+        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'runs:in.cmdline_options[0]')
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        out.addConnection('self:ext_in.grompp.mdp', 'runs:in.mdp[0]')
+        out.addConnection('self:sub_out.settings_array', 'runs:in.settings')
+        out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
+        out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
+
+    if mdruns != len(lambdas):
+        foreignLambdas=""
+        for lmb in lambdas:
+            foreignLambdas += "%g "%lmb
+        settings_array=[]
+        i=0
+        for lam in lambdas:
+            #lam=float(i)/float(len(lambdas)-1)
+            mdp=[]
+            mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                      'value' : StringValue('%g'%lam)}))
+            nsteps=inp.getInput('nsteps')
+            mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                      'value' : StringValue('%d'%nsteps) }))
+            mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
+                                      'value' : StringValue(foreignLambdas)}))
+            settings_array.append(ArrayValue(mdp))
+            i+=1
+        for i in range(mdruns, len(lambdas)):
+            lam=lambdas[i]
+            #lam=float(i)/float(len(lambdas)-1)
+            # for now, connect directly to runs
+            lami=findClosest(path_lambdas, lam)
+            out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
+                              'runs:in.conf[%d]'%i)
+            out.addConnection('runs:out.conf[%d]'%i, 
+                              'self:ext_out.path.lambdas[%d].conf'%i)
+            out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
+            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+        out.setSubOut('settings_array', ArrayValue(settings_array))
+        mdruns=len(lambdas)
+    pers.set('mdruns', mdruns)
+
+    pers.write()
+    return out
+'''
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_solvation(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+
