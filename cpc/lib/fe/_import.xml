@@ -27,7 +27,8 @@
 
     <type id="string_array" base="array" member-type="string" />
     <type id="meas_array" base="array" member-type="meas::meas" />
-    <type id="meas_array_array" base="array" member-type="meas_array" />
+    <!--<type id="meas_array_array" base="array" member-type="meas_array" />-->
+    <type id="priority_array" base="array" member-type="int" />
 
     <function id="solvation" type="external">
         <desc>Calculates a free energy of solvation. Takes a configuration with
@@ -72,13 +73,15 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="meas_array_array" id="dG_array"/>
+            <field type="meas_array" id="dG_q_array"/>
+            <field type="meas_array" id="dG_lj_array"/>
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
             <field type="int" id="n_lambdas_init"/>
             <field type="int" id="nsteps"/>
             <field type="int" id="nsteps_init"/>
+            <field type="priority_array" id="priority"/>
         </subnet-outputs>
         <controller log="true" executable="solvation" persistent_dir="true" />
     </function>
@@ -311,6 +314,7 @@
         <subnet-outputs>
             <field type="gromacs::mdp_array" id="settings"/>
             <field type="gromacs::mdp_array_array" id="settings_array"/>
+            <field type="int" id="priority" />
         </subnet-outputs>
         <controller log="true" executable="fe_init" persistent_dir="true" />
     </function>
@@ -340,6 +344,9 @@
             <field type="int" id="nsteps">
                 <desc>Number of simulation steps to take.</desc>
             </field>
+            <field type="int" id="priority" opt="true">
+                <desc>The priority of this iteration.</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="meas::meas" id="dG">
@@ -356,6 +363,8 @@
         </outputs>
         <subnet-inputs>
             <field type="gromacs::conf_array" id="confs" />
+            <field type="meas::meas" id="dG" />
+            <field type="gromacs::bar_detailed_value_array" id="bar_values" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="gromacs::mdp_array_array" id="settings_array"/>
@@ -363,6 +372,7 @@
         <controller log="true" executable="fe_iteration" persistent_dir="true"
                     access_outputs="true" access_subnet_outputs="true" />
     </function>
+
 
     <function id="decouple" type="external">
         <desc>Calculates a free energy of decoupling.</desc>
@@ -404,14 +414,15 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="meas_array_array" id="dG_array_bound"/>
-            <field type="meas_array_array" id="dG_array_solv"/>
+            <field type="meas_array" id="dG_q_array"/>
+            <field type="meas_array" id="dG_lj_array"/>
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
             <field type="int" id="n_lambdas_init"/>
             <field type="int" id="nsteps"/>
             <field type="int" id="nsteps_init"/>
+            <field type="priority_array" id="priority"/>
         </subnet-outputs>
         <controller log="true" executable="decouple" persistent_dir="true" />
     </function>

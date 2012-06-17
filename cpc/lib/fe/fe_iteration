@@ -78,7 +78,8 @@ def fe_iteration(inp, out):
     if g_bar is None:
         g_bar=1
         out.addInstance('g_bar', 'gromacs::g_bar')
-        out.addConnection('g_bar:out.dG', 'self:ext_out.dG')
+        out.addConnection('g_bar:out.dG', 'self:sub_in.dG')
+        out.addConnection('g_bar:out.bar_values', 'self:sub_in.bar_values')
     pers.set('g_bar', g_bar)
 
     mdruns=pers.get('mdruns')
@@ -93,6 +94,7 @@ def fe_iteration(inp, out):
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
                           'runs:in.cmdline_options[0]')
         out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        out.addConnection('self:ext_in.priority', 'runs:in.priority[0]')
         out.addConnection('self:ext_in.grompp.mdp', 'runs:in.mdp[0]')
         out.addConnection('self:sub_out.settings_array', 'runs:in.settings')
         out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
@@ -144,10 +146,22 @@ def fe_iteration(inp, out):
             inConf=inp.getSubnetInput('confs[%d]'%i)
             sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
             if inConf is not None:
-                outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+                #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+                outConf=pers.get('conf_%d'%i)
                 sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
                 if inConf != outConf:
                     out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
+                    pers.set('conf_%d'%i, inConf)
+
+    if inp.getSubnetInputValue('dG').isUpdated():
+        dgVal=inp.getSubnetInput('dG.value')
+        dgErr=inp.getSubnetInput('dG.error')
+        if dgVal is not None: 
+            out.setOut('dG.value', FloatValue(dgVal))
+            out.setOut('dG.error', FloatValue(dgErr))
+    if inp.getSubnetInputValue('bar_values').isUpdated():
+        pass
+        # TODO: calculate new lambda values
 
     pers.write()
     return out

@@ -182,6 +182,8 @@ def fe_init(inp, out):
         out.addConnection('self:ext_in.grompp.include', 'grompp:in.include')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
                           'mdrun:in.cmdline_options')
+        out.setSubOut('priority', IntValue(5))
+        out.addConnection('self:sub_out.priority', 'mdrun:in.priority')
         if not notune:
             out.addConnection('mdrun_tune:out.resources', 'mdrun:in.resources')
             out.addConnection('mdrun_tune:out.mdp', 'grompp:in.mdp')

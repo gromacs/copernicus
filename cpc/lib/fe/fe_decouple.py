@@ -39,8 +39,41 @@ from cpc.dataflow import ArrayValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
+def calcAvg(name, inp, out):
+    """Calculate an average of measurement values of subnet input array 
+        'name'
+         
+         returns a tuple of (value, error, N)"""
+    N=0
+    sumVal=0.
+    sumErr=0.
+    dgArray=inp.getSubnetInput(name) 
+    if dgArray is not None: 
+        # we ignore 0 because that's equilibration
+        for i in range(1, len(dgArray)):
+            #sys.stderr.write('%s[%d]\n'%(name, i))
+            subval=inp.getSubnetInput('%s[%d]'%(name,i))
+            sys.stderr.write('%s[%d]: %g/%d +/- %g/%d\n'%
+                             (name, i, sumVal, N, sumErr, N))
+            if subval is not None:
+                val=inp.getSubnetInput('%s[%d].value'%(name, i))
+                err=inp.getSubnetInput('%s[%d].error'%(name, i))
+                if val is not None and err is not None:
+                    sys.stderr.write('%s[%d]: %g +/- %g\n'%(name, i, val, err))
+                    sumVal += val
+                    sumErr += err*err
+                    N+=1
+    if N>0:
+        sys.stderr.write('%s: %g +/- %g (N=%d)\n'%
+                         (name, sumVal/N, math.sqrt(sumErr/N), N)) 
+        return ( sumVal/N, math.sqrt(sumErr/N), N)
+    else:
+        sys.stderr.write('N=0\n')
+        return (0., 0., 0)
+
 def addIteration(inp, out, i):
     """Add one fe calc iteration."""
+    out.setSubOut('priority[%d]'%i, IntValue(3-i))
     out.addInstance('iter_q_%d'%i, 'fe_iteration')
     out.addInstance('iter_lj_%d'%i, 'fe_iteration')
     # connect shared inputs
@@ -48,10 +81,12 @@ def addIteration(inp, out, i):
     out.addConnection('init_q:out.resources', 'iter_q_%d:in.resources'%i)
     out.addConnection('init_q:out.grompp', 'iter_q_%d:in.grompp'%i)
     out.addConnection('self:sub_out.nsteps', 'iter_q_%d:in.nsteps'%i)
+    out.addConnection('self:sub_out.priority[%d]'%i, 'iter_q_%d:in.priority'%i)
     # lj
     out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
     out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
     out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
+    out.addConnection('self:sub_out.priority[%d]'%i, 'iter_lj_%d:in.priority'%i)
     if i==0:
         # connect the inits
         # q
@@ -69,8 +104,8 @@ def addIteration(inp, out, i):
         #out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
         #                  'iter_lj_%d:in.lambdas'%i)
     # connect the outputs
-    out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_array[%d][0]'%i)
-    out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_array[%d][1]'%i)
+    out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_q_array[%d]'%i)
+    out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_lj_array[%d]'%i)
 
 def decouple(inp, out, relaxation_time):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
@@ -122,65 +157,83 @@ def decouple(inp, out, relaxation_time):
 
     dgOutputsHandled=pers.get('dg_outputs_handled')
     # read in the dG inputs.
-    dgArray=inp.getSubnetInput('dG_array')
-    dGl=[]
+    changedValues=False
+    totVals=[]
+    totErrs=[]
     end=False
-    if dgArray is not None:
-        nOutputs=0
-        for i in range(len(dgArray)):
-            sublist=inp.getSubInput('dG_array[%d]'%i)
-            if sublist is not None:
-                dGsl=[]
-                for j in range(len(sublist)):
-                    val=inp.getSubInput('dG_array[%d][%d].value'%(i, j))
-                    err=inp.getSubInput('dG_array[%d][%d].error'%(i, j))
-                    if val is not None and err is not None:
-                        dGsl.append( (val, err) )
-                    else:
-                        end=True
-                        break
-                dGl.append(dGsl)
-            else:
-                break
-            if end:
-                break
-    # now count the number of valid inputs
-    ndgOutputs=len(dGl)
-    nSubVal=0
-    if ndgOutputs > 0:
-        nSubVal=len(dGl[0])
-        for i in range(1, ndgOutputs):
-            if len(dGl[i]) != len(dGl[0]):
-                ndgOutputs=i
-                break
-    if ndgOutputs != dgOutputsHandled:
-        val=nSubVal*[0.]
-        err=nSubVal*[0.]
-        totVal=None
-        totErr=None
-        N=ndgOutputs
-        if N>1: # we ignore the first one, as it is an equilibration run
-            for i in range(1, ndgOutputs):
-                for j in range(nSubVal):
-                    val[j] += dGl[i][j][0]
-                    err[j] += dGl[i][j][1]*dGl[i][j][1]
-            for j in range(nSubVal):
-                totVal += val[j]
-                totErr += err[j]
-                val[j] = val[j]/N
-                err[j] = math.sqrt(err[j] / N)
-            totVal /= (N*nSubVal)
-            totErr = math.sqrt(totErr/(N*nSubVal))
-            dgOutputsHandled=ndgOutputs
-            precision=inp.getInput('precision')
-            if precision is None:
-                precision = 1 # default of 1 kJ/mol
-            if totErr > precision:
-                addIteration(inp, out, nruns)
-                nruns += 1
-            out.setOut('delta_f.value', FloatValue(totVal))
-            out.setOut('delta_f.error', FloatValue(totErr))
-    pers.set('dg_outputs_handled', dgOutputsHandled)
+    # q first
+    (val, err, N) = calcAvg('dG_q_array', inp, out)
+    dg_q_handled=pers.get('dg_q_handled')
+    if N>0:
+        totVals.append(  ( val, err ) )
+        if dg_q_handled is None or dg_q_handled<N:
+            dg_q_handled=N
+            changedValues=True
+    else:
+        dg_q_handled=0
+    pers.set('dg_q_handled', dg_q_handled)
+    # lj next first
+    (val, err, N) = calcAvg('dG_lj_array', inp, out)
+    dg_l_handled=pers.get('dg_lj_handled')
+    if N>0:
+        totVals.append(  ( val, err ) )
+        if dg_l_handled is None or dg_q_handled<N:
+            dg_l_handled=N
+            changedValues=True
+    pers.set('dg_lj_handled', dg_l_handled)
+
+    if changedValues and len(totVals) == 2:    
+        totVal=0.
+        totErr=0.
+        for val, err in totVals:
+            totVal += val
+            totErr += err*err
+        totVal /= len(totVals)
+        totErr = math.sqrt(totErr/len(totVals))
+        out.setOut('delta_f.value', FloatValue(totVal))
+        out.setOut('delta_f.error', FloatValue(totErr))
+        precision=inp.getInput('precision')
+        if totErr > precision:
+            addIteration(inp, out, nruns)
+            nruns += 1
+        
+    ## now count the number of valid inputs
+    #ndgOutputs=len(dGl)
+    #nSubVal=0
+    #if ndgOutputs > 0:
+    #    nSubVal=len(dGl[0])
+    #    for i in range(1, ndgOutputs):
+    #        if len(dGl[i]) != len(dGl[0]):
+    #            ndgOutputs=i
+    #            break
+    #if ndgOutputs != dgOutputsHandled:
+    #    val=nSubVal*[0.]
+    #    err=nSubVal*[0.]
+    #    totVal=None
+    #    totErr=None
+    #    N=ndgOutputs
+    #    if N>1: # we ignore the first one, as it is an equilibration run
+    #        for i in range(1, ndgOutputs):
+    #            for j in range(nSubVal):
+    #                val[j] += dGl[i][j][0]
+    #                err[j] += dGl[i][j][1]*dGl[i][j][1]
+    #        for j in range(nSubVal):
+    #            totVal += val[j]
+    #            totErr += err[j]
+    #            val[j] = val[j]/N
+    #            err[j] = math.sqrt(err[j] / N)
+    #        totVal /= (N*nSubVal)
+    #        totErr = math.sqrt(totErr/(N*nSubVal))
+    #        dgOutputsHandled=ndgOutputs
+    #        precision=inp.getInput('precision')
+    #        if precision is None:
+    #            precision = 1 # default of 1 kJ/mol
+    #        if totErr > precision:
+    #            addIteration(inp, out, nruns)
+    #            nruns += 1
+    #        out.setOut('delta_f.value', FloatValue(totVal))
+    #        out.setOut('delta_f.error', FloatValue(totErr))
+    #pers.set('dg_outputs_handled', dgOutputsHandled)
     pers.set('nruns', nruns)
     pers.write()
         
