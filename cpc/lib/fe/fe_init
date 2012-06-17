@@ -25,7 +25,7 @@ import os.path
 #import shutil
 #import glob
 #import stat
-#import subprocess
+import subprocess
 #import traceback
 #import re
 try:
@@ -41,6 +41,7 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
 
 
 class FEError(cpc.dataflow.ApplicationError):
@@ -75,6 +76,12 @@ def fe_init(inp, out):
         valarray.append(RecordValue( { 'name' : 
                                         StringValue('separate-dhdl-file'),
                                        'value' : StringValue('no')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0')}))
         valarray.append(RecordValue( { 'name' : StringValue('delta-lambda'),
                                        'value' : StringValue('0')}))
         valarray.append(RecordValue( { 'name' : StringValue('couple_moltype'),
@@ -86,9 +93,6 @@ def fe_init(inp, out):
                                        'value' : StringValue('1.0') } ))
         valarray.append(RecordValue( { 'name' : StringValue('sc-sigma'),
                                        'value' : StringValue('0.3') } ))
-        valarray.append(RecordValue( { 'name' : StringValue('nsteps'),
-                                        'value' : 
-                                        StringValue('%d'%(relax_time) )}))
         valarray.append(RecordValue( { 'name' : StringValue('couple-lambda0'),
                                        'value' : inp.getInputValue('a')}))
         valarray.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
@@ -96,13 +100,20 @@ def fe_init(inp, out):
         out.setSubOut('settings', ArrayValue(valarray))
 
         settings_array=[]
-        for i in range(npoints_init-1):
-            lam_start=float(i+1)/float(npoints_init-1)
-            # specific settings for relaxation
-            mdp=[]
-            mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                       'value' : StringValue('%g'%lam_start)}))
-            settings_array.append(ArrayValue(mdp))
+        mdp=[]
+        mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                'value' : StringValue('0')}))
+        frame_spacing=int(relax_time/(npoints_init-1))
+        # make sure it is divisible
+        relax_time=(npoints_init-1)*frame_spacing
+        delta_lambda=1./relax_time
+        mdp.append(RecordValue( { 'name' : StringValue('delta-lambda'),
+                                  'value' : StringValue('%g'%delta_lambda)}))
+        mdp.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                  'value' : StringValue('%d'%frame_spacing)}))
+        mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                  'value' : StringValue('%d'%(relax_time) )}))
+        settings_array.append(ArrayValue(mdp))
         out.setSubOut('settings_array', ArrayValue(settings_array))
 
     # here we create an entirely new sampling set.
@@ -157,51 +168,34 @@ def fe_init(inp, out):
 
     # now create the runs.
     mdrun=pers.get('mdrun')
-    if mdrun is None or mdrun != npoints_init:
+    if mdrun is None: #or mdrun != npoints_init:
         if mdrun is None:
             mdrun=0
         else:
             raise FEError("Change in n_lambdas not yet implemented")
         # these are the multiple runs
-        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
-        #out.addInstance('mdruns', 'gromacs::mdrun_multi')
+        out.addInstance('grompp', 'gromacs::grompp')
+        out.addInstance('mdrun', 'gromacs::mdrun')
         # connect the tpr, mdp and resources
-        #out.addConnection('runs:out.tpr', 'mdruns:in.tpr')
-        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
-        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
-        out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
+        out.addConnection('self:ext_in.grompp.top', 'grompp:in.top')
+        out.addConnection('self:ext_in.grompp.ndx', 'grompp:in.ndx')
+        out.addConnection('self:ext_in.grompp.include', 'grompp:in.include')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
-                          'runs:in.cmdline_options[0]')
+                          'mdrun:in.cmdline_options')
         if not notune:
-            out.addConnection('mdrun_tune:out.resources', 
-                              'runs:in.resources[0]')
-            out.addConnection('mdrun_tune:out.mdp', 'runs:in.mdp[0]')
+            out.addConnection('mdrun_tune:out.resources', 'mdrun:in.resources')
+            out.addConnection('mdrun_tune:out.mdp', 'grompp:in.mdp')
         else:
-            out.addConnection('self:ext_in.resources', 
-                              'runs:in.resources[0]')
-            out.addConnection('merge_mdp:out.mdp', 'runs:in.mdp[0]')
-        out.addConnection('self:sub_out.settings_array', 
-                          'runs:in.settings')
-        # set the individual configurations and connect the outputs
-        # coulomb first
-        for i in range(0, npoints_init-1):
-            # connect the confs
-            if i == 0:
-                out.addConnection('self:ext_in.conf', 'runs:in.conf[0]')
-            else:
-                out.addConnection('runs:out.conf[%d]'%(i-1), 
-                                  'runs:in.conf[%d]'%i)
-            # and the outputs
-            if i == 0:
-                # add the fixed one
-                out.addConnection('self:ext_in.conf', 
-                                  'self:ext_out.path.lambdas[0].conf')
-            out.addConnection('runs:out.conf[%d]'%i, 
-                              'self:ext_out.path.lambdas[%d].conf'%(i+1))
-            # the last of the confs is the conf_b
-            if i == npoints_init-2:
-                out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.conf_b')
-
+            out.addConnection('self:ext_in.resources', 'mdrun:in.resources')
+            out.addConnection('merge_mdp:out.mdp', 'grompp:in.mdp')
+        out.addConnection('self:sub_out.settings_array[0]', 
+                          'grompp:in.settings')
+        out.addConnection('grompp:out.tpr', 'self:sub_in.tpr')
+        out.addConnection('grompp:out.tpr', 'mdrun:in.tpr')
+        out.addConnection('mdrun:out.trr', 'self:sub_in.trr')
+        out.addConnection('self:ext_in.conf', 'grompp:in.conf')
+        out.addConnection('self:ext_in.conf', 
+                          'self:ext_out.path.lambdas[0].conf')
         # Set the lambda values.
         # set lambda array outputs for coulomb + vdw
         out.addConnection('self:ext_in.a', 'self:ext_out.path.a')
@@ -213,8 +207,34 @@ def fe_init(inp, out):
             out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         mdrun=npoints_init
         pers.set("mdrun", mdrun)
-
     pers.write()
+
+    if inp.getSubnetInputValue('trr').isUpdated():
+        sys.stderr.write('trr updated!\n')
+        trrName=inp.getSubnetInput('trr')
+        tprName=inp.getSubnetInput('tpr')
+        confoutname=os.path.join(inp.getOutputDir(), 'lambda.gro')
+        cmd=['trjconv', '-s', tprName, '-f', trrName, '-o', confoutname, 
+             '-sep' ]
+        proc=subprocess.Popen(cmd, 
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              cwd=inp.outputDir,
+                              close_fds=True)
+        (stdout, stderr) = proc.communicate('System')
+        if proc.returncode != 0:
+            raise FEError("ERROR: trjconv returned %s, %s"%(stdout, stderr))
+        # extract the frames.
+        for i in range(npoints_init-1):
+            confname=os.path.join(inp.getOutputDir(), "lambda%d.gro"%i)
+            if not os.path.exists(confname):
+                raise FEError("ERROR: trjconv failed to deliver: %s"%
+                              (confname))
+            out.setOut('path.lambdas[%d].conf'%(i+1), FileValue(confname))
+            if i==(npoints_init-2):
+                out.setOut('conf_b', FileValue(confname))
+
     return out
 
 

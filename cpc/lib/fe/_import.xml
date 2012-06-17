@@ -28,7 +28,7 @@
     <type id="meas_array" base="array" member-type="meas::meas" />
     <type id="meas_array_array" base="array" member-type="meas_array" />
 
-    <function id="fe_solvation" type="external">
+    <function id="solvation" type="external">
         <desc>Calculates a free energy of solvation. Takes a configuration with
               a molecule that is solvated, and de-solvates it in steps, 
               calculating the free energy difference between the solvated
@@ -82,8 +82,9 @@
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
             <field type="int" id="n_lambdas_init"/>
+            <field type="int" id="nsteps"/>
         </subnet-outputs>
-        <controller log="true" executable="fe_solvation" 
+        <controller log="true" executable="solvation" 
                     persistent_dir="true" />
     </function>
 
@@ -204,6 +205,8 @@
             </field>-->
         </outputs>
         <subnet-inputs>
+            <field type="file" id="tpr" />
+            <field type="file" id="trr" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="gromacs::mdp-array" id="settings"/>

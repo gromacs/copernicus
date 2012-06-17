@@ -11,7 +11,7 @@ fi
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import fe
 # add the grompp and mdrun function instances
-./cpcc instance fe::fe_solvation fe
+./cpcc instance fe::solvation fe
 # activate the function instance
 ./cpcc activate
 

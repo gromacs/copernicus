@@ -292,7 +292,8 @@ class SCCommandFinishedForward(ServerCommand):
                 cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
         
         task = cmd.getTask()
-        (newcmds, cancelcmds) = task.run(cmd)
+        if task is not None:
+            (newcmds, cancelcmds) = task.run(cmd)
             
         cmdQueue = serverState.getProjectList().getCmdQueue()
         if cancelcmds is not None:

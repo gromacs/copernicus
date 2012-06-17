@@ -230,7 +230,7 @@ class Task(object):
            run() call is called. """
         with self.lock:
             if self.canceled:
-                return
+                return (None, None)
             locked=False
             canceled=None
             try:
@@ -273,7 +273,7 @@ class Task(object):
                 self._handleFnOutput(ret)
 
                 #if ret.cancelCmds:
-                #    log.debug("Canceling %d existing commands"%(len(self.cmds)))
+                #   log.debug("Canceling %d existing commands"%(len(self.cmds)))
                 #    canceled=self.cmds
                 #    for cmd in canceled:
                 #        cmd.setTask(None)

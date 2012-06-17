@@ -45,36 +45,29 @@ def addIteration(inp, out, i):
     out.addInstance('iter_lj_%d'%i, 'fe_iteration')
     # connect shared inputs
     # q
-    out.addConnection('init_q:out.resources',
-                      'iter_q_%d:in.resources'%i)
-    out.addConnection('init_q:out.grompp',
-                      'iter_q_%d:in.grompp'%i)
+    out.addConnection('init_q:out.resources', 'iter_q_%d:in.resources'%i)
+    out.addConnection('init_q:out.grompp', 'iter_q_%d:in.grompp'%i)
+    out.addConnection('self:sub_out.nsteps', 'iter_q_%d:in.nsteps'%i)
     # lj
-    out.addConnection('init_lj:out.resources',
-                      'iter_lj_%d:in.resources'%i)
-    out.addConnection('init_lj:out.grompp',
-                      'iter_lj_%d:in.grompp'%i)
+    out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
+    out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
+    out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
     if i==0:
         # connect the inits
         # q
-        out.addConnection('init_q:out.path', 
-                          'iter_q_%d:in.path'%i )
+        out.addConnection('init_q:out.path', 'iter_q_%d:in.path'%i )
         # lj
-        out.addConnection('init_lj:out.path', 
-                          'iter_lj_%d:in.path'%i )
-
+        out.addConnection('init_lj:out.path', 'iter_lj_%d:in.path'%i )
     else:
         # connect the previous iteration
         # q
-        out.addConnection('iter_q_%d:out.path'%(i-1), 
-                          'iter_q_%d:in.path'%i )
-        out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
-                          'iter_q_%d:in.lambdas'%i )
+        out.addConnection('iter_q_%d:out.path'%(i-1), 'iter_q_%d:in.path'%i )
+        #out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
+        #                  'iter_q_%d:in.lambdas'%i )
         # lj
-        out.addConnection('iter_lj_%d:out.path'%(i-1), 
-                          'iter_lj_%d:in.path'%i )
-        out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
-                          'iter_lj_%d:in.lambdas'%i )
+        out.addConnection('iter_lj_%d:out.path'%(i-1), 'iter_lj_%d:in.path'%i)
+        #out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
+        #                  'iter_lj_%d:in.lambdas'%i)
     # connect the outputs
     out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_array[%d][0]'%i)
     out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_array[%d][1]'%i)
@@ -95,6 +88,9 @@ def fe_solvation(inp, out):
         out.setSubOut('endpoint_array[1]', StringValue('vdw'))
         out.setSubOut('endpoint_array[2]', StringValue('none'))
         out.setSubOut('n_lambdas_init', IntValue(10))
+        # this is a rough guess, but shouldn't matter too much:
+        out.setSubOut('nsteps', 
+                      IntValue(20*inp.getInput('solvation_relaxation_time')))
 
         out.addConnection('self:ext_in.conf', 'init_q:in.conf')
         out.addConnection('self:ext_in.grompp', 'init_q:in.grompp')
@@ -103,12 +99,9 @@ def fe_solvation(inp, out):
                           'init_q:in.nsteps')
         out.addConnection('self:ext_in.molecule_name', 
                           'init_q:in.molecule_name')
-        out.addConnection('self:sub_out.endpoint_array[0]',
-                          'init_q:in.a')
-        out.addConnection('self:sub_out.endpoint_array[1]',
-                          'init_q:in.b')
-        out.addConnection('self:sub_out.n_lambdas_init', 
-                          'init_q:in.n_lambdas')
+        out.addConnection('self:sub_out.endpoint_array[0]', 'init_q:in.a')
+        out.addConnection('self:sub_out.endpoint_array[1]', 'init_q:in.b')
+        out.addConnection('self:sub_out.n_lambdas_init', 'init_q:in.n_lambdas')
 
         out.addConnection('self:ext_in.grompp', 'init_lj:in.grompp')
         out.addConnection('self:ext_in.resources', 'init_lj:in.resources')
@@ -116,12 +109,9 @@ def fe_solvation(inp, out):
                           'init_lj:in.nsteps')
         out.addConnection('self:ext_in.molecule_name', 
                           'init_lj:in.molecule_name')
-        out.addConnection('self:sub_out.endpoint_array[1]',
-                          'init_lj:in.a')
-        out.addConnection('self:sub_out.endpoint_array[2]',
-                          'init_lj:in.b')
-        out.addConnection('self:sub_out.n_lambdas_init', 
-                          'init_lj:in.n_lambdas')
+        out.addConnection('self:sub_out.endpoint_array[1]', 'init_lj:in.a')
+        out.addConnection('self:sub_out.endpoint_array[2]', 'init_lj:in.b')
+        out.addConnection('self:sub_out.n_lambdas_init', 'init_lj:in.n_lambdas')
         pers.set('init', init)
 
     nruns=pers.get('nruns')
@@ -182,15 +172,18 @@ def fe_solvation(inp, out):
                 err[j] = math.sqrt(err[j] / N)
             totVal /= (N*nSubVal)
             totErr = math.sqrt(totErr/(N*nSubVal))
-        dgOutputsHandled=ndgOutputs
-        precision=inp.getInput('precision')
-        if precision is None:
-            precision = 1 # default of 1 kJ/mol
-        if totErr > precision:
-            addIteration(inp, out, nruns)
-            nruns += 1
+            dgOutputsHandled=ndgOutputs
+            precision=inp.getInput('precision')
+            if precision is None:
+                precision = 1 # default of 1 kJ/mol
+            if totErr > precision:
+                addIteration(inp, out, nruns)
+                nruns += 1
+            out.setOut('delta_f.value', FloatValue(totVal))
+            out.setOut('delta_f.error', FloatValue(totErr))
     pers.set('dg_outputs_handled', dgOutputsHandled)
     pers.set('nruns', nruns)
+    pers.write()
         
 
 

@@ -96,6 +96,11 @@ def fe_iteration(inp, out):
         out.addConnection('self:sub_out.settings_array', 'runs:in.settings')
         out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
         out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
+        out.addConnection('self:ext_in.path.molecule_name', 
+                          'self:ext_out.path.molecule_name')
+
+    sys.stderr.write('Nlambdas=%d\n'%len(lambdas))
+    sys.stderr.write('lambdas=%s\n'%lambdas)
 
     if mdruns != len(lambdas):
         foreignLambdas=""
@@ -104,7 +109,6 @@ def fe_iteration(inp, out):
         settings_array=[]
         i=0
         for lam in lambdas:
-            #lam=float(i)/float(len(lambdas)-1)
             mdp=[]
             mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
                                       'value' : StringValue('%g'%lam)}))
@@ -117,8 +121,7 @@ def fe_iteration(inp, out):
             i+=1
         for i in range(mdruns, len(lambdas)):
             lam=lambdas[i]
-            #lam=float(i)/float(len(lambdas)-1)
-            # for now, connect directly to runs
+            sys.stderr.write("lambda %d: %g\n"%(i, lam))
             lami=findClosest(path_lambdas, lam)
             out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
                               'runs:in.conf[%d]'%i)

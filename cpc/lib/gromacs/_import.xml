@@ -83,7 +83,8 @@
             </field>
         </outputs>
         <controller function="cpc.lib.gromacs.grompp" 
-                    import="cpc.lib.gromacs" />
+                    import="cpc.lib.gromacs"
+                    persistent_dir="true" />
     </function>
 
     <!-- gromacs mdrun controller function -->

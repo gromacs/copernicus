@@ -112,7 +112,25 @@ def grompp(inp):
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("grompp -version")
         return 
-    #outfname=os.path.join(inp.outputDir, "grompp.mdp")
+
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    fo=inp.getFunctionOutput()
+    if not (inp.getInputValue('conf').isUpdated() or 
+            inp.getInputValue('top').isUpdated() or 
+            inp.getInputValue('include').isUpdated() or 
+            inp.getInputValue('settings').isUpdated() or
+            inp.getInputValue('ndx').isUpdated()):
+        if pers.get('init') is not None:
+            return fo
+    if pers.get('init') is not None:
+        log.debug("conf: %s"%(inp.getInputValue('conf').isUpdated()))
+        log.debug("top: %s"%(inp.getInputValue('top').isUpdated()))
+        log.debug("include: %s"%(inp.getInputValue('include').isUpdated()))
+        log.debug("settings: %s"%(inp.getInputValue('settings').isUpdated()))
+        log.debug("ndx: %s"%(inp.getInputValue('ndx').isUpdated()))
+
+    pers.set('init', 1)
     mdpfile=procSettings(inp, inp.outputDir)
     # copy the topology and include files 
     topfile=os.path.join(inp.outputDir, 'topol.top')
@@ -150,9 +168,9 @@ def grompp(inp):
     if proc.returncode != 0:
         raise GromacsError("Error running grompp: %s"%
                            (open(stdoutfn,'r').read()))
-    fo=inp.getFunctionOutput()
     fo.setOut('stdout', FileValue(stdoutfn))
     fo.setOut('tpr', FileValue(os.path.join(inp.outputDir, "topol.tpr")))
+    pers.write()
     return fo
 
 def mdrun(inp):
@@ -217,6 +235,7 @@ def mdrun(inp):
             extractConf(newtpr, confFile)
             tune.tune(rsrc, confFile, newtpr, persDir)
         if inp.cmd is not None:
+            log.debug("Canceling commands")
             fo.cancelPrevCommands()
         pers.set('initialized', True)
     else:
