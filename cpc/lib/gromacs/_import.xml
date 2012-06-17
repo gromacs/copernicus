@@ -4,11 +4,11 @@
     <import name="resource" />
     <import name="meas" />
 
-    <type id="grompp-include-array" base="array" member-type="file" />
-    <type id="grompp-include-array-array" base="array" 
-           member-type="grompp-include-array" />
+    <type id="grompp_include_array" base="array" member-type="file" />
+    <type id="grompp_include_array_array" base="array" 
+           member-type="grompp_include_array" />
 
-    <!--<type id="out-grompp-multi" base="record">
+    <!--<type id="out-grompp_multi" base="record">
         <desc>tpr file</desc>
         <field type="file" id="tpr">
             <desc>generated tpr file</desc>
@@ -19,24 +19,24 @@
     </type>-->
 
 
-    <type id="mdp-file-array" base="array" member-type="file" />
-    <type id="conf-array" base="array" member-type="file" />
-    <type id="top-array" base="array" member-type="file" />
-    <type id="ndx-array" base="array" member-type="file" />
-    <!--<type id="out-grompp-multi-array" base="array" 
-          member-type="out-grompp-multi" />-->
-    <!--<type id="out-mdrun-multi-array" base="array" 
+    <type id="mdp-file_array" base="array" member-type="file" />
+    <type id="conf_array" base="array" member-type="file" />
+    <type id="top_array" base="array" member-type="file" />
+    <type id="ndx_array" base="array" member-type="file" />
+    <!--<type id="out-grompp_multi_array" base="array" 
+          member-type="out-grompp_multi" />-->
+    <!--<type id="out-mdrun-multi_array" base="array" 
           member-type="out-mdrun-multi" />-->
 
-    <type id="tpr-array" base="array" member-type="file" />
-    <type id="prio-array" base="array" member-type="int" />
-    <type id="cmdline-array" base="array" member-type="string" />
-    <type id="rsrc-array" base="array" member-type="resource::run_desc" />
+    <type id="tpr_array" base="array" member-type="file" />
+    <type id="prio_array" base="array" member-type="int" />
+    <type id="cmdline_array" base="array" member-type="string" />
+    <type id="rsrc_array" base="array" member-type="resource::run_desc" />
 
-    <type id="xtc-array" base="array" member-type="file" />
-    <type id="trr-array" base="array" member-type="file" />
-    <type id="edr-array" base="array" member-type="file" />
-    <type id="log-array" base="array" member-type="file" />
+    <type id="xtc_array" base="array" member-type="file" />
+    <type id="trr_array" base="array" member-type="file" />
+    <type id="edr_array" base="array" member-type="file" />
+    <type id="log_array" base="array" member-type="file" />
 
     <!-- individual settings -->
     <type id="setting" base="record">
@@ -44,10 +44,10 @@
         <field id="name" type="string" />
         <field id="value" type="string" />
     </type>
-    <type id="mdp-array" base="array" member-type="setting">
+    <type id="mdp_array" base="array" member-type="setting">
         <desc>An array of grompp mdp settings</desc>
     </type>
-    <type id="mdp-array-array" base="array" member-type="mdp-array">
+    <type id="mdp_array_array" base="array" member-type="mdp_array">
         <desc>An array of arrays of grompp mdp settings</desc>
     </type>
 
@@ -64,10 +64,10 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp-include-array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp-array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -131,12 +131,12 @@
     </function>
 
     <function id="merge_mdp" type="python-extended">
-        <desc>Merge an mdp file and a mdp-array into an output mdp file</desc>
+        <desc>Merge an mdp file and a mdp_array into an output mdp file</desc>
         <inputs>
             <field type="file" id="mdp">
                 <desc>The .mdp file</desc>
             </field>
-            <field type="mdp-array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true">
                 <desc>Array of settings</desc>
             </field>
         </inputs>
@@ -163,10 +163,10 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp-include-array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp-array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -257,7 +257,7 @@
 
     <function id="g_bar" type="python-extended">
         <inputs>
-            <field type="edr-array" id="edr">
+            <field type="edr_array" id="edr">
                 <desc>An array of .edr files with free energy data.</desc>
             </field>
         </inputs>
@@ -290,27 +290,27 @@
               grompp instances. The output is an array of .tprs.
         </desc>
         <inputs>
-            <field type="conf-array" id="conf">
+            <field type="conf_array" id="conf">
                 <desc>An array of .gro configuration files</desc>
             </field>
-            <field type="mdp-file-array" id="mdp" >
+            <field type="mdp-file_array" id="mdp" >
                 <desc>An array of .mdp settings files</desc>
             </field>
-            <field type="top-array" id="top" >
+            <field type="top_array" id="top" >
                 <desc>An array of .top topology files</desc>
             </field>
-            <field type="ndx-array" id="ndx" opt="true">
+            <field type="ndx_array" id="ndx" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
-            <field type="mdp-array-array" id="settings" opt="true">
+            <field type="mdp_array_array" id="settings" opt="true">
                 <desc>An array of arrays of settings</desc>
             </field>
-            <field type="grompp-include-array-array" id="include" opt="true">
+            <field type="grompp_include_array_array" id="include" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="tpr-array" id="tpr">
+            <field type="tpr_array" id="tpr">
                 <desc>Array of run descriptions (tpr files)</desc>
             </field>
         </outputs>
@@ -326,37 +326,37 @@
         <desc>Runs a set of MD simulations. Inputs are spread in the 
               same way as grompp_multi</desc>
         <inputs>
-            <field type="tpr-array" id="tpr">
+            <field type="tpr_array" id="tpr">
                 <desc>The tpr file generated by grompp</desc>
             </field>
-            <field type="prio-array" id="priority" opt="true">
+            <field type="prio_array" id="priority" opt="true">
                 <desc>An optional priority for commands issued</desc>
             </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
+            <field type="cmdline_array" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for mdrun
                       to use</desc>
             </field>
-            <field type="rsrc-array" id="resources" opt="true">
+            <field type="rsrc_array" id="resources" opt="true">
                 <desc>The run resources for tuning these runs.</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="conf-array" id="conf">
+            <field type="conf_array" id="conf">
                 <desc>Array of Output configuration (.gro) files</desc>
             </field>
-            <!--<field type="log-array" id="stderr">
+            <!--<field type="log_array" id="stderr">
                 <desc>Array of mdrun's standard error output files</desc>
             </field>
-            <field type="log-array" id="stdout">
+            <field type="log_array" id="stdout">
                 <desc>Array of mdrun's standard output output files</desc>
             </field>-->
-            <field type="xtc-array" id="xtc">
+            <field type="xtc_array" id="xtc">
                 <desc>Array of compressed (xtc) trajectory files</desc>
             </field>
-            <field type="trr-array" id="trr">
+            <field type="trr_array" id="trr">
                 <desc>Array of full-precision (trr) trajectory files</desc>
             </field>
-            <field type="edr-array" id="edr">
+            <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
             </field>
         </outputs>
@@ -370,55 +370,55 @@
         <desc>Prepares and runs a set of MD simulations.
               A combination of grompp_multi and mdrun_multi.</desc>
         <inputs>
-            <field type="conf-array" id="conf">
+            <field type="conf_array" id="conf">
                 <desc>An array of .gro configuration files</desc>
             </field>
-            <field type="mdp-file-array" id="mdp" >
+            <field type="mdp-file_array" id="mdp" >
                 <desc>An array of .mdp settings files</desc>
             </field>
-            <field type="top-array" id="top" >
+            <field type="top_array" id="top" >
                 <desc>An array of .top topology files</desc>
             </field>
-            <field type="ndx-array" id="ndx" opt="true">
+            <field type="ndx_array" id="ndx" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
-            <field type="mdp-array-array" id="settings" opt="true">
+            <field type="mdp_array_array" id="settings" opt="true">
                 <desc>An array of arrays of settings</desc>
             </field>
-            <field type="grompp-include-array-array" id="include" opt="true">
+            <field type="grompp_include_array_array" id="include" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
-            <field type="prio-array" id="priority" opt="true">
+            <field type="prio_array" id="priority" opt="true">
                 <desc>An optional priority for commands issued</desc>
             </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
+            <field type="cmdline_array" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for mdrun
                       to use</desc>
             </field>
-            <field type="rsrc-array" id="resources" opt="true">
+            <field type="rsrc_array" id="resources" opt="true">
                 <desc>The run resources for tuning these runs.</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="tpr-array" id="tpr">
+            <field type="tpr_array" id="tpr">
                 <desc>Array of run descriptions (tpr files)</desc>
             </field>
-            <field type="conf-array" id="conf">
+            <field type="conf_array" id="conf">
                 <desc>Array of Output configuration (.gro) files</desc>
             </field>
-            <!--<field type="log-array" id="stderr">
+            <!--<field type="log_array" id="stderr">
                 <desc>Array of mdrun's standard error output files</desc>
             </field>
-            <field type="log-array" id="stdout">
+            <field type="log_array" id="stdout">
                 <desc>Array of mdrun's standard output output files</desc>
             </field>-->
-            <field type="xtc-array" id="xtc">
+            <field type="xtc_array" id="xtc">
                 <desc>Array of compressed (xtc) trajectory files</desc>
             </field>
-            <field type="trr-array" id="trr">
+            <field type="trr_array" id="trr">
                 <desc>Array of full-precision (trr) trajectory files</desc>
             </field>
-            <field type="edr-array" id="edr">
+            <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
             </field>
         </outputs>

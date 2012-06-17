@@ -33,6 +33,7 @@ import cpc.dataflow
 from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
+from cpc.dataflow import FileValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
 
@@ -98,6 +99,7 @@ def fe_iteration(inp, out):
         out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
         out.addConnection('self:ext_in.path.molecule_name', 
                           'self:ext_out.path.molecule_name')
+        out.addConnection('runs:out.conf', 'self:sub_in.confs')
 
     sys.stderr.write('Nlambdas=%d\n'%len(lambdas))
     sys.stderr.write('lambdas=%s\n'%lambdas)
@@ -125,13 +127,27 @@ def fe_iteration(inp, out):
             lami=findClosest(path_lambdas, lam)
             out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
                               'runs:in.conf[%d]'%i)
-            out.addConnection('runs:out.conf[%d]'%i, 
-                              'self:ext_out.path.lambdas[%d].conf'%i)
+            #out.addConnection('runs:out.conf[%d]'%i, 
+            #                  'self:ext_out.path.lambdas[%d].conf'%i)
             out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
             out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         out.setSubOut('settings_array', ArrayValue(settings_array))
         mdruns=len(lambdas)
     pers.set('mdruns', mdruns)
+
+    # now compare the outputs to the inputs
+    if inp.getSubnetInput('confs') is not None:
+        lnInConfs=len(inp.getSubnetInput('confs'))
+        sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
+        #lnInConfs=len(self.getOutput('confs'))
+        for i in range(lnInConfs):
+            inConf=inp.getSubnetInput('confs[%d]'%i)
+            sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
+            if inConf is not None:
+                outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+                sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
+                if inConf != outConf:
+                    out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
 
     pers.write()
     return out

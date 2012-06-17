@@ -5,6 +5,7 @@
     <import name="gromacs" />
     <import name="meas" />
     <import name="int" />
+    <import name="coord" />
 
     <type id="grompp_input" base="record">
         <desc>Partial grompp input</desc>
@@ -13,10 +14,10 @@
         <field type="file" id="ndx" opt="true">
             <desc>A .ndx index file</desc>
         </field>
-        <field type="gromacs::grompp-include-array" id="include" opt="true">
+        <field type="gromacs::grompp_include_array" id="include" opt="true">
             <desc>array of files to include</desc>
         </field>
-        <field type="gromacs::mdp-array" id="settings" opt="true">
+        <field type="gromacs::mdp_array" id="settings" opt="true">
             <desc>array of settings</desc>
         </field>
         <field type="string" id="mdrun_cmdline_options" opt="true">
@@ -43,10 +44,6 @@
             </field>
             <field type="file" id="conf">
                 <desc>A configuration with the solvent.</desc>
-            </field>
-            <field type="file" id="conf_decoupled" opt="true">
-                <desc>A configuration with the solvent decoupled, for
-                      faster equilibration.</desc>
             </field>
             <field type="string" id="molecule_name">
                 <desc>The name/group number of the molecule to desolvate.
@@ -75,18 +72,121 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="meas_array_array" id="dG_array">
-                <desc>The free energy difference</desc>
-            </field>
+            <field type="meas_array_array" id="dG_array"/>
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
             <field type="int" id="n_lambdas_init"/>
             <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_init"/>
         </subnet-outputs>
-        <controller log="true" executable="solvation" 
-                    persistent_dir="true" />
+        <controller log="true" executable="solvation" persistent_dir="true" />
     </function>
+
+    <type id="restraint" base="record">
+        <desc>Describes a restraint on a ligand.</desc>
+        <field type="string" id="resname">
+            <desc>Name of residue to restrain to.</desc>
+        </field>
+        <field type="coord::coord_3d" id="pos">
+            <desc>Relative location to restrain to.</desc>
+        </field>
+        <field type="float" id="strength">
+            <desc>Coupling strength (in kJ/mol/nm).</desc>
+        </field>
+    </type>
+    <type id="restraint_array" base="array" member-type="restraint" />
+
+    <function id="binding" type="external">
+        <desc>Calculates a free energy of binding. Takes two configurations:
+              one with a molecule (ligand) that is bound to another molecule 
+              (receptor), and one with the ligand solvated. Two calculations 
+              then proceed: one where the free energy of decoupling the ligand 
+              from the receptor is calculated, and one where the free energy 
+              of solvation of the ligand is calculated.  The difference in 
+              is the free energy of binding. For both caculations, the
+              Bennett acceptance ratio method is used. 
+        </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp_bound">
+                <desc>A full set of input values for grompp (except 
+                      configuration) for the situation where the ligand is 
+                      bound to the receptor.
+                </desc>
+            </field>
+            <field type="file" id="conf_bound">
+                <desc>A configuration with the ligand bound to the receptor.
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources_bound" opt="true">
+                <desc>The run resources for a typical run in the bound
+                      state</desc>
+            </field>
+            <field type="restraint_array" id="restraints_bound" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+            <field type="grompp_input" id="grompp_solv">
+                <desc>A full set of input values for grompp (except 
+                      configuration) for the situation where the ligand is 
+                      solvated.
+                </desc>
+            </field>
+            <field type="file" id="conf_solv">
+                <desc>A configuration of the ligand in the solvent.</desc>
+            </field>
+            <field type="string" id="ligand_name">
+                <desc>The name/group number of the ligand.  </desc>
+            </field>
+            <field type="resource::run_desc" id="resources_solv" opt="true">
+                <desc>The run resources for a typical run in the solvated
+                      state</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 0.1 ns should be good for water.</desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+            <field type="meas::meas" id="delta_f_bound">
+                <desc>The free energy difference with error estimate of the 
+                      decoupling of the bound state.</desc>
+            </field>
+            <field type="meas::meas" id="delta_f_solv">
+                <desc>The free energy difference with error estimate of 
+                      ligand solvation.
+                </desc>
+            </field>
+
+        </outputs>
+        <subnet-inputs>
+            <!--<field type="meas_array_array" id="dG_array_bound"/>
+            <field type="meas_array_array" id="dG_array_solv"/>-->
+            <field type="meas::meas" id="dG_bound"/>
+            <field type="meas::meas" id="dG_solv"/>
+        </subnet-inputs>
+        <subnet-outputs>
+            <!--<field type="string_array" id="endpoint_array"/>
+            <field type="int" id="n_lambdas_init"/>
+            <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_init"/>-->
+        </subnet-outputs>
+        <controller log="true" executable="binding" persistent_dir="true" />
+    </function>
+
+
 
     <!-- internal functions -->
 
@@ -209,8 +309,8 @@
             <field type="file" id="trr" />
         </subnet-inputs>
         <subnet-outputs>
-            <field type="gromacs::mdp-array" id="settings"/>
-            <field type="gromacs::mdp-array-array" id="settings_array"/>
+            <field type="gromacs::mdp_array" id="settings"/>
+            <field type="gromacs::mdp_array_array" id="settings_array"/>
         </subnet-outputs>
         <controller log="true" executable="fe_init" persistent_dir="true" />
     </function>
@@ -255,11 +355,66 @@
             </field>
         </outputs>
         <subnet-inputs>
+            <field type="gromacs::conf_array" id="confs" />
         </subnet-inputs>
         <subnet-outputs>
-            <field type="gromacs::mdp-array-array" id="settings_array"/>
+            <field type="gromacs::mdp_array_array" id="settings_array"/>
         </subnet-outputs>
-        <controller log="true" executable="fe_iteration" persistent_dir="true"/>
+        <controller log="true" executable="fe_iteration" persistent_dir="true"
+                    access_outputs="true" access_subnet_outputs="true" />
     </function>
+
+    <function id="decouple" type="external">
+        <desc>Calculates a free energy of decoupling.</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with full coupling
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="restraint_array" id="restraints" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+            <field type="string" id="molecule_name">
+                <desc>The name/group number of the molecule to decouple.</desc>
+            </field>
+            <field type="int" id="relaxation_time">
+                <desc>Estimate for the relaxation time for the decoupling
+                      process being calculated.</desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                      not set.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="meas_array_array" id="dG_array_bound"/>
+            <field type="meas_array_array" id="dG_array_solv"/>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="string_array" id="endpoint_array"/>
+            <field type="int" id="n_lambdas_init"/>
+            <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_init"/>
+        </subnet-outputs>
+        <controller log="true" executable="decouple" persistent_dir="true" />
+    </function>
+
 </cpc>
 

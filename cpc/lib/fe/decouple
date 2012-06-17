@@ -38,6 +38,7 @@ from cpc.dataflow import ArrayValue
 import fe_decouple
 
 
+
 # read the input data
 inf=StringIO()
 inf.write(sys.stdin.read())
@@ -61,7 +62,7 @@ if inp.testing():
 out=inp.getFunctionOutput()
 
 fe_decouple.decouple(inp, out, 
-                     inp.getInput('solvation_relaxation_time'))
+                     inp.getInput('relaxation_time'))
 
 out.writeXML(sys.stdout)
 #sys.stderr.write('\n')
