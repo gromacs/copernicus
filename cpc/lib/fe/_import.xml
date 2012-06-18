@@ -111,6 +111,18 @@
               Bennett acceptance ratio method is used. 
         </desc>
         <inputs>
+            <field type="string" id="ligand_name">
+                <desc>The name/group number of the ligand.  </desc>
+            </field>
+            <field type="string" id="receptor_name">
+                <desc>The name/group number of the receptor.  </desc>
+            </field>
+
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
+
             <field type="grompp_input" id="grompp_bound">
                 <desc>A full set of input values for grompp (except 
                       configuration) for the situation where the ligand is 
@@ -129,6 +141,13 @@
                 <desc>Restraints on the ligand position relative to the
                       center of mass of residues in the receptor.</desc>
             </field>
+            <field type="int" id="binding_relaxation_time">
+                <desc>Estimate for the relaxation time for binding (i.e. of 
+                      the bound configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 10 ns should be good for water.</desc>
+            </field>
+
             <field type="grompp_input" id="grompp_solv">
                 <desc>A full set of input values for grompp (except 
                       configuration) for the situation where the ligand is 
@@ -137,9 +156,6 @@
             </field>
             <field type="file" id="conf_solv">
                 <desc>A configuration of the ligand in the solvent.</desc>
-            </field>
-            <field type="string" id="ligand_name">
-                <desc>The name/group number of the ligand.  </desc>
             </field>
             <field type="resource::run_desc" id="resources_solv" opt="true">
                 <desc>The run resources for a typical run in the solvated
@@ -150,10 +166,6 @@
                       the solvent configuration) in simulation time steps. 
                       This time should not be too short, but can be too long. 
                       A value of 0.1 ns should be good for water.</desc>
-            </field>
-            <field type="float" id="precision" opt="true">
-                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
-                not set.</desc>
             </field>
         </inputs>
         <outputs>
@@ -172,7 +184,6 @@
                       ligand solvation.
                 </desc>
             </field>
-
         </outputs>
         <subnet-inputs>
             <!--<field type="meas_array_array" id="dG_array_bound"/>
@@ -185,6 +196,8 @@
             <field type="int" id="n_lambdas_init"/>
             <field type="int" id="nsteps"/>
             <field type="int" id="nsteps_init"/>-->
+            <field type="float" id="prec_bound" />
+            <field type="float" id="prec_solv" />
         </subnet-outputs>
         <controller log="true" executable="binding" persistent_dir="true" />
     </function>

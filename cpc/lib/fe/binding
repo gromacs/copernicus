@@ -39,152 +39,67 @@ from cpc.dataflow import ArrayValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
-def addIteration(inp, out, i):
-    """Add one fe calc iteration."""
-    out.addInstance('iter_q_%d'%i, 'fe_iteration')
-    out.addInstance('iter_lj_%d'%i, 'fe_iteration')
-    # connect shared inputs
-    # q
-    out.addConnection('init_q:out.resources', 'iter_q_%d:in.resources'%i)
-    out.addConnection('init_q:out.grompp', 'iter_q_%d:in.grompp'%i)
-    out.addConnection('self:sub_out.nsteps', 'iter_q_%d:in.nsteps'%i)
-    # lj
-    out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
-    out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
-    out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
-    if i==0:
-        # connect the inits
-        # q
-        out.addConnection('init_q:out.path', 'iter_q_%d:in.path'%i )
-        # lj
-        out.addConnection('init_lj:out.path', 'iter_lj_%d:in.path'%i )
-    else:
-        # connect the previous iteration
-        # q
-        out.addConnection('iter_q_%d:out.path'%(i-1), 'iter_q_%d:in.path'%i )
-        #out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
-        #                  'iter_q_%d:in.lambdas'%i )
-        # lj
-        out.addConnection('iter_lj_%d:out.path'%(i-1), 'iter_lj_%d:in.path'%i)
-        #out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
-        #                  'iter_lj_%d:in.lambdas'%i)
-    # connect the outputs
-    out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_array[%d][0]'%i)
-    out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_array[%d][1]'%i)
 
-def fe_solvation(inp, out):
+def fe_binding(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
+    prec=pers.get('prec')
+    precision=inp.getInput('precision')
+    if precision is None:
+        precision=1
+    if prec != precision:
+        prec=precision
+        out.setSubOut('prec_bound', FloatValue(precision/2.)) 
+        out.setSubOut('prec_solv', FloatValue(precision/2.)) 
+    pers.set('prec', prec)
 
-    init=pers.get('init')
-    if init is None:
-        init=1
-        out.addInstance('init_q', 'fe_init')
-        out.addInstance('init_lj', 'fe_init')
-        # connect them together
-        out.addConnection('init_q:out.conf_b', 'init_lj:in.conf')
-        # set inputs
-        out.setSubOut('endpoint_array[0]', StringValue('vdwq'))
-        out.setSubOut('endpoint_array[1]', StringValue('vdw'))
-        out.setSubOut('endpoint_array[2]', StringValue('none'))
-        out.setSubOut('n_lambdas_init', IntValue(10))
-        # this is a rough guess, but shouldn't matter too much:
-        out.setSubOut('nsteps', 
-                      IntValue(20*inp.getInput('solvation_relaxation_time')))
-
-        out.addConnection('self:ext_in.conf', 'init_q:in.conf')
-        out.addConnection('self:ext_in.grompp', 'init_q:in.grompp')
-        out.addConnection('self:ext_in.resources', 'init_q:in.resources')
+    run_solv=pers.get('run_solv')
+    if run_solv is None:
+        run_solv=1
+        out.addInstance('solv', 'decouple')
+        out.addConnection('self:ext_in.grompp_solv', 'solv:in.grompp')
+        out.addConnection('self:ext_in.conf_solv', 'solv:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'solv:in.molecule_name')
         out.addConnection('self:ext_in.solvation_relaxation_time', 
-                          'init_q:in.nsteps')
-        out.addConnection('self:ext_in.molecule_name', 
-                          'init_q:in.molecule_name')
-        out.addConnection('self:sub_out.endpoint_array[0]', 'init_q:in.a')
-        out.addConnection('self:sub_out.endpoint_array[1]', 'init_q:in.b')
-        out.addConnection('self:sub_out.n_lambdas_init', 'init_q:in.n_lambdas')
+                          'solv:in.relaxation_time')
+        out.addConnection('self:ext_in.resources_solv', 'solv:in.resources')
+        out.addConnection('self:sub_out.prec_solv', 'solv:in.precision')
+        out.addConnection('solv:out.delta_f', 'self:sub_in.dG_solv')
+    pers.set('run_solv', run_solv)
 
-        out.addConnection('self:ext_in.grompp', 'init_lj:in.grompp')
-        out.addConnection('self:ext_in.resources', 'init_lj:in.resources')
-        out.addConnection('self:ext_in.solvation_relaxation_time', 
-                          'init_lj:in.nsteps')
-        out.addConnection('self:ext_in.molecule_name', 
-                          'init_lj:in.molecule_name')
-        out.addConnection('self:sub_out.endpoint_array[1]', 'init_lj:in.a')
-        out.addConnection('self:sub_out.endpoint_array[2]', 'init_lj:in.b')
-        out.addConnection('self:sub_out.n_lambdas_init', 'init_lj:in.n_lambdas')
-        pers.set('init', init)
+    run_bound=pers.get('run_bound')
+    if run_bound is None:
+        run_bound=1
+        out.addInstance('bound', 'decouple')
+        out.addConnection('self:ext_in.grompp_bound', 'bound:in.grompp')
+        out.addConnection('self:ext_in.conf_bound', 'bound:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'bound:in.molecule_name')
+        out.addConnection('self:ext_in.binding_relaxation_time', 
+                          'bound:in.relaxation_time')
+        out.addConnection('self:ext_in.resources_bound', 'bound:in.resources')
+        out.addConnection('self:sub_out.prec_bound', 'bound:in.precision')
+        out.addConnection('bound:out.delta_f', 'self:sub_in.dG_bound')
+    pers.set('run_bound', run_bound)
 
-    nruns=pers.get('nruns')
-    if nruns is None or nruns==0:
-        # make the first two. The first one is simply an equilibration run
-        nruns=2
-        addIteration(inp, out, 0)
-        addIteration(inp, out, 1)
+    boundfValue=inp.getSubnetInputValue('dG_bound')
+    solvfValue=inp.getSubnetInputValue('dG_solv')
+    if boundfValue is not None and boundfValue.isUpdated():
+        out.setOut('delta_f_bound', boundfValue)
+    if solvfValue is not None and solvfValue.isUpdated():
+        out.setOut('delta_f_solv', solvfValue)
 
-    dgOutputsHandled=pers.get('dg_outputs_handled')
-    # read in the dG inputs.
-    dgArray=inp.getSubnetInput('dG_array')
-    dGl=[]
-    end=False
-    if dgArray is not None:
-        nOutputs=0
-        for i in range(len(dgArray)):
-            sublist=inp.getSubInput('dG_array[%d]'%i)
-            if sublist is not None:
-                dGsl=[]
-                for j in range(len(sublist)):
-                    val=inp.getSubInput('dG_array[%d][%d].value'%(i, j))
-                    err=inp.getSubInput('dG_array[%d][%d].error'%(i, j))
-                    if val is not None and err is not None:
-                        dGsl.append( (val, err) )
-                    else:
-                        end=True
-                        break
-                dGl.append(dGsl)
-            else:
-                break
-            if end:
-                break
-    # now count the number of valid inputs
-    ndgOutputs=len(dGl)
-    nSubVal=0
-    if ndgOutputs > 0:
-        nSubVal=len(dGl[0])
-        for i in range(1, ndgOutputs):
-            if len(dGl[i]) != len(dGl[0]):
-                ndgOutputs=i
-                break
-    if ndgOutputs != dgOutputsHandled:
-        val=nSubVal*[0.]
-        err=nSubVal*[0.]
-        totVal=None
-        totErr=None
-        N=ndgOutputs
-        if N>1: # we ignore the first one, as it is an equilibration run
-            for i in range(1, ndgOutputs):
-                for j in range(nSubVal):
-                    val[j] += dGl[i][j][0]
-                    err[j] += dGl[i][j][1]*dGl[i][j][1]
-            for j in range(nSubVal):
-                totVal += val[j]
-                totErr += err[j]
-                val[j] = val[j]/N
-                err[j] = math.sqrt(err[j] / N)
-            totVal /= (N*nSubVal)
-            totErr = math.sqrt(totErr/(N*nSubVal))
-            dgOutputsHandled=ndgOutputs
-            precision=inp.getInput('precision')
-            if precision is None:
-                precision = 1 # default of 1 kJ/mol
-            if totErr > precision:
-                addIteration(inp, out, nruns)
-                nruns += 1
+    if boundfValue.isUpdated() or solvfValue.isUpdated():
+        boundVal=inp.getSubnetInput('dG_bound.value')
+        boundErr=inp.getSubnetInput('dG_bound.error')
+        solvVal=inp.getSubnetInput('dG_solv.value')
+        solvErr=inp.getSubnetInput('dG_solv.error')
+        if (boundVal is not None and boundErr is not None and 
+            solvVal is not None and solvErr is not None):
+            totVal=boundVal + solvVal
+            totErr=math.sqrt( (boundErr*boundErr + solvErr*solvErr)/2. )
             out.setOut('delta_f.value', FloatValue(totVal))
             out.setOut('delta_f.error', FloatValue(totErr))
-    pers.set('dg_outputs_handled', dgOutputsHandled)
-    pers.set('nruns', nruns)
     pers.write()
-        
 
 
 # read the input data
@@ -209,7 +124,7 @@ if inp.testing():
 # prepare the output data
 out=inp.getFunctionOutput()
 
-fe_solvation(inp, out)
+fe_binding(inp, out)
 
 out.writeXML(sys.stdout)
 #sys.stderr.write('\n')

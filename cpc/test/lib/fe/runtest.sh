@@ -27,7 +27,7 @@ fi
 ./cpcc set-file fe:in.conf cpc/test/lib/fe/conf.gro
 
 ./cpcc set fe:in.molecule_name  ethanol
-./cpcc set fe:in.solvation_relaxation_time 1000
+./cpcc set fe:in.solvation_relaxation_time 2500
 ./cpcc set fe:in.precision 1
 
 #./cpcc set fe_init:in.n_lambdas 10

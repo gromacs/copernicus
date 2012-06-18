@@ -53,8 +53,8 @@ def calcAvg(name, inp, out):
         for i in range(1, len(dgArray)):
             #sys.stderr.write('%s[%d]\n'%(name, i))
             subval=inp.getSubnetInput('%s[%d]'%(name,i))
-            sys.stderr.write('%s[%d]: %g/%d +/- %g/%d\n'%
-                             (name, i, sumVal, N, sumErr, N))
+            #sys.stderr.write('%s[%d]: %g/%d +/- %g/%d\n'%
+            #                 (name, i, sumVal, N, sumErr, N))
             if subval is not None:
                 val=inp.getSubnetInput('%s[%d].value'%(name, i))
                 err=inp.getSubnetInput('%s[%d].error'%(name, i))
@@ -71,41 +71,43 @@ def calcAvg(name, inp, out):
         sys.stderr.write('N=0\n')
         return (0., 0., 0)
 
-def addIteration(inp, out, i):
+def addIteration(name, i, inp, out):
     """Add one fe calc iteration."""
+    iname='iter_%s_%d'%(name, i)
+    prevname='iter_%s_%d'%(name, (i-1))
     out.setSubOut('priority[%d]'%i, IntValue(3-i))
-    out.addInstance('iter_q_%d'%i, 'fe_iteration')
-    out.addInstance('iter_lj_%d'%i, 'fe_iteration')
+    out.addInstance('%s'%iname, 'fe_iteration')
+    #out.addInstance('%s'%iname, 'fe_iteration')
     # connect shared inputs
     # q
-    out.addConnection('init_q:out.resources', 'iter_q_%d:in.resources'%i)
-    out.addConnection('init_q:out.grompp', 'iter_q_%d:in.grompp'%i)
-    out.addConnection('self:sub_out.nsteps', 'iter_q_%d:in.nsteps'%i)
-    out.addConnection('self:sub_out.priority[%d]'%i, 'iter_q_%d:in.priority'%i)
+    out.addConnection('init_%s:out.resources'%name, '%s:in.resources'%iname)
+    out.addConnection('init_%s:out.grompp'%name, '%s:in.grompp'%iname)
+    out.addConnection('self:sub_out.nsteps', '%s:in.nsteps'%iname)
+    out.addConnection('self:sub_out.priority[%d]'%i, '%s:in.priority'%iname)
     # lj
-    out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
-    out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
-    out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
-    out.addConnection('self:sub_out.priority[%d]'%i, 'iter_lj_%d:in.priority'%i)
+    #out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
+    #out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
+    #out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
+    #out.addConnection('self:sub_out.priority[%d]'%i,'iter_lj_%d:in.priority'%i)
     if i==0:
         # connect the inits
         # q
-        out.addConnection('init_q:out.path', 'iter_q_%d:in.path'%i )
+        out.addConnection('init_%s:out.path'%name, '%s:in.path'%iname )
         # lj
-        out.addConnection('init_lj:out.path', 'iter_lj_%d:in.path'%i )
+        #out.addConnection('init_lj:out.path', 'iter_lj_%d:in.path'%i )
     else:
         # connect the previous iteration
         # q
-        out.addConnection('iter_q_%d:out.path'%(i-1), 'iter_q_%d:in.path'%i )
+        out.addConnection('%s:out.path'%(prevname), '%s:in.path'%iname )
         #out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
         #                  'iter_q_%d:in.lambdas'%i )
         # lj
-        out.addConnection('iter_lj_%d:out.path'%(i-1), 'iter_lj_%d:in.path'%i)
+        #out.addConnection('iter_lj_%d:out.path'%(i-1), 'iter_lj_%d:in.path'%i)
         #out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
         #                  'iter_lj_%d:in.lambdas'%i)
     # connect the outputs
-    out.addConnection('iter_q_%d:out.dG'%i, 'self:sub_in.dG_q_array[%d]'%i)
-    out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_lj_array[%d]'%i)
+    out.addConnection('%s:out.dG'%iname, 'self:sub_in.dG_%s_array[%d]'%(name,i))
+    #out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_lj_array[%d]'%i)
 
 def decouple(inp, out, relaxation_time):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
@@ -148,16 +150,23 @@ def decouple(inp, out, relaxation_time):
         out.addConnection('self:sub_out.n_lambdas_init', 'init_lj:in.n_lambdas')
         pers.set('init', init)
 
-    nruns=pers.get('nruns')
-    if nruns is None or nruns==0:
+    nruns_q=pers.get('nruns_q')
+    nruns_lj=pers.get('nruns_lj')
+    if nruns_q is None or nruns_q==0:
         # make the first two. The first one is simply an equilibration run
-        nruns=2
-        addIteration(inp, out, 0)
-        addIteration(inp, out, 1)
+        nruns_q=2
+        addIteration("q", 0, inp, out)
+        addIteration("q", 1, inp, out)
+    if nruns_lj is None or nruns_lj==0:
+        # make the first two. The first one is simply an equilibration run
+        nruns_lj=2
+        addIteration("lj", 0, inp, out)
+        addIteration("lj", 1, inp, out)
 
     dgOutputsHandled=pers.get('dg_outputs_handled')
     # read in the dG inputs.
-    changedValues=False
+    changedValues=[False, False]
+
     totVals=[]
     totErrs=[]
     end=False
@@ -168,7 +177,7 @@ def decouple(inp, out, relaxation_time):
         totVals.append(  ( val, err ) )
         if dg_q_handled is None or dg_q_handled<N:
             dg_q_handled=N
-            changedValues=True
+            changedValues[0]=True
     else:
         dg_q_handled=0
     pers.set('dg_q_handled', dg_q_handled)
@@ -179,62 +188,42 @@ def decouple(inp, out, relaxation_time):
         totVals.append(  ( val, err ) )
         if dg_l_handled is None or dg_q_handled<N:
             dg_l_handled=N
-            changedValues=True
+            changedValues[1]=True
     pers.set('dg_lj_handled', dg_l_handled)
 
-    if changedValues and len(totVals) == 2:    
-        totVal=0.
-        totErr=0.
-        for val, err in totVals:
-            totVal += val
-            totErr += err*err
-        totVal /= len(totVals)
-        totErr = math.sqrt(totErr/len(totVals))
-        out.setOut('delta_f.value', FloatValue(totVal))
-        out.setOut('delta_f.error', FloatValue(totErr))
-        precision=inp.getInput('precision')
-        if totErr > precision:
-            addIteration(inp, out, nruns)
-            nruns += 1
+    precision=inp.getInput('precision')
+    if precision is None:
+        precision = 1
+    if changedValues[0] or changedValues[1]:
+        if len(totVals) == 2:
+            totVal=0.
+            totErr=0.
+            for val, err in totVals:
+                totVal += val
+                totErr += err*err
+            #totVal /= len(totVals)
+            totErr = math.sqrt(totErr/len(totVals))
+            out.setOut('delta_f.value', FloatValue(totVal))
+            out.setOut('delta_f.error', FloatValue(totErr))
+            #precision=inp.getInput('precision')
+            #if totErr > precision:
+                #addIteration(inp, out, nruns)
+            #    nruns += 1
+        # now add iterations if the error is more than half the desired error
+        # (in which case it's better to add iterations to the other half)
+        if changedValues[0]:
+            if totVals[0][1] > precision/2:
+                sys.stderr.write('Adding another q iteration\n')
+                addIteration("q", nruns_q, inp, out)
+                nruns_q += 1
+        if changedValues[1]:
+            if totVals[1][1] > precision/2:
+                sys.stderr.write('Adding another lj iteration\n')
+                addIteration("lj", nruns_lj, inp, out)
+                nruns_lj += 1
         
-    ## now count the number of valid inputs
-    #ndgOutputs=len(dGl)
-    #nSubVal=0
-    #if ndgOutputs > 0:
-    #    nSubVal=len(dGl[0])
-    #    for i in range(1, ndgOutputs):
-    #        if len(dGl[i]) != len(dGl[0]):
-    #            ndgOutputs=i
-    #            break
-    #if ndgOutputs != dgOutputsHandled:
-    #    val=nSubVal*[0.]
-    #    err=nSubVal*[0.]
-    #    totVal=None
-    #    totErr=None
-    #    N=ndgOutputs
-    #    if N>1: # we ignore the first one, as it is an equilibration run
-    #        for i in range(1, ndgOutputs):
-    #            for j in range(nSubVal):
-    #                val[j] += dGl[i][j][0]
-    #                err[j] += dGl[i][j][1]*dGl[i][j][1]
-    #        for j in range(nSubVal):
-    #            totVal += val[j]
-    #            totErr += err[j]
-    #            val[j] = val[j]/N
-    #            err[j] = math.sqrt(err[j] / N)
-    #        totVal /= (N*nSubVal)
-    #        totErr = math.sqrt(totErr/(N*nSubVal))
-    #        dgOutputsHandled=ndgOutputs
-    #        precision=inp.getInput('precision')
-    #        if precision is None:
-    #            precision = 1 # default of 1 kJ/mol
-    #        if totErr > precision:
-    #            addIteration(inp, out, nruns)
-    #            nruns += 1
-    #        out.setOut('delta_f.value', FloatValue(totVal))
-    #        out.setOut('delta_f.error', FloatValue(totErr))
-    #pers.set('dg_outputs_handled', dgOutputsHandled)
-    pers.set('nruns', nruns)
+    pers.set('nruns_q', nruns_q)
+    pers.set('nruns_lj', nruns_lj)
     pers.write()
         
 
