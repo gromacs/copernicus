@@ -386,24 +386,24 @@ class CmdLine(object):
 #                    co.write('    %s -> %s;\n'%(src,dst))
         co.write('}\n')
         return co.getvalue()
-def InputIsNotConnected(input,name,connections):
+    def InputIsNotConnected(input,name,connections):
 
-    #check if we have any connections for name
-    for conn in connections:
-        index =conn.index(name)
-        if re.search('^in.%s'%input,conn[index+1]):
-            return False
+        #check if we have any connections for name
+        for conn in connections:
+            index =conn.index(name)
+            if re.search('^in.%s'%input,conn[index+1]):
+                return False
 
-    return True
+        return True
 
-def outputIsNotConnected(output,name,connections):
-    #check if we have any connections for name
-    for conn in connections:
-        index =conn.index(name)
-        if re.search('^out.%s'%output,conn[index+1]):
-            return False
+    def outputIsNotConnected(output,name,connections):
+        #check if we have any connections for name
+        for conn in connections:
+            index =conn.index(name)
+            if re.search('^out.%s'%output,conn[index+1]):
+                return False
 
-    return True
+        return True
 
 
     
