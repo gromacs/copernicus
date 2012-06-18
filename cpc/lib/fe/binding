@@ -95,7 +95,7 @@ def fe_binding(inp, out):
         solvErr=inp.getSubnetInput('dG_solv.error')
         if (boundVal is not None and boundErr is not None and 
             solvVal is not None and solvErr is not None):
-            totVal=boundVal + solvVal
+            totVal=boundVal - solvVal
             totErr=math.sqrt( (boundErr*boundErr + solvErr*solvErr)/2. )
             out.setOut('delta_f.value', FloatValue(totVal))
             out.setOut('delta_f.error', FloatValue(totErr))

@@ -1,0 +1,14 @@
+#include "ffoplsaa.itp"
+
+#include "ana.itp"
+#include "ana2.itp"
+
+#include "spce.itp"
+
+[ system ]
+AA in water
+
+[ molecules ]
+ethanol 1
+ethanol2 1
+SOL               632
