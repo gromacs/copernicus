@@ -111,11 +111,13 @@ class ConnectionBundle(Conf):
 
 
         #Worker specific configs
-        parser = SafeConfigParser()
-        base = os.path.dirname(os.path.abspath(sys.argv[0]))
-        parser.read(os.path.join(base,'properties'))
+#        parser = SafeConfigParser()
+#        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+#        parser.read(os.path.join(base,'properties'))
+#
+#        base_path = ".%s"%parser.get('default','app-name')
 
-        base_path = ".%s"%parser.get('default','app-name')
+        base_path = '.copernicus'
 
         self._add('global_dir', os.path.join(os.environ["HOME"],
             base_path),

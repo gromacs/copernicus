@@ -120,18 +120,25 @@ class Conf:
         # We first need to find out where our configuration files are.
 
 
-        parser = SafeConfigParser()
-        base = os.path.dirname(os.path.abspath(sys.argv[0]))
-        parser.read(os.path.join(base,'properties'))
+#        parser = SafeConfigParser()
+#        base = os.path.dirname(os.path.abspath(sys.argv[0]))
+#        parser.read(os.path.join(base,'properties'))
+#
+#        base_path = ".%s"%parser.get('default','app-name')
+#
+#        self._add('global_dir', os.path.join(os.environ["HOME"],
+#                    base_path),
+#                  'The global configuration directory',
+#                  userSettable=True)
 
-        base_path = ".%s"%parser.get('default','app-name')
-
+        base_path = '.copernicus'
         self._add('global_dir', os.path.join(os.environ["HOME"],
                     base_path),
                   'The global configuration directory',
                   userSettable=True)
-        
-                  
+
+
+
         self._add('conf_dir', os.path.join(os.environ["HOME"],
                                            base_path,
                                            self.hostname),
