@@ -60,8 +60,7 @@ if inp.testing():
 # prepare the output data
 out=inp.getFunctionOutput()
 
-fe_decouple.decouple(inp, out, 
-                     inp.getInput('solvation_relaxation_time'))
+fe_decouple.decouple(inp, out, inp.getInput('solvation_relaxation_time'), -1)
 
 out.writeXML(sys.stdout)
 #sys.stderr.write('\n')

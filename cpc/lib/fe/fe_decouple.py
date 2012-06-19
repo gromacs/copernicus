@@ -79,37 +79,22 @@ def addIteration(name, i, inp, out):
     out.addInstance('%s'%iname, 'fe_iteration')
     #out.addInstance('%s'%iname, 'fe_iteration')
     # connect shared inputs
-    # q
     out.addConnection('init_%s:out.resources'%name, '%s:in.resources'%iname)
     out.addConnection('init_%s:out.grompp'%name, '%s:in.grompp'%iname)
     out.addConnection('self:sub_out.nsteps', '%s:in.nsteps'%iname)
     out.addConnection('self:sub_out.priority[%d]'%i, '%s:in.priority'%iname)
-    # lj
-    #out.addConnection('init_lj:out.resources', 'iter_lj_%d:in.resources'%i)
-    #out.addConnection('init_lj:out.grompp', 'iter_lj_%d:in.grompp'%i)
-    #out.addConnection('self:sub_out.nsteps', 'iter_lj_%d:in.nsteps'%i)
-    #out.addConnection('self:sub_out.priority[%d]'%i,'iter_lj_%d:in.priority'%i)
     if i==0:
         # connect the inits
-        # q
         out.addConnection('init_%s:out.path'%name, '%s:in.path'%iname )
-        # lj
-        #out.addConnection('init_lj:out.path', 'iter_lj_%d:in.path'%i )
     else:
         # connect the previous iteration
-        # q
         out.addConnection('%s:out.path'%(prevname), '%s:in.path'%iname )
         #out.addConnection('iter_q_%d:out.lambdas'%(i-1), 
         #                  'iter_q_%d:in.lambdas'%i )
-        # lj
-        #out.addConnection('iter_lj_%d:out.path'%(i-1), 'iter_lj_%d:in.path'%i)
-        #out.addConnection('iter_lj_%d:out.lambdas'%(i-1), 
-        #                  'iter_lj_%d:in.lambdas'%i)
     # connect the outputs
     out.addConnection('%s:out.dG'%iname, 'self:sub_in.dG_%s_array[%d]'%(name,i))
-    #out.addConnection('iter_lj_%d:out.dG'%i, 'self:sub_in.dG_lj_array[%d]'%i)
 
-def decouple(inp, out, relaxation_time):
+def decouple(inp, out, relaxation_time, mult):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
@@ -128,7 +113,6 @@ def decouple(inp, out, relaxation_time):
         # this is a rough guess, but shouldn't matter too much:
         out.setSubOut('nsteps', IntValue(20*relaxation_time) )
         out.setSubOut('nsteps_init', IntValue(relaxation_time) )
-        #           inp.getInput('relaxation_time')))
 
         out.addConnection('self:ext_in.conf', 'init_q:in.conf')
         out.addConnection('self:ext_in.grompp', 'init_q:in.grompp')
@@ -203,7 +187,7 @@ def decouple(inp, out, relaxation_time):
                 totErr += err*err
             #totVal /= len(totVals)
             totErr = math.sqrt(totErr/len(totVals))
-            out.setOut('delta_f.value', FloatValue(totVal))
+            out.setOut('delta_f.value', FloatValue(mult*totVal))
             out.setOut('delta_f.error', FloatValue(totErr))
             #precision=inp.getInput('precision')
             #if totErr > precision:

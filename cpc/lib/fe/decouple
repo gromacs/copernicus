@@ -61,7 +61,11 @@ if inp.testing():
 # prepare the output data
 out=inp.getFunctionOutput()
 
-fe_decouple.decouple(inp, out, inp.getInput('relaxation_time'))
+mult=1
+if inp.getInput('multiplier') is not None:
+    mult=inp.getInput('multiplier')
+
+fe_decouple.decouple(inp, out, inp.getInput('relaxation_time'), mult)
 
 out.writeXML(sys.stdout)
 #sys.stderr.write('\n')

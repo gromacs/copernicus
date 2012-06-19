@@ -31,11 +31,13 @@
     <type id="priority_array" base="array" member-type="int" />
 
     <function id="solvation" type="external">
-        <desc>Calculates a free energy of solvation. Takes a configuration with
-              a molecule that is solvated, and de-solvates it in steps, 
-              calculating the free energy difference between the solvated
-              and de-solvated states with the Bennett acceptance ratio 
-              method. 
+        <desc>Calculates a free energy of solvation: the free energy difference
+              between the solvated molecule and the same molecule in vacuum,
+              decoupled from the solvent.  
+              Takes a configuration with a molecule that is solvated, and 
+              de-solvates it in steps, calculating the free energy difference 
+              between the solvated and de-solvated states with the Bennett 
+              acceptance ratio method. 
         </desc>
         <inputs>
             <field type="grompp_input" id="grompp">
@@ -101,14 +103,16 @@
     <type id="restraint_array" base="array" member-type="restraint" />
 
     <function id="binding" type="external">
-        <desc>Calculates a free energy of binding. Takes two configurations:
-              one with a molecule (ligand) that is bound to another molecule 
-              (receptor), and one with the ligand solvated. Two calculations 
-              then proceed: one where the free energy of decoupling the ligand 
-              from the receptor is calculated, and one where the free energy 
-              of solvation of the ligand is calculated.  The difference in 
-              is the free energy of binding. For both caculations, the
-              Bennett acceptance ratio method is used. 
+        <desc>Calculates a free energy of binding: the free energy difference
+              between a molecule (ligand) bound to another molecule
+              (receptor), and the same molecules unbound.
+              This function takes two configurations: one with a ligand bound 
+              to the receptor, and one with the ligand solvated. Two 
+              calculations then proceed: one where the free energy of 
+              decoupling the ligand from the receptor is calculated, and one 
+              where the free energy of solvation of the ligand is calculated.  
+              The difference in is the free energy of binding. For both 
+              caculations, the Bennett acceptance ratio method is used. 
         </desc>
         <inputs>
             <field type="string" id="ligand_name">
@@ -186,18 +190,14 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <!--<field type="meas_array_array" id="dG_array_bound"/>
-            <field type="meas_array_array" id="dG_array_solv"/>-->
             <field type="meas::meas" id="dG_bound"/>
             <field type="meas::meas" id="dG_solv"/>
         </subnet-inputs>
         <subnet-outputs>
-            <!--<field type="string_array" id="endpoint_array"/>
-            <field type="int" id="n_lambdas_init"/>
-            <field type="int" id="nsteps"/>
-            <field type="int" id="nsteps_init"/>-->
             <field type="float" id="prec_bound" />
             <field type="float" id="prec_solv" />
+            <field type="float" id="mult_bound" />
+            <field type="float" id="mult_solv" />
         </subnet-outputs>
         <controller log="true" executable="binding" persistent_dir="true" />
     </function>
@@ -416,6 +416,10 @@
             <field type="float" id="precision" opt="true">
                 <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
                       not set.</desc>
+            </field>
+            <field type="float" id="multiplier" opt="true">
+                <desc>Multiplier (usually 1 or -1) for end result. Defaults to 1
+                </desc>
             </field>
         </inputs>
         <outputs>
