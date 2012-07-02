@@ -547,7 +547,11 @@ class File(object):
         self.refs -= 1
         if self.refs <= 0:
             log.debug("Removing %s because it is no longer in use."%self.name)
-            os.remove( os.path.join(self.fileList.root, self.name ) )
+            try:
+                os.remove( os.path.join(self.fileList.root, self.name ) )
+            except OSError:
+                # we don't care about non-existing files at this point
+                pass
 
 class FileList(object):
     """Contains a list of all files referenced in a project."""

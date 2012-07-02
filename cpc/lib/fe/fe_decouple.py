@@ -149,16 +149,16 @@ def decouple(inp, out, relaxation_time, mult):
 
     dgOutputsHandled=pers.get('dg_outputs_handled')
     # read in the dG inputs.
+    # whether the q (0) or lj (1) parts have changed
     changedValues=[False, False]
-
-    totVals=[]
-    totErrs=[]
+    # the total value+error for q (0) and lj (1)
+    totVals=[ (None, None), (None, None)]
     end=False
     # q first
     (val, err, N) = calcAvg('dG_q_array', inp, out)
     dg_q_handled=pers.get('dg_q_handled')
     if N>0:
-        totVals.append(  ( val, err ) )
+        totVals[0]= (val, err) 
         if dg_q_handled is None or dg_q_handled<N:
             dg_q_handled=N
             changedValues[0]=True
@@ -169,7 +169,7 @@ def decouple(inp, out, relaxation_time, mult):
     (val, err, N) = calcAvg('dG_lj_array', inp, out)
     dg_l_handled=pers.get('dg_lj_handled')
     if N>0:
-        totVals.append(  ( val, err ) )
+        totVals[1]=(val, err)
         if dg_l_handled is None or dg_q_handled<N:
             dg_l_handled=N
             changedValues[1]=True
@@ -179,7 +179,8 @@ def decouple(inp, out, relaxation_time, mult):
     if precision is None:
         precision = 1
     if changedValues[0] or changedValues[1]:
-        if len(totVals) == 2:
+        if not (totVals[0][0] is None or totVals[1][0] is None):  
+            # len(totVals) == 2:
             totVal=0.
             totErr=0.
             for val, err in totVals:
