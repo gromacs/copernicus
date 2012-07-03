@@ -43,6 +43,12 @@ import cpc.util
 
 import tune
 
+#hack to test for shutil.split()
+has_split=True
+try:
+  shutil.split('foo bar')
+except:
+  has_split=False
 
 class GromacsError(cpc.util.CpcError):
     pass
@@ -483,7 +489,10 @@ def mdrun(inp):
         src=os.path.join(inp.getBaseDir(), tpr)
         dst=os.path.join(newdirname,"topol.tpr")
         if inp.getInput('cmdline_options') is not None:
-            cmdlineOpts=shutil.split(inp.getInput('cmdline_options'))
+            if has_split:
+                cmdlineOpts=shutil.split(inp.getInput('cmdline_options'))
+            else:
+                cmdlineOpts=inp.getInput('cmdline_options')
         else:
             cmdlineOpts=[]
         if inp.getInput('priority') is not None:

@@ -23,7 +23,6 @@ import re
 import os.path
 import shutil
 import glob
-import stat
 import subprocess
 import logging
 import time
@@ -40,6 +39,12 @@ from cpc.dataflow import FloatValue
 import cpc.server.command
 import cpc.util
 
+#hack to test for shutil.split()
+has_split=True
+try:
+  shutil.split('foo bar')
+except:
+  has_split=False
 
 class GromacsError(cpc.util.CpcError):
     def __init__(self, str):
@@ -92,4 +97,83 @@ def g_energy(inp):
     fo.setOut('unit', StringValue(unit))
     return fo 
 
+def trjconv(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("trjconv -version")
+        return
+    output_groups=inp.getInput('output_groups')
+    trjfile=inp.getInput('trj')
+    tprfile=inp.getInput('tpr')
+    if inp.getInput('cmdline_options') is not None:
+        if has_split:
+            cmdlineOpts=shutil.split(inp.getInput('cmdline_options'))
+        else:
+            cmdlineOpts=inp.getInput('cmdline_options')
+    else:
+        cmdlineOpts=[]
+    cmdlist=["trjconv", "-s", tprfile, "-f", trjfile]
+    cmdlist.extend(cmdlineOpts)
 
+    if inp.hasInput('ndx'):
+        cmdlist.extend(["-n", inp.getInput('ndx')])
+
+    proc=subprocess.Popen(cmdlist,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.outputDir,
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(output_groups)
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: trjconv returned %s"%(stdout))
+    fo=inp.getFunctionOutput()
+    fo.setOut('xtc', FileValue(os.path.join(inp.outputDir,'trajout.xtc')))
+    return fo
+
+ 
+def pdb2gmx(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("pdb2gmx -version")
+        return
+    input_choices=inp.getInput('input_choices')
+    if input_choices is None:
+        input_choices=''
+    pdbfile=inp.getInput('conf')
+    #pdbfile=os.path.join(inp.outputDir,inp.getInput('conf'))
+    #shutil.copy(inp.getInput('conf'),pdbfile)
+    forcefield=inp.getInput('ff')
+    watermodel=inp.getInput('water')
+    skip_hydrogens=True #default to ignh
+    if inp.getInput('cmdline_options') is not None:
+        if has_split:
+            cmdlineOpts=shutil.split(inp.getInput('cmdline_options'))
+        else:
+            cmdlineOpts=inp.getInput('cmdline_options')
+    else:
+        cmdlineOpts=[]
+    cmdlist=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
+    if skip_hydrogens:
+        cmdlist.append(["-ignh"]
+    cmdlist.extend(cmdlineOpts)
+
+    proc=subprocess.Popen(cmdlist,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.outputDir,
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(input_choices)
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: pdb2gmx returned %s"%(stdout))
+    fo=inp.getFunctionOutput()
+    fo.setOut('conf', FileValue(os.path.join(inp.outputDir,'conf.gro')))
+    fo.setOut('top', FileValue(os.path.join(inp.outputDir,'topol.top')))
+    #how do we handle itp output files?
+    itpfiles=glob.glob(os.path.join(inp.outputDir,'*.itp'))
+    fo.setOut('include',itpfiles)
+    for i in range(len(itpfiles)):
+        fo.setOut('include[%d]'%(i),itpfiles[i])
+    return fo
+ 

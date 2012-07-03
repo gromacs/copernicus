@@ -270,4 +270,71 @@
                     import="cpc.lib.gromacs" 
                     persistent_dir="true" />
     </function>
+
+    <function id="trjconv" type="python-extended">
+        <desc>Converts and processes trajectories.</desc>
+        <inputs>
+            <field type="file" id="tpr">
+                <desc>The run input file.</desc>
+            </field>
+            <field type="file" id="trj">
+                <desc>Trajectory file (trr,xtc,pdb,etc.).</desc>
+            </field>
+            <field type="cmdline-array" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun
+                    to use</desc>
+            </field>
+            <field type="string" id="output_groups" opt="true">
+                <desc>Which group index to output, select for operations, etc.</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An .ndx index file</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="xtc">
+                <desc>Output trajectory</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.trjconv" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
+    <function id="pdb2gmx" type="python-extended">
+        <desc>Creates processed gro and topology from pdb.</desc>
+        <inputs>
+            <field type="file" id="conf">
+                <desc>The input structure.</desc>
+            </field>
+            <field type="string" id="ff">
+                <desc>Force field to use.</desc>
+            </field>
+            <field type="string" id="water">
+                <desc>Water model to use.</desc>
+            </field>
+            <field type="cmdline-array" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun
+                    to use</desc>
+            </field>
+            <field type="string" id="input_choices" opt="true">
+                <desc>Stdin for any manual choices.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="conf">
+                <desc>Processed structure</desc>
+            </field>
+            <field type="file" id="top">
+                <desc>Topology</desc>
+            </field>
+            <field type="grompp-include-array" id="include">
+                <desc>array of .itp files created.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.pdb2gmx" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
 </cpc>
