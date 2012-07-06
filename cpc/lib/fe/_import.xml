@@ -266,10 +266,20 @@
                       ligand solvation.
                 </desc>
             </field>
+            <field type="partial_res_array" id="partial_results_bound">
+                <desc>The partial results of the bound state that lead to the 
+                      free energy output.</desc>
+            </field>
+            <field type="partial_res_array" id="partial_results_solv">
+                <desc>The partial results of the solvated state that lead to 
+                      the free energy output.</desc>
+            </field>
         </outputs>
         <subnet-inputs>
             <field type="meas::meas" id="dG_bound"/>
             <field type="meas::meas" id="dG_solv"/>
+            <field type="partial_res_array" id="partial_results_bound" />
+            <field type="partial_res_array" id="partial_results_solv" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="float" id="prec_bound" />

@@ -66,6 +66,8 @@ def fe_binding(inp, out):
         out.addConnection('self:ext_in.resources_solv', 'solv:in.resources')
         out.addConnection('self:sub_out.prec_solv', 'solv:in.precision')
         out.addConnection('solv:out.delta_f', 'self:sub_in.dG_solv')
+        out.addConnection('solv:out.partial_results', 
+                          'self:sub_in.partial_results_solv')
         out.addConnection('self:sub_out.mult_solv', 'solv:in.multiplier')
     pers.set('run_solv', run_solv)
 
@@ -82,6 +84,8 @@ def fe_binding(inp, out):
         out.addConnection('self:ext_in.resources_bound', 'bound:in.resources')
         out.addConnection('self:sub_out.prec_bound', 'bound:in.precision')
         out.addConnection('bound:out.delta_f', 'self:sub_in.dG_bound')
+        out.addConnection('bound:out.partial_results', 
+                          'self:sub_in.partial_results_bound')
         out.addConnection('self:sub_out.mult_bound', 'bound:in.multiplier')
     pers.set('run_bound', run_bound)
 
@@ -103,6 +107,12 @@ def fe_binding(inp, out):
             totErr=math.sqrt( (boundErr*boundErr + solvErr*solvErr)/2. )
             out.setOut('delta_f.value', FloatValue(totVal))
             out.setOut('delta_f.error', FloatValue(totErr))
+    boundPartialRes=inp.getSubnetInputValue('partial_results_bound')
+    if boundPartialRes.isUpdated() and boundPartialRes.value is not None:
+        out.setOut('partial_results_bound', boundPartialRes)
+    solvPartialRes=inp.getSubnetInputValue('partial_results_solv')
+    if solvPartialRes.isUpdated() and solvPartialRes.value is not None:
+        out.setOut('partial_results_solv', solvPartialRes)
     pers.write()
 
 
