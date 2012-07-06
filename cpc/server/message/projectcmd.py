@@ -21,6 +21,10 @@ import logging
 import json
 import os
 import os.path
+import tarfile
+import tempfile
+from cpc.util.conf.server_conf import ServerConf
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -326,6 +330,57 @@ class SCProjectGet(ServerCommand):
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
+
+
+class SCProjectBackup(ServerCommand):
+    def __init__(self):
+        ServerCommand.__init__(self, "project-backup")
+
+    def run(self, serverState, request, response):
+
+        if request.hasParam('project'):
+            conf = ServerConf()
+            project=request.getParam('project')
+            projectFolder = "%s/%s"%(conf.getRunDir(),project)
+            serverState.write()
+            if(os.path.isdir(projectFolder)):
+                #tar the project folder but keep the old files also, this is only a backup!!!
+
+                tff=tempfile.TemporaryFile()
+                tf=tarfile.open(fileobj=tff, mode="w:gz")
+                tf.add(projectFolder, arcname=".", recursive=True)
+                tf.close()
+                tff.seek(0)
+
+                response.setFile(tff,'application/x-tar')
+
+            else:
+                response.add("Project does not exist",status="ERROR")
+        else:
+            response.add("No project specified for backup",status="ERROR")
+
+
+class SCProjectRestore(ServerCommand):
+    def __init__(self):
+        ServerCommand.__init__(self, "project-restore")
+
+    def run(self, serverState, request, response):
+        #todo check so we are not trying to overwrite a current project directory
+        if(request.haveFile("projectBundle")):
+            projectName = request.getParam("project")
+            projectBundle=request.getFile('projectBundle')
+            serverState.getProjectList().add(projectName)
+            extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
+            tar = tarfile.open(fileobj=projectBundle,mode="r")
+            tar.extractall(path=extractPath)
+            tar.close()
+            serverState.readProjectState(projectName)
+
+            response.add("extracted")
+        else:
+            response.add("No project bundle provided")
+
+
 
 class SCProjectSet(ServerCommand):
     """Set an i/o item in a project."""
