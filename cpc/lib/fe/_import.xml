@@ -30,6 +30,91 @@
     <!--<type id="meas_array_array" base="array" member-type="meas_array" />-->
     <type id="priority_array" base="array" member-type="int" />
 
+    <type id="conf_lambda" base="record">
+        <desc>A combination of configuration and lambda value</desc>
+        <field type="file" id="conf"><desc>The configuration</desc></field>
+        <field type="float" id="lambda"><desc>The lambda value</desc></field>
+    </type>
+    <type id="conf_lambda_array" base="array" member-type="conf_lambda">
+        <desc>An array of conf_lambdas forming an FE path.</desc>
+    </type>
+
+    <type id="fe_path" base="record">
+        <desc>An array of lambda values and a description of the endpoints,
+              including final configurations.
+        </desc>
+        <field type="string" id="desc" opt="true">
+            <desc>A description of the path.</desc>
+        </field>
+        <field type="string" id="a">
+            <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="string" id="b">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="string" id="molecule_name">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="conf_lambda_array" id="lambdas">
+            <desc>The FE path.</desc>
+        </field>
+    </type>
+    <type id="fe_path_array" base="array" member-type="fe_path" />
+
+    <type id="partial_res" base="record">
+        <desc>An array of individual free energy measurements from a part of 
+               a free energy calculation
+        </desc>
+        <field type="string" id="desc">
+            <desc>The part of the calculation</desc>
+        </field>
+        <field type="meas::meas" id="average">
+            <desc>The average for this part.</desc>
+        </field>
+        <field type="meas_array" id="parts">
+            <desc>Array with independent samples</desc>
+        </field>
+        <field type="fe_path" id="path">
+            <desc>The last free energy path (array of lambda values and
+                  configurations) for this part</desc>
+        </field>
+    </type>
+    <type id="partial_res_array" base="array" member-type="partial_res" />
+
+
+
+    <type id="lambda_array" base="array" member-type="float" />
+
+
+    <type id="restraint" base="record">
+        <desc>Describes a restraint on a ligand.</desc>
+        <field type="string" id="resname">
+            <desc>Name of residue to restrain to.</desc>
+        </field>
+        <field type="coord::coord_3d" id="pos">
+            <desc>Relative location to restrain to.</desc>
+        </field>
+        <field type="float" id="strength">
+            <desc>Coupling strength (in kJ/mol/nm).</desc>
+        </field>
+    </type>
+    <type id="restraint_array" base="array" member-type="restraint" />
+
+
+    <!-- Functions -->
+
     <function id="solvation" type="external">
         <desc>Calculates a free energy of solvation: the free energy difference
               between the solvated molecule and the same molecule in vacuum,
@@ -73,10 +158,16 @@
                  in the mdp parameters, and a Gibbs free energy if pressure 
                  coupling is on).</desc>
             </field>
+            <field type="partial_res_array" id="partial_results">
+                <desc>The partial results that lead to the free energy 
+                      output.</desc>
+            </field>
         </outputs>
         <subnet-inputs>
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
+            <field type="fe_path_array" id="path_q" />
+            <field type="fe_path_array" id="path_lj" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
@@ -88,19 +179,6 @@
         <controller log="true" executable="solvation" persistent_dir="true" />
     </function>
 
-    <type id="restraint" base="record">
-        <desc>Describes a restraint on a ligand.</desc>
-        <field type="string" id="resname">
-            <desc>Name of residue to restrain to.</desc>
-        </field>
-        <field type="coord::coord_3d" id="pos">
-            <desc>Relative location to restrain to.</desc>
-        </field>
-        <field type="float" id="strength">
-            <desc>Coupling strength (in kJ/mol/nm).</desc>
-        </field>
-    </type>
-    <type id="restraint_array" base="array" member-type="restraint" />
 
     <function id="binding" type="external">
         <desc>Calculates a free energy of binding: the free energy difference
@@ -207,48 +285,7 @@
     <!-- internal functions -->
 
 
-    <type id="conf_lambda" base="record">
-        <desc>A combination of configuration and lambda value</desc>
-        <field type="file" id="conf"><desc>The configuration</desc></field>
-        <field type="float" id="lambda"><desc>The lambda value</desc></field>
-    </type>
-    <type id="conf_lambda_array" base="array" member-type="conf_lambda">
-        <desc>An array of conf_lambdas forming an FE path.</desc>
-    </type>
 
-
-    <type id="fe_path" base="record">
-        <desc>An array of lambda values and a description of the endpoints
-        </desc>
-        <field type="string" id="a">
-            <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' for:
-                  vdwq: full coupling,
-                  vdw: only vdw interactions,
-                  none: no interactions.
-            </desc>
-        </field>
-        <field type="string" id="b">
-            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
-                  vdwq: full coupling,
-                  vdw: only vdw interactions,
-                  none: no interactions.
-            </desc>
-        </field>
-        <field type="string" id="molecule_name">
-            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
-                  vdwq: full coupling,
-                  vdw: only vdw interactions,
-                  none: no interactions.
-            </desc>
-        </field>
-        <field type="conf_lambda_array" id="lambdas">
-            <desc>The FE path.</desc>
-        </field>
-    </type>
-    <type id="fe_path_array" base="array" member-type="fe_path" />
-
-
-    <type id="lambda_array" base="array" member-type="float" />
 
     <function id="fe_init" type="external">
         <desc>Initialize a free energy run, by generating a set of 
@@ -429,10 +466,16 @@
                  in the mdp parameters, and a Gibbs free energy if pressure 
                  coupling is on).</desc>
             </field>
+            <field type="partial_res_array" id="partial_results">
+                <desc>The partial results that lead to the free energy 
+                      output.</desc>
+            </field>
         </outputs>
         <subnet-inputs>
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
+            <field type="fe_path_array" id="path_q" />
+            <field type="fe_path_array" id="path_lj" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>

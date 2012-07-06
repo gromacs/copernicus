@@ -69,7 +69,7 @@ def fe_iteration(inp, out):
     lambdas=path_lambdas
 
     lambdas_in=inp.getInput('lambdas')
-    if lambdas_in is not None and len(lambdas_in) > 0:
+    if (lambdas_in is not None) and (len(lambdas_in) > 0):
         lambdas=[]
         for i in range(len(lambdas_in)):
             lambdas.append(inp.getInput('lambdas[%d]'%i))
