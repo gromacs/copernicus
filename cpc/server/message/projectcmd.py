@@ -365,20 +365,24 @@ class SCProjectRestore(ServerCommand):
         ServerCommand.__init__(self, "project-restore")
 
     def run(self, serverState, request, response):
-        #todo check so we are not trying to overwrite a current project directory
         if(request.haveFile("projectBundle")):
             projectName = request.getParam("project")
             projectBundle=request.getFile('projectBundle')
-            serverState.getProjectList().add(projectName)
-            extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
-            tar = tarfile.open(fileobj=projectBundle,mode="r")
-            tar.extractall(path=extractPath)
-            tar.close()
-            serverState.readProjectState(projectName)
 
-            response.add("extracted")
+            try:
+                serverState.getProjectList().add(projectName)
+                extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
+                tar = tarfile.open(fileobj=projectBundle,mode="r")
+                tar.extractall(path=extractPath)
+                tar.close()
+                serverState.readProjectState(projectName)
+
+            except:
+                raise
+
+            response.add("Project restored as %s"%projectName)
         else:
-            response.add("No project bundle provided")
+            response.add("No project bundle provided",status="ERROR")
 
 
 

@@ -483,11 +483,9 @@ try:
         clnt=ClientMessage()
         response = clnt.projectBackupRequest(project)
 
-        #TODO handle error cases from the server!!!!
-
         if response.content_type=="text/json":
             ProcessedResponse(response).pprint()
-            
+
         else:
             filecontents = response.getRawData() #this is an mmap
             #try catch here!! test if file can be written in destination
@@ -508,7 +506,6 @@ try:
     elif cmd =="restore":
         #provided a project bundle it will restore it on the server side
 
-        #TODO check if project already exists
         projectBundle = getArg(args, 1, "Path to project bundle")  #path to the bundle
         projectName = getArg(args, 2, "Name of project")  #path to the bundle
         clnt=ClientMessage()
