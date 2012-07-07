@@ -89,8 +89,8 @@ def print_usage():
     print "       cpcc readconf"
     print ""
     print "Project Backup and Restore commands "
-    print "       cpcc backup      projectname [project-tar]"
-    print "       cpcc restore     project-tar "
+    print "       cpcc save      project-name [project-tar]"
+    print "       cpcc load     project-tar project-name "
     print ""
     print "Common options:"
     print "       cpcc [-c conffile]"
@@ -472,7 +472,7 @@ try:
 
 
     #backup and restore commands
-    elif cmd =="backup":
+    elif cmd =="save":
 
         project= getArg(args,1,"Project name")
 
@@ -503,7 +503,7 @@ try:
 
 
 
-    elif cmd =="restore":
+    elif cmd =="load":
         #provided a project bundle it will restore it on the server side
 
         projectBundle = getArg(args, 1, "Path to project bundle")  #path to the bundle
