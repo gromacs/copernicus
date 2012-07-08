@@ -150,6 +150,32 @@
                     persistent_dir="false" />
     </function>
 
+    <function id="extract_mdp" type="python-extended">
+        <desc>Extract a setting from an mdp file</desc>
+        <inputs>
+            <field type="file" id="mdp">
+                <desc>The .mdp file</desc>
+            </field>
+
+            <field type="mdp_array" id="settings" opt="true">
+                <desc>Array of settings</desc>
+            </field>
+            <field type="string" id="name">
+                <desc>The setting to extract</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="string" id="value">
+                <desc>The extracted setting value</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.extract_mdp" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="false" />
+    </function>
+
+
+
     <function id="mdrun_tune" type="python-extended">
         <desc>Optimize an MD simulation (for the available run resources).
         </desc>

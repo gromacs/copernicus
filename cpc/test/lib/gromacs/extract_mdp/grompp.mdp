@@ -1,0 +1,93 @@
+; RUN CONTROL PARAMETERS = 
+integrator               = sd
+; start time and timestep in ps = 
+tinit                    = 0.0
+dt                       = 0.002
+nsteps                   = 20000 		
+
+; OUTPUT CONTROL OPTIONS = 
+; Output frequency for coords (x), velocities (v) and forces (f) = 
+nstxout                  = 0
+nstvout                  = 0
+nstfout                  = 0
+; Output frequency for energies to log file and energy file = 
+nstlog                   = 500
+nstenergy                = 200
+; Output frequency and precision for xtc file = 
+nstxtcout                = 200
+xtc_precision            = 1000
+; This selects the subset of atoms for the xtc file. = 
+; Only the first group gets written out, it does not make sense = 
+; to have multiple groups. By default all atoms will be written = 
+xtc_grps                 = 
+; Selection of energy groups = 
+energygrps               = protein sol
+
+; NEIGHBORSEARCHING PARAMETERS = 
+; nblist update frequency = 
+nstlist                  = 10
+; ns algorithm (simple or grid) = 
+ns_type                  = grid
+; nblist cut-off         = 
+rlist                    = 1.0
+
+; OPTIONS FOR ELECTROSTATICS AND VDW = 
+; Method for doing electrostatics = 
+coulomb_type             = pme
+rcoulomb_switch          = 0
+rcoulomb                 = 1.0
+; Dielectric constant (DC) for cut-off or DC of reaction field = 
+epsilon_r                = 1.0
+; Method for doing Van der Waals = 
+vdw_type                 = cut-off
+; cut-off lengths        = 
+rvdw                     = 1
+dispcorr                 = enerpres
+
+ewald_rtol               = 1e-5
+
+; fourierspacing = 
+; 25 would be a bit better but that's not that good for parallel runs 
+fourier_nx              = 24
+fourier_ny              = 24
+fourier_nz              = 24
+
+; OPTIONS FOR WEAK COUPLING ALGORITHMS = 
+; Temperature coupling   = 
+tcoupl                   = v-rescale 
+; Groups to couple separately = 
+tc-grps                  = system
+; Time constant (ps) and reference temperature (K) = 
+tau_t                    = 1.0
+ref_t                    = 298
+
+; Pressure coupling      = 
+Pcoupl                   = Berendsen
+; Time constant (ps), compressibility (1/bar) and reference P (bar) = 
+tau_p                    = 2.0
+compressibility          = 4.6e-5
+ref_p                    = 1
+
+; GENERATE VELOCITIES FOR STARTUP RUN = 
+gen_vel                  = no 		; !autogen
+gen_seed                 = -1
+gen_temp                 = 298
+
+; BONDS
+constraints              = all-bonds
+
+; FREE ENERGY
+couple-moltype           = ethanol
+free-energy		 = yes 
+init-lambda		 = 1 	
+delta-lambda		 = 0  	
+sc-power		 = 1  	
+sc-sigma		 = 0.3  
+couple-intramol		 = no  	
+couple-lambda0		 = none  	
+couple-lambda1		 = vdwq  	
+sc-alpha		 = 1.0  	
+foreign-lambda		 =  0 0.3892 0.5648 0.6291 0.6778 0.7317 0.8034 0.8783 0.9392 0.972 0.989 1
+separate-dhdl-file       = no
+
+

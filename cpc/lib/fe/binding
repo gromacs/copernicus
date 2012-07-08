@@ -60,6 +60,19 @@ def fe_binding(inp, out):
         out.setSubOut('prec_solv', FloatValue( prec_solv ) ) 
     pers.set('prec', prec)
 
+    restraints=pers.get('restraints')
+    if restraints is None or restraints<1:
+        restraints=1
+        out.addInstance('addres', 'add_restraints')
+        out.addConnection('self:ext_in.restraints_bound', 
+                          'addres:in.restraints')
+        out.addConnection('self:ext_in.grompp_bound', 'addres:in.grompp')
+        out.addConnection('self:ext_in.conf_bound', 'addres:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'addres:in.couple_mol')
+        out.addConnection('addres:out.dg', 'self:sub_in.dg_restraints')
+
+    pers.set('restraints', restraints)
+
     run_solv=pers.get('run_solv')
     if run_solv is None:
         run_solv=1
@@ -83,7 +96,8 @@ def fe_binding(inp, out):
         run_bound=1
         out.setSubOut('mult_bound', FloatValue(1))
         out.addInstance('bound', 'decouple')
-        out.addConnection('self:ext_in.grompp_bound', 'bound:in.grompp')
+        #out.addConnection('self:ext_in.grompp_bound', 'bound:in.grompp')
+        out.addConnection('addres:out.grompp', 'bound:in.grompp')
         out.addConnection('self:ext_in.conf_bound', 'bound:in.conf')
         out.addConnection('self:ext_in.ligand_name', 'bound:in.molecule_name')
         out.addConnection('self:ext_in.binding_relaxation_time', 
@@ -108,9 +122,11 @@ def fe_binding(inp, out):
         boundErr=inp.getSubnetInput('dG_bound.error')
         solvVal=inp.getSubnetInput('dG_solv.value')
         solvErr=inp.getSubnetInput('dG_solv.error')
+        restraintVal=inp.getSubnetInput('dg_restraints')
         if (boundVal is not None and boundErr is not None and 
-            solvVal is not None and solvErr is not None):
-            totVal=boundVal + solvVal
+            solvVal is not None and solvErr is not None and 
+            restraintVal is not None):
+            totVal=boundVal + solvVal + restraintVal
             totErr=math.sqrt( (boundErr*boundErr + solvErr*solvErr)/2. )
             out.setOut('delta_f.value', FloatValue(totVal))
             out.setOut('delta_f.error', FloatValue(totErr))

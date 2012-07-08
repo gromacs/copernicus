@@ -112,7 +112,6 @@
     </type>
     <type id="restraint_array" base="array" member-type="restraint" />
 
-
     <!-- Functions -->
 
     <function id="solvation" type="external">
@@ -199,12 +198,10 @@
             <field type="string" id="receptor_name">
                 <desc>The name/group number of the receptor.  </desc>
             </field>
-
             <field type="float" id="precision" opt="true">
                 <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
                 not set.</desc>
             </field>
-
             <field type="grompp_input" id="grompp_bound">
                 <desc>A full set of input values for grompp (except 
                       configuration) for the situation where the ligand is 
@@ -280,6 +277,7 @@
             <field type="meas::meas" id="dG_solv"/>
             <field type="partial_res_array" id="partial_results_bound" />
             <field type="partial_res_array" id="partial_results_solv" />
+            <field type="float" id="dg_restraints" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="float" id="prec_bound" />
@@ -497,5 +495,51 @@
         <controller log="true" executable="decouple" persistent_dir="true" />
     </function>
 
+
+    <function id="add_restraints" type="external">
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with full coupling
+                </desc>
+            </field>
+            <field type="string" id="couple_mol">
+                <desc>The name of the coupled molecule
+                </desc>
+            </field>
+            <field type="restraint_array" id="restraints" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <!--<field type="file" id="mdp">
+                <desc>A .mdp (gromacs simulation settings) file with restraints
+                </desc>
+            </field>-->
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="float" id="dg">
+                <desc>The free energy contribution of this set of restraints
+                </desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="string" id="temp_value" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp_array" id="settings"/>
+            <field type="string" id="temp_opt" />
+        </subnet-outputs>
+        <controller log="true" executable="add_restraints" 
+                    persistent_dir="true" />
+    </function>
 </cpc>
 

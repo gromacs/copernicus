@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e cpc/test/lib/gromacs_bar/lambda00.edr ]; then
+if [ ! -e cpc/test/lib/fe/init/grompp.mdp ]; then
     echo "This test script must be run from within the copernicus base directory"
     exit 1
 fi
@@ -21,11 +21,11 @@ fi
 # will be executed as one atomic operation upon the cpcc commit command.
 ./cpcc transact
 
-./cpcc set-file fe_init:in.grompp.top cpc/test/lib/fe_init/topol.top
-./cpcc set-file fe_init:in.grompp.include[0]  cpc/test/lib/fe_init/ana.itp
-./cpcc set-file fe_init:in.grompp.mdp cpc/test/lib/fe_init/grompp.mdp
+./cpcc set-file fe_init:in.grompp.top cpc/test/lib/fe/init/topol.top
+./cpcc set-file fe_init:in.grompp.include[0]  cpc/test/lib/fe/init/ana.itp
+./cpcc set-file fe_init:in.grompp.mdp cpc/test/lib/fe/init/grompp.mdp
 
-./cpcc set-file fe_init:in.conf cpc/test/lib/fe_init/conf.gro
+./cpcc set-file fe_init:in.conf cpc/test/lib/fe/init/conf.gro
 
 ./cpcc set fe_init:in.molecule_name ethanol
 

@@ -1,6 +1,6 @@
 [ moleculetype ]
 ; Name            nrexcl
-ethanol	3
+ethanol	         3
 
 [ atoms ]
 ;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB

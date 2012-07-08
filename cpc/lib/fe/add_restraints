@@ -1,0 +1,195 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+import math
+#import shutil
+#import glob
+#import stat
+import subprocess
+#import traceback
+#import re
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+# we start with 2*10 lambda points
+#npoints_init=10
+
+def add_restraints(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    merge=pers.get('merge')
+    if merge is None or merge < 1:
+        merge=1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:sub_out.settings', 'merge:in.settings')
+        out.addConnection('self:ext_in.grompp.top', 'self:ext_out.grompp.top')
+        out.addConnection('self:ext_in.grompp.ndx', 'self:ext_out.grompp.ndx')
+        out.addConnection('self:ext_in.grompp.include', 
+                          'self:ext_out.grompp.include')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'self:ext_out.grompp.mdrun_cmdline_options')
+        out.addConnection('merge:out.mdp', 'self:ext_out.grompp.mdp')
+        # extract the temperature
+        out.addInstance('extract_mdp', 'gromacs::extract_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'extract_mdp:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 
+                          'extract_mdp:in.settings')
+        out.addConnection('self:sub_out.temp_opt', 'extract_mdp:in.name')
+        out.addConnection('extract_mdp:out.value', 'self:sub_in.temp_value')
+        out.setSubOut('temp_opt', StringValue('ref-t'))
+    pers.set('merge', merge)
+
+    resval=inp.getInput('restraints')
+    settings=pers.get('settings')
+    if settings is None or inp.getInputValue('restraints').isUpdated():
+        settings=1
+        dg=0.
+        # the array with values to use as settings
+        valarray=[]
+        settings=inp.getInput('grompp.settings')
+        if settings is not None and type(settings) == type([]):
+            valarray.extend(settings)
+        if resval is not None and len(resval) > 0:
+            N=len(resval)
+            valarray.append(RecordValue({'name' : StringValue('pull'),
+                                         'value' : StringValue('umbrella')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_geometry'),
+                                         'value' : StringValue('position')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_dim'),
+                                         'value' : StringValue('Y Y Y')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_start'),
+                                         'value' : StringValue('no')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_nstxout'),
+                                         'value' : StringValue('10000')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_nstfout'),
+                                         'value' : StringValue('0')}))
+            valarray.append(RecordValue({'name' : StringValue('pull_ngroups'),
+                                         'value' : StringValue("%d"%N)}))
+            valarray.append(RecordValue({'name' : StringValue('pull_group0'),
+                                         'value' : 
+                                            inp.getInputValue('couple_mol')}))
+            # iterate over the restraints
+            i=0
+            for res in resval:
+                ri=i+1
+                valarray.append(RecordValue( 
+                                { 'name' : StringValue('pull_rate%d'%ri),
+                                  'value' : StringValue('0') } ))
+
+                resname=inp.getInput('restraints[%d].resname'%i)
+                x=inp.getInput('restraints[%d].pos.x'%i)
+                y=inp.getInput('restraints[%d].pos.y'%i)
+                z=inp.getInput('restraints[%d].pos.z'%i)
+                k=inp.getInput('restraints[%d].strength'%i)
+                valarray.append(RecordValue( 
+                                { 'name' : StringValue('pull_group%d'%ri),
+                                  'value' : StringValue(resname) } ))
+                valarray.append(RecordValue( 
+                                { 'name' : StringValue('pull_init%d'%ri),
+                                  'value' : StringValue('%g %g %g'%(x,y,z))}))
+                valarray.append(RecordValue( 
+                                { 'name' : StringValue('pull_k%d'%ri),
+                                  'value' : StringValue('%g'%(k))}))
+                i+=1  
+        out.setSubOut('settings', ArrayValue(valarray))
+    pers.set('settings', settings)
+
+    
+    dg=pers.get('dg') 
+    if ( (inp.getSubnetInput('temp_value') is not None) and 
+         (settings is not None) and
+         (dg is None or inp.getInputValue('restraints').isUpdated())):
+        tempstring=inp.getSubnetInput('temp_value')
+        sys.stderr.write('tempstring="%s"\n'%tempstring)
+        spl=tempstring.split()
+        if len(spl) > 0: 
+            try:
+                T=float(tempstring.split()[0])
+                k=1.3806488e-23 # Boltzmann's constant
+                kT=k*T
+                d=3 #dimensionality
+                dg=0.
+                i=0
+                for res in resval:
+                    k=inp.getInput('restraints[%d].strength'%i)
+                    dg += - d*kT*math.log( math.pi*kT/k )/2.
+                    i+=1
+                out.setOut('dg', FloatValue(dg))
+            except ValueError:
+                pass
+    if dg is not None:
+        pers.set('dg', dg)
+    pers.write()
+    return out
+
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+add_restraints(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

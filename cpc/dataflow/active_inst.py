@@ -321,7 +321,14 @@ class ActiveInstance(object):
     def setErrmsg(self, msg):
         """Set the error message."""
         with self.lock:
-            self.errmsg=msg
+            # try to convert it to unicode, we *should* be getting a 
+            # unicode object or a utf-8 encoded string.
+            if type(msg) != type(u''):
+                # as a last resort, just ignore everything we don't know
+                # how to deal with
+                self.errmsg = unicode(msg, encoding='utf-8', errors='ignore')
+            else: 
+                self.errmsg=msg
 
     def getBasedir(self):
         """Get the active instance's base directory."""
@@ -806,10 +813,10 @@ class ActiveInstance(object):
     def markError(self, msg):
         """Mark active instance as being in error state."""
         with self.lock:
-            if isinstance(msg, str):
-                self.errmsg=unicode(msg, encoding="utf-8")
+            if isinstance(msg, unicode):
+                self.errmsg=msg
             else:
-                self.errmsg=unicode(msg) #$, encoding="utf-8")
+                self.errmsg=unicode(msg, encoding="utf-8", errors='ignore')
             self.state=ActiveInstance.error
             #print msg
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
@@ -843,7 +850,7 @@ class ActiveInstance(object):
         with self.lock:
             if self.state==ActiveInstance.error:
                 strn=self.errmsg
-                msg='errmsg=%s'%str(xml.sax.saxutils.quoteattr(strn))
+                msg='errmsg=%s'%xml.sax.saxutils.quoteattr(strn).encode('utf-8')
             else:
                 msg=""
             outf.write('%s<active id="%s" state="%s" %s seqnr="%d">\n'%

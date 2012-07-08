@@ -36,6 +36,7 @@ from cpc.dataflow import Value
 from cpc.dataflow import FileValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
+from cpc.dataflow import StringValue
 from sets import Set
 from cpc.dataflow import Resources
 import cpc.server.command
@@ -62,19 +63,13 @@ def extractConf(tprFile, confFile):
                            (open(stdoutfn,'r').read()))
 
 
+
 def procSettings(inp, outMdpDir):
     """Process settings into a new mdp file, or return the old mdp file if
        there are no additional settings."""
     mdpfile=inp.getInput('mdp')
     if ( inp.hasInput('settings') and len(inp.getInput('settings'))>0 ):
         repl=dict()
-        #if inp.hasInput('gen_vel'):
-        #    gen_vel=inp.getInput('gen_vel')
-        #    if gen_vel == 0:
-        #        genvelst='no'
-        #    else:
-        #        genvelst='yes'
-        #    repl['gen_vel'] = genvelst
         if inp.hasInput('settings'):
             settings=inp.getInput('settings')
             for setting in settings:
@@ -507,6 +502,39 @@ def merge_mdp(inp):
     fo.setOut('mdp', FileValue(mdpfile))
     return fo
 
+def extract_mdp(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        return
+    fo=inp.getFunctionOutput()
+    keyFind=inp.getInput('name')
+    keyFind=keyFind.strip().replace('-', '_').lower()
+    setVal=None
+    mdpfile=inp.getInput('mdp')
+    #if ( inp.hasInput('settings') and len(inp.getInput('settings'))>0 ):
+    repl=dict()
+    if inp.hasInput('settings'):
+        settings=inp.getInput('settings')
+        for setting in settings:
+            if ("name" in setting.value) and ("value" in setting.value):
+                val = setting.value["value"].value
+                name = setting.value["name"].value
+                name = name.strip().replace('-', '_').lower()
+                if name == keyFind:
+                    setVal=val
+    if setVal is None:
+        #outMdpName=os.path.join(outMdpDir, "grompp.mdp")
+        #outf=open(outMdpName, "w")
+        inf=open(mdpfile, "r")
+        for line in inf:
+            sp=line.split('=')
+            if len(sp) == 2:
+                key=sp[0].strip().replace('-', '_').lower()
+                if key==keyFind:
+                    setVal=sp[1].strip()
+    if setVal is not None:
+        fo.setOut('value', StringValue(setVal))
+    return fo
 
 def tune_fn(inp):
     if inp.testing():
@@ -562,7 +590,7 @@ def grompp_multi(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
-    inputs = ['mdp','top','conf', 'settings', 'include']
+    inputs = ['mdp','top','conf', 'ndx', 'settings', 'include']
     outputs = [ 'tpr' ]
     running=0
     if(pers.get("running")):
@@ -619,7 +647,7 @@ def grompp_mdrun_multi(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
 
-    grompp_inputs = ['mdp','top','conf', 'settings', 'include' ]
+    grompp_inputs = ['mdp','top','conf', 'ndx', 'settings', 'include' ]
     mdrun_inputs = [ 'priority', 'cmdline_options', 'resources']
     inputs = grompp_inputs + mdrun_inputs
     grompp_outputs = [ 'tpr' ]
