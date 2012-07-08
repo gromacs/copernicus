@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+import shutil
 import tarfile
 import tempfile
 
@@ -127,12 +128,15 @@ class ServerState:
             projectFolder = "%s/%s"%(conf.getRunDir(),project)
             if(os.path.isdir(projectFolder)):
                 #tar the project folder but keep the old files also, this is only a backup!!!
-
+                #copy _state.xml to _state.bak.xml
+                stateBackupFile = "%s/_state.bak.xml"%projectFolder
+                shutil.copyfile("%s/_state.xml"%projectFolder,stateBackupFile)
                 tff=tempfile.TemporaryFile()
                 tf=tarfile.open(fileobj=tff, mode="w:gz")
                 tf.add(projectFolder, arcname=".", recursive=True)
                 tf.close()
                 tff.seek(0)
+                os.remove(stateBackupFile)
                 self.taskExecThreads.cont()
             else:
                 self.taskExecThreads.cont()

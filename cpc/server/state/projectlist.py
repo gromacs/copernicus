@@ -215,7 +215,7 @@ class ProjectList(object):
     #reads in the project state of a project state that has been restored from backup
     def readProjectState(self,projectName):
         prj = self.projects[projectName]
-        prj.readState()
+        prj.readState(stateFile="_state.bak.xml")
 
 class ProjectListReaderError(cpc.util.CpcXMLError):
     pass
