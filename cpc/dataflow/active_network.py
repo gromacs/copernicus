@@ -343,8 +343,8 @@ class ActiveNetwork(network.Network):
                 #                                conn.getDstItemList(),
                 #                                conn.getInitialValue())
                 val=conn.getInitialValue()
-                log.debug("Setting input to %s: %s"%
-                          (conn.dstAcp.value.getFullName(), val.value))
+                #log.debug("Setting input to %s: %s"%
+                #          (conn.dstAcp.value.getFullName(), val.value))
                 conn.dstAcp.update(val, sourceTag, None)
                 conn.dstAcp.propagate(sourceTag, None)
                 #with dstAcp.activeInstance.lock:
@@ -401,11 +401,11 @@ class ActiveNetwork(network.Network):
             for inst in self.instances.itervalues():
                 if not inst.isImplicit():
                     inst.writeXML(outFile, indent+1) 
-            for conn in self.connections:
-                if not conn.isImplicit():
-                    conn.writeXML(outFile, indent+1)
             for ai in self.activeInstances.itervalues():
                 if ai.getName() != keywords.Self:
                     ai.writeXML(outFile, indent+1)
+            for conn in self.connections:
+                if not conn.isImplicit():
+                    conn.writeXML(outFile, indent+1)
             outFile.write('%s</network>\n'%indstr)
 

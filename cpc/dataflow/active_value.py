@@ -98,8 +98,8 @@ class ActiveValue(value.Value):
         self.sourceTag=sourceTag
         if resetSourceTag:
             srcVal.sourceTag=None
-        #log.debug("Updating new value for %s: %s."%
-        #          (self.getFullName(), self.sourceTag))
+        #log.debug("Updating new value for %s: %s."% (self.getFullName(), 
+        #                                             self.sourceTag))
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
@@ -186,9 +186,9 @@ class ActiveValue(value.Value):
     
            Returns: a boolean telling whether an update has taken place."""
         ret=False
-        #log.debug("Checking for update in %s, %s=%s reset=%s %s"%
+        #log.debug("Checking for update in %s, %s=%s reset=%s %s:%s"%
         #          (self.getFullName(), sourceTag, sourceValue.sourceTag, 
-        #           resetSourceTag, sourceValue.value))
+        #          resetSourceTag, sourceValue.getFullName(),sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
@@ -202,7 +202,8 @@ class ActiveValue(value.Value):
                 #sourceValue.setUpdated(False)
                 return True
             #else:
-            #   log.debug("Rejecting acceptNewValue because of sequence number")
+            #   log.debug("Rejecting acceptNewValue %s: sequence number %d>%d"%
+            #             (self.getFullName(), self.seqNr, sourceValue.seqNr))
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:

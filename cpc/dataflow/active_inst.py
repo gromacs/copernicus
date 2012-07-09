@@ -530,7 +530,8 @@ class ActiveInstance(object):
                  some global lock preventing concurrent updates, and 
                  that it is locked. This normally is project.networkLock.
            """
-        log.debug("handleNewInput on  %s"%self.getCanonicalName())
+        log.debug("handleNewInput in %s: %s"%(self.getCanonicalName(), 
+                                              sourceTag))
         with self.inputLock:
             # first check whether we've already checked this
             #self.updated=False

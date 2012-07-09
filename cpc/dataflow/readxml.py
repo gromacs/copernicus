@@ -162,10 +162,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         for ai in self.affectedInputAIs:
             ai.handleNewInput(self, None, noNewTasks=True)
             #ai.resetUpdated()
-        #except ProjectXMLError as e:
-        #    raise e
-        #except apperror.ApplicationError as e:
-        #    raise ProjectXMLError(str(e), self)
 
     def _doRead(self, inf):
         try:

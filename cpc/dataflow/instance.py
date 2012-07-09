@@ -229,21 +229,21 @@ class Instance(object):
         iiindstr=cpc.util.indStr*(indent+2)
         outf.write('%s<instance id="%s" function="%s">\n'%
                    (indstr, self.name, self.fullFnName))
-        if self.inputs.hasMembers():
-            outf.write('%s<inputs>\n'%iindstr)
-            self.inputs.writePartsXML(outf, indent+2)
-            outf.write('%s</inputs>\n'%iindstr)
-        if self.outputs.hasMembers():
-            outf.write('%s<outputs>\n'%iindstr)
-            self.outputs.writePartsXML(outf, indent+2)
-            outf.write('%s</outputs>\n'%iindstr)
-        if self.subnetInputs.hasMembers():
-            outf.write('%s<subnet-inputs>\n'%iindstr)
-            self.subnetInputs.writePartsXML(outf, indent+2)
-            outf.write('%s</subnet-inputs>\n'%iindstr)
-        if self.subnetOutputs.hasMembers():
-            outf.write('%s<subnet-outputs>\n'%iindstr)
-            self.subnetOutputs.writePartsXML(outf, indent+2)
-            outf.write('%s</subnet-outputs>\n'%iindstr)
+        #if self.inputs.hasMembers():
+        #    outf.write('%s<inputs>\n'%iindstr)
+        #    self.inputs.writePartsXML(outf, indent+2)
+        #    outf.write('%s</inputs>\n'%iindstr)
+        #if self.outputs.hasMembers():
+        #    outf.write('%s<outputs>\n'%iindstr)
+        #    self.outputs.writePartsXML(outf, indent+2)
+        #    outf.write('%s</outputs>\n'%iindstr)
+        #if self.subnetInputs.hasMembers():
+        #    outf.write('%s<subnet-inputs>\n'%iindstr)
+        #    self.subnetInputs.writePartsXML(outf, indent+2)
+        #    outf.write('%s</subnet-inputs>\n'%iindstr)
+        #if self.subnetOutputs.hasMembers():
+        #    outf.write('%s<subnet-outputs>\n'%iindstr)
+        #    self.subnetOutputs.writePartsXML(outf, indent+2)
+        #    outf.write('%s</subnet-outputs>\n'%iindstr)
         outf.write('%s</instance>\n'%indstr)
 

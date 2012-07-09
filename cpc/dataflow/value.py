@@ -700,6 +700,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     # this means that the type is a literal and can be parsed 
                     nval=interpretLiteral(attrs.getValue('value'), tp)
                     subVal.copy(nval)
+                    #log.debug("Setting value for %s to %s"%
+                    #          (subVal.getFullName(), subVal.value) )
                     #subVal._set(tp.valueFromLiteral(attrs.getValue('value')))
             else:
                 if 'value' in attrs:
@@ -711,6 +713,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 updated=cpc.util.getBooleanAttribute(attrs, "updated")
                 if updated:
                     subVal.markUpdated(updated)
+            #log.debug("Setting value for %s"%subVal.getFullName())
             subVal.sourceTag=self.sourceTag
             self.lastDepth=self.depth
             self.depth+=1
