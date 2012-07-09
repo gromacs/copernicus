@@ -474,11 +474,14 @@ def mdrun(inp):
         args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt",
                "-rcon", "0.7"  ]
         args.extend(cmdlineOpts)
+        # for the new neighbor search scheme in Gromacs 4.6, set this env 
+        # variable
+        cenv={ 'GMX_VERLET_SCHEME': '1' }
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
         cmd=cpc.server.command.Command(newdirname, "gromacs/mdrun",args,
                                  minVersion=cpc.server.command.Version("4.5"),
-                                 addPriority=prio)
+                                 addPriority=prio, env=cenv)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
             #log.debug("resources is %s"%(inp.getInput("resources")))
             #rsrc=Resources(inp.getInputValue("resources"))

@@ -30,6 +30,7 @@ import shutil
 import threading
 import traceback
 import time
+import copy
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -243,11 +244,14 @@ class WorkLoad(object):
                                          str(plr.printXML()))
             if plugin_retmsg[0] != 0:
                 log.error("Platform plugin failed: %s"%plugin_retmsg[1])
-                raise cpc.worker.WorkerError("Platform plugin failed: %s"%plugin_retmsg[1])
+                raise cpc.worker.WorkerError("Platform plugin failed: %s"%
+                                             plugin_retmsg[1])
             log.debug("Platform plugin, finish cmd: '%s'"%plugin_retmsg[1])
 
 
     def _runInThread(self):
+        """The low-level running function. Run from within a running thread
+           started with runThreadFn()."""
         log.debug("Run thread with cmd id=%s started in directory %s"%
                   (self.cmd.id, self.rundir))
         if self.args is None:
@@ -256,10 +260,18 @@ class WorkLoad(object):
         stdoutf=open(stdoutname, 'w')
         stderrname=os.path.join(self.rundir, "stderr")
         stderrf=open(stderrname, 'w')
+        cenv=self.cmd.getEnv()
+        if cenv is not None:
+            # copy the environment variables
+            nenv=copy.copy(os.environ)
+            # and set the additional ones
+            nenv.update(cenv)
+        else:
+            nenv=None
         with splock:
             sp=subprocess.Popen(self.args, stdin=None,
                                 stdout=stdoutf, stderr=stderrf,
-                                cwd=self.rundir)
+                                cwd=self.rundir, env=nenv)
         sp.wait() 
         stdoutf.close()
         stderrf.close()
