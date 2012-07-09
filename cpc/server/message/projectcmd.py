@@ -332,9 +332,9 @@ class SCProjectGet(ServerCommand):
                 response.add('Item %s not found'%itemname, status="ERROR")
 
 
-class SCProjectBackup(ServerCommand):
+class SCProjectSave(ServerCommand):
     def __init__(self):
-        ServerCommand.__init__(self, "project-backup")
+        ServerCommand.__init__(self, "project-save")
 
     def run(self, serverState, request, response):
 
@@ -357,17 +357,17 @@ class SCProjectBackup(ServerCommand):
             else:
                 response.add("Project does not exist",status="ERROR")
         else:
-            response.add("No project specified for backup",status="ERROR")
+            response.add("No project specified for save",status="ERROR")
 
 
-class SCProjectRestore(ServerCommand):
+class SCProjectLoad(ServerCommand):
     def __init__(self):
-        ServerCommand.__init__(self, "project-restore")
+        ServerCommand.__init__(self, "project-load")
 
     def run(self, serverState, request, response):
-        if(request.haveFile("projectBundle")):
+        if(request.haveFile("projectFile")):
             projectName = request.getParam("project")
-            projectBundle=request.getFile('projectBundle')
+            projectBundle=request.getFile('projectFile')
 
             try:
                 serverState.getProjectList().add(projectName)
@@ -382,7 +382,7 @@ class SCProjectRestore(ServerCommand):
 
             response.add("Project restored as %s"%projectName)
         else:
-            response.add("No project bundle provided",status="ERROR")
+            response.add("No project file provided",status="ERROR")
 
 
 

@@ -89,7 +89,7 @@ def print_usage():
     print "       cpcc readconf"
     print ""
     print "Project Backup and Restore commands "
-    print "       cpcc backup      projectname [project-tar]"
+    print "       cpcc save      projectname [project-tar]"
     print "       cpcc restore     project-tar "
     print ""
     print "Common options:"
@@ -471,8 +471,8 @@ try:
         ProcessedResponse(clnt.saveStateRequest()).pprint()
 
 
-    #backup and restore commands
-    elif cmd =="backup":
+    # save and load project commands
+    elif cmd =="save":
 
         project= getArg(args,1,"Project name")
 
@@ -481,7 +481,7 @@ try:
             savePath=getArg(args, 2, "Destination file")
 
         clnt=ClientMessage()
-        response = clnt.projectBackupRequest(project)
+        response = clnt.projectSaveRequest(project)
 
         if response.content_type=="text/json":
             ProcessedResponse(response).pprint()
@@ -494,25 +494,21 @@ try:
                 file.write(filecontents.read(len(filecontents)))
                 file.close()
             except IOError as e:
-                print "Could not save backup to %s\nError %s "%(savePath,e.strerror)
+                print "Could not save project to %s\nError %s "%(savePath,
+                                                                 e.strerror)
                 sys.exit(1)
 
 
-            print "Saved backup to %s"%savePath
+            print "Saved project to %s"%savePath
+    elif cmd =="load":
+        #provided a project file it will restore it on the server side
 
-
-
-
-    elif cmd =="restore":
-        #provided a project bundle it will restore it on the server side
-
-        projectBundle = getArg(args, 1, "Path to project bundle")  #path to the bundle
-        projectName = getArg(args, 2, "Name of project")  #path to the bundle
+        #path to the file
+        projectFile = getArg(args, 1, "Path to project file")  
+        projectName = getArg(args, 2, "Name of project")  
         clnt=ClientMessage()
-        ProcessedResponse(clnt.projectRestoreRequest(projectBundle,projectName)).pprint()
-
-
-
+        ProcessedResponse(clnt.projectRestoreRequest(projectFile,
+                                                     projectName)).pprint()
     else: 
         print "ERROR: unknown command"
 except ClientError as e:

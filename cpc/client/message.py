@@ -491,9 +491,9 @@ class ClientMessage(ClientBase):
                   
         return response
 
-    def projectBackupRequest(self, project):
+    def projectSaveRequest(self, project):
         """Get a data item from a project."""
-        cmdstring="project-backup"
+        cmdstring="project-save"
         fields = []
         fields.append(Input('cmd', cmdstring))
         #if project is not None:
@@ -503,14 +503,14 @@ class ClientMessage(ClientBase):
 
     def projectRestoreRequest(self, projectBundle,projectName):
         """Get a data item from a project."""
-        cmdstring="project-restore"
+        cmdstring="project-load"
         fields = []
         fields.append(Input('cmd', cmdstring))
         #if project is not None:
 
         filename = os.path.basename(projectBundle)
         fields.append(Input('project', projectName))
-        files = [FileInput('projectBundle',filename,open(projectBundle,'r'))]
+        files = [FileInput('projectFile',filename,open(projectBundle,'r'))]
 
         response=self.putRequest(ServerRequest.prepareRequest(fields,files))
         return response
