@@ -117,7 +117,8 @@
     <function id="solvation" type="external">
         <desc>Calculates a free energy of solvation: the free energy difference
               between the solvated molecule and the same molecule in vacuum,
-              decoupled from the solvent.  
+              decoupled from the solvent: F_solv = F_solvated - F_decoupled. 
+
               Takes a configuration with a molecule that is solvated, and 
               de-solvates it in steps, calculating the free energy difference 
               between the solvated and de-solvated states with the Bennett 
@@ -182,7 +183,9 @@
     <function id="binding" type="external">
         <desc>Calculates a free energy of binding: the free energy difference
               between a molecule (ligand) bound to another molecule
-              (receptor), and the same molecules unbound.
+              (receptor), and the same molecules unbound, and solvated 
+              separately: F_binding = F_bound - F_unbound
+
               This function takes two configurations: one with a ligand bound 
               to the receptor, and one with the ligand solvated. Two 
               calculations then proceed: one where the free energy of 
