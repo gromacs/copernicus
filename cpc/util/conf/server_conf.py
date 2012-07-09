@@ -68,6 +68,11 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         
         self._add('server_host', server_host, 
           "Address the server listens on", True)
+
+        self._add('server_fqdn', socket.getfqdn(),
+            "Manually specified fqdn", True)
+
+
         self._add('server_https_port', self.defaultHTTPSPort,
                   "Port number the server listens on for https connections", True,None,'\d+')
 
@@ -265,7 +270,8 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
     def getServerHTTPPort(self):        
         return int(self.conf['server_http_port'].get())
     def getHostName(self):
-        return self.hostname
+        #return self.hostname
+        return self.conf['server_fqdn'].get()
 
     #just a wrapper method to conform with clientConnection
     def getClientHTTPSPort(self):

@@ -224,7 +224,8 @@ class SCWorkerReady(ServerCommand):
             hasJob =False # temporary flag that should be removed
             for node in nodes:
                 if topology.exists(node.getId()) == False:
-                    clnt = WorkerMessage(node.host,node.https_port) 
+                    log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
+                    clnt = WorkerMessage(node.host,node.https_port,conf=ServerConf()) 
                     
                     clientResponse = clnt.workerRequest(workerData,topology)
                     

@@ -127,6 +127,11 @@ class ServerState:
         self.projectlist.readState(self, self.conf.getProjectFile())
         self.heartbeatList.readState()
 
+    #rereads the project state for one specific project
+    def readProjectState(self,projectName):
+        self.projectlist.readProjectState(projectName)
+
+
     def getWorkerStates(self):
         return self.workerStates
     

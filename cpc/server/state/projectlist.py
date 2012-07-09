@@ -212,6 +212,11 @@ class ProjectList(object):
             #log.debug("Setting default project")
             self.setDefault(rd.getDefault())
 
+    #reads in the project state of a project state that has been restored from backup
+    def readProjectState(self,projectName):
+        prj = self.projects[projectName]
+        prj.readState()
+
 class ProjectListReaderError(cpc.util.CpcXMLError):
     pass
 

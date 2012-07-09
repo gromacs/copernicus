@@ -66,7 +66,8 @@ class ProcessedResponse(object):
         for item in self.resp:
             if item['status'] != 'OK':
                 return False
-        
+
+
         return True
         
     def getData(self):  

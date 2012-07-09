@@ -38,8 +38,10 @@ class WorkerMessage(ClientBase):
     Messages not directly sent from a user of copernicus
     '''
     
-    def __init__(self,host=None,port=None):
-        self.conf = ConnectionBundle()
+    def __init__(self,host=None,port=None,conf=None):
+        self.conf = conf
+        if self.conf==None:
+            self.conf = ConnectionBundle()
         self.host = host
         self.port = port
         if self.host == None:

@@ -86,6 +86,8 @@ scSecureList.add(server_command.ScGrantAllNodeConnections())
 scSecureList.add(server_command.ScChangeNodePriority()) 
 scSecureList.add(trackingcmd.SCPullAsset())
 scSecureList.add(trackingcmd.SCClearAsset())
+scSecureList.add(projectcmd.SCProjectBackup())
+scSecureList.add(projectcmd.SCProjectRestore())
 # requests for dataflow
 scSecureList.add(projectcmd.SCProjects())
 scSecureList.add(projectcmd.SCProjectStart())
