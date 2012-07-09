@@ -143,14 +143,14 @@ def add_restraints(inp, out):
         if len(spl) > 0: 
             try:
                 T=float(tempstring.split()[0])
-                k=1.3806488e-23 # Boltzmann's constant
-                kT=k*T
+                #kT=1.3806488e-23*T # Boltzmann's constant
+                kT=8.314510e-3*T # Boltzmann's constant in Gromacs units
                 d=3 #dimensionality
                 dg=0.
                 i=0
                 for res in resval:
                     k=inp.getInput('restraints[%d].strength'%i)
-                    dg += - d*kT*math.log( math.pi*kT/k )/2.
+                    dg += - d*kT*math.log( math.pi/(k/kT) )/2.
                     i+=1
                 out.setOut('dg', FloatValue(dg))
             except ValueError:
