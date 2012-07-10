@@ -88,9 +88,15 @@ def print_usage():
     print "       cpcc network-topology"
     print "       cpcc readconf"
     print ""
+<<<<<<< HEAD
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
     print "       cpcc load      project-tar projectname"
+=======
+    print "Project Backup and Restore commands "
+    print "       cpcc save      project-name [project-tar]"
+    print "       cpcc load     project-tar project-name "
+>>>>>>> proj-backup
     print ""
     print "Common options:"
     print "       cpcc [-c conffile]"
@@ -471,7 +477,11 @@ try:
         ProcessedResponse(clnt.saveStateRequest()).pprint()
 
 
+<<<<<<< HEAD
     # save and load project commands
+=======
+    #backup and restore commands
+>>>>>>> proj-backup
     elif cmd =="save":
 
         project= getArg(args,1,"Project name")
@@ -506,6 +516,7 @@ try:
         #path to the file
         projectFile = getArg(args, 1, "Path to project file")  
         projectName = getArg(args, 2, "Name of project")  
+
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectRestoreRequest(projectFile,
                                                      projectName)).pprint()

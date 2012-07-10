@@ -15,11 +15,13 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
+import shutil
+import tarfile
+import tempfile
 
 import threading
 import time
+from cpc.util.conf.server_conf import ServerConf
 
 import projectlist
 import cpc.server.queue
@@ -32,6 +34,7 @@ import localassets
 import remoteassets
 import cpc.util.worker_state
 
+import os
 log=logging.getLogger('cpc.server.command')
 
 class ServerState:
@@ -116,6 +119,32 @@ class ServerState:
         finally:
             self.taskExecThreads.release()
 
+    def saveProject(self,project):
+        self.taskExecThreads.acquire()
+        conf = ServerConf()
+        try:
+            self.taskExecThreads.pause()
+            self._write()
+            projectFolder = "%s/%s"%(conf.getRunDir(),project)
+            if(os.path.isdir(projectFolder)):
+                #tar the project folder but keep the old files also, this is only a backup!!!
+                #copy _state.xml to _state.bak.xml
+                stateBackupFile = "%s/_state.bak.xml"%projectFolder
+                shutil.copyfile("%s/_state.xml"%projectFolder,stateBackupFile)
+                tff=tempfile.TemporaryFile()
+                tf=tarfile.open(fileobj=tff, mode="w:gz")
+                tf.add(projectFolder, arcname=".", recursive=True)
+                tf.close()
+                tff.seek(0)
+                os.remove(stateBackupFile)
+                self.taskExecThreads.cont()
+            else:
+                self.taskExecThreads.cont()
+                raise Exception("Project does not exist")
+        finally:
+            self.taskExecThreads.release()
+
+        return tff
 
     def _write(self):
         self.projectlist.writeFullState(self.conf.getProjectFile())

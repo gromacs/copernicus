@@ -339,23 +339,12 @@ class SCProjectSave(ServerCommand):
     def run(self, serverState, request, response):
 
         if request.hasParam('project'):
-            conf = ServerConf()
             project=request.getParam('project')
-            projectFolder = "%s/%s"%(conf.getRunDir(),project)
-            serverState.write()
-            if(os.path.isdir(projectFolder)):
-                #tar the project folder but keep the old files also, this is only a backup!!!
-
-                tff=tempfile.TemporaryFile()
-                tf=tarfile.open(fileobj=tff, mode="w:gz")
-                tf.add(projectFolder, arcname=".", recursive=True)
-                tf.close()
-                tff.seek(0)
-
+            try:
+                tff = serverState.saveProject(project)
                 response.setFile(tff,'application/x-tar')
-
-            else:
-                response.add("Project does not exist",status="ERROR")
+            except Exception as e:
+                response.add(e.message,status="ERROR")
         else:
             response.add("No project specified for save",status="ERROR")
 
@@ -370,6 +359,7 @@ class SCProjectLoad(ServerCommand):
             projectBundle=request.getFile('projectFile')
 
             try:
+
                 serverState.getProjectList().add(projectName)
                 extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
                 tar = tarfile.open(fileobj=projectBundle,mode="r")
