@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<cpc>
+    <!-- a module for free energy calculations.-->
+    <import name="resource" />
+    <import name="gromacs" />
+    <import name="meas" />
+    <import name="int" />
+    <import name="coord" />
+
+    <type id="grompp_input" base="record">
+        <desc>Partial grompp input</desc>
+        <field type="file" id="mdp" ><desc>A .mdp settings file</desc></field>
+        <field type="file" id="top" ><desc>A .top topology file</desc></field>
+        <field type="file" id="ndx" opt="true">
+            <desc>A .ndx index file</desc>
+        </field>
+        <field type="gromacs::grompp_include_array" id="include" opt="true">
+            <desc>array of files to include</desc>
+        </field>
+        <field type="gromacs::mdp_array" id="settings" opt="true">
+            <desc>array of settings</desc>
+        </field>
+        <field type="string" id="mdrun_cmdline_options" opt="true">
+            <desc>mdrun command line options</desc>
+        </field>
+    </type>
+
+    <type id="swarm_point" base="record">
+        <desc>A single point along a swarm path, with a configuration and
+              a z value.</desc>
+        <field type="file" id="conf">
+            <desc>The configuration.</desc>
+        </field>
+        <field type="file" id="zpoint">
+            <desc>The point in z space.</desc>
+        </field>
+    </type>
+
+    <type id="swarm_path" base="array" member-type="swarm_point">
+        <desc>An array of configurations and a coordinates in the z-space (as 
+              a file)
+        </desc>
+    </type>
+
+
+
+    <!-- functions -->
+
+    <function id="dihedral_swarm">
+        <desc>Sets up a swarm-based string method simulation with a set of 
+              dihedrals as the tracking (z-)space of the path</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field>
+            <field type="file" id="conf_A">
+                <desc>The start configuration of the path.</desc>
+            </field>
+            <field type="file" id="conf_B">
+                <desc>The end configuration of the path.</desc>
+            </field>
+            <field type="int" id="relaxation_steps">
+                <desc>The number of relaxation steps for the swarm iteration.
+                </desc>
+            </field>
+            <field type="int" id="constrained_run_steps">
+                <desc>The number of steps for the constrained run after 
+                      equilibration.</desc>
+            </field>
+            <field type="int" id="swarm_run_steps">
+                <desc>The number of steps to run in a free simulation for the 
+                      swarm runs.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                <desc>The number of swarm simulations to run.</desc>
+            </field>
+
+            <field type="float" id="convergence_distance">
+                <desc>Desired maximum displacement in dihedrals between
+                      iterations.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="swarm_path" id="path">
+                <desc>The full swarm path so far.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="swarm" 
+                    persistent_dir="true" />
+    </function>
+
+    <function id="dihedral_swarm_iteration">
+        <desc>A single iteration of the swarm-based string method</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field>
+            <field type="swarm_path" id="path">
+                <desc>The full swarm path so far.</desc>
+            </field>
+            <field type="string" id="dihedrals_group_name">
+                <desc>The group name that determines the phi/psi dihedrals to 
+                      use for the z space. </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="int" id="relaxation_steps">
+                <desc>The number of relaxation steps for the swarm iteration.
+                </desc>
+            </field>
+            <field type="int" id="constrained_run_steps">
+                <desc>The number of steps for the constrained run after 
+                      equilibration.</desc>
+            </field>
+            <field type="int" id="swarm_run_steps">
+                <desc>The number of steps to run in a free simulation for the 
+                      swarm runs.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                <desc>The number of swarm simulations to run.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="swarm_path" id="path">
+                <desc>The full swarm path so far.</desc>
+            </field>
+            <field type="float" id="distance">
+                <desc>The largest displacement in z-space for the new path.
+                </desc>
+            </field>
+        <controller log="true" executable="swarm_iteration" 
+                    persistent_dir="true" />
+    </function>
+
+</cpc>
+
