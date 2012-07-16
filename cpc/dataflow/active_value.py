@@ -52,18 +52,24 @@ class ActiveValue(value.Value):
        Values are trees with dicts/lists of members; the top level is usually
        a <instance>:in or <instance>:out. ActiveValue trees have listeners:
        active connection points that connect values together."""
-    def __init__(self, val, tp, parent=None, selfName=None, seqNr=0,
+    def __init__(self, val, tp, parent=None, owner=None, selfName=None, seqNr=0,
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
            tp = the actual type
            parent = the parent in which this value is a sub-item
+           owner = the owning object (such as the ActiveInstance) of this value
            selfName = the name in the parent's collection
+           seqNr = the starting sequence number
+           createObject = object type to create as sub-values (none for 
+                                                               ActiveValue)
+           fileList = a file list object to attach file references to
+           sourceTag = the initial value of the source tag.
         """
         if createObject is None:
             createObject=ActiveValue
-        value.Value.__init__(self, val, tp, parent, selfName,
+        value.Value.__init__(self, val, tp, parent, owner, selfName,
                              createObject=createObject, fileList=fileList,
                              sourceTag=sourceTag)
         self.seqNr=seqNr # sequence number.

@@ -115,18 +115,22 @@ class ActiveInstance(object):
 
         # These are the basic value trees
         self.inputVal=active_value.ActiveValue(None, inst.getInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
         self.outputVal=active_value.ActiveValue(None, inst.getOutputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "out"),
                           fileList=fileList)
 
         self.subnetInputVal=active_value.ActiveValue(None, 
                           inst.getSubnetInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
         self.subnetOutputVal=active_value.ActiveValue(None, 
                           inst.getSubnetOutputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "sub_out"),
                           fileList=fileList)
 
@@ -135,11 +139,13 @@ class ActiveInstance(object):
         # running thread. Once all updates are done, the values can be copied 
         # to the non-staged versions with acceptNewValue()
         self.stagedInputVal=active_value.ActiveValue(None, inst.getInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
 
         self.stagedSubnetInputVal=active_value.ActiveValue(None, 
                           inst.getSubnetInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
 

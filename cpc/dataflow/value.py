@@ -70,7 +70,7 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
         tp=destType
     if tp.getBaseType().simpleLiteral:
         # if it's a simple literal just make the value
-        retval=Value(None, tp, fileList=fileList)
+        retval=Value(None, tp, None, None, fileList=fileList)
         retval._set(tp.valueFromLiteral(literal), tp)
         return retval
     raise ValError("Non-simple literals not yet implemented.")
@@ -78,15 +78,18 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
 class Value(object):
     """The class describing a data value. Value classes hold function input 
        and output data, and are used to transmit external i/o data."""
-    def __init__(self, value, tp, parent=None, selfName=None, 
+    def __init__(self, value, tp, parent=None, owner=None, selfName=None, 
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
            tp = the actual type
-           parent = the parent in which this value is a sub-item
+           parent = the parent in which this value is a sub-item (or None)
+           owner = the owning object (such as the ActiveInstance) of this value
            selfName = the name in the parent's collection
            createObject = the object type to create when creating subitems
+           fileList = the file list object to attach file references to
+           sourceTag = the initial value for the source tag.
         """
         self.type=tp
         self.basetype=tp.getBaseType()
@@ -95,6 +98,7 @@ class Value(object):
         else:
             self.createObject=createObject
         self.parent=parent
+        self.owner=owner
         self.fileValue=None
         self.fileList=fileList
         self.updated=False # whether this value has been updated
@@ -108,16 +112,10 @@ class Value(object):
            is used as a type)."""
         if value is not None:
             tp=value.type
-        return self.createObject(value, tp, parent=self, selfName=selfName, 
+        return self.createObject(value, tp, parent=self, owner=self.owner, 
+                                 selfName=selfName, 
                                  createObject=self.createObject,
                                  fileList=self.fileList, sourceTag=sourceTag)
-
-    #def getFullName(self):
-    #    if self.parent is not None:
-    #        ret=self.parent.getFullName()
-    #        return "%s.%s"%(ret, self.selfName)
-    #    else:
-    #        return self.selfName
 
     def copy(self, val):
         """Copy a value object or None"""
