@@ -27,6 +27,11 @@ import stat
 import subprocess
 import logging
 import time
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 
 
 log=logging.getLogger('cpc.lib.mdrun')
@@ -90,6 +95,82 @@ def g_energy(inp):
     fo.setOut('rmsd', FloatValue(rmsd))
     fo.setOut('drift', FloatValue(drift))
     fo.setOut('unit', StringValue(unit))
+    return fo 
+
+def trjconv(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("trjconv -version")
+        return 
+    writeStdin=StringIO()
+    xtcfile=inp.getInput('xtc')
+    trrfile=inp.getInput('trr')
+    tprfile=inp.getInput('tpr')
+    #item=inp.getInput('item')
+    outDir=inp.getOutputDir()
+    xtcoutname=os.path.join(outDir, "trajout.xtc")
+    cmdline=["trjconv", '-s', tprfile, '-o', xtcoutname, '-f']
+    if xtcfile is not None:
+        if trrfile is not None:
+            raise GromacsError("Both xtc and trr trajectories set")
+        cmdline.append(xtcfile)
+    elif trrfile is not None:
+        cmdline.append(trrfile)
+    ndxfile=inp.getInput('ndx')
+    if ndxfile is not None:
+        cmdline.extend(['-n', ndxfile] )
+    first_frame_ps=inp.getInput('first_frame_ps')
+    if first_frame_ps is not None:
+        cmdline.extend(['-b', "%g"%first_frame_ps] )
+    last_frame_ps=inp.getInput('last_frame_ps')
+    if last_frame_ps is not None:
+        cmdline.extend(['-b', "%g"%last_frame_ps] )
+    dt=inp.getInput('dt')
+    if dt is not None:
+        cmdline.extend(['-dt', "%g"%dt] )
+    skip=inp.getInput('skip')
+    if skip is not None:
+        cmdline.extend(['-skip', "%d"%skip] )
+    dump=inp.getInput('dump')
+    if dump is not None:
+        cmdline.extend(['-dump', "%g"%dump] )
+    pbc=inp.getInput('pbc')
+    if pbc is not None:
+        cmdline.extend(['-pbc', pbc] )
+    ur=inp.getInput('ur')
+    if ur is not None:
+        cmdline.extend(['-ur', ur] )
+    center=inp.getInput('center')
+    if center is not None:
+        cmdline.extend(['-center'])
+        writeStdin.write("%s\n"%center)
+    fit=inp.getInput('fit')
+    fit_type=inp.getInput('fit_type')
+    if fit is not None:
+        if center is not None:
+            raise GromacsError('Both fit and center set')
+        if fit_type is None:
+            fit_type='rot+trans'
+        cmdline.extend(['-fit', fit_type])
+        writeStdin.write("%s\n"%fit)
+    log.debug(cmdline)
+    outputGroup=inp.getInput('output_group')
+    if outputGroup is not None:
+        writeStdin.write("%s\n"%outputGroup)
+    else:
+        writeStdin.write("System\n")
+
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.outputDir,
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(writeStdin.getvalue())
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: trjconv returned %s"%(stdout))
+    fo=inp.getFunctionOutput()
+    fo.setOut('xtc', FileValue(xtcoutname))
     return fo 
 
 
