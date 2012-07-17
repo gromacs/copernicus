@@ -22,6 +22,7 @@ import os
 import re
 import os.path
 import shutil
+import shlex
 import glob
 import stat
 import subprocess
@@ -431,7 +432,7 @@ def mdrun(inp):
         src=os.path.join(inp.getBaseDir(), tpr)
         dst=os.path.join(newdirname,"topol.tpr")
         if inp.getInput('cmdline_options') is not None:
-            cmdlineOpts=shutil.split(inp.getInput('cmdline_options'))
+            cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
         else:
             cmdlineOpts=[]
         if inp.getInput('priority') is not None:
