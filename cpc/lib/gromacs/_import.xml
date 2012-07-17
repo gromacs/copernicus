@@ -251,14 +251,29 @@
                     persistent_dir="true" />
     </function>
 
+    <!--<function id="g_rama" type="python-extended">
+        <desc>Extracts protein backbone phi+psi angles.</desc>
+        <inputs>
+            <field type="file" id="traj">
+                <desc>The trajector as compressed xtc.</desc>
+            </field>
+            <field type="file" id="tpr">
+                <desc>A run file from grompp with the same settings as 
+                      used for the trajectory.</desc>
+            </field>
+        </inputs>
+        <outputs>
+        </outputs>
+        <controller function="cpc.lib.gromacs.g_rama" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>-->
+
     <function id="trjconv" type="python-extended">
         <desc>Manipulates trajectories.</desc>
         <inputs>
-            <field type="file" id="xtc" opt="true">
-                <desc>The trajector as compressed xtc.</desc>
-            </field>
-            <field type="file" id="trr" opt="true">
-                <desc>The trajectory as trr.</desc>
+            <field type="file" id="traj">
+                <desc>The trajectory as compressed xtc or trr, or gro.</desc>
             </field>
             <field type="file" id="tpr">
                 <desc>A run file from grompp with the same settings as 

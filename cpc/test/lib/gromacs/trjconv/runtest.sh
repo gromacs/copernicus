@@ -22,7 +22,7 @@ fi
 
 
 ./cpcc set-file trjconv:in.tpr cpc/test/lib/gromacs/trjconv/topol.tpr
-./cpcc set-file trjconv:in.xtc cpc/test/lib/gromacs/trjconv/traj.xtc
+./cpcc set-file trjconv:in.traj cpc/test/lib/gromacs/trjconv/traj.xtc
 ./cpcc set trjconv:in.center 'RNA'
 ./cpcc set trjconv:in.pbc 'mol'
 ./cpcc set trjconv:in.ur 'compact'

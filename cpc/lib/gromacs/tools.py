@@ -103,19 +103,12 @@ def trjconv(inp):
         cpc.util.plugin.testCommand("trjconv -version")
         return 
     writeStdin=StringIO()
-    xtcfile=inp.getInput('xtc')
-    trrfile=inp.getInput('trr')
+    trajfile=inp.getInput('traj')
     tprfile=inp.getInput('tpr')
     #item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
-    cmdline=["trjconv", '-s', tprfile, '-o', xtcoutname, '-f']
-    if xtcfile is not None:
-        if trrfile is not None:
-            raise GromacsError("Both xtc and trr trajectories set")
-        cmdline.append(xtcfile)
-    elif trrfile is not None:
-        cmdline.append(trrfile)
+    cmdline=["trjconv", '-s', tprfile, '-o', xtcoutname, '-f', trajfile]
     ndxfile=inp.getInput('ndx')
     if ndxfile is not None:
         cmdline.extend(['-n', ndxfile] )
