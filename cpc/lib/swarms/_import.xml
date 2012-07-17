@@ -26,21 +26,36 @@
     </type>
 
     <type id="conf" base="file">
-	    <desc>A conformation of the input protein.</desc>
+            <desc>A conformation of the input protein.</desc>
     </type>
 
     <type id="conf_path" base="array" member-type="conf">
-	    <desc>An array of configurations of the structure</desc>
+            <desc>An array of configurations of the structure</desc>
+    </type>
+    
+    <type id="conf_path_array" base="array" member-type="conf_path">
+            <desc>An array of paths.</desc>
+    </type>
+    
+    <type id="dist_array" base="array" member-type="float">
+            <desc>An array of max. path displacements.</desc>
     </type>
     
     <type id="trj_array" base="array" member-type="file">
-	    <desc>An array of trajectory files</desc>
+            <desc>An array of trajectory files</desc>
     </type>
 
+    <type id="conf_array" base="array" member-type="file">
+            <desc>An array of configuration files</desc>
+    </type>
+
+    <type id="xvg_array" base="array" member-type="file">
+            <desc>An array of xvg (xmgrace) files</desc>
+    </type>
 
     <!-- functions -->
 
-    <function id="dihedral_swarm">
+    <function id="dihedral_swarm" type="external">
         <desc>Sets up a swarm-based string method simulation with a set of 
               dihedrals as the tracking (z-)space of the path</desc>
         <inputs>
@@ -54,15 +69,15 @@
             </field>
             <field type="file" id="target">
                 <desc>The end configuration of the path.</desc>
-	    </field>
-	    <field type="file" id="res_index">
+            </field>
+            <field type="file" id="res_index">
                 <desc>The group name that determines the phi/psi dihedrals to 
                       use for the z space. </desc>
             </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
+            <field type="int" id="Ninterpolants">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
+            </field>
             <field type="int" id="restrained_steps">
                 <desc>The number of restrained equilibration steps for the swarm iteration.
                 </desc>
@@ -83,12 +98,19 @@
             </field>
         </inputs>
         <outputs>
+            <field type="conf_path_array" id="paths">
+                <desc>The sequence of paths generated</desc>
+            </field>
+            <field type="dist_array" id="dists">
+                <desc>The maximum displacement distance for each iteration.
+                </desc>
+            </field>
         </outputs>
         <controller log="true" executable="swarm" 
                     persistent_dir="true" />
     </function>
 
-    <function id="dihedral_swarm_iteration">
+    <function id="dihedral_swarm_iteration" type="external">
         <desc>A single iteration of the swarm-based string method</desc>
         <inputs>
             <field type="grompp_input" id="grompp">
@@ -96,13 +118,13 @@
                       configuration).
                 </desc>
             </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
+            <field type="int" id="Ninterpolants">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
+            </field>
             <field type="conf_path" id="path">
                 <desc>A full set of structures along the path so far.</desc>
-	    </field>
+            </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
@@ -129,145 +151,172 @@
                 <desc>The largest displacement in z-space for the new path.
                 </desc>
             </field>
+        </outputs>
         <controller log="true" executable="swarm_iteration" 
                     persistent_dir="true" />
     </function>
 
-    <function id="run_minimization">
+    <function id="run_minimization" type="external">
         <desc>Minimize the interpolated structures for restrained simulations.</desc>
-	    <inputs>
-	           <field type="conf_path" id="minim_in">
-			    <desc>Configurations to be minimized</desc>
-		    </field>
-		    <field type="grompp_input" id="minim">
-			    <desc>Minimization mdp file</desc>
-		    </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
-	    </inputs>
-	    <outputs>
-		    <field type="conf_path" id="minim_out">
-			    <desc>Output configurations of the minimization</desc>
-		    </field>
-	    </outputs>
+        <inputs>
+           <field type="conf_path" id="minim_in">
+                    <desc>Configurations to be minimized</desc>
+            </field>
+            <field type="grompp_input" id="minim">
+                    <desc>Minimization mdp file</desc>
+            </field>
+        <field type="int" id="Ninterpolants">
+            <desc>The number of steps of interpolation between the initial
+                  and target conformations.</desc>
+        </field>
+        </inputs>
+        <outputs>
+            <field type="conf_path" id="minim_out">
+                    <desc>Output configurations of the minimization</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="run_minimization" 
+                    persistent_dir="true" />
     </function>
-	    
-    <function id="run_restrained">
-	    <desc>Simulations generating conformations for swarm trajectories.
-	    </desc>
-	    <inputs>
-		    <field type="int" id="constrained_run_steps">
-			<desc>The number of steps for the constrained run after 
-			      equilibration.</desc>
-	            </field>
-		    <field type="conf_path" id="minim_out">
-			    <desc>Output structures of the minimization.</desc>
-		    </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
-		    <field type="grompp_input" id="restrained">
-			    <desc>Restrained run input</desc>
-		    </field>
-	    </inputs>
-	    <outputs>
-		    <field type="trj_array" id="restrained_trjs">
-			    <desc>The trajectories used to make the initial swarm
-				    configurations. 
-			    </desc>
-		    </field>
-	    </outputs>
+            
+    <function id="run_restrained" type="external">
+        <desc>Simulations generating conformations for swarm trajectories.
+        </desc>
+        <inputs>
+            <field type="int" id="constrained_run_steps">
+                <desc>The number of steps for the constrained run after 
+                      equilibration.</desc>
+            </field>
+            <field type="conf_path" id="minim_out">
+                    <desc>Output structures of the minimization.</desc>
+            </field>
+            <field type="int" id="Ninterpolants">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
+            </field>
+            <field type="grompp_input" id="restrained">
+                    <desc>Restrained run input</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="trj_array" id="restrained_trjs">
+                    <desc>The trajectories used to make the initial swarm
+                            configurations. 
+                    </desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="run_restrained" 
+                    persistent_dir="true" />
     </function>
 
-    <function id="prep_swarms">
-	    <desc>Generate inputs for swarm trajectories.</desc>
-	    <inputs>
-		    <field type="trj_array" id="restrained_trjs">
-			    <desc>Output of the restrained simulations.</desc>
-		    </field>
-		    <field type="int" id="Nswarms">
-			    <desc>Number of swarm trajectories to run</desc>
-		    </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
-	    </inputs>
-	    <outputs>
-		    <field type="conf_path" id="swarms">
-			    <desc>Initial swarm confs.</desc>
-		    </field>
-	    </outputs>
+    <function id="prep_swarms" type="external">
+        <desc>Generate inputs for swarm trajectories.</desc>
+        <inputs>
+            <field type="trj_array" id="restrained_trjs">
+                    <desc>Output of the restrained simulations.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                    <desc>Number of swarm trajectories to run</desc>
+            </field>
+            <field type="int" id="Ninterpolants">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_path" id="swarms">
+                    <desc>Initial swarm confs.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="prep_swarms" 
+                    persistent_dir="true" />
     </function> 
 
-    <function id="run_swarms">
-	    <desc>Run a large number of short unbiased trajectories.</desc>
-	    <inputs>
-		    <field type="conf_array" id="init_swarms">
-			    <desc>Initial swarm confs.</desc>
-		    </field>
-		    <field type="int" id="swarm_steps">
-			    <desc>Number of steps to run of unbiased simulation.</desc>
-		    </field>
-		    <field type="int" id="Nswarms">
-			    <desc>Number of swarm trajectories to run</desc>
-		    </field>
-		    <field type="grompp_input" id="swarms">
-			    <desc>Swarm unbiased simulation mdp file</desc>
-		    </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
-	    </inputs>
-	    <outputs>
-		    <field type="conf_array" id="out_swarms">
-			    <desc>Output conf of unrestrained simulation.</desc>
-		    </field>
-	    </outputs>
+    <function id="run_swarms" type="external">
+        <desc>Run a large number of short unbiased trajectories.</desc>
+        <inputs>
+            <field type="conf_array" id="init_swarms">
+                    <desc>Initial swarm confs.</desc>
+            </field>
+            <field type="int" id="swarm_steps">
+                    <desc>Number of steps to run of unbiased simulation.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                    <desc>Number of swarm trajectories to run</desc>
+            </field>
+            <field type="grompp_input" id="swarms">
+                    <desc>Swarm unbiased simulation mdp file</desc>
+            </field>
+        <field type="int" id="Ninterpolants">
+            <desc>The number of steps of interpolation between the initial
+                  and target conformations.</desc>
+        </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="out_swarms">
+                    <desc>Output conf of unrestrained simulation.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="run_swarms" 
+                    persistent_dir="true" />
     </function>
 
-    <function id="reparametrize">
-	    <desc>Compute the average drift in z-space and use it to set 
-		    restraint values for the next iteration.
-	    </desc>
-	    <inputs>
-		    <field type="conf_array" id="out_swarms">
-			    <desc>The swarm trajectory output, sent to
-				    g_rama to get points in z-space.
-			    </desc>
-		    </field>
-		    <field type="file" id="init">
-			<desc>The start configuration of the path.</desc>
-		    </field>
-		    <field type="file" id="res_index">
-			<desc>The group name that determines the phi/psi 
-				dihedrals to use for the z space. </desc>
-		    </field>
-		    <field type="file" id="init_topol">
-			<desc>The initial topology file from the iteration
-			</desc>
-		    </field>
-		    <field type="int" id="Nswarms">
-		    </field>
-		    <field type="int" id="n">
-			<desc>Number of interpolants</desc>
-		    </field>
-	    <field type="int" id="Ninterpolants">
-		<desc>The number of steps of interpolation between the initial
-		      and target conformations.</desc>
-	    </field>
-	    </inputs>
-	    <outputs>
-		    <field type="file" id="newtop">
-			 <desc>Topology file with restraints for 
-				next iteration.</desc>
-		    </field>
-            </outputs>
-    </funtion>
+    <function id="reparametrize" type="external">
+        <desc>Compute the average drift in z-space and use it to set 
+                restraint values for the next iteration.
+        </desc>
+        <inputs>
+            <field type="conf_array" id="out_swarms">
+                    <desc>The swarm trajectory output, sent to
+                            g_rama to get points in z-space.
+                    </desc>
+            </field>
+            <field type="file" id="init">
+                <desc>The start configuration of the path.</desc>
+            </field>
+            <field type="file" id="res_index">
+                <desc>The group name that determines the phi/psi 
+                        dihedrals to use for the z space. </desc>
+            </field>
+            <field type="file" id="init_topol">
+                <desc>The initial topology file from the iteration
+                </desc>
+            </field>
+            <field type="int" id="Nswarms">
+            </field>
+            <field type="int" id="n">
+                <desc>Number of interpolants</desc>
+            </field>
+        <field type="int" id="Ninterpolants">
+            <desc>The number of steps of interpolation between the initial
+                  and target conformations.</desc>
+        </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="newtop">
+                 <desc>Topology file with restraints for 
+                        next iteration.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="reparametrize" 
+                    persistent_dir="true" />
+    </function>
 
-    </cpc>
+    <function id="g_rama_multi" type="external">
+        <inputs>
+            <field type="file" id="tpr">
+                <desc>A tpr file describing the configurations.</desc>
+            </field>
+            <field type="conf_array" id="confs">
+                <desc>An array of configurations.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="xvg_array" id="xvgs">
+                <desc>An array xvg files with phi/psi angles.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="g_rama_multi" persistent_dir="true"/>
+    </function>
+</cpc>
 
