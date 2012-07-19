@@ -4,7 +4,7 @@
 #	swarm structure dihedral angles (.xvg)
 #	topology file (.itp)
 #	index.ndx
-#	nSwarms - number of swarms
+#a	Nswarms - number of swarms
 #	n - number of interpolants 
 # outputs:
 #	topology file for use with next iteration
@@ -14,55 +14,14 @@
 import sys
 import re
 import os
+import res_selection
 
-
-#nSwarms=200
+#Nswarms=200
 #n=2 # for testing
-conf = open('init.gro','r').readlines()
-ndx = ''.join(open('index.ndx','r').readlines()[1:]).split()
+res_selection = res_select('init.gro','index.ndx')
 top = open('topol.top','r').read()
 newtop = open('newtop.itp','w')
 newtop.write(top)
-
-# TODO make this section a module and import it
-#############
-class atom:
-    # read an atom from a line
-    def __init__(self, line):
-        self.resnr=int(line[0:5])
-        self.resname=line[5:10].strip()
-        self.atomname=line[10:15].strip()
-        self.atomnr=int(line[15:20])
-        self.x=float(line[20:28])
-        self.y=float(line[28:36])
-        self.z=float(line[36:44])
-        vxs=line[44:52]
-        if vxs.strip() != "":
-            self.vx=float(vxs)
-            self.vy=float(line[52:60])
-            self.vz=float(line[60:68])
-            self.vset=True
-        else:
-            self.vset=False
-        self.group=[]
-
-
-# read the conf file into atom types
-# TODO restrict to index numbers
-j=2
-protein = []
-while j < len(conf)-1:
-        if "SOL" not in conf[j]:
-                protein.append(atom(conf[j]))
-        j+=1
-
-# convert the ndx file to a list of residues
-res_selection = []
-for a in ndx:
-        res_selection+=[protein[int(a)-1].resnr]
-res_selection = list(set(res_selection)) # remove redundant copies of the resnr
-print res_selection
-##############
 
 # helper functions for list operations
 def add(x,y): return x+y
@@ -80,7 +39,7 @@ for interp in range(1,n):
 	for r in res_selection:
 		driftList = []
 		vec = []
-		for i in range(1,nSwarms):
+		for i in range(1,Nswarms):
 			xvg = open('swarm_%s.xvg'%i)
 			for line in xvg:
 				if re.search(r'\-%s\n'%r,line):
@@ -90,7 +49,7 @@ for interp in range(1,n):
 			driftList+=[vec]
 		# driftList has phi,psi values for residue in every swarm
 		# average phi, psi values over swarms, list may contain multiple residues!
-		avg+=[scale((1/float(nSwarms)),reduce(mapadd,driftList))]
+		avg+=[scale((1/float(Nswarms)),reduce(mapadd,driftList))]
 	newpts+=avg
 
 # reparametrize the points

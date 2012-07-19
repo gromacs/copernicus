@@ -45,6 +45,7 @@ def swarm_iteration(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
     # the function...
+    # use pers.get to pass the function args to the various subfunctions
     pers.write()
 
 # read the input data

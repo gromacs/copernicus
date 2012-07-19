@@ -40,11 +40,19 @@ class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
-def run(inp, out):
+def reparametrize(inp, out):
     return
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
     # the function...
+    # how does one refer to other persistent structs?
+    diheds=inp.getInput('xvg_array')
+    Nswarms=inp.get('Nswarms')
+    ndx_file=inp.get('index')
+    init_conf=inp.get('init')
+    init_top=inp.get('top')
+    # pass these inputs to the python script
+
     pers.write()
 
 # read the input data

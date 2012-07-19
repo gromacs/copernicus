@@ -17,14 +17,6 @@ import sys
 import re
 import random
 
-# Check for the proper number of arguments
-#if len(sys.argv) < 4:
-#	print 'Error: Too few arguments'
-#	exit()
-#elif len(sys.argv) > 4:
-#	print 'Error: Too many arguments'
-#	exit()
-
 class atom:
     # read an atom from a line
     def __init__(self, line):
