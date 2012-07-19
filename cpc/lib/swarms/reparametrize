@@ -35,6 +35,8 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
 
+import reparametrize
+
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
@@ -42,18 +44,29 @@ class FEError(cpc.dataflow.ApplicationError):
 
 def reparametrize(inp, out):
     return
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
-                                               "persistent.dat"))
+    #pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    #                                           "persistent.dat"))
     # the function...
     # how does one refer to other persistent structs?
-    diheds=inp.getInput('xvg_array')
-    Nswarms=inp.get('Nswarms')
-    ndx_file=inp.get('index')
-    init_conf=inp.get('init')
-    init_top=inp.get('top')
-    # pass these inputs to the python script
+    diheds=inp.getInput('dihedrals')
+    
+    #Nswarms=inp.getInput('Nswarms')
+    ndx_file=inp.getInput('res_index')
+    #init_conf=inp.getInput('init')
+    init_top=inp.getInput('init_top')
 
-    pers.write()
+    dihedrals=[]
+    for i in len(diheds):
+        di=inp.getInput('dihedrals[%d]'%i)
+        for j in len(di):
+            di_array.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
+        dihedrals.append(di_array)
+
+    # pass these inputs to the python script
+    new_top=os.path.join(inp.outputDir, 'topol.top')
+    reparametrize.reparametrize(dihedrals, res_index, init_top, new_top)
+    out.setOut('newtop', FileValue(new_top))
+    #pers.write()
 
 # read the input data
 inf=StringIO()
