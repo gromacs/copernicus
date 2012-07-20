@@ -56,11 +56,12 @@ def reparametrize(inp, out):
     init_top=inp.getInput('init_top')
 
     dihedrals=[]
-    for i in len(diheds):
-        di=inp.getInput('dihedrals[%d]'%i)
-        for j in len(di):
-            di_array.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
-        dihedrals.append(di_array)
+    for i in range(len(diheds)):
+       di=inp.getInput('dihedrals[%d]'%i)
+       di_array=[]
+       for j in range(len(di)):
+            di_array.append(inp.getInput('dihedrals[%d][%d].conf'%(i,j)))
+       dihedrals.append(di_array)
 
     # pass these inputs to the python script
     new_top=os.path.join(inp.outputDir, 'topol.top')

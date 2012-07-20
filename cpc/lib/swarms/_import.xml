@@ -14,9 +14,9 @@
         <field type="file" id="ndx" opt="true">
             <desc>A .ndx index file</desc>
         </field>
-        <field type="gromacs::grompp_include_array" id="include" opt="true">
+        <!--<field type="gromacs::grompp_include_array" id="include" opt="true">
             <desc>array of files to include</desc>
-        </field>
+        </field>-->
         <field type="gromacs::mdp_array" id="settings" opt="true">
             <desc>array of settings</desc>
         </field>
@@ -29,7 +29,18 @@
             <desc>A conformation of the input protein.</desc>
     </type>
 
-    <type id="conf_path" base="array" member-type="conf">
+    <type id="path_point" base="record">
+        <desc>Describes one point on a path.</desc>
+        <field type="file" id="conf">
+            <desc>The configuration at this point in the path</desc>
+        </field>
+        <field type="file" id="itp">
+            <desc>The protein topology include file with dihedral restraints 
+                  for this point in the path</desc>
+        </field>
+    </type>
+
+    <type id="conf_path" base="array" member-type="path_point">
             <desc>An array of configurations of the structure</desc>
     </type>
 
@@ -65,6 +76,10 @@
                 <desc>A full set of input values for grompp (except 
                       configuration).
                 </desc>
+            </field>
+            <field type="file" id="protein_itp">
+                <desc>The topology include file describing the protein to be
+                      sampled</desc> 
             </field>
             <field type="file" id="start_conf">
                 <desc>The start configuration of the path.</desc>
@@ -113,85 +128,11 @@
                     persistent_dir="true" />
     </function>
 
-    <function id="dihedral_swarm_iteration" type="network">
-        <desc>A single iteration of the swarm-based string method</desc>
-        <inputs>
-            <field type="grompp_input" id="grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                  </desc>
-             </field>
-             <!-- <field type="grompp_input" id="restrained_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                  </desc>
-             </field>
-             <field type="grompp_input" id="swarm_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                </desc>
-            </field> -->       
-            <field type="conf_path" id="path">
-                <desc>A full set of structures along the path so far.</desc>
-            </field>
-            <field type="resource::run_desc" id="resources" opt="true">
-                <desc>The run resources for a typical run</desc>
-            </field>
-            <field type="int" id="minim_steps">
-                <desc>The number of minimization steps for the swarm iteration.
-                </desc>
-            </field>
-            <field type="int" id="restrained_steps">
-                <desc>The number of steps of restrained equilibration.</desc>
-            </field>
-            <field type="int" id="swarm_run_steps">
-                <desc>The number of steps to run in a free simulation for the 
-                      swarm runs.</desc>
-            </field>
-            <field type="int" id="Nswarms">
-                <desc>The number of swarm simulations to run.</desc>
-            </field>
-        </inputs>
-        <outputs>
-            <field type="conf_path" id="path">
-                <desc>The full interpolated path so far.</desc>
-            </field>
-            <field type="float" id="distance">
-                <desc>The largest displacement in z-space for the new path.
-                </desc>
-            </field>
-        </outputs>
-        <network>
-            <instance id="minimization" function="run_minimization"/>
-            <instance id="equilibration" function="run_restrained"/>
-            <instance id="swarms" function="run_swarms"/>
-            <instance id="reparametrization" function="reparametrize"/>
-
-            <!-- connections to minimization -->
-            <connection src="self:ext_in.grompp_input"
-                        dest="run_minimization:grompp_input"/>
-            <connection src="self.ext_in.minim_steps"
-                        dest="run_minimization:minim_steps"/>
-            <connection src="self.ext_in.conf_path"
-                        dest="run_minimization:conf_path"/>
-
-            <!-- connections to equilibration -->
-            <connection src="self.ext_in.restrained_steps"
-                        dest="run_restrained:restrained_steps"/>
-            <connection src="self.ext_in.Nswarms"
-                        dest="run_restrained:Nswarms"/>
-
-            <!-- connections to swarms -->
-            <connection src="self.ext_in.swarm_run_steps"
-                        dest="run_swarms.swarm_run_steps"/>
-        </network>
-    </function>
-
     <function id="run_minimization" type="external">
         <desc>Minimize the interpolated structures for restrained simulations.
         </desc>
         <inputs>
-            <field type="grompp_input" id="grompp_input">
+            <field type="grompp_input" id="grompp">
                 <desc>Minimization mdp file</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
@@ -200,9 +141,9 @@
             <field type="conf_path" id="conf_path">
                 <desc>Configurations to be minimized</desc>
             </field>
-            <field type="int" id="minim_steps">
-                <desc>Number of steps of minimization.</desc>
-            </field> 
+            <field type="float" id="em_tolerance">
+                <desc>The minimization tolerance to use.</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="conf_path" id="minimized_conf_path">
@@ -210,11 +151,13 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="file" id="topol" />
+            <field type="gromacs::conf_array" id="confs" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="gromacs::mdp_array" id="minimization_settings" />
-            <!-- Others? -->
+            <field type="gromacs::conf_array" id="confs" />
+            <!--<field type="gromacs::grompp_include_array_array" 
+                       id="includes" />-->
         </subnet-outputs>    
         <controller log="true" executable="run_minimization" 
                     persistent_dir="true" />
@@ -239,7 +182,7 @@
             </field>
             <field type="int" id="Nswarms">
                 <desc>The number of configurations to extract from the
-                    restrained trajectories.</des>
+                    restrained trajectories.</desc>
             </field>
         </inputs>
         <outputs>
@@ -348,5 +291,82 @@
         </outputs>
         <controller log="true" executable="g_rama_multi" persistent_dir="true"/>
     </function>
+
+
+    <function id="dihedral_swarm_iteration" type="network">
+        <desc>A single iteration of the swarm-based string method</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                  </desc>
+             </field>
+             <!-- <field type="grompp_input" id="restrained_grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                  </desc>
+             </field>
+             <field type="grompp_input" id="swarm_grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field> -->       
+            <field type="conf_path" id="path">
+                <desc>A full set of structures along the path so far.</desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="float" id="em_tolerance">
+                <desc>The number of minimization steps for the swarm iteration.
+                </desc>
+            </field>
+            <field type="int" id="restrained_steps">
+                <desc>The number of steps of restrained equilibration.</desc>
+            </field>
+            <field type="int" id="swarm_run_steps">
+                <desc>The number of steps to run in a free simulation for the 
+                      swarm runs.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                <desc>The number of swarm simulations to run.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_path" id="path">
+                <desc>The full interpolated path so far.</desc>
+            </field>
+            <field type="float" id="distance">
+                <desc>The largest displacement in z-space for the new path.
+                </desc>
+            </field>
+        </outputs>
+        <network>
+            <instance id="minimization" function="run_minimization"/>
+            <instance id="equilibration" function="run_restrained"/>
+            <instance id="swarms" function="run_swarms"/>
+            <instance id="reparametrization" function="reparametrize"/>
+
+            <!-- connections to minimization -->
+            <connection src="self:ext_in.grompp_input"
+                        dest="minimization:in.grompp_input"/>
+            <connection src="self:ext_in.em_tolerance"
+                        dest="minimization:in.em_tolerance"/>
+            <connection src="self:ext_in.conf_path"
+                        dest="minimization:in.conf_path"/>
+
+            <!-- connections to equilibration -->
+            <connection src="self:ext_in.restrained_steps"
+                        dest="equilibration:in.restrained_steps"/>
+            <connection src="self:ext_in.Nswarms"
+                        dest="equilibration:in.Nswarms"/>
+
+            <!-- connections to swarms -->
+            <connection src="self:ext_in.swarm_run_steps"
+                        dest="swarms:in.swarm_run_steps"/>
+        </network>
+    </function>
+
+
 </cpc>
 
