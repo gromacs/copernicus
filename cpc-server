@@ -123,11 +123,20 @@ try:
                         "Run directory: the base directory for project output")
         cn=None
         confdir =None
+
+        print args
+        forceReset = False
+        if('-force' in args):
+            forceReset = True
+            args.remove('-force')
+
         if(len(args)>2):
-            cn = getArg(2,"distinguished name for the server")            
-    
-    
-        cmd_line_utils.initiateServerSetup(rundir, cn)
+            cn = getArg(2,"distinguished name for the server")
+
+
+
+
+        cmd_line_utils.initiateServerSetup(rundir, cn,forceReset=forceReset)
 
         sys.exit(0)
     

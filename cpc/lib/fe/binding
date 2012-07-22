@@ -1,0 +1,172 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+def fe_binding(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    prec=pers.get('prec')
+    precision=inp.getInput('precision')
+    if precision is None:
+        precision=1
+    if prec != precision:
+        prec=precision
+        # solvation is always easier to calculate than binding FE, so we 
+        # set it to 1/3 the precision of the total value. That makes
+        # the bound value precision requirement sqrt( (3^2-1) / (3^2) ) = 0.943 
+        # of the total precision (i.e. very close to 1).
+        n=3.
+        prec_solv=precision/n
+        prec_bound=precision*math.sqrt( (n*n-1.)/(n*n) )
+        out.setSubOut('prec_bound', FloatValue( prec_bound ) )
+        out.setSubOut('prec_solv', FloatValue( prec_solv ) ) 
+    pers.set('prec', prec)
+
+    restraints=pers.get('restraints')
+    if restraints is None or restraints<1:
+        restraints=1
+        out.addInstance('addres', 'add_restraints')
+        out.addConnection('self:ext_in.restraints_bound', 
+                          'addres:in.restraints')
+        out.addConnection('self:ext_in.grompp_bound', 'addres:in.grompp')
+        out.addConnection('self:ext_in.conf_bound', 'addres:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'addres:in.couple_mol')
+        out.addConnection('addres:out.dg', 'self:sub_in.dg_restraints')
+
+    pers.set('restraints', restraints)
+
+    run_solv=pers.get('run_solv')
+    if run_solv is None:
+        run_solv=1
+        out.setSubOut('mult_solv', FloatValue(-1))
+        out.addInstance('solv', 'decouple')
+        out.addConnection('self:ext_in.grompp_solv', 'solv:in.grompp')
+        out.addConnection('self:ext_in.conf_solv', 'solv:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'solv:in.molecule_name')
+        out.addConnection('self:ext_in.solvation_relaxation_time', 
+                          'solv:in.relaxation_time')
+        out.addConnection('self:ext_in.resources_solv', 'solv:in.resources')
+        out.addConnection('self:sub_out.prec_solv', 'solv:in.precision')
+        out.addConnection('solv:out.delta_f', 'self:sub_in.dG_solv')
+        out.addConnection('solv:out.partial_results', 
+                          'self:sub_in.partial_results_solv')
+        out.addConnection('self:sub_out.mult_solv', 'solv:in.multiplier')
+    pers.set('run_solv', run_solv)
+
+    run_bound=pers.get('run_bound')
+    if run_bound is None:
+        run_bound=1
+        out.setSubOut('mult_bound', FloatValue(1))
+        out.addInstance('bound', 'decouple')
+        #out.addConnection('self:ext_in.grompp_bound', 'bound:in.grompp')
+        out.addConnection('addres:out.grompp', 'bound:in.grompp')
+        out.addConnection('self:ext_in.conf_bound', 'bound:in.conf')
+        out.addConnection('self:ext_in.ligand_name', 'bound:in.molecule_name')
+        out.addConnection('self:ext_in.binding_relaxation_time', 
+                          'bound:in.relaxation_time')
+        out.addConnection('self:ext_in.resources_bound', 'bound:in.resources')
+        out.addConnection('self:sub_out.prec_bound', 'bound:in.precision')
+        out.addConnection('bound:out.delta_f', 'self:sub_in.dG_bound')
+        out.addConnection('bound:out.partial_results', 
+                          'self:sub_in.partial_results_bound')
+        out.addConnection('self:sub_out.mult_bound', 'bound:in.multiplier')
+    pers.set('run_bound', run_bound)
+
+    boundfValue=inp.getSubnetInputValue('dG_bound')
+    solvfValue=inp.getSubnetInputValue('dG_solv')
+    if boundfValue is not None and boundfValue.isUpdated():
+        out.setOut('delta_f_bound', boundfValue)
+    if solvfValue is not None and solvfValue.isUpdated():
+        out.setOut('delta_f_solv', solvfValue)
+
+    if boundfValue.isUpdated() or solvfValue.isUpdated():
+        boundVal=inp.getSubnetInput('dG_bound.value')
+        boundErr=inp.getSubnetInput('dG_bound.error')
+        solvVal=inp.getSubnetInput('dG_solv.value')
+        solvErr=inp.getSubnetInput('dG_solv.error')
+        restraintVal=inp.getSubnetInput('dg_restraints')
+        if (boundVal is not None and boundErr is not None and 
+            solvVal is not None and solvErr is not None and 
+            restraintVal is not None):
+            totVal=boundVal - restraintVal - solvVal
+            totErr=math.sqrt( (boundErr*boundErr + solvErr*solvErr)/2. )
+            out.setOut('delta_f.value', FloatValue(totVal))
+            out.setOut('delta_f.error', FloatValue(totErr))
+    boundPartialRes=inp.getSubnetInputValue('partial_results_bound')
+    if boundPartialRes.isUpdated() and boundPartialRes.value is not None:
+        out.setOut('partial_results_bound', boundPartialRes)
+    solvPartialRes=inp.getSubnetInputValue('partial_results_solv')
+    if solvPartialRes.isUpdated() and solvPartialRes.value is not None:
+        out.setOut('partial_results_solv', solvPartialRes)
+    pers.write()
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_binding(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

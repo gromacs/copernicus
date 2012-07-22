@@ -135,7 +135,11 @@ class FunctionRunInput(object):
         else:
             # if we're running in an external function, the current directory
             # is the base dir, so we don't need to distinguish between them
-            return retv.value
+            if retv.value is not None and retv.type.isSubtype(vtype.fileType):
+                return os.path.join(self.baseDir, retv.value)
+            else:
+                return retv.value
+            #return retv.value
     def getSubnetInputValue(self, itemname):
         """Get the Value object associated with an input."""
         items=vtype.parseItemList(itemname)

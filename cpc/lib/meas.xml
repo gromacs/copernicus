@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<cpc>
+    <type id="meas" base="record">
+        <desc>A measurement value with error estimate.</desc>
+        <field id="value" type="float"/>
+        <field id="error" type="float"/>
+    </type>
+</cpc>

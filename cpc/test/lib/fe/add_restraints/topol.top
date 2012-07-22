@@ -1,0 +1,12 @@
+#include "ffoplsaa.itp"
+
+#include "ana.itp"
+
+#include "spce.itp"
+
+[ system ]
+AA
+
+[ molecules ]
+ethanol 1
+SOL 640

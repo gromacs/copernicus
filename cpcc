@@ -65,7 +65,8 @@ def print_usage():
     print "       cpcc rollback    [-p projectname]"
     print "       cpcc upload      [-p projectname] upload.xml"
     print "       cpcc clear-error [-p projectname] [item]"
-    print 
+    print "       cpcc clear-error [-p projectname] [item]"
+    print ""
     print "Worker and heartbeat monitoring commands."
     print "       cpcc queue|q"
     print "       cpcc running|r "
@@ -85,7 +86,11 @@ def print_usage():
     print "       cpcc list-node-requests"
     print "       cpcc change-node-priority priority host [port]"
     print "       cpcc network-topology"
-    print "       cpcc readconf"     
+    print "       cpcc readconf"
+    print ""
+    print "Project Save and Load commands "
+    print "       cpcc save      projectname [project-tar]"
+    print "       cpcc load      project-tar projectname"
     print ""
     print "Common options:"
     print "       cpcc [-c conffile]"
@@ -464,7 +469,47 @@ try:
     elif cmd == "save-state":
         clnt=ClientMessage()
         ProcessedResponse(clnt.saveStateRequest()).pprint()
-  
+
+
+    # save and load project commands
+    elif cmd =="save":
+
+        project= getArg(args,1,"Project name")
+
+        savePath = "%s.tar.gz"%project
+        if(len(args)>2):
+            savePath=getArg(args, 2, "Destination file")
+
+        clnt=ClientMessage()
+        response = clnt.projectSaveRequest(project)
+
+        if response.content_type=="text/json":
+            ProcessedResponse(response).pprint()
+
+        else:
+            filecontents = response.getRawData() #this is an mmap
+            #try catch here!! test if file can be written in destination
+            try:
+                file=open(savePath,"wb")
+                file.write(filecontents.read(len(filecontents)))
+                file.close()
+            except IOError as e:
+                print "Could not save project to %s\nError %s "%(savePath,
+                                                                 e.strerror)
+                sys.exit(1)
+
+
+            print "Saved project to %s"%savePath
+    elif cmd =="load":
+        #provided a project file it will restore it on the server side
+
+        #path to the file
+        projectFile = getArg(args, 1, "Path to project file")  
+        projectName = getArg(args, 2, "Name of project")  
+
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectRestoreRequest(projectFile,
+                                                     projectName)).pprint()
     else: 
         print "ERROR: unknown command"
 except ClientError as e:

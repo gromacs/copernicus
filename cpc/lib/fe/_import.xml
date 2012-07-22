@@ -1,0 +1,548 @@
+<?xml version="1.0"?>
+<cpc>
+    <!-- a module for free energy calculations.-->
+    <import name="resource" />
+    <import name="gromacs" />
+    <import name="meas" />
+    <import name="int" />
+    <import name="coord" />
+
+    <type id="grompp_input" base="record">
+        <desc>Partial grompp input</desc>
+        <field type="file" id="mdp" ><desc>A .mdp settings file</desc></field>
+        <field type="file" id="top" ><desc>A .top topology file</desc></field>
+        <field type="file" id="ndx" opt="true">
+            <desc>A .ndx index file</desc>
+        </field>
+        <field type="gromacs::grompp_include_array" id="include" opt="true">
+            <desc>array of files to include</desc>
+        </field>
+        <field type="gromacs::mdp_array" id="settings" opt="true">
+            <desc>array of settings</desc>
+        </field>
+        <field type="string" id="mdrun_cmdline_options" opt="true">
+            <desc>mdrun command line options</desc>
+        </field>
+    </type>
+
+    <type id="string_array" base="array" member-type="string" />
+    <type id="meas_array" base="array" member-type="meas::meas" />
+    <!--<type id="meas_array_array" base="array" member-type="meas_array" />-->
+    <type id="priority_array" base="array" member-type="int" />
+
+    <type id="conf_lambda" base="record">
+        <desc>A combination of configuration and lambda value</desc>
+        <field type="file" id="conf"><desc>The configuration</desc></field>
+        <field type="float" id="lambda"><desc>The lambda value</desc></field>
+    </type>
+    <type id="conf_lambda_array" base="array" member-type="conf_lambda">
+        <desc>An array of conf_lambdas forming an FE path.</desc>
+    </type>
+
+    <type id="fe_path" base="record">
+        <desc>An array of lambda values and a description of the endpoints,
+              including final configurations.
+        </desc>
+        <field type="string" id="desc" opt="true">
+            <desc>A description of the path.</desc>
+        </field>
+        <field type="string" id="a">
+            <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="string" id="b">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="string" id="molecule_name">
+            <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' for:
+                  vdwq: full coupling,
+                  vdw: only vdw interactions,
+                  none: no interactions.
+            </desc>
+        </field>
+        <field type="conf_lambda_array" id="lambdas">
+            <desc>The FE path.</desc>
+        </field>
+    </type>
+    <type id="fe_path_array" base="array" member-type="fe_path" />
+
+    <type id="partial_res" base="record">
+        <desc>An array of individual free energy measurements from a part of 
+               a free energy calculation
+        </desc>
+        <field type="string" id="desc">
+            <desc>The part of the calculation</desc>
+        </field>
+        <field type="meas::meas" id="average">
+            <desc>The average for this part.</desc>
+        </field>
+        <field type="meas_array" id="parts">
+            <desc>Array with independent samples</desc>
+        </field>
+        <field type="fe_path" id="path">
+            <desc>The last free energy path (array of lambda values and
+                  configurations) for this part</desc>
+        </field>
+    </type>
+    <type id="partial_res_array" base="array" member-type="partial_res" />
+
+
+
+    <type id="lambda_array" base="array" member-type="float" />
+
+
+    <type id="restraint" base="record">
+        <desc>Describes a restraint on a ligand.</desc>
+        <field type="string" id="resname">
+            <desc>Name of residue to restrain to.</desc>
+        </field>
+        <field type="coord::coord_3d" id="pos">
+            <desc>Relative location to restrain to.</desc>
+        </field>
+        <field type="float" id="strength">
+            <desc>Coupling strength (in kJ/mol/nm).</desc>
+        </field>
+    </type>
+    <type id="restraint_array" base="array" member-type="restraint" />
+
+    <!-- Functions -->
+
+    <function id="solvation" type="external">
+        <desc>Calculates a free energy of solvation: the free energy difference
+              between the solvated molecule and the same molecule in vacuum,
+              decoupled from the solvent: F_solv = F_solvated - F_decoupled. 
+
+              Takes a configuration with a molecule that is solvated, and 
+              de-solvates it in steps, calculating the free energy difference 
+              between the solvated and de-solvated states with the Bennett 
+              acceptance ratio method. 
+        </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with the solvent.</desc>
+            </field>
+            <field type="string" id="molecule_name">
+                <desc>The name/group number of the molecule to desolvate.
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 0.1 ns should be good for water.</desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+            <field type="partial_res_array" id="partial_results">
+                <desc>The partial results that lead to the free energy 
+                      output.</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="meas_array" id="dG_q_array"/>
+            <field type="meas_array" id="dG_lj_array"/>
+            <field type="fe_path_array" id="path_q" />
+            <field type="fe_path_array" id="path_lj" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="string_array" id="endpoint_array"/>
+            <field type="int" id="n_lambdas_init"/>
+            <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_init"/>
+            <field type="priority_array" id="priority"/>
+        </subnet-outputs>
+        <controller log="true" executable="solvation" persistent_dir="true" />
+    </function>
+
+
+    <function id="binding" type="external">
+        <desc>Calculates a free energy of binding: the free energy difference
+              between a molecule (ligand) bound to another molecule
+              (receptor), and the same molecules unbound, and solvated 
+              separately: F_binding = F_bound - F_unbound
+
+              This function takes two configurations: one with a ligand bound 
+              to the receptor, and one with the ligand solvated. Two 
+              calculations then proceed: one where the free energy of 
+              decoupling the ligand from the receptor is calculated, and one 
+              where the free energy of solvation of the ligand is calculated.  
+              The difference in is the free energy of binding. For both 
+              caculations, the Bennett acceptance ratio method is used. 
+        </desc>
+        <inputs>
+            <field type="string" id="ligand_name">
+                <desc>The name/group number of the ligand.  </desc>
+            </field>
+            <field type="string" id="receptor_name">
+                <desc>The name/group number of the receptor.  </desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
+            <field type="grompp_input" id="grompp_bound">
+                <desc>A full set of input values for grompp (except 
+                      configuration) for the situation where the ligand is 
+                      bound to the receptor.
+                </desc>
+            </field>
+            <field type="file" id="conf_bound">
+                <desc>A configuration with the ligand bound to the receptor.
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources_bound" opt="true">
+                <desc>The run resources for a typical run in the bound
+                      state</desc>
+            </field>
+            <field type="restraint_array" id="restraints_bound" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+            <field type="int" id="binding_relaxation_time">
+                <desc>Estimate for the relaxation time for binding (i.e. of 
+                      the bound configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 10 ns should be good for water.</desc>
+            </field>
+
+            <field type="grompp_input" id="grompp_solv">
+                <desc>A full set of input values for grompp (except 
+                      configuration) for the situation where the ligand is 
+                      solvated.
+                </desc>
+            </field>
+            <field type="file" id="conf_solv">
+                <desc>A configuration of the ligand in the solvent.</desc>
+            </field>
+            <field type="resource::run_desc" id="resources_solv" opt="true">
+                <desc>The run resources for a typical run in the solvated
+                      state</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                      This time should not be too short, but can be too long. 
+                      A value of 0.1 ns should be good for water.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+            <field type="meas::meas" id="delta_f_bound">
+                <desc>The free energy difference with error estimate of the 
+                      decoupling of the bound state.</desc>
+            </field>
+            <field type="meas::meas" id="delta_f_solv">
+                <desc>The free energy difference with error estimate of 
+                      ligand solvation.
+                </desc>
+            </field>
+            <field type="partial_res_array" id="partial_results_bound">
+                <desc>The partial results of the bound state that lead to the 
+                      free energy output.</desc>
+            </field>
+            <field type="partial_res_array" id="partial_results_solv">
+                <desc>The partial results of the solvated state that lead to 
+                      the free energy output.</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="meas::meas" id="dG_bound"/>
+            <field type="meas::meas" id="dG_solv"/>
+            <field type="partial_res_array" id="partial_results_bound" />
+            <field type="partial_res_array" id="partial_results_solv" />
+            <field type="float" id="dg_restraints" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="float" id="prec_bound" />
+            <field type="float" id="prec_solv" />
+            <field type="float" id="mult_bound" />
+            <field type="float" id="mult_solv" />
+        </subnet-outputs>
+        <controller log="true" executable="binding" persistent_dir="true" />
+    </function>
+
+
+
+    <!-- internal functions -->
+
+
+
+
+    <function id="fe_init" type="external">
+        <desc>Initialize a free energy run, by generating a set of 
+              </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with the fully coupled molecule</desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="string" id="molecule_name">
+                <desc>The name/group number of the lambda-coupled molecule
+                </desc>
+            </field>
+            <field type="string" id="a">
+                <desc>A description of point A: set to 'vdwq', 'vdw', or 'none' 
+                      for:
+                      vdwq: full coupling,
+                      vdw: only vdw interactions,
+                      none: no interactions.
+                </desc>
+            </field>
+            <field type="string" id="b">
+                <desc>A description of point B: set to 'vdwq', 'vdw', or 'none' 
+                      for:
+                      vdwq: full coupling,
+                      vdw: only vdw interactions,
+                      none: no interactions.
+                </desc>
+            </field>
+            <field type="int" id="n_lambdas">
+                <desc>The number of lambda values to simulate at per 
+                      coulomb/vdw step</desc>
+            </field>
+            <field type="int" id="nsteps">
+                <desc>Estimate for the relaxation time for solvation (i.e. of 
+                      the solvent configuration) in simulation time steps. 
+                </desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="fe_path" id="path">
+                <desc>Free energy path arrays, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
+            </field>
+            <field type="file" id="conf_b">
+                <desc>The configuration at point B, for stringing paths together
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
+            </field>
+
+            <!--<field type="file" id="mdp">
+                <desc>A full set of input values for grompp 
+                      (except configuration), with tuned and prepared mdp.
+                </desc>
+            </field>-->
+        </outputs>
+        <subnet-inputs>
+            <field type="file" id="tpr" />
+            <field type="file" id="trr" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp_array" id="settings"/>
+            <field type="gromacs::mdp_array_array" id="settings_array"/>
+            <field type="int" id="priority" />
+        </subnet-outputs>
+        <controller log="true" executable="fe_init" persistent_dir="true" />
+    </function>
+
+    <function id="fe_iteration" type="external">
+        <desc>Do one iteration of a free energy calculation. 
+              Takes a system ready to run with a set of lambda paramters,
+              and  calculate an estimate for the free energy and a new set 
+              of lambda parameters.</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp 
+                        (except configuration).
+                </desc>
+            </field>
+            <field type="fe_path" id="path">
+                <desc>Free energy path, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
+            </field>
+            <field type="lambda_array" id="lambdas" opt="true">
+                <desc>New lambda values to simulate at</desc>
+            </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="int" id="nsteps">
+                <desc>Number of simulation steps to take.</desc>
+            </field>
+            <field type="int" id="priority" opt="true">
+                <desc>The priority of this iteration.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="dG">
+                <desc>The free energy difference</desc>
+            </field>
+            <field type="lambda_array" id="lambdas">
+                <desc>New set of lambda values for the next iteration.</desc>
+            </field>
+            <field type="fe_path" id="path">
+                <desc>Free energy path, describing the path taken
+                      (in lambda coupling) with lambda points and corresponding 
+                      configurations.</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="gromacs::conf_array" id="confs" />
+            <field type="meas::meas" id="dG" />
+            <field type="gromacs::bar_detailed_value_array" id="bar_values" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp_array_array" id="settings_array"/>
+        </subnet-outputs>
+        <controller log="true" executable="fe_iteration" persistent_dir="true"
+                    access_outputs="true" access_subnet_outputs="true" />
+    </function>
+
+
+    <function id="decouple" type="external">
+        <desc>Calculates a free energy of decoupling.</desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with full coupling
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="restraint_array" id="restraints" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+            <field type="string" id="molecule_name">
+                <desc>The name/group number of the molecule to decouple.</desc>
+            </field>
+            <field type="int" id="relaxation_time">
+                <desc>Estimate for the relaxation time for the decoupling
+                      process being calculated.</desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                      not set.</desc>
+            </field>
+            <field type="float" id="multiplier" opt="true">
+                <desc>Multiplier (usually 1 or -1) for end result. Defaults to 1
+                </desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The free energy difference with error estimate 
+                (this is a Helmholtz free energy if pressure coupling is off 
+                 in the mdp parameters, and a Gibbs free energy if pressure 
+                 coupling is on).</desc>
+            </field>
+            <field type="partial_res_array" id="partial_results">
+                <desc>The partial results that lead to the free energy 
+                      output.</desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="meas_array" id="dG_q_array"/>
+            <field type="meas_array" id="dG_lj_array"/>
+            <field type="fe_path_array" id="path_q" />
+            <field type="fe_path_array" id="path_lj" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="string_array" id="endpoint_array"/>
+            <field type="int" id="n_lambdas_init"/>
+            <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_init"/>
+            <field type="priority_array" id="priority"/>
+        </subnet-outputs>
+        <controller log="true" executable="decouple" persistent_dir="true" />
+    </function>
+
+
+    <function id="add_restraints" type="external">
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration with full coupling
+                </desc>
+            </field>
+            <field type="string" id="couple_mol">
+                <desc>The name of the coupled molecule
+                </desc>
+            </field>
+            <field type="restraint_array" id="restraints" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <!--<field type="file" id="mdp">
+                <desc>A .mdp (gromacs simulation settings) file with restraints
+                </desc>
+            </field>-->
+            <field type="grompp_input" id="grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration) 
+                </desc>
+            </field>
+            <field type="float" id="dg">
+                <desc>The free energy contribution of this set of restraints
+                </desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="string" id="temp_value" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::mdp_array" id="settings"/>
+            <field type="string" id="temp_opt" />
+        </subnet-outputs>
+        <controller log="true" executable="add_restraints" 
+                    persistent_dir="true" />
+    </function>
+</cpc>
+

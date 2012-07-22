@@ -115,18 +115,22 @@ class ActiveInstance(object):
 
         # These are the basic value trees
         self.inputVal=active_value.ActiveValue(None, inst.getInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
         self.outputVal=active_value.ActiveValue(None, inst.getOutputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "out"),
                           fileList=fileList)
 
         self.subnetInputVal=active_value.ActiveValue(None, 
                           inst.getSubnetInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
         self.subnetOutputVal=active_value.ActiveValue(None, 
                           inst.getSubnetOutputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "sub_out"),
                           fileList=fileList)
 
@@ -135,11 +139,13 @@ class ActiveInstance(object):
         # running thread. Once all updates are done, the values can be copied 
         # to the non-staged versions with acceptNewValue()
         self.stagedInputVal=active_value.ActiveValue(None, inst.getInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
 
         self.stagedSubnetInputVal=active_value.ActiveValue(None, 
                           inst.getSubnetInputs(),
+                          parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
 
@@ -321,7 +327,14 @@ class ActiveInstance(object):
     def setErrmsg(self, msg):
         """Set the error message."""
         with self.lock:
-            self.errmsg=msg
+            # try to convert it to unicode, we *should* be getting a 
+            # unicode object or a utf-8 encoded string.
+            if type(msg) != type(u''):
+                # as a last resort, just ignore everything we don't know
+                # how to deal with
+                self.errmsg = unicode(msg, encoding='utf-8', errors='ignore')
+            else: 
+                self.errmsg=msg
 
     def getBasedir(self):
         """Get the active instance's base directory."""
@@ -523,7 +536,8 @@ class ActiveInstance(object):
                  some global lock preventing concurrent updates, and 
                  that it is locked. This normally is project.networkLock.
            """
-        log.debug("handleNewInput on  %s"%self.getCanonicalName())
+        #log.debug("handleNewInput in %s: %s"%(self.getCanonicalName(), 
+        #                                      sourceTag))
         with self.inputLock:
             # first check whether we've already checked this
             #self.updated=False
@@ -543,25 +557,25 @@ class ActiveInstance(object):
             # same at the same time.
             upd1=self.inputVal.acceptNewValue(self.stagedInputVal,sourceTag,
                                               True)
-            if upd1:
-                self.stagedInputVal.setUpdated(False)
             # also check the subnet input values
             upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
                                                     sourceTag, True)
-            if upd2:
-                self.stagedSubnetInputVal.setUpdated(False)
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
             if self.updated:
-                #log.debug("%s: Processing new input for %s of fn %s"%
-                #          (self.getCanonicalName(), self.instance.getName(), 
-                #           self.function.getName()))
                 # only continue if we're active
                 if self.state != ActiveInstance.active or noNewTasks:
                     return
+                #log.debug("%s: Processing new input for %s of fn %s"%
+                #          (self.getCanonicalName(), self.instance.getName(), 
+                #           self.function.getName()))
                 # and make it run.
                 if self._canRun():
                     self._genTask()
+            if upd1:
+                self.stagedInputVal.setUpdated(False)
+            if upd2:
+                self.stagedSubnetInputVal.setUpdated(False)
 
 
     #def resetUpdated(self):
@@ -806,10 +820,10 @@ class ActiveInstance(object):
     def markError(self, msg):
         """Mark active instance as being in error state."""
         with self.lock:
-            if isinstance(msg, str):
-                self.errmsg=unicode(msg, encoding="utf-8")
+            if isinstance(msg, unicode):
+                self.errmsg=msg
             else:
-                self.errmsg=unicode(msg) #$, encoding="utf-8")
+                self.errmsg=unicode(msg, encoding="utf-8", errors='ignore')
             self.state=ActiveInstance.error
             #print msg
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
@@ -843,7 +857,7 @@ class ActiveInstance(object):
         with self.lock:
             if self.state==ActiveInstance.error:
                 strn=self.errmsg
-                msg='errmsg=%s'%str(xml.sax.saxutils.quoteattr(strn))
+                msg='errmsg=%s'%xml.sax.saxutils.quoteattr(strn).encode('utf-8')
             else:
                 msg=""
             outf.write('%s<active id="%s" state="%s" %s seqnr="%d">\n'%

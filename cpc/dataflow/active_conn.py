@@ -169,6 +169,10 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
             #          (listener.value.getFullName()))
             listener._propagateDests(sourceTag, seqNr)
 
+    #def _propagateSelfDests(self, sourceTag, seqNr):
+    #    for dest in self.directDests:
+    #        dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
+
     def _propagateDests(self, sourceTag, seqNr):
         """Propagate an updated value to the direct destinations of this acp."""
         for dest in self.directDests:

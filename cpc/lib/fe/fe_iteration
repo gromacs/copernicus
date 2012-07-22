@@ -1,0 +1,201 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import FileValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+def findClosest(path_lambdas, lam):
+    """Find the index of the closest lambda value."""
+    mindif=2
+    mini=-1
+    i=0
+    for plam in path_lambdas:
+        dif=(plam-lam)*(plam-lam) #math.fabs(plam-lam)
+        if dif < mindif:
+            mini=i
+            mindif=dif
+        i+=1     
+    return mini
+
+def fe_iteration(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+
+    fe_path=inp.getInput('path.lambdas')
+    #nlambdas=len(fe_path)
+    path_lambdas=[]
+    for i in range(len(fe_path)):
+        path_lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
+
+    # by default, the lambdas are the same as the path lambdas
+    lambdas=path_lambdas
+
+    lambdas_in=inp.getInput('lambdas')
+    if (lambdas_in is not None) and (len(lambdas_in) > 0):
+        lambdas=[]
+        for i in range(len(lambdas_in)):
+            lambdas.append(inp.getInput('lambdas[%d]'%i))
+
+    g_bar=pers.get('g_bar')
+    if g_bar is None:
+        g_bar=1
+        out.addInstance('g_bar', 'gromacs::g_bar')
+        out.addConnection('g_bar:out.dG', 'self:sub_in.dG')
+        out.addConnection('g_bar:out.bar_values', 'self:sub_in.bar_values')
+    pers.set('g_bar', g_bar)
+
+    mdruns=pers.get('mdruns')
+    if mdruns is None:
+        mdruns=0
+        # these are the multiple runs
+        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        # connect the mdp and resources
+        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'runs:in.cmdline_options[0]')
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        out.addConnection('self:ext_in.priority', 'runs:in.priority[0]')
+        out.addConnection('self:ext_in.grompp.mdp', 'runs:in.mdp[0]')
+        out.addConnection('self:sub_out.settings_array', 'runs:in.settings')
+        out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
+        out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
+        out.addConnection('self:ext_in.path.molecule_name', 
+                          'self:ext_out.path.molecule_name')
+        out.addConnection('runs:out.conf', 'self:sub_in.confs')
+
+    sys.stderr.write('Nlambdas=%d\n'%len(lambdas))
+    sys.stderr.write('lambdas=%s\n'%lambdas)
+
+    if mdruns != len(lambdas):
+        foreignLambdas=""
+        for lmb in lambdas:
+            foreignLambdas += "%g "%lmb
+        settings_array=[]
+        i=0
+        for lam in lambdas:
+            mdp=[]
+            mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                      'value' : StringValue('%g'%lam)}))
+            nsteps=inp.getInput('nsteps')
+            mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                      'value' : StringValue('%d'%nsteps) }))
+            mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
+                                      'value' : StringValue(foreignLambdas)}))
+            settings_array.append(ArrayValue(mdp))
+            i+=1
+        for i in range(mdruns, len(lambdas)):
+            lam=lambdas[i]
+            sys.stderr.write("lambda %d: %g\n"%(i, lam))
+            lami=findClosest(path_lambdas, lam)
+            out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
+                              'runs:in.conf[%d]'%i)
+            #out.addConnection('runs:out.conf[%d]'%i, 
+            #                  'self:ext_out.path.lambdas[%d].conf'%i)
+            out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
+            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+        out.setSubOut('settings_array', ArrayValue(settings_array))
+        mdruns=len(lambdas)
+    pers.set('mdruns', mdruns)
+
+    # now compare the outputs to the inputs
+    if inp.getSubnetInput('confs') is not None:
+        lnInConfs=len(inp.getSubnetInput('confs'))
+        sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
+        #lnInConfs=len(self.getOutput('confs'))
+        for i in range(lnInConfs):
+            inConf=inp.getSubnetInput('confs[%d]'%i)
+            sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
+            if inConf is not None:
+                #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+                outConf=pers.get('conf_%d'%i)
+                sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
+                if inConf != outConf:
+                    out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
+                    pers.set('conf_%d'%i, inConf)
+
+    if inp.getSubnetInputValue('dG').isUpdated():
+        dgVal=inp.getSubnetInput('dG.value')
+        dgErr=inp.getSubnetInput('dG.error')
+        if dgVal is not None: 
+            out.setOut('dG.value', FloatValue(dgVal))
+            out.setOut('dG.error', FloatValue(dgErr))
+    if inp.getSubnetInputValue('bar_values').isUpdated():
+        pass
+        # TODO: calculate new lambda values
+
+    pers.write()
+    return out
+
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_iteration(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

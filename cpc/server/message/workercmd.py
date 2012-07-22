@@ -23,6 +23,7 @@ import os
 import tarfile
 import tempfile
 import threading
+import time
 
 
 
@@ -156,6 +157,10 @@ class SCWorkerReady(ServerCommand):
         ServerCommand.__init__(self, "worker-ready")
 
     def run(self, serverState, request, response):
+        # now sleep for 2 seconds to give the dataflow time to react to any 
+        # new state. This also serves as a rate limiter for incoming requests
+        # if many new workers start simultaneously.
+        time.sleep(2)
         # first read platform capabilities and executables
         rdr=cpc.server.command.platform_exec_reader.PlatformExecutableReader()
         workerData=request.getParam('worker')
@@ -169,7 +174,8 @@ class SCWorkerReady(ServerCommand):
         else:
             originating = ServerConf().getHostName() #FIXME this cannot be correct ever
         log.debug("worker identified %s"%request.headers['originating-client'] )
-        serverState.setWorkerState("idle",workerData,request.headers['originating-client'])    
+        serverState.setWorkerState("idle",workerData,
+                                   request.headers['originating-client'])    
         
         if len(cmds) > 0:
             # construct the tar file.
@@ -218,7 +224,8 @@ class SCWorkerReady(ServerCommand):
             hasJob =False # temporary flag that should be removed
             for node in nodes:
                 if topology.exists(node.getId()) == False:
-                    clnt = WorkerMessage(node.host,node.https_port) 
+                    log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
+                    clnt = WorkerMessage(node.host,node.https_port,conf=ServerConf()) 
                     
                     clientResponse = clnt.workerRequest(workerData,topology)
                     
@@ -286,7 +293,8 @@ class SCCommandFinishedForward(ServerCommand):
                 cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
         
         task = cmd.getTask()
-        (newcmds, cancelcmds) = task.run(cmd)
+        if task is not None:
+            (newcmds, cancelcmds) = task.run(cmd)
             
         cmdQueue = serverState.getProjectList().getCmdQueue()
         if cancelcmds is not None:

@@ -140,8 +140,6 @@ class Set(TransactionItem):
                  ioItemList, literal, sourceType, printName):
         """initialize based on the active instance, old value associated
            with the instance, and a new value."""
-        #instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
-        #self.activeInstance=self.active.getNamedActiveInstance(instanceName)
         self.itemname=itemname
         self.activeInstance=activeInstance
         self.direction=direction
@@ -205,8 +203,6 @@ class Set(TransactionItem):
 
 class Connect(TransactionItem):
     """Transaction item for connecting a value"""
-    #def __init__(self, connection):
-    #    self.connection=connection
     def __init__(self, project, src, dst):
         self.src=src
         self.dst=dst

@@ -41,18 +41,6 @@ seeded=False # whether the command id generator has been seeded
 seededLock=threading.Lock()
 
 
-#class CommandInput(object):
-#    """Simple task input object, with member variables name, type, and value.#"""
-#    def __init__(self, name, typename, value):
-#        self.name=name
-#        self.typename=typename
-#        self.value=value
-#
-#    def writeXML(self, outf):
-#        outf.write('  <input id="%s" type="%s" value="%s" />'%
-#                   (self.name, self.typename, self.value) )
-
-
 class CommandInputFile(object):
     """A class describing an input file in a command"""
     def __init__(self, realName, packagedName):
@@ -77,7 +65,8 @@ class Command(object):
        """
     def __init__(self, dir, executable, args, 
                  addPriority=0, minVersion=None, maxVersion=None, 
-                 id=None, task=None, running=False, workerServer=None):
+                 id=None, task=None, running=False, workerServer=None,
+                 env=None):
         """Create a command
             dir = the directory 
             executable = the name of the executable object
@@ -91,6 +80,7 @@ class Command(object):
             running = whether the cmd is running
             workerServer = the server the worker executing this command is 
                            connected to.
+            env = environment variables to set: a dict of values (or None).
            """
         #self.taskID=taskID
         self.dir=dir
@@ -115,6 +105,7 @@ class Command(object):
         # dictionary of max allowed resource objects
         self.maxAllowed = { }
         self.task=None
+        self.env=env
 
     #def setTaskID(self, id):
     #    self.taskID=id
@@ -149,6 +140,18 @@ class Command(object):
         for arg in self.args:
             retstr += "%s "%arg
         return retstr
+
+    def addEnv(self, name, value):
+        """Add a single environment variable."""
+        if self.env is None:
+            self.env=dict()
+        self.env[name]=value
+
+    def getEnv(self):
+        """Get the dict of environment values (or None if none set)"""
+        return self.env
+
+
 
     def addFile(self, file):
         """Add a commandInputFile object"""
@@ -298,6 +301,10 @@ class Command(object):
         #for input in self.inputs:
         #    input.writeXML(outf)
         # required resources
+        if self.env is not None:
+            for name, value in self.env.iteritems():
+                outf.write('%s<env name="%s" value="%s"/>\n'%(iindstr, name, 
+                                                              value))
         outf.write('%s<min-required>\n'%iindstr)
         for rsrc in self.minRequired.itervalues():
             rsrc.writeXML(outf, indent+2)
@@ -440,11 +447,19 @@ class CommandReader(xml.sax.handler.ContentHandler):
                 self.setCputime(cputime)
         elif name == 'arg':
             if not attrs.has_key('value'):
-                
                 raise CommandReaderError("command argument has no value",
                                          self.loc)
             else:
                 self.curCommand.addArg(attrs.getValue('value'))
+        elif name == 'env':
+            if not attrs.has_key('name'):
+                raise CommandReaderError("environment variable has no name",
+                                         self.loc)
+            if not attrs.has_key('value'):
+                raise CommandReaderError("environment variable has no value",
+                                         self.loc)
+            self.curCommand.addEnv(attrs.getValue('name'), 
+                                   attrs.getValue('value'))
         elif name == "min-required":
             self.inMinRequired=True
             self.resourceReader=resource.ResourceReader()

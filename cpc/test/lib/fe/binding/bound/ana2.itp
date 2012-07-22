@@ -1,0 +1,64 @@
+[ moleculetype ]
+; Name            nrexcl
+ethanol2	3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+     1   opls_158      1   THR      CB      1      0.145     12.011
+     2   opls_140      1   THR     HB1      1       0.06      1.008
+     3   opls_140      1   THR     HB2      1       0.06      1.008
+     4   opls_154      1   THR     OG1      1     -0.683    15.9994
+     5   opls_155      1   THR     HG1      1      0.418      1.008
+     6   opls_135      1   THR     CG2      2      -0.18     12.011
+     7   opls_140      1   THR    HG21      2       0.06      1.008
+     8   opls_140      1   THR    HG22      2       0.06      1.008
+     9   opls_140      1   THR    HG23      2       0.06      1.008
+
+[ bonds ]
+;  ai    aj funct            c0            c1            c2            c3
+    1     2     1 
+    1     3     1 
+    1     4     1 
+    1     6     1 
+    4     5     1 
+    6     7     1 
+    6     8     1 
+    6     9     1 
+
+[ pairs ]
+;  ai    aj funct            c0            c1            c2            c3
+    4     7     1 
+    4     8     1 
+    4     9     1 
+    5     6     1 
+
+[ angles ]
+;  ai    aj    ak funct            c0            c1            c2            c3
+    2     1     3     1 
+    2     1     4     1 
+    2     1     6     1 
+    3     1     4     1 
+    3     1     6     1 
+    4     1     6     1 
+    1     4     5     1 
+    1     6     7     1 
+    1     6     8     1 
+    1     6     9     1 
+    7     6     8     1 
+    7     6     9     1 
+    8     6     9     1 
+
+[ dihedrals ]
+;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+    2     1     4     5     3 
+    3     1     4     5     3 
+    6     1     4     5     3 
+    2     1     6     7     3 
+    2     1     6     8     3 
+    2     1     6     9     3 
+    3     1     6     7     3 
+    3     1     6     8     3 
+    3     1     6     9     3 
+    4     1     6     7     3 
+    4     1     6     8     3 
+    4     1     6     9     3 

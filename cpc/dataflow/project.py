@@ -523,8 +523,8 @@ class Project(object):
            XML file."""
         outFile.write('  <cpc-project id="%s" dir=""/>\n'%(self.name))
 
-    def readState(self):
-        fname=os.path.join(self.basedir, "_state.xml")
+    def readState(self,stateFile="_state.xml"):
+        fname=os.path.join(self.basedir, stateFile)
         if os.path.exists(fname):
             log.debug("Importing project state from %s"%fname)
             with self.networkLock:

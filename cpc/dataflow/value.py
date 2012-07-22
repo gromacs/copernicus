@@ -64,13 +64,13 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
             tp=sourceType
         else:
             raise ValError(
-                    "Source type %s is not compatible with resulting type %s."%
-                    (sourceType.getName(), destType.getName()))
+                    "Source type %s is not compatible with resulting type %s for literal '%s'."%
+                    (sourceType.getName(), destType.getName(), literal))
     else:
         tp=destType
     if tp.getBaseType().simpleLiteral:
         # if it's a simple literal just make the value
-        retval=Value(None, tp, fileList=fileList)
+        retval=Value(None, tp, None, None, fileList=fileList)
         retval._set(tp.valueFromLiteral(literal), tp)
         return retval
     raise ValError("Non-simple literals not yet implemented.")
@@ -78,15 +78,18 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
 class Value(object):
     """The class describing a data value. Value classes hold function input 
        and output data, and are used to transmit external i/o data."""
-    def __init__(self, value, tp, parent=None, selfName=None, 
+    def __init__(self, value, tp, parent=None, owner=None, selfName=None, 
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
            tp = the actual type
-           parent = the parent in which this value is a sub-item
+           parent = the parent in which this value is a sub-item (or None)
+           owner = the owning object (such as the ActiveInstance) of this value
            selfName = the name in the parent's collection
            createObject = the object type to create when creating subitems
+           fileList = the file list object to attach file references to
+           sourceTag = the initial value for the source tag.
         """
         self.type=tp
         self.basetype=tp.getBaseType()
@@ -95,6 +98,7 @@ class Value(object):
         else:
             self.createObject=createObject
         self.parent=parent
+        self.owner=owner
         self.fileValue=None
         self.fileList=fileList
         self.updated=False # whether this value has been updated
@@ -108,16 +112,10 @@ class Value(object):
            is used as a type)."""
         if value is not None:
             tp=value.type
-        return self.createObject(value, tp, parent=self, selfName=selfName, 
+        return self.createObject(value, tp, parent=self, owner=self.owner, 
+                                 selfName=selfName, 
                                  createObject=self.createObject,
                                  fileList=self.fileList, sourceTag=sourceTag)
-
-    #def getFullName(self):
-    #    if self.parent is not None:
-    #        ret=self.parent.getFullName()
-    #        return "%s.%s"%(ret, self.selfName)
-    #    else:
-    #        return self.selfName
 
     def copy(self, val):
         """Copy a value object or None"""
@@ -269,6 +267,8 @@ class Value(object):
                             return None
                     # choose the most specific type
                     ntp=self.type.getMembers()
+                    #log.debug("ntp=%s"%ntp)
+                    #log.debug("type=%s, name=%s"%(self.type, self.type.name))
                     if createType is not None and createType.isSubtype(ntp):
                         ntp=createType
                     # and make it
@@ -377,8 +377,12 @@ class Value(object):
                 if not self.type.getRecordMember(item).opt:
                     if (not item in self.value) or (self.value[item].value 
                                                     is None):
+                        #log.debug('%s: missing record value %s'%
+                        #          (self.getFullName(), item))
                         return False
                     if not self.value[item].haveAllRequiredValues():
+                        #log.debug('%s: * missing record value %s'%
+                        #          (self.getFullName(), item))
                         return False
                     #if self.value[item].type.isSubtype(vtype.recordType):
                     #    # check whether it's a list: then check the list
@@ -541,7 +545,11 @@ class File(object):
         self.refs -= 1
         if self.refs <= 0:
             log.debug("Removing %s because it is no longer in use."%self.name)
-            os.remove( os.path.join(self.fileList.root, self.name ) )
+            try:
+                os.remove( os.path.join(self.fileList.root, self.name ) )
+            except OSError:
+                # we don't care about non-existing files at this point
+                pass
 
 class FileList(object):
     """Contains a list of all files referenced in a project."""
@@ -690,6 +698,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     # this means that the type is a literal and can be parsed 
                     nval=interpretLiteral(attrs.getValue('value'), tp)
                     subVal.copy(nval)
+                    #log.debug("Setting value for %s to %s"%
+                    #          (subVal.getFullName(), subVal.value) )
                     #subVal._set(tp.valueFromLiteral(attrs.getValue('value')))
             else:
                 if 'value' in attrs:
@@ -701,6 +711,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                 updated=cpc.util.getBooleanAttribute(attrs, "updated")
                 if updated:
                     subVal.markUpdated(updated)
+            #log.debug("Setting value for %s"%subVal.getFullName())
             subVal.sourceTag=self.sourceTag
             self.lastDepth=self.depth
             self.depth+=1

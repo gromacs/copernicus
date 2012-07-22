@@ -357,8 +357,12 @@ class ScAddNodeAccepted(ServerCommand):
         nodes = conf.getSentNodeConnectRequests()        
         node = json.loads(request.getParam('acceptedNode'),object_hook=json_serializer.fromJson)
         if(nodes.exists(node.getId())):
-            nodeToAdd = nodes.get(node.getId())           
-            conf.addNode(nodeToAdd)
+            nodeToAdd = nodes.get(node.getId())
+            conf.addNode(Node(nodeToAdd.host,
+                nodeToAdd.http_port,
+                nodeToAdd.https_port,
+                nodeToAdd.qualified_name))
+            #conf.addNode(nodeToAdd)
             openssl = OpenSSL(conf)
             openssl.addCa(nodeToAdd.key)           
             nodes.removeNode(nodeToAdd.getId())

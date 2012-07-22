@@ -1,0 +1,274 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+#import shutil
+#import glob
+#import stat
+import subprocess
+#import traceback
+#import re
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+# we start with 2*10 lambda points
+#npoints_init=10
+
+def fe_init(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+
+    # TODO: relaxation time
+    relax_time_value=inp.getInputValue('nsteps')
+    relax_time=relax_time_value.value
+    npoints_init_value=inp.getInputValue('n_lambdas')
+    npoints_init=npoints_init_value.value
+    total_relax_time = relax_time*npoints_init
+
+    if relax_time_value.isUpdated() or npoints_init_value.isUpdated():
+        # create settings to be used in tuning/running
+        i=0
+        inSettings=inp.getInput('grompp.settings')
+        valarray=[]
+        if inSettings is not None:
+            for value in inSettings: 
+                valarray.append(value)
+        valarray.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('sd') } ))
+        valarray.append(RecordValue( { 'name' : StringValue('free_energy'),
+                                       'value' : StringValue('yes') } ))
+        valarray.append(RecordValue( { 'name' : 
+                                        StringValue('separate-dhdl-file'),
+                                       'value' : StringValue('no')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('delta-lambda'),
+                                       'value' : StringValue('0')}))
+        valarray.append(RecordValue( { 'name' : StringValue('couple_moltype'),
+                                       'value' : 
+                                        inp.getInputValue('molecule_name')}))
+        valarray.append(RecordValue( { 'name' : StringValue('sc-alpha'),
+                                       'value' : StringValue('1.0') } ))
+        valarray.append(RecordValue( { 'name' : StringValue('sc-power'),
+                                       'value' : StringValue('1.0') } ))
+        valarray.append(RecordValue( { 'name' : StringValue('sc-sigma'),
+                                       'value' : StringValue('0.3') } ))
+        valarray.append(RecordValue( { 'name' : StringValue('couple-lambda0'),
+                                       'value' : inp.getInputValue('a')}))
+        valarray.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
+                                       'value' : inp.getInputValue('b') }))
+        out.setSubOut('settings', ArrayValue(valarray))
+
+        settings_array=[]
+        mdp=[]
+        mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                'value' : StringValue('0')}))
+        frame_spacing=int(relax_time/(npoints_init-1))
+        # make sure it is divisible
+        relax_time=(npoints_init-1)*frame_spacing
+        delta_lambda=1./relax_time
+        mdp.append(RecordValue( { 'name' : StringValue('delta-lambda'),
+                                  'value' : StringValue('%g'%delta_lambda)}))
+        mdp.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                  'value' : StringValue('%d'%frame_spacing)}))
+        mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                  'value' : StringValue('%d'%(relax_time) )}))
+        settings_array.append(ArrayValue(mdp))
+        out.setSubOut('settings_array', ArrayValue(settings_array))
+
+    # here we create an entirely new sampling set.
+    notune=True
+    connectGrompp=False
+    tune=pers.get('tune')
+    #sys.stderr.write("%s, %s"%(len(inp.getInput('resources.min')), 
+    #                           len(inp.getInput('resources.max'))))
+    if tune is None and ((inp.getInput('resources.min') is None or 
+                          len(inp.getInput('resources.min')) ==0 ) and
+                         (inp.getInput('resources.max') is None or 
+                          len(inp.getInput('resources.max')) ==0 )) :
+        tune=1
+        # create a tuning instance
+        out.addInstance('mdrun_tune', 'gromacs::mdrun_tune')
+        # connect everything to it
+        out.addConnection('self:ext_in.grompp.mdp', 'mdrun_tune:in.mdp')
+        out.addConnection('self:ext_in.grompp.top', 'mdrun_tune:in.top')
+        out.addConnection('self:ext_in.grompp.include', 
+                          'mdrun_tune:in.include')
+        out.addConnection('self:sub_out.settings', 'mdrun_tune:in.settings')
+        out.addConnection('self:ext_in.grompp.ndx', 'mdrun_tune:in.ndx')
+        out.addConnection('self:ext_in.conf', 'mdrun_tune:in.conf')
+        # connect its output to the subnet inputs of self
+        out.addConnection('mdrun_tune:out.resources', 'self:ext_out.resources')
+        out.addConnection('mdrun_tune:out.mdp', 'self:ext_out.grompp.mdp')
+        # connect the output grompp settings
+        connectGrompp=True
+        pers.set("tune", tune)
+        notune=False
+
+    merge_mdp=pers.get('merge_mdp')
+    if notune and merge_mdp is None:
+        # if we don't need tuning, we still need to merge mdps
+        merge_mdp=1
+        out.addInstance('merge_mdp', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge_mdp:in.mdp')
+        out.addConnection('self:sub_out.settings', 'merge_mdp:in.settings')
+        out.addConnection('merge_mdp:out.mdp', 'self:ext_out.grompp.mdp')
+        # connect the output grompp settings
+        connectGrompp=True
+        pers.set("merge_mdp", merge_mdp)
+
+    if connectGrompp:
+        # connect the output grompp settings
+        out.addConnection('self:ext_in.grompp.top', 'self:ext_out.grompp.top')
+        out.addConnection('self:ext_in.grompp.ndx', 'self:ext_out.grompp.ndx')
+        out.addConnection('self:ext_in.grompp.include', 
+                          'self:ext_out.grompp.include')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'self:ext_out.grompp.mdrun_cmdline_options')
+
+    # now create the runs.
+    mdrun=pers.get('mdrun')
+    if mdrun is None: #or mdrun != npoints_init:
+        if mdrun is None:
+            mdrun=0
+        else:
+            raise FEError("Change in n_lambdas not yet implemented")
+        # these are the multiple runs
+        out.addInstance('grompp', 'gromacs::grompp')
+        out.addInstance('mdrun', 'gromacs::mdrun')
+        # connect the tpr, mdp and resources
+        out.addConnection('self:ext_in.grompp.top', 'grompp:in.top')
+        out.addConnection('self:ext_in.grompp.ndx', 'grompp:in.ndx')
+        out.addConnection('self:ext_in.grompp.include', 'grompp:in.include')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+                          'mdrun:in.cmdline_options')
+        out.setSubOut('priority', IntValue(5))
+        out.addConnection('self:sub_out.priority', 'mdrun:in.priority')
+        if not notune:
+            out.addConnection('mdrun_tune:out.resources', 'mdrun:in.resources')
+            out.addConnection('mdrun_tune:out.mdp', 'grompp:in.mdp')
+        else:
+            out.addConnection('self:ext_in.resources', 'mdrun:in.resources')
+            out.addConnection('merge_mdp:out.mdp', 'grompp:in.mdp')
+        out.addConnection('self:sub_out.settings_array[0]', 
+                          'grompp:in.settings')
+        out.addConnection('grompp:out.tpr', 'self:sub_in.tpr')
+        out.addConnection('grompp:out.tpr', 'mdrun:in.tpr')
+        out.addConnection('mdrun:out.trr', 'self:sub_in.trr')
+        out.addConnection('self:ext_in.conf', 'grompp:in.conf')
+        out.addConnection('self:ext_in.conf', 
+                          'self:ext_out.path.lambdas[0].conf')
+        # Set the lambda values.
+        # set lambda array outputs for coulomb + vdw
+        out.addConnection('self:ext_in.a', 'self:ext_out.path.a')
+        out.addConnection('self:ext_in.b', 'self:ext_out.path.b')
+        out.addConnection('self:ext_in.molecule_name', 
+                          'self:ext_out.path.molecule_name')
+        for i in range(npoints_init):
+            lam=float(i)/float(npoints_init-1)
+            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+        mdrun=npoints_init
+        pers.set("mdrun", mdrun)
+    pers.write()
+
+    if inp.getSubnetInputValue('trr').isUpdated():
+        sys.stderr.write('trr updated!\n')
+        trrName=inp.getSubnetInput('trr')
+        tprName=inp.getSubnetInput('tpr')
+        confoutname=os.path.join(inp.getOutputDir(), 'lambda.gro')
+        cmd=['trjconv', '-s', tprName, '-f', trrName, '-o', confoutname, 
+             '-sep' ]
+        proc=subprocess.Popen(cmd, 
+                              stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              cwd=inp.outputDir,
+                              close_fds=True)
+        (stdout, stderr) = proc.communicate('System')
+        if proc.returncode != 0:
+            raise FEError("ERROR: trjconv returned %s, %s"%(stdout, stderr))
+        # extract the frames.
+        for i in range(npoints_init-1):
+            confname=os.path.join(inp.getOutputDir(), "lambda%d.gro"%i)
+            if not os.path.exists(confname):
+                raise FEError("ERROR: trjconv failed to deliver: %s"%
+                              (confname))
+            out.setOut('path.lambdas[%d].conf'%(i+1), FileValue(confname))
+            if i==(npoints_init-2):
+                out.setOut('conf_b', FileValue(confname))
+
+    return out
+
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_init(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

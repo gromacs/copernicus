@@ -2,10 +2,13 @@
 <cpc>
     <desc>Gromacs specific functions</desc>
     <import name="resource" />
+    <import name="meas" />
 
-    <type id="grompp-include-array" base="array" member-type="file" />
+    <type id="grompp_include_array" base="array" member-type="file" />
+    <type id="grompp_include_array_array" base="array" 
+           member-type="grompp_include_array" />
 
-    <type id="out-grompp-multi" base="record">
+    <!--<type id="out-grompp_multi" base="record">
         <desc>tpr file</desc>
         <field type="file" id="tpr">
             <desc>generated tpr file</desc>
@@ -13,40 +16,27 @@
         <field type="file" id="stdout">
             <desc>log file </desc>
         </field>
-    </type>
+    </type>-->
 
 
-    <type id="out-mdrun-multi" base="record">
-        <field type="file" id="conf">
-            <desc>Output configuration (.gro) file</desc>
-        </field>
-        <field type="file" id="stderr">
-            <desc>mdrun's standard error output</desc>
-        </field>
-        <field type="file" id="stdout">
-            <desc>mdrun's standard output output</desc>
-        </field>
-        <field type="file" id="xtc" optional="1">
-            <desc>compressed (xtc) trajectory file</desc>
-        </field>
-        <field type="file" id="trr" optional="1">
-            <desc>full-precision (trr) trajectory file</desc>
-        </field>
-        <field type="file" id="edr">
-            <desc>energy+measurements output file</desc>
-        </field>
-    </type>
+    <type id="mdp-file_array" base="array" member-type="file" />
+    <type id="conf_array" base="array" member-type="file" />
+    <type id="top_array" base="array" member-type="file" />
+    <type id="ndx_array" base="array" member-type="file" />
+    <!--<type id="out-grompp_multi_array" base="array" 
+          member-type="out-grompp_multi" />-->
+    <!--<type id="out-mdrun-multi_array" base="array" 
+          member-type="out-mdrun-multi" />-->
 
-    <type id="mdp-file-array" base="array" member-type="file" />
-    <type id="conf-array" base="array" member-type="file" />
-    <type id="top-array" base="array" member-type="file" />
-    <type id="ndx-array" base="array" member-type="file" />
-    <type id="out-grompp-multi-array" base="array" member-type="out-grompp-multi" />
-    <type id="out-mdrun-multi-array" base="array" member-type="out-mdrun-multi" />
+    <type id="tpr_array" base="array" member-type="file" />
+    <type id="prio_array" base="array" member-type="int" />
+    <type id="cmdline_array" base="array" member-type="string" />
+    <type id="rsrc_array" base="array" member-type="resource::run_desc" />
 
-    <type id="tpr-array" base="array" member-type="file" />
-    <type id="prio-array" base="array" member-type="int" />
-    <type id="cmdline-array" base="array" member-type="string" />
+    <type id="xtc_array" base="array" member-type="file" />
+    <type id="trr_array" base="array" member-type="file" />
+    <type id="edr_array" base="array" member-type="file" />
+    <type id="log_array" base="array" member-type="file" />
 
     <!-- individual settings -->
     <type id="setting" base="record">
@@ -54,70 +44,12 @@
         <field id="name" type="string" />
         <field id="value" type="string" />
     </type>
-    <type id="mdp-array" base="array" member-type="setting">
+    <type id="mdp_array" base="array" member-type="setting">
         <desc>An array of grompp mdp settings</desc>
     </type>
-
-
-
-    <function id="grompp_multi" type="python-extended">
-        <desc>can handle multiple input files</desc>
-        <inputs>
-            <field type="conf-array" id="conf">
-                <desc>An array of .gro configuration files</desc>
-            </field>
-            <field type="mdp-file-array" id="mdp" >
-                <desc>An array of .mdp settings files</desc>
-            </field>
-            <field type="top-array" id="top" >
-                <desc>An array of .top topology files</desc>
-            </field>
-            <field type="ndx-array" id="ndx" opt="true">
-                <desc>An array of .ndx index files</desc>
-            </field>
-        </inputs>
-        <outputs>
-            <field type="tpr-array" id="result">
-            <desc>the tpr file for mdrun</desc>
-            </field>
-            <!--<field type="out-grompp-multi-array" id="result">-->
-                <!--<desc>the tpr file for mdrun and stdout out generated during grompp</desc>-->
-            <!--</field>-->
-        </outputs>
-        <controller function="cpc.lib.gromacs.grompp_multi"
-                    import="cpc.lib.gromacs"
-                    log="true" persistent_dir="true"
-                    access_outputs="true"
-                />
-    </function>
-
-
-    <!-- gromacs mdrun controller function -->
-    <function id="mdrun_multi" type="python-extended">
-        <desc>Runs an MD simulation.</desc>
-        <inputs>
-            <field type="tpr-array" id="tpr">
-                <desc>The tpr file generated by grompp</desc>
-            </field>
-            <field type="prio-array" id="priority" opt="true">
-                <desc>An optional priority for commands issued</desc>
-            </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
-                <desc>An optional string with command line options for mdrun
-                    to use</desc>
-            </field>
-        </inputs>
-        <outputs>
-            <field type="out-mdrun-multi-array" id="result">
-                <desc>simulation results</desc>
-            </field>
-        </outputs>
-        <controller function="cpc.lib.gromacs.mdrun_multi"
-                    import="cpc.lib.gromacs"
-                    log="true" persistent_dir="true"
-                    access_outputs="true" />
-    </function>
-
+    <type id="mdp_array_array" base="array" member-type="mdp_array">
+        <desc>An array of arrays of grompp mdp settings</desc>
+    </type>
 
 
     <function id="grompp" type="python-extended">
@@ -132,10 +64,10 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp-include-array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp-array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -151,7 +83,8 @@
             </field>
         </outputs>
         <controller function="cpc.lib.gromacs.grompp" 
-                    import="cpc.lib.gromacs" />
+                    import="cpc.lib.gromacs"
+                    persistent_dir="true" />
     </function>
 
     <!-- gromacs mdrun controller function -->
@@ -197,8 +130,55 @@
                     persistent_dir="true" />
     </function>
 
+    <function id="merge_mdp" type="python-extended">
+        <desc>Merge an mdp file and a mdp_array into an output mdp file</desc>
+        <inputs>
+            <field type="file" id="mdp">
+                <desc>The .mdp file</desc>
+            </field>
+            <field type="mdp_array" id="settings" opt="true">
+                <desc>Array of settings</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="mdp">
+                <desc>Output .mdp file</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.merge_mdp" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="false" />
+    </function>
+
+    <function id="extract_mdp" type="python-extended">
+        <desc>Extract a setting from an mdp file</desc>
+        <inputs>
+            <field type="file" id="mdp">
+                <desc>The .mdp file</desc>
+            </field>
+
+            <field type="mdp_array" id="settings" opt="true">
+                <desc>Array of settings</desc>
+            </field>
+            <field type="string" id="name">
+                <desc>The setting to extract</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="string" id="value">
+                <desc>The extracted setting value</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.extract_mdp" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="false" />
+    </function>
+
+
+
     <function id="mdrun_tune" type="python-extended">
-        <desc>Optimize an MD simulation (for the available run resources).</desc>
+        <desc>Optimize an MD simulation (for the available run resources).
+        </desc>
         <inputs>
             <field type="file" id="conf">
                 <desc>A .gro configuration file</desc>
@@ -209,10 +189,10 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp-include-array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp-array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -271,24 +251,101 @@
                     persistent_dir="true" />
     </function>
 
-    <function id="trjconv" type="python-extended">
-        <desc>Converts and processes trajectories.</desc>
+    <!--<function id="g_rama" type="python-extended">
+        <desc>Extracts protein backbone phi+psi angles.</desc>
         <inputs>
+            <field type="file" id="traj">
+                <desc>The trajector as compressed xtc.</desc>
+            </field>
             <field type="file" id="tpr">
-                <desc>The run input file.</desc>
+                <desc>A run file from grompp with the same settings as 
+                      used for the trajectory.</desc>
             </field>
-            <field type="file" id="trj">
-                <desc>Trajectory file (trr,xtc,pdb,etc.).</desc>
+        </inputs>
+        <outputs>
+        </outputs>
+        <controller function="cpc.lib.gromacs.g_rama" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>-->
+
+    <function id="trjconv" type="python-extended">
+        <desc>Manipulates trajectories.</desc>
+        <inputs>
+            <field type="file" id="traj">
+                <desc>The trajectory as compressed xtc or trr, or gro.</desc>
             </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
-                <desc>An optional string with command line options for mdrun
-                    to use</desc>
-            </field>
-            <field type="string" id="output_groups" opt="true">
-                <desc>Which group index to output, select for operations, etc.</desc>
+            <field type="file" id="tpr">
+                <desc>A run file from grompp with the same settings as 
+                      used for the trajectory.</desc>
             </field>
             <field type="file" id="ndx" opt="true">
-                <desc>An .ndx index file</desc>
+                <desc>An index file.</desc>
+            </field>
+            <field type="string" id="output_group" opt="true">
+                <desc>If set, only writes the named group to the output 
+                      trajectory, instead of everything.</desc>
+            </field>
+            <field type="float" id="first_frame_ps" opt="true">
+                <desc>The first frame in ps to read from the trajectory.</desc>
+            </field>
+            <field type="float" id="last_frame_ps" opt="true">
+                <desc>The last frame in ps to read from the trajectory.</desc>
+            </field>
+            <field type="float" id="dt" opt="true">
+                <desc>Frame spacing in ps for the output trajectory.</desc>
+            </field>
+            <field type="int" id="skip" opt="true">
+                <desc>Frame spacing in frame numbers for the output trajectory.
+                </desc>
+            </field>
+            <field type="float" id="dump" opt="true">
+                <desc>If set, trjconv outputs a single frame: the one closest 
+                      in ps to this value.</desc>
+            </field>
+            <field type="string" id="pbc" opt="true">
+                <desc>How to apply periodic  boundary conditions. 
+                      Can be 
+                      'none' for no re-interpretation,
+                      'mol' to keep molecules whole (with COM in the box),
+                      'res' to keep residues whole (with COM in the box),
+                      'atom' to force atoms in the box,
+                      'nojump' to force the movement continuous across the 
+                            trajectory,
+                      'cluster' to keep an indexed cluster whole.
+                       </desc>
+            </field>
+            <field type="string" id="ur" opt="true">
+                <desc>The shape of the unit cell for the 'pbc' input: 
+                      'rect' creates a rectangular unit cell
+                      'tric' shows a triclinic unit cell
+                      'compact' shows the unit cell of points closest to the 
+                                center of the box 
+                                </desc>
+            </field>
+            <field type="string" id="center" opt="true">
+                <desc>If set to a group name, centers the COM of that group in 
+                      the output trajectory.</desc>
+            </field>
+            <field type="string" id="fit" opt="true">
+                <desc>If set to a group name, fits that structure to a 
+                      reference structure; fit type set in fit_type</desc>
+            </field>
+            <field type="string" id="fit_type" opt="true">
+                <desc>The type of fitting to use; the default methods fit 
+                      against a reference structure from the tpr input. The 
+                      choices are:
+                      'rot+trans': for rotation and translation (the default),
+                      'rotxy+transxy': for rotation and translation only in xy
+                      'translation': for only translation
+                      'transxy': for translation in xy
+                      'progressive': for rot+trans fitting against the previous 
+                                     step
+                      </desc>
+            </field>
+            <field type="cmdline-array" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for trjconv
+                    to use</desc>
             </field>
         </inputs>
         <outputs>
@@ -335,6 +392,209 @@
         <controller function="cpc.lib.gromacs.pdb2gmx" 
                     import="cpc.lib.gromacs" 
                     persistent_dir="true" />
+    </function>
+
+
+    <!-- g_bar -->
+    <type id="bar_detailed_values" base="record">
+        <desc>Detailed output values in kT from BAR</desc>
+        <field id="lambda_A" type="float">
+            <desc>Lambda value of start point (A) of sub-interval</desc> 
+        </field>
+        <field id="lambda_B" type="float">
+            <desc>Lambda value of end point (B) of sub-interval</desc> 
+        </field>
+        <field id="dG" type="meas::meas">
+            <desc>Free energy difference of the sub-interval in kJ/mol</desc> 
+        </field>
+        <field id="dG_kT" type="meas::meas">
+            <desc>Free energy difference of the sub-interval in kT</desc> 
+        </field>
+        <field id="s_A" type="meas::meas">
+            <desc>Relative entropy of B in A in kT</desc> 
+        </field>
+        <field id="s_B" type="meas::meas">
+            <desc>Relative entropy of A in B in kT</desc> 
+        </field>
+        <field id="stdev" type="meas::meas">
+            <desc>expected per-sample standard deviation in kT</desc> 
+        </field>
+    </type>
+    <type id="bar_detailed_value_array" 
+          base="array" 
+          member-type="bar_detailed_values" />
+
+    <function id="g_bar" type="python-extended">
+        <inputs>
+            <field type="edr_array" id="edr">
+                <desc>An array of .edr files with free energy data.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="dG">
+                <desc>The free energy difference</desc>
+            </field>
+            <field type="file" id="histogram">
+                <desc>The BAR histogram</desc>
+            </field>
+            <field type="file" id="dG_lambda">
+                <desc>The free energy plot as a function of lambda</desc>
+            </field>
+            <field type="bar_detailed_value_array" id="bar_values">
+                <desc>The array of detailed BAR values.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.g_bar" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
+
+    <function id="grompp_multi" type="python-extended">
+        <desc>Prepares multiple simulations; can handle multiple input files.
+              Each input is an array that can have N or 1 elements, where N is 
+              the number of desired outputs. If the number of inputs is N
+              each input will go to its own instance of grompp. If the number
+              of inputs in an array is 1, this will be distributed along all the
+              grompp instances. The output is an array of .tprs.
+        </desc>
+        <inputs>
+            <field type="conf_array" id="conf">
+                <desc>An array of .gro configuration files</desc>
+            </field>
+            <field type="mdp-file_array" id="mdp" >
+                <desc>An array of .mdp settings files</desc>
+            </field>
+            <field type="top_array" id="top" >
+                <desc>An array of .top topology files</desc>
+            </field>
+            <field type="ndx_array" id="ndx" opt="true">
+                <desc>An array of .ndx index files</desc>
+            </field>
+            <field type="mdp_array_array" id="settings" opt="true">
+                <desc>An array of arrays of settings</desc>
+            </field>
+            <field type="grompp_include_array_array" id="include" opt="true">
+                <desc>An array of .ndx index files</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="tpr_array" id="tpr">
+                <desc>Array of run descriptions (tpr files)</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.grompp_multi"
+                    import="cpc.lib.gromacs"
+                    log="true" persistent_dir="true"
+                    access_outputs="true"
+                />
+    </function>
+
+
+    <function id="mdrun_multi" type="python-extended">
+        <desc>Runs a set of MD simulations. Inputs are spread in the 
+              same way as grompp_multi</desc>
+        <inputs>
+            <field type="tpr_array" id="tpr">
+                <desc>The tpr file generated by grompp</desc>
+            </field>
+            <field type="prio_array" id="priority" opt="true">
+                <desc>An optional priority for commands issued</desc>
+            </field>
+            <field type="cmdline_array" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun
+                      to use</desc>
+            </field>
+            <field type="rsrc_array" id="resources" opt="true">
+                <desc>The run resources for tuning these runs.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="conf">
+                <desc>Array of Output configuration (.gro) files</desc>
+            </field>
+            <!--<field type="log_array" id="stderr">
+                <desc>Array of mdrun's standard error output files</desc>
+            </field>
+            <field type="log_array" id="stdout">
+                <desc>Array of mdrun's standard output output files</desc>
+            </field>-->
+            <field type="xtc_array" id="xtc">
+                <desc>Array of compressed (xtc) trajectory files</desc>
+            </field>
+            <field type="trr_array" id="trr">
+                <desc>Array of full-precision (trr) trajectory files</desc>
+            </field>
+            <field type="edr_array" id="edr">
+                <desc>Array of energy+measurements output files</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.mdrun_multi"
+                    import="cpc.lib.gromacs"
+                    log="true" persistent_dir="true"
+                    access_outputs="true" />
+    </function>
+
+    <function id="grompp_mdrun_multi" type="python-extended">
+        <desc>Prepares and runs a set of MD simulations.
+              A combination of grompp_multi and mdrun_multi.</desc>
+        <inputs>
+            <field type="conf_array" id="conf">
+                <desc>An array of .gro configuration files</desc>
+            </field>
+            <field type="mdp-file_array" id="mdp" >
+                <desc>An array of .mdp settings files</desc>
+            </field>
+            <field type="top_array" id="top" >
+                <desc>An array of .top topology files</desc>
+            </field>
+            <field type="ndx_array" id="ndx" opt="true">
+                <desc>An array of .ndx index files</desc>
+            </field>
+            <field type="mdp_array_array" id="settings" opt="true">
+                <desc>An array of arrays of settings</desc>
+            </field>
+            <field type="grompp_include_array_array" id="include" opt="true">
+                <desc>An array of .ndx index files</desc>
+            </field>
+            <field type="prio_array" id="priority" opt="true">
+                <desc>An optional priority for commands issued</desc>
+            </field>
+            <field type="cmdline_array" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun
+                      to use</desc>
+            </field>
+            <field type="rsrc_array" id="resources" opt="true">
+                <desc>The run resources for tuning these runs.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="tpr_array" id="tpr">
+                <desc>Array of run descriptions (tpr files)</desc>
+            </field>
+            <field type="conf_array" id="conf">
+                <desc>Array of Output configuration (.gro) files</desc>
+            </field>
+            <!--<field type="log_array" id="stderr">
+                <desc>Array of mdrun's standard error output files</desc>
+            </field>
+            <field type="log_array" id="stdout">
+                <desc>Array of mdrun's standard output output files</desc>
+            </field>-->
+            <field type="xtc_array" id="xtc">
+                <desc>Array of compressed (xtc) trajectory files</desc>
+            </field>
+            <field type="trr_array" id="trr">
+                <desc>Array of full-precision (trr) trajectory files</desc>
+            </field>
+            <field type="edr_array" id="edr">
+                <desc>Array of energy+measurements output files</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.grompp_mdrun_multi"
+                    import="cpc.lib.gromacs"
+                    log="true" persistent_dir="true"
+                    access_outputs="true" />
     </function>
 
 </cpc>

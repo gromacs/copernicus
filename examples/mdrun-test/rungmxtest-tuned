@@ -22,6 +22,7 @@ fi
 ./cpcc transact
 # connect the tpr output of grompp to the tpr input of mdrun
 ./cpcc connect grompp:out.tpr mdrun:in.tpr
+./cpcc set mdrun:in.cmdline_options '-v -npme 0'
 # set the grompp inputs
 ./cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro
 #./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp

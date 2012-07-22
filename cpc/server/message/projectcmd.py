@@ -21,6 +21,10 @@ import logging
 import json
 import os
 import os.path
+import tarfile
+import tempfile
+from cpc.util.conf.server_conf import ServerConf
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -326,6 +330,51 @@ class SCProjectGet(ServerCommand):
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
+
+
+class SCProjectSave(ServerCommand):
+    def __init__(self):
+        ServerCommand.__init__(self, "project-save")
+
+    def run(self, serverState, request, response):
+
+        if request.hasParam('project'):
+            project=request.getParam('project')
+            try:
+                tff = serverState.saveProject(project)
+                response.setFile(tff,'application/x-tar')
+            except Exception as e:
+                response.add(e.message,status="ERROR")
+        else:
+            response.add("No project specified for save",status="ERROR")
+
+
+class SCProjectLoad(ServerCommand):
+    def __init__(self):
+        ServerCommand.__init__(self, "project-load")
+
+    def run(self, serverState, request, response):
+        if(request.haveFile("projectFile")):
+            projectName = request.getParam("project")
+            projectBundle=request.getFile('projectFile')
+
+            try:
+
+                serverState.getProjectList().add(projectName)
+                extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
+                tar = tarfile.open(fileobj=projectBundle,mode="r")
+                tar.extractall(path=extractPath)
+                tar.close()
+                serverState.readProjectState(projectName)
+
+            except:
+                raise
+
+            response.add("Project restored as %s"%projectName)
+        else:
+            response.add("No project file provided",status="ERROR")
+
+
 
 class SCProjectSet(ServerCommand):
     """Set an i/o item in a project."""

@@ -52,18 +52,24 @@ class ActiveValue(value.Value):
        Values are trees with dicts/lists of members; the top level is usually
        a <instance>:in or <instance>:out. ActiveValue trees have listeners:
        active connection points that connect values together."""
-    def __init__(self, val, tp, parent=None, selfName=None, seqNr=0,
+    def __init__(self, val, tp, parent=None, owner=None, selfName=None, seqNr=0,
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references
     
            val = an original value
            tp = the actual type
            parent = the parent in which this value is a sub-item
+           owner = the owning object (such as the ActiveInstance) of this value
            selfName = the name in the parent's collection
+           seqNr = the starting sequence number
+           createObject = object type to create as sub-values (none for 
+                                                               ActiveValue)
+           fileList = a file list object to attach file references to
+           sourceTag = the initial value of the source tag.
         """
         if createObject is None:
             createObject=ActiveValue
-        value.Value.__init__(self, val, tp, parent, selfName,
+        value.Value.__init__(self, val, tp, parent, owner, selfName,
                              createObject=createObject, fileList=fileList,
                              sourceTag=sourceTag)
         self.seqNr=seqNr # sequence number.
@@ -98,8 +104,8 @@ class ActiveValue(value.Value):
         self.sourceTag=sourceTag
         if resetSourceTag:
             srcVal.sourceTag=None
-        #log.debug("Updating new value for %s: %s."%
-        #          (self.getFullName(), self.sourceTag))
+        #log.debug("Updating new value for %s: %s."% (self.getFullName(), 
+        #                                             self.sourceTag))
         self.seqNr=newSeqNr
         # keep the file value for later.
         fileValue=self.fileValue
@@ -127,7 +133,8 @@ class ActiveValue(value.Value):
             if self.basetype == vtype.recordType:
                 for name, item in srcVal.value.iteritems():
                     if not self.type.hasMember(name):
-                        raise ActiveValError("Unknown member item '%s'"%name)
+                        raise ActiveValError("Unknown member item '%s' in %s"%
+                                             (name, self.getFullName()))
                     # make the value if it doesn't exist
                     if not self.value.has_key(name):
                         self.value[name]=self._create(None, 
@@ -185,23 +192,24 @@ class ActiveValue(value.Value):
     
            Returns: a boolean telling whether an update has taken place."""
         ret=False
-        #log.debug("Checking for update in %s, %s=%s reset=%s %s"%
+        #log.debug("Checking for update in %s, %s=%s reset=%s %s:%s"%
         #          (self.getFullName(), sourceTag, sourceValue.sourceTag, 
-        #           resetSourceTag, sourceValue.value))
+        #          resetSourceTag, sourceValue.getFullName(),sourceValue.value))
         if ( (sourceValue.sourceTag == sourceTag) or (sourceTag is None) ):
             if sourceValue.seqNr is None:
                 sourceValue.seqNr=self.seqNr
             if sourceValue.seqNr >= self.seqNr:
-                #log.debug("**Found update in %s, %s %s"%
+                #log.debug("**Found update in %s, %s %s %s"%
                 #          (self.getFullName(), resetSourceTag, 
-                #           sourceValue.value))
+                #           sourceValue.value, sourceValue.updated))
                 self.update(sourceValue, sourceValue.seqNr, sourceTag,
                             resetSourceTag=resetSourceTag)
                 #sourceValue.updated=False
-                sourceValue.setUpdated(False)
+                #sourceValue.setUpdated(False)
                 return True
             #else:
-            #   log.debug("Rejecting acceptNewValue because of sequence number")
+            #   log.debug("Rejecting acceptNewValue %s: sequence number %d>%d"%
+            #             (self.getFullName(), self.seqNr, sourceValue.seqNr))
         if isinstance(sourceValue.value, dict):
             for name, val in sourceValue.value.iteritems():
                 if name in self.value:

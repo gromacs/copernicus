@@ -23,6 +23,7 @@ fi
 
 #NOTE WE CAN LOOP OVER THIS
 ./cpcc set-file mdrun_multi:in.tpr[+] examples/multi-test/topol.tpr
+#./cpcc set-file mdrun_multi:in.tpr[+] examples/multi-test/topol.tpr
  
 ./cpcc commit
 

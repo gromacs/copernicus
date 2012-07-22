@@ -162,10 +162,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         for ai in self.affectedInputAIs:
             ai.handleNewInput(self, None, noNewTasks=True)
             #ai.resetUpdated()
-        #except ProjectXMLError as e:
-        #    raise e
-        #except apperror.ApplicationError as e:
-        #    raise ProjectXMLError(str(e), self)
 
     def _doRead(self, inf):
         try:
@@ -295,6 +291,9 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     #members=self.project.getType(attrs.getValue("members"))
                     self.type.setMembers(members)
                     log.debug("new array(%s) type %s"%(members.name, name))
+                else:
+                    raise ProjectXMLError("Array type %s has no member type"%
+                                          name, self)
             elif basetype.isSubtype(vtype.dictType):
                 if attrs.has_key("member-type"):
                     tnm=attrs.getValue("member-type")
