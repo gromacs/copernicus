@@ -148,7 +148,7 @@ def trjconv(inp):
         cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
     else:
         cmdlineOpts=[]
-    cmdlist.extend(cmdlineOpts)
+    cmdline.extend(cmdlineOpts)
     log.debug(cmdline)
     outputGroup=inp.getInput('output_group')
     if outputGroup is not None:
@@ -188,12 +188,12 @@ def pdb2gmx(inp):
         cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
     else:
         cmdlineOpts=[]
-    cmdlist=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
+    cmdline=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
     if skip_hydrogens:
-        cmdlist.append(["-ignh"]
-    cmdlist.extend(cmdlineOpts)
+        cmdline.append(["-ignh"]
+    cmdline.extend(cmdlineOpts)
 
-    proc=subprocess.Popen(cmdlist,
+    proc=subprocess.Popen(cmdline,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
