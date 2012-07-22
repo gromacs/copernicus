@@ -343,7 +343,7 @@
                                      step
                       </desc>
             </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
+            <field type="cmdline_array" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for trjconv
                     to use</desc>
             </field>
@@ -370,7 +370,7 @@
             <field type="string" id="water">
                 <desc>Water model to use.</desc>
             </field>
-            <field type="cmdline-array" id="cmdline_options" opt="true">
+            <field type="cmdline_array" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for mdrun
                     to use</desc>
             </field>
