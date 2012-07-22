@@ -15,9 +15,9 @@
         </field>
     </type>
 
-    <type id="conf-array" base="array" member-type="file" />
-    <type id="seq-array" base="array" member-type="file" />
-    <type id="out-pairmodel-multi-array" base="array" member-type="out-pairmodel-multi" />
+    <type id="conf_array" base="array" member-type="file" />
+    <type id="seq_array" base="array" member-type="file" />
+    <type id="out_pairmodel_multi_array" base="array" member-type="out-pairmodel-multi" />
 
     <type id="cmdline_array" base="array" member-type="string" />
 

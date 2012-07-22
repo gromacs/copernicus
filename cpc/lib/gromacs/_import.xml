@@ -385,7 +385,7 @@
             <field type="file" id="top">
                 <desc>Topology</desc>
             </field>
-            <field type="grompp-include-array" id="include">
+            <field type="grompp_include_array" id="include">
                 <desc>array of .itp files created.</desc>
             </field>
         </outputs>
