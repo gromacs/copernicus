@@ -25,6 +25,7 @@ import shutil
 import glob
 import subprocess
 import logging
+import shlex
 import time
 try:
     from cStringIO import StringIO
@@ -190,7 +191,7 @@ def pdb2gmx(inp):
         cmdlineOpts=[]
     cmdline=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
     if skip_hydrogens:
-        cmdline.append(["-ignh"]
+        cmdline.extend(["-ignh"])
     cmdline.extend(cmdlineOpts)
 
     proc=subprocess.Popen(cmdline,
