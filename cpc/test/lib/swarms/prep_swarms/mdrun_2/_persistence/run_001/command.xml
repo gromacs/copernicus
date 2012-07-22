@@ -1,0 +1,20 @@
+<command executable="gromacs/mdrun" id="9c1dda8071472cbb32cfbad1593408c16056dd7b" dir="/Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001" min_version="4.5">
+  <arg value="-quiet"/>
+  <arg value="-s"/>
+  <arg value="topol.tpr"/>
+  <arg value="-noappend"/>
+  <arg value="-cpi"/>
+  <arg value="state.cpt"/>
+  <arg value="-rcon"/>
+  <arg value="0.7"/>
+  <env name="GMX_VERLET_SCHEME" value="1"/>
+  <min-required>
+    <resource name="cores" value="1" />
+  </min-required>
+  <max-allowed>
+    <resource name="cores" value="1" />
+  </max-allowed>
+  <reserved>
+    <resource name="cores" value="1" />
+  </reserved>
+</command>

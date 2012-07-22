@@ -1,0 +1,68 @@
+                         :-)  G  R  O  M  A  C  S  (-:
+
+               Gromacs Runs One Microsecond At Cannonball Speeds
+
+                            :-)  VERSION 4.5.5  (-:
+
+        Written by Emile Apol, Rossen Apostolov, Herman J.C. Berendsen,
+      Aldert van Buuren, Pär Bjelkmar, Rudi van Drunen, Anton Feenstra, 
+        Gerrit Groenhof, Peter Kasson, Per Larsson, Pieter Meulenhoff, 
+           Teemu Murtola, Szilard Pall, Sander Pronk, Roland Schulz, 
+                Michael Shirts, Alfons Sijbers, Peter Tieleman,
+
+               Berk Hess, David van der Spoel, and Erik Lindahl.
+
+       Copyright (c) 1991-2000, University of Groningen, The Netherlands.
+            Copyright (c) 2001-2010, The GROMACS development team at
+        Uppsala University & The Royal Institute of Technology, Sweden.
+            check out http://www.gromacs.org for more information.
+
+         This program is free software; you can redistribute it and/or
+          modify it under the terms of the GNU General Public License
+         as published by the Free Software Foundation; either version 2
+             of the License, or (at your option) any later version.
+
+                               :-)  eneconv  (-:
+
+Option     Filename  Type         Description
+------------------------------------------------------------
+  -f /Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001/ener.part0001.edr  Input, Mult. Energy file
+  -o /Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_run_0000/ener.edr 
+                                   Output       Energy file
+
+Option       Type   Value   Description
+------------------------------------------------------
+-[no]h       bool   no      Print help info and quit
+-[no]version bool   no      Print version info and quit
+-nice        int    19      Set the nicelevel
+-b           real   -1      First time to use
+-e           real   -1      Last time to use
+-dt          real   0       Only write out frame when t MOD dt = offset
+-offset      real   0       Time offset for -dt option
+-[no]settime bool   no      Change starting time interactively
+-[no]sort    bool   yes     Sort energy files (not frames)
+-[no]rmdh    bool   no      Remove free energy block data
+-scalefac    real   1       Multiply energy component by this factor
+-[no]error   bool   yes     Stop on errors in the file
+
+Opened /Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001/ener.part0001.edr as single precision energy file
+Reading energy frame      0 time    0.000         Reading energy frame      1 time    0.024         
+Sorting disabled.
+
+Summary of files and start times used:
+
+          File                Start time
+-----------------------------------------
+/Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001/ener.part0001.edr        0.000
+
+Opened /Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001/ener.part0001.edr as single precision energy file
+Reading energy frame      0 time    0.000         
+Continue writing frames from t=0, step=0
+Writing frame time 0    Reading energy frame      1 time    0.024         Reading energy frame      2 time    0.048         Reading energy frame      3 time    0.072         Reading energy frame      4 time    0.096         Reading energy frame      5 time    0.120         Reading energy frame      6 time    0.144         Reading energy frame      7 time    0.168         Reading energy frame      8 time    0.192         Reading energy frame      9 time    0.216         Reading energy frame     10 time    0.240         Reading energy frame     11 time    0.264         Reading energy frame     12 time    0.288         Reading energy frame     13 time    0.312         Reading energy frame     14 time    0.336         Reading energy frame     15 time    0.360         Reading energy frame     16 time    0.384         Reading energy frame     17 time    0.408         Reading energy frame     18 time    0.432         Reading energy frame     19 time    0.456         Reading energy frame     20 time    0.480         Reading energy frame     30 time    0.720         Reading energy frame     40 time    0.960         Reading energy frame     50 time    1.200         Reading energy frame     60 time    1.440         Reading energy frame     70 time    1.680         Reading energy frame     80 time    1.920         Reading energy frame     90 time    2.160         Reading energy frame    100 time    2.400         Reading energy frame    110 time    2.640         Reading energy frame    120 time    2.880         Reading energy frame    130 time    3.120         Reading energy frame    140 time    3.360         Reading energy frame    150 time    3.600         Reading energy frame    160 time    3.840         Reading energy frame    170 time    4.080         Reading energy frame    180 time    4.320         Reading energy frame    190 time    4.560         Reading energy frame    200 time    4.800         Reading energy frame    300 time    7.200         Reading energy frame    400 time    9.600         Last energy frame read 417 time   10.000         
+Last frame written was at step 50000, time 10.000000
+Wrote 418 frames
+
+gcq#360: "There's no way you can rely on an experiment" (Gerrit Groenhof)
+
+
+Last step written from /Users/grantrotskoff/cpc-run/test/run/runs/mdrun_2/_persistence/run_001/ener.part0001.edr: t 10, step 50000

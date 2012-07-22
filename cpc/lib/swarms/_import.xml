@@ -47,12 +47,17 @@
     <type id="conf_path_array" base="array" member-type="conf_path">
         <desc>An array of paths: the output of a full swarm set.</desc>
     </type>
+    <type id="conf_array" base="array" member-type="file">
+    </type>
+    <type id="conf_array_array" base="array" member-type="conf_array">
+        <desc>An array of configurations without itp files</desc>
+    </type>
     
     <type id="dist_array" base="array" member-type="float">
             <desc>An array of max. path displacements.</desc>
     </type>
     
-    <type id="trj_array" base="array" member-type="file">
+    <type id="trr_array" base="array" member-type="file">
             <desc>An array of trajectory files</desc>
     </type>
 
@@ -167,7 +172,7 @@
         <desc>Simulations generating conformations for swarm trajectories.
         </desc>
         <inputs>
-            <field type="grompp_input" id="grompp_input">
+            <field type="grompp_input" id="grompp">
                 <desc>Restrained run mdp file</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
@@ -177,61 +182,78 @@
                 <desc>The number of steps for the constrained run after 
                       equilibration.</desc>
             </field>
-            <field type="conf_path" id="minimized_conf_path">
-                    <desc>Output structures of the minimization.</desc>
-            </field>
             <field type="int" id="Nswarms">
-                <desc>The number of configurations to extract from the
-                    restrained trajectories.</desc>
+                <desc>The number of swarm trajectories to run. The 
+                      restrained trajectory will output this number of
+                      frames. </desc>
+            </field>
+            <field type="conf_path" id="minimized_conf_path">
+                <desc>Output structures of the minimization and their
+                      restraint parameters.</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="conf_path_array" id="swarms">
-                    <desc>Initial swarm confs.</desc>
-            </field>
+            <field type="trr_array" id="restrained_trrs" />
         </outputs>
+        <subnet-inputs>
+            <field type="gromacs::conf_array" id="confs" />
+            <field type="gromacs::trr_array" id="trrs" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::conf_array" id="confs" />
+            <field type="gromacs::mdp_array" id="restrained_settings" />
+            <field type="gromacs::trr_array" id="trrs" />
+            <field type="gromacs::grompp_include_array_array" 
+                       id="includes" />
+        </subnet-outputs>  
         <controller log="true" executable="run_restrained" 
                     persistent_dir="true" />
     </function>
 
-    <!--<function id="prep_swarms" type="external">
+    <function id="prep_swarms" type="external">
         <desc>Generate inputs for swarm trajectories.</desc>
         <inputs>
-            <field type="trj_array" id="restrained_trjs">
+            <field type="trr_array" id="trrs">
                     <desc>Output of the restrained simulations.</desc>
             </field>
-            <field type="int" id="Nswarms">
-                    <desc>Number of swarm trajectories to run</desc>
-            </field>
-            <field type="int" id="Ninterpolants">
-                <desc>The number of steps of interpolation between the initial
-                      and target conformations.</desc>
+            <field type="file" id="tpr">
+                    <desc>The tpr file for trjconv</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="conf_path" id="swarms">
+            <field type="conf_array_array" id="out_swarms">
                     <desc>Initial swarm confs.</desc>
             </field>
         </outputs>
+        <subnet-inputs>
+            <field type="conf_array_array" id="swarm_array">
+            </field>
+        </subnet-inputs>
         <controller log="true" executable="prep_swarms" 
                     persistent_dir="true" />
-    </function> -->
+    </function>
 
     <function id="run_swarms" type="external">
         <desc>Run a large number of short unbiased trajectories.</desc>
         <inputs>
-            <field type="grompp_input" id="grompp_input">
+            <field type="grompp_input" id="grompp">
                 <desc>Swarm run mdp file</desc>
             </field>
-            <field type="conf_path_array" id="swarms">
+            <field type="file" id="tpr">
+                <desc>A tpr for g_rama</desc>
+            </field> 
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="conf_path_array" id="conf_path_array">
                     <desc>Initial swarm confs.</desc>
             </field>
-            <field type="int" id="swarm_run_steps">
+            <field type="int" id="swarm_steps">
                     <desc>Number of steps to run of unbiased simulation.</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="conf_path_array" id="end_swarms">
+            <field type="conf_path_array" id="out_swarms">
                     <desc>Output confs of unrestrained simulations.</desc>
             </field>
             <field type="xvg_path_array" id="dihedrals">
@@ -239,6 +261,18 @@
                     </desc>
             </field>
         </outputs>
+        <subnet-inputs>
+            <field type="gromacs::conf_array" id="confs">
+                <desc>The structures from unrestrained simulations</desc>
+            </field>
+            <field type="xvg_path_array" id="xvgs">
+            </field>
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::conf_array" id="confs" />
+            <field type="gromacs::mdp_array" id="swarm_settings" />
+            <field type="conf_path_array" id="out_swarms" />
+        </subnet-outputs>
         <controller log="true" executable="run_swarms" 
                     persistent_dir="true" />
     </function>
@@ -286,7 +320,8 @@
         </inputs>
         <outputs>
             <field type="xvg_path_array" id="xvgs">
-                <desc>An array of arrays of xvg files with phi/psi angles.</desc>
+                <desc>An array of arrays of xvg files with phi/psi angles.
+                </desc>
             </field>
         </outputs>
         <controller log="true" executable="g_rama_multi" persistent_dir="true"/>
@@ -358,15 +393,10 @@
             <!-- connections to equilibration -->
             <connection src="self:ext_in.restrained_steps"
                         dest="equilibration:in.restrained_steps"/>
-            <connection src="self:ext_in.Nswarms"
-                        dest="equilibration:in.Nswarms"/>
 
             <!-- connections to swarms -->
             <connection src="self:ext_in.swarm_run_steps"
                         dest="swarms:in.swarm_run_steps"/>
         </network>
     </function>
-
-
 </cpc>
-

@@ -34,17 +34,85 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
-
+from cpc.dataflow import FileValue
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
 def run(inp, out):
-    return
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
-    # the function...
+
+    # first create the right mdp file
+    merge=pers.get('merge')
+    if merge is None or merge==0:
+        merge=1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # now we set our own mdp settings
+        steps=inp.getInput('restrained_steps')
+        Nswarms=inp.getInput('Nswarms')
+        output_timing=steps/Nswarms
+        settings=[] 
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('md') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue("%d"%steps) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('%d'%output_timing) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+                                       'value' : StringValue('120') } ) )
+        out.setSubOut('restrained_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    ## the multiple minimizations
+    ## the function from fe/binding
+    mdruns=pers.get('mdruns')
+    if mdruns is None:
+        mdruns=0
+        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        # connect the minimization mdp and resources
+        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                          'runs:in.cmdline_options[0]')
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
+        out.addConnection('self:sub_out.restrained_settings', 
+                          'runs:in.settings[0]')
+        out.addConnection('self:sub_out.confs', 'runs:in.conf')
+        out.addConnection('self:sub_out.includes', 'runs:in.include')
+        # this is where we could set the dihedral restraints by merging in
+        # the itp file with the rest of the includes.
+        out.addConnection('runs:out.trr', 'self:sub_in.trrs')
+
+        # create the include array array, and populate the output trr_array
+        # we fill the trr_array with the input confs
+        in_confs=inp.getInput('minimized_conf_path')
+        for i in range(len(in_confs)):
+            conf=inp.getInput('minimized_conf_path[%d].conf'%i)
+            itp=inp.getInput('minimized_conf_path[%d].itp'%i)
+            out.setSubOut('includes[%d][0]'%i, FileValue(itp))
+            out.setSubOut('confs[%d]'%i, FileValue(conf))
+        mdruns=1
+    pers.set('mdruns', mdruns)
+
+    confs=inp.getSubnetInput('confs')
+    if confs is not None and len(confs) > 0:
+        for i in range(len(confs)):
+            trr=inp.getSubnetInputValue('trrs[%d]'%i)
+            if trr.value is not None and trr.isUpdated():
+                out.setOut('restrained_trrs[%d]'%i, trr)
     pers.write()
 
 # read the input data

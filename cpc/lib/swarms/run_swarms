@@ -34,17 +34,97 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
-
+from cpc.dataflow import FileValue
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
 def run(inp, out):
-    return
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
-    # the function...
+
+    # first create the right mdp file
+    merge=pers.get('merge')
+    if merge is None or merge==0:
+        merge=1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # now we set our own mdp settings
+        steps=inp.getInput('swarm_steps')
+        settings=[] 
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('md') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue("%s"%steps) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+                                       'value' : StringValue('120') } ) )
+        out.setSubOut('swarm_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    mdruns=pers.get('mdruns')
+    if mdruns is None:
+        mdruns=0
+        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        # connect the swarm mdp and resources
+        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                          'runs:in.cmdline_options[0]')
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
+        out.addConnection('self:sub_out.swarm_settings', 
+                          'runs:in.settings[0]')
+        out.addConnection('self:sub_out.confs', 'runs:in.conf')
+        out.addConnection('runs:out.conf', 'self:sub_in.confs')
+
+        # create the configurations array, and populate the output conf_path
+        in_confs=inp.getInput('conf_path_array')
+        Nswarms=3 # TODO len(ArrayValue(in_confs[0]))
+        for i in range(len(in_confs)):
+            for j in range(Nswarms):
+                conf=inp.getInput('conf_path_array[%d][%d].conf'%(i,j))
+                out.setSubOut('confs[%d]'%(i+j), FileValue(conf))
+        mdruns=1
+    pers.set('mdruns', mdruns)
+
+    # populate the out_swarms conf_path_array with the swarm output files
+    # we need not include itp files, as they won't be used
+    confs=inp.getSubnetInput('confs')
+    in_confs=inp.getInput('conf_path_array')
+    if confs is not None and len(confs) > 0:
+        for i in range(len(confs)):
+            conf=inp.getSubnetInputValue('confs[%d]'%i)
+            if conf.value is not None and conf.isUpdated():
+                out.setOut('out_swarms[%d][%d].conf'%(i/len(in_confs),i%len(in_confs)), conf)
+                out.setSubOut('out_swarms[%d][%d].conf'%(i/len(in_confs),i%len(in_confs)), conf)
+
+    ramas=pers.get('ramas')
+    if ramas is None:
+        ramas=0
+        out.addInstance('grama', 'g_rama_multi')
+        out.addConnection('self:sub_out.out_swarms', 'grama:in.confs')
+        out.addConnection('self:ext_in.tpr', 'grama:in.tpr')
+        out.addConnection('grama:out.xvgs', 'self:sub_in.xvgs')
+        ramas=1
+    pers.set('ramas', ramas)
+
+    xvgs=inp.getSubnetInput('xvgs')
+    if xvgs is not None and len(xvgs) > 0:
+        for i in range(len(xvgs)):
+            xvg_array=inp.getSubnetInputValue('xvgs[%d]'%i)
+            if xvg_array.value is not None and conf.isUpdated():
+                out.setOut('dihedrals[%d]'%i,xvg_array)
+
     pers.write()
 
 # read the input data
@@ -61,7 +141,6 @@ if inp.testing():
     cpc.util.plugin.testCommand("grompp -version")
     cpc.util.plugin.testCommand("trjconv -version")
     cpc.util.plugin.testCommand("gmxdump -version")
-    # try to import msmproject and thereby msmbuilder
     sys.exit(0)
 
 

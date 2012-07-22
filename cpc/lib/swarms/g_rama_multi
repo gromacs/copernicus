@@ -45,17 +45,26 @@ def g_rama_multi(inp, out):
                                                "persistent.dat"))
     insts=pers.get('insts')
     if insts is None:
-        insts=0
+        insts=[]
     confs=inp.getInput('confs')
 
-    while len(confs) > insts:
-        out.addInstance('g_rama_%d'%insts, 'gromacs::g_rama')
-        out.addConnection('self:ext_in.confs[%d]'%insts, 
-                          'g_rama_%d:in.traj'%insts)
-        out.addConnection('self:ext_in.tpr', 'g_rama_%d:in.tpr'%insts)
-        out.addConnection('g_rama_%d:out.xvg'%insts, 
-                          'self:ext_out.xvgs[%d]'%insts)
-        insts+=1
+    #while len(confs) > len(insts):
+    for i in range(len(confs)):
+        while len(insts) < i+1:
+            insts.append(0)
+            sys.stderr.write('insts[%d]: %d elements\n'%(len(insts)-1,
+                                                         insts[len(insts)-1]))
+        sconfs=inp.getInput('confs[%d]'%i)
+        while len(sconfs) > insts[i]:
+            j=insts[i]
+            instname='g_rama_%d_%d'%(i,j)
+            out.addInstance(instname, 'gromacs::g_rama')
+            out.addConnection('self:ext_in.confs[%d][%d].conf'%(i,j), 
+                              '%s:in.traj'%instname)
+            out.addConnection('self:ext_in.tpr', '%s:in.tpr'%instname)
+            out.addConnection('%s:out.xvg'%instname, 
+                              'self:ext_out.xvgs[%d][%d]'%(i,j))
+            insts[i] += 1
     pers.set('insts', insts)
     pers.write()
 

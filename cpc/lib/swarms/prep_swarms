@@ -34,17 +34,34 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
-
+from cpc.dataflow import FileValue
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
 def run(inp, out):
-    return
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
-    # the function...
+    # the multiple restrained trjconvs
+    trjconvs=pers.get('trjconvs')
+    if trjconvs is None or trjconvs<1:
+        trrs=inp.getInput('trrs')
+        for i in range(len(trrs)):
+            out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.swarm_array[%d]'%i)
+        trjconvs=1
+    pers.set('trjconvs', trjconvs)
+    
+    confs=inp.getSubnetInput('swarm_array')
+    if confs is not None and len(confs) > 0:
+        for i in range(len(confs)):
+            conf_array=getSubnetInputValue('confs[%d]'%i)
+            if conf_array.value is not None and conf_array.isUpdated():
+                out.setOut('out_swarms[%d]'%i, conf_array)
+
     pers.write()
 
 # read the input data
@@ -63,7 +80,6 @@ if inp.testing():
     cpc.util.plugin.testCommand("gmxdump -version")
     # try to import msmproject and thereby msmbuilder
     sys.exit(0)
-
 
 
 # prepare the output data

@@ -1,0 +1,411 @@
+Log file opened on Tue Jul 24 10:36:37 2012
+Host: Grants-MacBook-Air.local  pid: 648  nodeid: 0  nnodes:  1
+The Gromacs distribution was built Thu Dec 22 12:25:54 CST 2011 by
+grantrotskoff@Grants-MacBook-Air.local (Darwin 11.2.0 x86_64)
+
+
+                         :-)  G  R  O  M  A  C  S  (-:
+
+                Gravel Rubs Often Many Awfully Cauterized Sores
+
+                            :-)  VERSION 4.5.5  (-:
+
+        Written by Emile Apol, Rossen Apostolov, Herman J.C. Berendsen,
+      Aldert van Buuren, Pär Bjelkmar, Rudi van Drunen, Anton Feenstra, 
+        Gerrit Groenhof, Peter Kasson, Per Larsson, Pieter Meulenhoff, 
+           Teemu Murtola, Szilard Pall, Sander Pronk, Roland Schulz, 
+                Michael Shirts, Alfons Sijbers, Peter Tieleman,
+
+               Berk Hess, David van der Spoel, and Erik Lindahl.
+
+       Copyright (c) 1991-2000, University of Groningen, The Netherlands.
+            Copyright (c) 2001-2010, The GROMACS development team at
+        Uppsala University & The Royal Institute of Technology, Sweden.
+            check out http://www.gromacs.org for more information.
+
+         This program is free software; you can redistribute it and/or
+          modify it under the terms of the GNU General Public License
+         as published by the Free Software Foundation; either version 2
+             of the License, or (at your option) any later version.
+
+                                :-)  mdrun  (-:
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+B. Hess and C. Kutzner and D. van der Spoel and E. Lindahl
+GROMACS 4: Algorithms for highly efficient, load-balanced, and scalable
+molecular simulation
+J. Chem. Theory Comput. 4 (2008) pp. 435-447
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+D. van der Spoel, E. Lindahl, B. Hess, G. Groenhof, A. E. Mark and H. J. C.
+Berendsen
+GROMACS: Fast, Flexible and Free
+J. Comp. Chem. 26 (2005) pp. 1701-1719
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+E. Lindahl and B. Hess and D. van der Spoel
+GROMACS 3.0: A package for molecular simulation and trajectory analysis
+J. Mol. Mod. 7 (2001) pp. 306-317
+-------- -------- --- Thank You --- -------- --------
+
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+H. J. C. Berendsen, D. van der Spoel and R. van Drunen
+GROMACS: A message-passing parallel molecular dynamics implementation
+Comp. Phys. Comm. 91 (1995) pp. 43-56
+-------- -------- --- Thank You --- -------- --------
+
+Input Parameters:
+   integrator           = md
+   nsteps               = 50000
+   init_step            = 0
+   ns_type              = Grid
+   nstlist              = 6
+   ndelta               = 2
+   nstcomm              = 10
+   comm_mode            = Linear
+   nstlog               = 10000
+   nstxout              = 0
+   nstvout              = 0
+   nstfout              = 0
+   nstcalcenergy        = 6
+   nstenergy            = 120
+   nstxtcout            = 500
+   init_t               = 0
+   delta_t              = 0.0002
+   xtcprec              = 500
+   nkx                  = 40
+   nky                  = 40
+   nkz                  = 40
+   pme_order            = 4
+   ewald_rtol           = 1e-05
+   ewald_geometry       = 0
+   epsilon_surface      = 0
+   optimize_fft         = FALSE
+   ePBC                 = xyz
+   bPeriodicMols        = FALSE
+   bContinuation        = FALSE
+   bShakeSOR            = FALSE
+   etc                  = V-rescale
+   nsttcouple           = 6
+   epc                  = Berendsen
+   epctype              = Isotropic
+   nstpcouple           = 6
+   tau_p                = 10
+   ref_p (3x3):
+      ref_p[    0]={ 1.00000e+00,  0.00000e+00,  0.00000e+00}
+      ref_p[    1]={ 0.00000e+00,  1.00000e+00,  0.00000e+00}
+      ref_p[    2]={ 0.00000e+00,  0.00000e+00,  1.00000e+00}
+   compress (3x3):
+      compress[    0]={ 1.00000e-04,  0.00000e+00,  0.00000e+00}
+      compress[    1]={ 0.00000e+00,  1.00000e-04,  0.00000e+00}
+      compress[    2]={ 0.00000e+00,  0.00000e+00,  1.00000e-04}
+   refcoord_scaling     = No
+   posres_com (3):
+      posres_com[0]= 0.00000e+00
+      posres_com[1]= 0.00000e+00
+      posres_com[2]= 0.00000e+00
+   posres_comB (3):
+      posres_comB[0]= 0.00000e+00
+      posres_comB[1]= 0.00000e+00
+      posres_comB[2]= 0.00000e+00
+   andersen_seed        = 815131
+   rlist                = 1
+   rlistlong            = 1
+   rtpi                 = 0.05
+   coulombtype          = PME
+   rcoulomb_switch      = 0
+   rcoulomb             = 1
+   vdwtype              = Cut-off
+   rvdw_switch          = 0
+   rvdw                 = 1
+   epsilon_r            = 1
+   epsilon_rf           = 1
+   tabext               = 5
+   implicit_solvent     = No
+   gb_algorithm         = Still
+   gb_epsilon_solvent   = 80
+   nstgbradii           = 1
+   rgbradii             = 1
+   gb_saltconc          = 0
+   gb_obc_alpha         = 1
+   gb_obc_beta          = 0.8
+   gb_obc_gamma         = 4.85
+   gb_dielectric_offset = 0.009
+   sa_algorithm         = Ace-approximation
+   sa_surface_tension   = 2.05016
+   DispCorr             = No
+   free_energy          = no
+   init_lambda          = 0
+   delta_lambda         = 0
+   n_foreign_lambda     = 0
+   sc_alpha             = 0
+   sc_power             = 0
+   sc_sigma             = 0.3
+   sc_sigma_min         = 0.3
+   nstdhdl              = 10
+   separate_dhdl_file   = yes
+   dhdl_derivatives     = yes
+   dh_hist_size         = 0
+   dh_hist_spacing      = 0.1
+   nwall                = 0
+   wall_type            = 9-3
+   wall_atomtype[0]     = -1
+   wall_atomtype[1]     = -1
+   wall_density[0]      = 0
+   wall_density[1]      = 0
+   wall_ewald_zfac      = 3
+   pull                 = no
+   disre                = No
+   disre_weighting      = Conservative
+   disre_mixed          = FALSE
+   dr_fc                = 1000
+   dr_tau               = 0
+   nstdisreout          = 100
+   orires_fc            = 0
+   orires_tau           = 0
+   nstorireout          = 100
+   dihre-fc             = 1000
+   em_stepsize          = 0.01
+   em_tol               = 10
+   niter                = 20
+   fc_stepsize          = 0
+   nstcgsteep           = 1000
+   nbfgscorr            = 10
+   ConstAlg             = Lincs
+   shake_tol            = 0.0001
+   lincs_order          = 6
+   lincs_warnangle      = 90
+   lincs_iter           = 1
+   bd_fric              = 0
+   ld_seed              = 1993
+   cos_accel            = 0
+   deform (3x3):
+      deform[    0]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      deform[    1]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+      deform[    2]={ 0.00000e+00,  0.00000e+00,  0.00000e+00}
+   userint1             = 0
+   userint2             = 0
+   userint3             = 0
+   userint4             = 0
+   userreal1            = 0
+   userreal2            = 0
+   userreal3            = 0
+   userreal4            = 0
+grpopts:
+   nrdf:          42
+   ref_t:         298
+   tau_t:           5
+anneal:          No
+ann_npoints:           0
+   acc:	           0           0           0
+   nfreeze:           N           N           N
+   energygrp_flags[  0]: 0
+   efield-x:
+      n = 0
+   efield-xt:
+      n = 0
+   efield-y:
+      n = 0
+   efield-yt:
+      n = 0
+   efield-z:
+      n = 0
+   efield-zt:
+      n = 0
+   bQMMM                = FALSE
+   QMconstraints        = 0
+   QMMMscheme           = 0
+   scalefactor          = 1
+qm_opts:
+   ngQM                 = 0
+Table routines are used for coulomb: TRUE
+Table routines are used for vdw:     FALSE
+Will do PME sum in reciprocal space.
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+U. Essmann, L. Perera, M. L. Berkowitz, T. Darden, H. Lee and L. G. Pedersen 
+A smooth particle mesh Ewald method
+J. Chem. Phys. 103 (1995) pp. 8577-8592
+-------- -------- --- Thank You --- -------- --------
+
+Will do ordinary reciprocal space Ewald sum.
+Using a Gaussian width (1/beta) of 0.320163 nm for Ewald
+Cut-off's:   NS: 1   Coulomb: 1   LJ: 1
+System total charge: -0.000
+Generated table with 3000 data points for Ewald.
+Tabscale = 500 points/nm
+Generated table with 3000 data points for LJ6.
+Tabscale = 500 points/nm
+Generated table with 3000 data points for LJ12.
+Tabscale = 500 points/nm
+Generated table with 3000 data points for 1-4 COUL.
+Tabscale = 500 points/nm
+Generated table with 3000 data points for 1-4 LJ6.
+Tabscale = 500 points/nm
+Generated table with 3000 data points for 1-4 LJ12.
+Tabscale = 500 points/nm
+Configuring nonbonded kernels...
+Configuring standard C nonbonded kernels...
+Testing x86_64 SSE2 support... present.
+
+
+Removing pbc first time
+
+Initializing LINear Constraint Solver
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+B. Hess and H. Bekker and H. J. C. Berendsen and J. G. E. M. Fraaije
+LINCS: A Linear Constraint Solver for molecular simulations
+J. Comp. Chem. 18 (1997) pp. 1463-1472
+-------- -------- --- Thank You --- -------- --------
+
+The number of constraints is 21
+Center of mass motion removal mode is Linear
+We have the following groups for center of mass motion removal:
+  0:  rest
+
+++++ PLEASE READ AND CITE THE FOLLOWING REFERENCE ++++
+G. Bussi, D. Donadio and M. Parrinello
+Canonical sampling through velocity rescaling
+J. Chem. Phys. 126 (2007) pp. 014101
+-------- -------- --- Thank You --- -------- --------
+
+There are: 22 Atoms
+Max number of connections per atom is 92
+Total number of connections is 616
+Max number of graph edges per atom is 4
+Total number of graph edges is 42
+
+Constraining the starting coordinates (step 0)
+
+Constraining the coordinates at t0-dt (step 0)
+RMS relative constraint deviation after constraining: 9.85e-07
+Initial temperature: 0.379664 K
+
+Started mdrun on node 0 Tue Jul 24 10:36:37 2012
+
+           Step           Time         Lambda
+              0        0.00000        0.00000
+
+Grid: 5 x 5 x 5 cells
+   Energies (kJ/mol)
+          Angle    Proper Dih.  Improper Dih.          LJ-14     Coulomb-14
+    4.61128e+01    6.14315e+01    1.57027e-01    1.93368e+01    1.90717e+02
+        LJ (SR)   Coulomb (SR)   Coul. recip.      Potential    Kinetic En.
+    1.68179e+01   -6.99463e+01   -2.80814e+02   -1.61873e+01    9.39112e-02
+   Total Energy    Temperature Pressure (bar)   Constr. rmsd
+   -1.60934e+01    5.37850e-01   -3.43802e+02    1.00649e-06
+
+
+Step 462: Run time exceeded 0.000 hours, will terminate the run
+           Step           Time         Lambda
+            468        0.09360        0.00000
+
+Writing checkpoint, step 468 at Tue Jul 24 10:36:39 2012
+
+
+   Energies (kJ/mol)
+          Angle    Proper Dih.  Improper Dih.          LJ-14     Coulomb-14
+    3.57167e+01    5.97056e+01    8.54116e-01    1.11463e+01    1.89854e+02
+        LJ (SR)   Coulomb (SR)   Coul. recip.      Potential    Kinetic En.
+   -3.69519e+00   -5.42531e+01   -2.80399e+02   -4.10707e+01    2.49112e+01
+   Total Energy    Temperature Pressure (bar)   Constr. rmsd
+   -1.61595e+01    1.42672e+02   -2.58362e+01    0.00000e+00
+
+	<======  ###############  ==>
+	<====  A V E R A G E S  ====>
+	<==  ###############  ======>
+
+	Statistics over 469 steps using 79 frames
+
+   Energies (kJ/mol)
+          Angle    Proper Dih.  Improper Dih.          LJ-14     Coulomb-14
+    2.66668e+01    5.80255e+01    9.68172e-01    1.41655e+01    1.93891e+02
+        LJ (SR)   Coulomb (SR)   Coul. recip.      Potential    Kinetic En.
+    1.68591e+00   -6.20197e+01   -2.81891e+02   -4.85082e+01    3.27626e+01
+   Total Energy    Temperature Pressure (bar)   Constr. rmsd
+   -1.57455e+01    1.87639e+02   -3.05135e+00    0.00000e+00
+
+          Box-X          Box-Y          Box-Z
+    4.72932e+00    4.72932e+00    4.72932e+00
+
+   Total Virial (kJ/mol)
+    9.54010e+00   -3.10729e+00   -4.70800e+00
+   -3.10733e+00    3.90189e+01    1.07893e+01
+   -4.70796e+00    1.07893e+01    1.33601e+01
+
+   Pressure (bar)
+   -3.07963e-02    1.45204e+00    8.23493e-01
+    1.45206e+00   -9.35382e+00   -4.44058e+00
+    8.23481e-01   -4.44060e+00    2.30573e-01
+
+   Total Dipole (D)
+   -1.52604e+00    1.06418e+00   -2.89012e+00
+
+
+	M E G A - F L O P S   A C C O U N T I N G
+
+   RF=Reaction-Field  FE=Free Energy  SCFE=Soft-Core/Free Energy
+   T=Tabulated        W3=SPC/TIP3p    W4=TIP4p (single or pairs)
+   NF=No Forces
+
+ Computing:                               M-Number         M-Flops  % Flops
+-----------------------------------------------------------------------------
+ Coul(T) + LJ                             0.062377           3.431     0.0
+ Outer nonbonded loop                     0.010318           0.103     0.0
+ 1,4 nonbonded interactions               0.019229           1.731     0.0
+ Calc Weights                             0.030954           1.114     0.0
+ Spread Q Bspline                         0.660352           1.321     0.0
+ Gather F Bspline                         0.660352           3.962     0.0
+ 3D-FFT                                 958.457780        7667.662    88.1
+ Solve PME                               15.758400        1008.538    11.6
+ NS-Pairs                                 0.019987           0.420     0.0
+ Reset In Box                             0.001738           0.005     0.0
+ Shift-X                                  0.020636           0.124     0.0
+ CG-CoM                                   0.001738           0.005     0.0
+ Angles                                   0.016884           2.837     0.0
+ Propers                                  0.027202           6.229     0.1
+ Virial                                   0.005293           0.095     0.0
+ Stop-CM                                  0.001034           0.010     0.0
+ P-Coupling                               0.010318           0.062     0.0
+ Calc-Ekin                                0.010340           0.279     0.0
+ Lincs                                    0.009891           0.593     0.0
+ Lincs-Mat                                0.271296           1.085     0.0
+ Constraint-V                             0.019740           0.158     0.0
+ Constraint-Vir                           0.001659           0.040     0.0
+-----------------------------------------------------------------------------
+ Total                                                    8699.804   100.0
+-----------------------------------------------------------------------------
+
+
+     R E A L   C Y C L E   A N D   T I M E   A C C O U N T I N G
+
+ Computing:         Nodes     Number     G-Cycles    Seconds     %
+-----------------------------------------------------------------------
+ Neighbor search        1         79        0.006        0.0     0.2
+ Force                  1        469        0.041        0.0     1.4
+ PME mesh               1        469        2.836        1.8    97.7
+ Write traj.            1          2        0.005        0.0     0.2
+ Update                 1        469        0.001        0.0     0.1
+ Constraints            1        469        0.004        0.0     0.1
+ Rest                   1                   0.008        0.0     0.3
+-----------------------------------------------------------------------
+ Total                  1                   2.901        1.8   100.0
+-----------------------------------------------------------------------
+-----------------------------------------------------------------------
+ PME spread/gather      1        938        0.243        0.2     8.4
+ PME 3D-FFT             1        938        1.860        1.2    64.1
+ PME solve              1        469        0.731        0.5    25.2
+-----------------------------------------------------------------------
+
+               NODE (s)   Real (s)      (%)
+       Time:      1.808      1.813     99.7
+               (Mnbf/s)   (GFlops)   (ns/day)  (hour/ns)
+Performance:      0.035      4.813      4.483      5.353
+Finished mdrun on node 0 Tue Jul 24 10:36:39 2012

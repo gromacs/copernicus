@@ -70,7 +70,7 @@ optimize_fft             = no
 ; Temperature coupling  
 tcoupl                   = V-rescale
 ; Groups to couple separately
-tc-grps                  = protein
+tc-grps                  = system
 ; Time constant (ps) and reference temperature (K)
 tau_t                    = 5.0
 ref_t                    = 298

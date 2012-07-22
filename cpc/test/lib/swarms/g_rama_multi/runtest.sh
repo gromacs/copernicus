@@ -22,10 +22,15 @@ fi
 
 
 ./cpcc set-file grm:in.tpr cpc/test/lib/swarms/g_rama_multi/topol.tpr
-./cpcc set-file grm:in.confs[0] cpc/test/lib/swarms/g_rama_multi/out0.gro
-./cpcc set-file grm:in.confs[1] cpc/test/lib/swarms/g_rama_multi/out1.gro
-./cpcc set-file grm:in.confs[2] cpc/test/lib/swarms/g_rama_multi/out2.gro
-./cpcc set-file grm:in.confs[3] cpc/test/lib/swarms/g_rama_multi/out3.gro
+./cpcc set-file grm:in.confs[0][0].conf cpc/test/lib/swarms/g_rama_multi/0.gro
+./cpcc set-file grm:in.confs[0][0].itp cpc/test/lib/swarms/g_rama_multi/0.itp
+
+./cpcc set-file grm:in.confs[1][0].conf cpc/test/lib/swarms/g_rama_multi/1.gro
+./cpcc set-file grm:in.confs[1][0].itp cpc/test/lib/swarms/g_rama_multi/0.itp
+./cpcc set-file grm:in.confs[1][1].conf cpc/test/lib/swarms/g_rama_multi/2.gro
+./cpcc set-file grm:in.confs[1][1].itp cpc/test/lib/swarms/g_rama_multi/0.itp
+./cpcc set-file grm:in.confs[1][2].conf cpc/test/lib/swarms/g_rama_multi/3.gro
+./cpcc set-file grm:in.confs[1][2].itp cpc/test/lib/swarms/g_rama_multi/0.itp
 
 # and commit this set of updates
 ./cpcc commit
