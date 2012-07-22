@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# check whether all input files will be available:
+if [ ! -e examples/mdrun-test/conf.gro ]; then
+    echo "This example script must be run from within the copernicus base directory"
+    exit 1
+fi
+
+# start the project
+./cpcc start test
+# import the gromacs module with grompp and mdrun functions
+./cpcc import gromacs
+# add the grompp and mdrun function instances
+./cpcc instance gromacs::grompp grompp
+./cpcc instance gromacs::mdrun mdrun
+./cpcc instance gromacs::trjconv trjconv
+# activate the function instance
+./cpcc activate 
+
+# start a transaction: all the 'set' and 'connect' commands following this
+# will be executed as one atomic operation upon the cpcc commit command.
+./cpcc transact
+# connect the trr output of mdrun to the input of trjconv
+./cpcc connect mdrun:out.trr trjconv:in.trr
+# connect the tpr output of grompp to the tpr input of mdrun
+./cpcc connect grompp:out.tpr mdrun:in.tpr
+# connect the tpr output of grompp to the input of trjconv
+./cpcc connect grompp:out.tpr trjconv:in.tpr
+# set the grompp inputs
+./cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro
+./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp
+./cpcc set-file grompp:in.top  examples/mdrun-test/topol.top
+# 
+./cpcc set grompp:in.settings[0].name nsteps
+./cpcc set grompp:in.settings[0].value 10000
+./cpcc set grompp:in.settings[1].name integrator
+./cpcc set grompp:in.settings[1].value md
+# trjconv options
+./cpcc set trjconv:in.pbc "mol"
+./cpcc set trjconv:in.output_group "0"
+# and commit this set of updates
+
+
+./cpcc commit
+
