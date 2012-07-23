@@ -96,7 +96,8 @@ def g_energy(inp):
     fo.setOut('unit', StringValue(unit))
     return fo 
 
-def trjconv(inp):
+def _trjconv(inp, fo, split):
+    """Internal implementation of trjconv and trjconv_split"""
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjconv -version")
@@ -107,7 +108,12 @@ def trjconv(inp):
     #item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
-    cmdline=["trjconv", '-s', tprfile, '-o', xtcoutname, '-f', trajfile]
+    grooutname=os.path.join(outDir, "out.gro")
+    cmdline=["trjconv", '-s', tprfile, '-f', trajfile] 
+    if not split:
+        cmdline.extend(['-o', xtcoutname])
+    else:
+        cmdline.extend(['-sep', '-o', grooutname])
     ndxfile=inp.getInput('ndx')
     if ndxfile is not None:
         cmdline.extend(['-n', ndxfile] )
@@ -166,11 +172,29 @@ def trjconv(inp):
     (stdout, stderr)=proc.communicate(writeStdin.getvalue())
     if proc.returncode != 0:
         raise GromacsError("ERROR: trjconv returned %s"%(stdout))
-    fo=inp.getFunctionOutput()
-    fo.setOut('xtc', FileValue(xtcoutname))
-    return fo 
+    if not split:
+        fo.setOut('xtc', FileValue(xtcoutname))
+    else:
+        i=0
+        # iterate as long as there are files with anme 'out%d.gro' for 
+        # increasing i
+        while True:
+            filename=os.path.join(outDir, 'out%d.gro'%i)
+            if not os.path.exists(filename):
+                break
+            fo.setOut('confs[%d]'%i, FileValue(filename))
+            i+=1
 
+def trjconv(inp):
+    fo=inp.getFunctionOutput()
+    _trjconv(inp, fo, False)
+    return fo
  
+def trjconv_split(inp):
+    fo=inp.getFunctionOutput()
+    _trjconv(inp, fo, True)
+    return fo
+
 def pdb2gmx(inp):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
