@@ -321,12 +321,20 @@ class FunctionRunOutput(object):
         """Add a specified output value.
             ioitem = the full output specifier 
             outval = an OutValue (OutValue object) """
+        if not isinstance(outval, value.Value):
+            raise FunctionRunError(
+                        "Output value for '%s' is not a Value object."%
+                        (ioitem))
         self.outputs.append( OutputItem(ioitem, outval) )
 
     def setSubOut(self, ioitem, outval):
         """Set a specified subnet output value.
             name = the output name
             outval = the output value (OutValue object) """
+        if not isinstance(outval, value.Value):
+            raise FunctionRunError(
+                        "Subnet output value for '%s' is not a Value object."%
+                        (ioitem))
         self.subnetOutputs.append( OutputItem(ioitem, outval) )
 
     def hasOutputs(self):
