@@ -19,7 +19,7 @@
     </type>-->
 
 
-    <type id="mdp-file_array" base="array" member-type="file" />
+    <type id="mdp_file_array" base="array" member-type="file" />
     <type id="conf_array" base="array" member-type="file" />
     <type id="top_array" base="array" member-type="file" />
     <type id="ndx_array" base="array" member-type="file" />
@@ -423,7 +423,7 @@
             <field type="conf_array" id="conf">
                 <desc>An array of .gro configuration files</desc>
             </field>
-            <field type="mdp-file_array" id="mdp" >
+            <field type="mdp_file_array" id="mdp" >
                 <desc>An array of .mdp settings files</desc>
             </field>
             <field type="top_array" id="top" >
@@ -503,7 +503,7 @@
             <field type="conf_array" id="conf">
                 <desc>An array of .gro configuration files</desc>
             </field>
-            <field type="mdp-file_array" id="mdp" >
+            <field type="mdp_file_array" id="mdp" >
                 <desc>An array of .mdp settings files</desc>
             </field>
             <field type="top_array" id="top" >

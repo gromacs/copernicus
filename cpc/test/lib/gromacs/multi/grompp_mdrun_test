@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e examples/mdrun-test/conf.gro ]; then
+if [ ! -e cpc/test/lib/gromacs/multi/conf.gro ]; then
     echo "This example script must be run from within the copernicus base directory"
     exit 1
 fi
@@ -23,13 +23,13 @@ fi
 #./cpcc connect grompp:out.tpr mdrun:in.tpr
 # set the grompp inputs
 
-./cpcc connect grompp_multi:out.result mdrun_multi:in.tpr
+./cpcc connect grompp_multi:out.tpr mdrun_multi:in.tpr
 #NOTE WE CAN LOOP OVER THIS
-./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
-./cpcc set-file grompp_multi:in.mdp[+]  examples/multi-test/grompp.mdp
-./cpcc set-file grompp_multi:in.top[+]  examples/multi-test/topol.top
+./cpcc set-file grompp_multi:in.conf[+] cpc/test/lib/gromacs/multi/conf.gro
+./cpcc set-file grompp_multi:in.mdp[+]  cpc/test/lib/gromacs/multi/grompp.mdp
+./cpcc set-file grompp_multi:in.top[+]  cpc/test/lib/gromacs/multi/topol.top
 
-./cpcc set-file grompp_multi:in.conf[+] examples/multi-test/conf.gro
+./cpcc set-file grompp_multi:in.conf[+] cpc/test/lib/gromacs/multi/conf.gro
 
 #NOTE these ones cannot be set with +
 #./cpcc set grompp_multi:in.settings[0].name nsteps

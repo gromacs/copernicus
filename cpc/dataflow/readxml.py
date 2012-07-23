@@ -245,7 +245,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key("id"):
                 raise ProjectXMLError("function has no id", self)
             fntype=attrs.getValue("type") 
-            id=attrs.getValue("id")
+            id=keywords.fixID(attrs.getValue("id"))
             #if type == "command":
             #    tsk=atomic.CommandFunction(id, [], [], None, None, None)
             if fntype == "python":
@@ -277,7 +277,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("type has no id", self)
             if not attrs.has_key("base"):
                 raise ProjectXMLError("type has no base", self)
-            name=attrs.getValue("id")
+            name=keywords.fixID(attrs.getValue("id"))
             basetype=self.importList.getTypeByFullName(attrs.getValue("base"), 
                                                      self.thisImport)
             #basetype=self.project.getType(attrs.getValue("base"))
@@ -409,7 +409,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                         raise ProjectXMLError("No id in list field", self)
                     const=cpc.util.getBooleanAttribute(attrs,"const")
                     opt=cpc.util.getBooleanAttribute(attrs,"opt")
-                    nm=attrs.getValue("id")
+                    nm=keywords.fixID(attrs.getValue("id"))
                     self.type.addMember(nm, tp, opt, const)
                 # add it to the stack
                 self.type=tp
@@ -444,7 +444,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("instance has no id", self)
             if not attrs.has_key("function"):
                 raise ProjectXMLError("instance has no function", self)
-            id=attrs.getValue('id')
+            id=keywords.fixID(attrs.getValue("id"))
             fn=attrs.getValue('function')
             func=self.importList.getFunctionByFullName(fn, self.thisImport)
             self.instance=instance.Instance(id, func, fn, self.thisImport)
@@ -580,7 +580,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("active instance has no state", self)
             if not attrs.has_key("seqnr"):
                 raise ProjectXMLError("active instance has no seqnr", self)
-            name=attrs.getValue("id")
+            name=keywords.fixID(attrs.getValue("id"))
             stStr=attrs.getValue("state")
             # now get the actual state
             state=None
@@ -619,7 +619,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 seqnr=int(attrs.getValue("seqnr"))
             else:
                 seqnr=0
-            name=attrs.getValue("id")
+            name=keywords.fixID(attrs.getValue("id"))
             # TODO fix this for new type struct.
             val=None
             if attrs.has_key("value"):

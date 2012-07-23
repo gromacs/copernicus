@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e examples/mdrun-test/conf.gro ]; then
+if [ ! -e cpc/test/lib/gromacs/multi/topol.tpr ]; then
     echo "This example script must be run from within the copernicus base directory"
     exit 1
 fi
@@ -22,8 +22,8 @@ fi
 # connect the tpr output of grompp to the tpr input of mdrun
 
 #NOTE WE CAN LOOP OVER THIS
-./cpcc set-file mdrun_multi:in.tpr[+] examples/multi-test/topol.tpr
-#./cpcc set-file mdrun_multi:in.tpr[+] examples/multi-test/topol.tpr
+./cpcc set-file mdrun_multi:in.tpr[+] cpc/test/lib/gromacs/multi/topol.tpr
+#./cpcc set-file mdrun_multi:in.tpr[+] cpc/test/lib/gromacs/multi/topol.tpr
  
 ./cpcc commit
 

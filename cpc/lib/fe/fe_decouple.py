@@ -180,7 +180,7 @@ def decouple(inp, out, relaxation_time, mult):
         out.setSubOut('endpoint_array[0]', StringValue('vdwq'))
         out.setSubOut('endpoint_array[1]', StringValue('vdw'))
         out.setSubOut('endpoint_array[2]', StringValue('none'))
-        out.setSubOut('n_lambdas_init', IntValue(10))
+        out.setSubOut('n_lambdas_init', IntValue(16))
         # this is a rough guess, but shouldn't matter too much:
         out.setSubOut('nsteps', IntValue(20*relaxation_time) )
         out.setSubOut('nsteps_init', IntValue(relaxation_time) )

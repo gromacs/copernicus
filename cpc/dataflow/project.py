@@ -155,14 +155,16 @@ class Project(object):
         """Get a value for a specific name according to the rule
            [instance]:[instance].[ioitem]."""
         #with self.updateLock:
-        instanceName,direction,ioItemList=connection.splitIOName(itemname, 
-                                                                 None)
+        itemname=keywords.fixID(itemname)
+        instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
         return instance.getNamedValue(direction, ioItemList)
 
     def scheduleSet(self, itemname, literal, outf, sourceType=None,
                     printName=None):
         """Add an instance of a set in the transaction schedule."""
+        itemname=keywords.fixID(itemname)
+        instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instanceName,direction,ioItemList=connection.splitIOName(itemname, None)
         instance=self.active.getNamedActiveInstance(instanceName)
         lstItem=transaction.Set(self, itemname, instance, direction, 
@@ -172,6 +174,8 @@ class Project(object):
 
     def scheduleConnect(self, src, dst, outf):
         """Add an instance of a connect in the transaction schedule."""
+        src=keywords.fixID(src)
+        dst=keywords.fixID(dst)
         lstItem=transaction.Connect(self, src, dst)
         with self.transactionListStackLock:
             self.transactionListStack[-1].addItem(lstItem, self, outf)
@@ -215,16 +219,17 @@ class Project(object):
     def getNamedItemList(self, pathname):
         """Get an list based on a path name according to the rule
            [instance]:[instance]"""
+        pathname=keywords.fixID(pathname)
         with self.networkLock:
             ret=dict()
             if ( (keywords.SubTypeSep in pathname) or 
                  (keywords.ArraySepStart in pathname) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.In)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.Out)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.SubIn)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.SubOut)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.ExtIn)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep, keywords.ExtOut))):
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.In)) or
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.Out)) or
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.SubIn)) or
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.SubOut)) or
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtIn)) or
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtOut))):
                 # it is an active I/O item
                 instName,direction,itemlist=connection.splitIOName(pathname, 
                                                                    None)
@@ -303,38 +308,9 @@ class Project(object):
 
     def getNamedDescription(self, pathname):
         """Get a description of a named function/type/lib"""
+        pathname=keywords.fixID(pathname)
         #with self.updateLock:
         ret=dict()
-            # the item 
-            #if ( (keywords.SubTypeSep in pathname) or 
-            #     (keywords.ArraySepStart in pathname) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.In)) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.Out)) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.SubIn)) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.SubOut)) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.ExtIn)) or
-            #     pathname.endswith("%s%s"%(keywords.InstSep, keywords.ExtOut))):
-            #    # it is a function's IO item.
-            #    fnName, direction, itemlist=connection.splitIOName(pathname, None)
-            #    try:
-            #        func=self.imports.getFunctionByFullName(fnName, 
-            #                                              self.topLevelImport)
-            #        if direction==function_io.inputs:
-            #            dirItem=func.getInputs()
-            #        elif directino==function_io.outputs:
-            #            dirItem=func.getOutputs()
-            #        elif direction==function_io.subnetInputs:
-            #            dirItem=func.getSubnetInputs()
-            #        elif directino==function_io.subnetOutputs:
-            #            dirItem=func.getSubnetOutputs()
-            #        #item=self.active.getNamedActiveInstance(instanceName)
-            #        item=
-            #        ret["type"]="function i/o type"
-            #    except active.ActiveError:
-            #        ret["name"]="Not found: %s"%pathname
-            #        ret["desc"]=""
-            #        return ret
-            #else:
         item=self.imports.getItemByFullName(pathname)
         if item is not None:
             ret["name"]=pathname
@@ -410,6 +386,7 @@ class Project(object):
     def getGraph(self, pathname):
         """Get an graph description based on a path name according to the rule
            [instance]:[instance]."""
+        pathname=keywords.fixID(pathname)
         with self.networkLock:
             item=self.active.getNamedActiveInstance(pathname)
             ret=dict()
@@ -428,6 +405,8 @@ class Project(object):
     def addInstance(self, name, functionName):
         """Add an instance with a name and function name to the top-level
            network."""
+        name=keywords.fixID(name)
+        functionName=keywords.fixID(functionName)
         with self.networkLock:
             func=self.imports.getFunctionByFullName(functionName, 
                                                     self.topLevelImport)
@@ -443,6 +422,7 @@ class Project(object):
 
     def importName(self, name):
         """Import a named module."""
+        name=keywords.fixID(name)
         with self.networkLock:
             if not self.imports.exists(name):
                 baseFilename="%s.xml"%name.replace(keywords.ModSep, '/')
@@ -478,6 +458,7 @@ class Project(object):
 
     def activate(self, pathname):
         """Activate all active instances."""
+        pathname=keywords.fixID(pathname)
         with self.networkLock:
             if pathname.strip() == "":
                 self.active.activateAll()
@@ -487,6 +468,7 @@ class Project(object):
 
     def deactivate(self, pathname):
         """De-activate all active instances."""
+        pathname=keywords.fixID(pathname)
         with self.networkLock:
             if pathname.strip() == "":
                 self.active.deactivateAll()
@@ -496,6 +478,7 @@ class Project(object):
 
     def clearError(self, pathname, recursive, outf):
         """Clear an error on an item."""
+        pathname=keywords.fixID(pathname)
         with self.networkLock:
             item=self.active.getNamedActiveInstance(pathname)
             ret=item.clearError(recursive, outf)

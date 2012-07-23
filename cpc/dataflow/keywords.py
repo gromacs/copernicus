@@ -43,3 +43,8 @@ SubTypeSep='.'
 ModSep='::'
 
 
+# an additional function for backward-compatibility: all IDs should have
+# underscores, not dashes, and we force dashes to be underscores.
+def fixID(idString):
+    return idString.replace('-', '_')
+
