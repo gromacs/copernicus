@@ -21,15 +21,15 @@ fi
 # will be executed as one atomic operation upon the cpcc commit command.
 ./cpcc transact
 # connect the trr output of mdrun to the input of trjconv
-./cpcc connect mdrun:out.trr trjconv:in.trr
+./cpcc connect mdrun:out.trr trjconv:in.traj
 # connect the tpr output of grompp to the tpr input of mdrun
 ./cpcc connect grompp:out.tpr mdrun:in.tpr
 # connect the tpr output of grompp to the input of trjconv
 ./cpcc connect grompp:out.tpr trjconv:in.tpr
 # set the grompp inputs
-./cpcc set-file grompp:in.conf examples/mdrun-test/conf.gro
-./cpcc set-file grompp:in.mdp  examples/mdrun-test/grompp.mdp
-./cpcc set-file grompp:in.top  examples/mdrun-test/topol.top
+./cpcc set-file grompp:in.conf examples/trjconv-test/conf.gro
+./cpcc set-file grompp:in.mdp  examples/trjconv-test/grompp.mdp
+./cpcc set-file grompp:in.top  examples/trjconv-test/topol.top
 # 
 ./cpcc set grompp:in.settings[0].name nsteps
 ./cpcc set grompp:in.settings[0].value 10000

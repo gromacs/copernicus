@@ -24,7 +24,7 @@ comm-grps                =
 
 ; OUTPUT CONTROL OPTIONS
 ; Output frequency for coords (x), velocities (v) and forces (f)
-nstxout                  = 0
+nstxout                  = 25
 nstvout                  = 0
 nstfout                  = 0
 ; Output frequency for energies to log file and energy file
