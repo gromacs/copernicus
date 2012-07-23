@@ -23,9 +23,9 @@ import re
 import os.path
 import shutil
 import glob
-import stat
 import subprocess
 import logging
+import shlex
 import time
 try:
     from cStringIO import StringIO
@@ -44,7 +44,6 @@ from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
 import cpc.server.command
 import cpc.util
-
 
 class GromacsError(cpc.util.CpcError):
     def __init__(self, str):
@@ -97,7 +96,8 @@ def g_energy(inp):
     fo.setOut('unit', StringValue(unit))
     return fo 
 
-def trjconv(inp):
+def _trjconv(inp, fo, split):
+    """Internal implementation of trjconv and trjconv_split"""
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjconv -version")
@@ -108,7 +108,12 @@ def trjconv(inp):
     #item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
-    cmdline=["trjconv", '-s', tprfile, '-o', xtcoutname, '-f', trajfile]
+    grooutname=os.path.join(outDir, "out.gro")
+    cmdline=["trjconv", '-s', tprfile, '-f', trajfile] 
+    if not split:
+        cmdline.extend(['-o', xtcoutname])
+    else:
+        cmdline.extend(['-sep', '-o', grooutname])
     ndxfile=inp.getInput('ndx')
     if ndxfile is not None:
         cmdline.extend(['-n', ndxfile] )
@@ -146,6 +151,11 @@ def trjconv(inp):
             fit_type='rot+trans'
         cmdline.extend(['-fit', fit_type])
         writeStdin.write("%s\n"%fit)
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline.extend(cmdlineOpts)
     log.debug(cmdline)
     outputGroup=inp.getInput('output_group')
     if outputGroup is not None:
@@ -162,8 +172,68 @@ def trjconv(inp):
     (stdout, stderr)=proc.communicate(writeStdin.getvalue())
     if proc.returncode != 0:
         raise GromacsError("ERROR: trjconv returned %s"%(stdout))
+    if not split:
+        fo.setOut('xtc', FileValue(xtcoutname))
+    else:
+        i=0
+        # iterate as long as there are files with anme 'out%d.gro' for 
+        # increasing i
+        while True:
+            filename=os.path.join(outDir, 'out%d.gro'%i)
+            if not os.path.exists(filename):
+                break
+            fo.setOut('confs[%d]'%i, FileValue(filename))
+            i+=1
+
+def trjconv(inp):
     fo=inp.getFunctionOutput()
-    fo.setOut('xtc', FileValue(xtcoutname))
-    return fo 
+    _trjconv(inp, fo, False)
+    return fo
+ 
+def trjconv_split(inp):
+    fo=inp.getFunctionOutput()
+    _trjconv(inp, fo, True)
+    return fo
 
+def pdb2gmx(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("pdb2gmx -version")
+        return
+    input_choices=inp.getInput('input_choices')
+    if input_choices is None:
+        input_choices=''
+    pdbfile=inp.getInput('conf')
+    #pdbfile=os.path.join(inp.outputDir,inp.getInput('conf'))
+    #shutil.copy(inp.getInput('conf'),pdbfile)
+    forcefield=inp.getInput('ff')
+    watermodel=inp.getInput('water')
+    skip_hydrogens=True #default to ignh
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
+    if skip_hydrogens:
+        cmdline.extend(["-ignh"])
+    cmdline.extend(cmdlineOpts)
 
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.outputDir,
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(input_choices)
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: pdb2gmx returned %s"%(stdout))
+    fo=inp.getFunctionOutput()
+    fo.setOut('conf', FileValue(os.path.join(inp.outputDir,'conf.gro')))
+    fo.setOut('top', FileValue(os.path.join(inp.outputDir,'topol.top')))
+    #how do we handle itp output files?
+    itpfiles=glob.glob(os.path.join(inp.outputDir,'*.itp'))
+    fo.setOut('include',itpfiles)
+    for i in range(len(itpfiles)):
+        fo.setOut('include[%d]'%(i),itpfiles[i])
+    return fo
+ 

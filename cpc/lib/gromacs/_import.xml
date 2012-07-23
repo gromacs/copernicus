@@ -343,6 +343,10 @@
                                      step
                       </desc>
             </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for trjconv
+                    to use</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="file" id="xtc">
@@ -354,6 +358,134 @@
                     persistent_dir="true" />
     </function>
 
+
+    <function id="trjconv_split" type="python-extended">
+        <desc>Splits trajectories into single frames. Same options as
+              trjconv.</desc>
+        <inputs>
+            <field type="file" id="traj">
+                <desc>The trajectory as compressed xtc or trr, or gro.</desc>
+            </field>
+            <field type="file" id="tpr">
+                <desc>A run file from grompp with the same settings as 
+                      used for the trajectory.</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>An index file.</desc>
+            </field>
+            <field type="string" id="output_group" opt="true">
+                <desc>If set, only writes the named group to the output 
+                      trajectory, instead of everything.</desc>
+            </field>
+            <field type="float" id="first_frame_ps" opt="true">
+                <desc>The first frame in ps to read from the trajectory.</desc>
+            </field>
+            <field type="float" id="last_frame_ps" opt="true">
+                <desc>The last frame in ps to read from the trajectory.</desc>
+            </field>
+            <field type="float" id="dt" opt="true">
+                <desc>Frame spacing in ps for the output trajectory.</desc>
+            </field>
+            <field type="int" id="skip" opt="true">
+                <desc>Frame spacing in frame numbers for the output trajectory.
+                </desc>
+            </field>
+            <field type="float" id="dump" opt="true">
+                <desc>If set, trjconv outputs a single frame: the one closest 
+                      in ps to this value.</desc>
+            </field>
+            <field type="string" id="pbc" opt="true">
+                <desc>How to apply periodic  boundary conditions. 
+                      Can be 
+                      'none' for no re-interpretation,
+                      'mol' to keep molecules whole (with COM in the box),
+                      'res' to keep residues whole (with COM in the box),
+                      'atom' to force atoms in the box,
+                      'nojump' to force the movement continuous across the 
+                            trajectory,
+                      'cluster' to keep an indexed cluster whole.
+                       </desc>
+            </field>
+            <field type="string" id="ur" opt="true">
+                <desc>The shape of the unit cell for the 'pbc' input: 
+                      'rect' creates a rectangular unit cell
+                      'tric' shows a triclinic unit cell
+                      'compact' shows the unit cell of points closest to the 
+                                center of the box 
+                                </desc>
+            </field>
+            <field type="string" id="center" opt="true">
+                <desc>If set to a group name, centers the COM of that group in 
+                      the output trajectory.</desc>
+            </field>
+            <field type="string" id="fit" opt="true">
+                <desc>If set to a group name, fits that structure to a 
+                      reference structure; fit type set in fit_type</desc>
+            </field>
+            <field type="string" id="fit_type" opt="true">
+                <desc>The type of fitting to use; the default methods fit 
+                      against a reference structure from the tpr input. The 
+                      choices are:
+                      'rot+trans': for rotation and translation (the default),
+                      'rotxy+transxy': for rotation and translation only in xy
+                      'translation': for only translation
+                      'transxy': for translation in xy
+                      'progressive': for rot+trans fitting against the previous 
+                                     step
+                      </desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for trjconv
+                    to use</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="confs">
+                <desc>Output trajectory</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.trjconv_split" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
+
+
+
+    <function id="pdb2gmx" type="python-extended">
+        <desc>Creates processed gro and topology from pdb.</desc>
+        <inputs>
+            <field type="file" id="conf">
+                <desc>The input structure.</desc>
+            </field>
+            <field type="string" id="ff">
+                <desc>Force field to use.</desc>
+            </field>
+            <field type="string" id="water">
+                <desc>Water model to use.</desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for mdrun
+                    to use</desc>
+            </field>
+            <field type="string" id="input_choices" opt="true">
+                <desc>Stdin for any manual choices.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="conf">
+                <desc>Processed structure</desc>
+            </field>
+            <field type="file" id="top">
+                <desc>Topology</desc>
+            </field>
+            <field type="grompp_include_array" id="include">
+                <desc>array of .itp files created.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.pdb2gmx" 
+                    import="cpc.lib.gromacs" 
+                    persistent_dir="true" />
+    </function>
 
 
     <!-- g_bar -->

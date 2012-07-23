@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<cpc>
+    <desc>High-level functions designed to run Modeller</desc>
+    <import name="resource" />
+
+    <type id="out-pairmodel-multi" base="record">
+        <field type="file" id="conf">
+            <desc>Output configuration (.pdb) file</desc>
+        </field>
+        <field type="file" id="stderr">
+            <desc>Modeller's standard error output</desc>
+        </field>
+        <field type="file" id="stdout">
+            <desc>Modeller's standard output output</desc>
+        </field>
+    </type>
+
+    <type id="conf_array" base="array" member-type="file" />
+    <type id="seq_array" base="array" member-type="file" />
+    <type id="out_pairmodel_multi_array" base="array" member-type="out-pairmodel-multi" />
+
+    <type id="cmdline_array" base="array" member-type="string" />
+
+    <function id="pairmodel" type="python-extended">
+        <desc>Models a sequence based on a pair of templates.</desc>
+        <inputs>
+            <field type="file" id="testseq">
+                <desc>The sequence to model</desc>
+            </field>
+            <field type="file" id="seq1">
+                <desc>The sequence for template1</desc>
+            </field>
+            <field type="file" id="seq2">
+                <desc>The sequence for template2</desc>
+            </field>
+            <field type="file" id="pdb1">
+                <desc>The pdb structure for template1</desc>
+            </field>
+            <field type="file" id="pdb2">
+                <desc>The pdb structure for template2</desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options to pairmodel
+                      </desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for tuning this run.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="conf">
+                <desc>Output configuration (.pdb) file</desc>
+            </field>
+            <field type="file" id="stderr">
+                <desc>Modeller's standard error output</desc>
+            </field>
+            <field type="file" id="stdout">
+                <desc>Modeller's standard output output</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.modeltools.pairmodel" 
+                    import="cpc.lib.modeltools" 
+                    persistent_dir="true" />
+    </function>
+
+</cpc>

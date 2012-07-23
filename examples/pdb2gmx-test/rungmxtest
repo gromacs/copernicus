@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# check whether all input files will be available:
+if [ ! -e examples/pdb2gmx-test/dhfr.pdb ]; then
+    echo "This example script must be run from within the copernicus base directory"
+    exit 1
+fi
+
+# start the project
+./cpcc start test
+# import the gromacs module with grompp and mdrun functions
+./cpcc import gromacs
+# add the grompp and mdrun function instances
+./cpcc instance gromacs::grompp grompp
+./cpcc instance gromacs::mdrun mdrun
+./cpcc instance gromacs::pdb2gmx pdb2gmx
+# activate the function instance
+./cpcc activate 
+
+# start a transaction: all the 'set' and 'connect' commands following this
+# will be executed as one atomic operation upon the cpcc commit command.
+./cpcc transact
+# connect the tpr output of grompp to the tpr input of mdrun
+./cpcc connect grompp:out.tpr mdrun:in.tpr
+# connect the tpr output of grompp to the input of pdb2gmx
+./cpcc connect pdb2gmx:out.conf grompp:in.conf
+./cpcc connect pdb2gmx:out.top grompp:in.top
+./cpcc connect pdb2gmx:out.include grompp:in.include
+# set the grompp inputs
+./cpcc set-file grompp:in.mdp  examples/pdb2gmx-test/grompp.mdp
+./cpcc set grompp:in.settings[0].name nsteps
+./cpcc set grompp:in.settings[0].value 10000
+./cpcc set grompp:in.settings[1].name integrator
+./cpcc set grompp:in.settings[1].value md
+# pdb2gmx options
+./cpcc set-file pdb2gmx:in.conf examples/pdb2gmx-test/dhfr.pdb
+./cpcc set pdb2gmx:in.water "tip3p"
+./cpcc set pdb2gmx:in.ff "amber99sb-ildn"
+#following gives parser error: Non-simple literals not yet implemented
+#./cpcc set pdb2gmx:in.cmdline_options "-ignh"
+# and commit this set of updates
+
+
+./cpcc commit
+

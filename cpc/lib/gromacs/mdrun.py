@@ -45,7 +45,6 @@ import cpc.util
 import tune
 import iterate
 
-
 class GromacsError(cpc.util.CpcError):
     pass
 
