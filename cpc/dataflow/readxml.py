@@ -223,7 +223,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         elif name == "import":
             if not attrs.has_key('name'):
                 raise ProjectXMLError("import has no name", self)
-            name=attrs.getValue('name')
+            name=keywords.fixID(attrs.getValue('name'))
             nimport=self.importList.get(name)
             if nimport is None:
                 # we don't have it yet. Read it.
@@ -244,7 +244,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                             self)
             if not attrs.has_key("id"):
                 raise ProjectXMLError("function has no id", self)
-            fntype=attrs.getValue("type") 
+            fntype=attrs.getValue("type")
             id=keywords.fixID(attrs.getValue("id"))
             #if type == "command":
             #    tsk=atomic.CommandFunction(id, [], [], None, None, None)
@@ -279,13 +279,13 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("type has no base", self)
             name=keywords.fixID(attrs.getValue("id"))
             basetype=self.importList.getTypeByFullName(attrs.getValue("base"), 
-                                                     self.thisImport)
+                                                       self.thisImport)
             #basetype=self.project.getType(attrs.getValue("base"))
             self.type=basetype.inherit(name, self.thisImport)
             self.typeStack.append( (self.type, None) )
             if basetype.isSubtype(vtype.arrayType):
                 if attrs.has_key("member-type"):
-                    tnm=attrs.getValue("member-type")
+                    tnm=keywords.fixID(attrs.getValue("member-type"))
                     members=self.importList.getTypeByFullName(tnm, 
                                                               self.thisImport)
                     #members=self.project.getType(attrs.getValue("members"))
@@ -296,7 +296,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                           name, self)
             elif basetype.isSubtype(vtype.dictType):
                 if attrs.has_key("member-type"):
-                    tnm=attrs.getValue("member-type")
+                    tnm=keywords.fixID(attrs.getValue("member-type"))
                     members=self.importList.getTypeByFullName(tnm, 
                                                               self.thisImport)
                     #members=self.project.getType(attrs.getValue("members"))
@@ -394,7 +394,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("Field without type context", self)
             if not attrs.has_key("type"):
                 raise ProjectXMLError("No type in field", self)
-            tpnm=attrs.getValue("type")
+            tpnm=keywords.fixID(attrs.getValue("type"))
             if self.type is not None and self.type.isCompound():
                 tp=self.importList.getTypeByFullName(tpnm, self.thisImport)
                 nm=None
@@ -445,7 +445,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key("function"):
                 raise ProjectXMLError("instance has no function", self)
             id=keywords.fixID(attrs.getValue("id"))
-            fn=attrs.getValue('function')
+            fn=keywords.fixID(attrs.getValue('function'))
             func=self.importList.getFunctionByFullName(fn, self.thisImport)
             self.instance=instance.Instance(id, func, fn, self.thisImport)
         elif name == "assign":
@@ -456,8 +456,8 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key('dest'):
                 raise ProjectXMLError("assign has no destination", self)
             valueString=attrs.getValue('value')
-            typestr=attrs.getValue('type')
-            dst=attrs.getValue('dest')
+            typestr=keywords.fixID(attrs.getValue('type'))
+            dst=keywords.fixID(attrs.getValue('dest'))
             # get the type object
             #tp=self.project.getType(typestr)
             tp=self.importList.getTypeByFullName(typestr, self.thisImport)
@@ -482,10 +482,10 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key('dest'):
                 raise ProjectXMLError("connection has no destination", self)
 
-            dst=attrs.getValue('dest')
+            dst=keywords.fixID(attrs.getValue('dest'))
             dstInstName,dstDir,dstItemName=(connection.splitIOName(dst, None))
             if attrs.has_key('src'):
-                src=attrs.getValue('src')
+                src=keywords.fixID(attrs.getValue('src'))
                 # now check the source
                 srcInstName,srcDir,srcItemName=(connection.splitIOName(src,
                                                                        None))
@@ -496,7 +496,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             else:
                 if not attrs.has_key("type"):
                     raise ProjectXMLError("connection has no type", self)
-                typestr=attrs.getValue('type')
+                typestr=keywords.fixID(attrs.getValue('type'))
                 valueString=attrs.getValue('value')
                 tp=self.importList.getTypeByFullName(typestr, self.thisImport)
                 #tp=self.project.getType(typestr)
@@ -539,11 +539,11 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 self.functionType == "python-extended"):
                 importName=None
                 if attrs.has_key("import"):
-                    importName=attrs.getValue('import')
+                    importName=keywords.fixID(attrs.getValue('import'))
                 if not attrs.has_key('function'):
                     raise ProjectXMLError("python controller has no function",
                                           self)
-                fnName=attrs.getValue("function")
+                fnName=keywords.fixID(attrs.getValue("function"))
                 self.function.setFunction(fnName, importName)
             elif self.functionType == "command":
                 pass
@@ -613,7 +613,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             #    raise ProjectXMLError("active conn field has no seqnr", self)
             if not attrs.has_key("type"):
                 raise ProjectXMLError("active conn field has no type", self)
-            tpnm=attrs.getValue("type")
+            tpnm=keywords.fixID(attrs.getValue("type"))
             tp=self.importList.getTypeByFullName(tpnm, self.thisImport)
             if attrs.has_key("seqnr"):
                 seqnr=int(attrs.getValue("seqnr"))
@@ -628,7 +628,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                         "active connection value without value_type", 
                         self)
                 #vtp=self.project.getType(attrs.getValue("value_type"))
-                vtpnm=attrs.getValue("value_type")
+                vtpnm=keywords.fixID(attrs.getValue("value_type"))
                 vtp=self.importList.getTypeByFullName(vtpnm, self.thisImport)
                 valnm=attrs.getValue("value")
                 val=value.interpetLiteral(valueString, tp) 

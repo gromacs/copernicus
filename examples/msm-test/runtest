@@ -39,5 +39,5 @@ fi
 ./cpcc set msm:in.grpname  Protein
 
 # commit the changes
-#./cpcc commit
+./cpcc commit
 

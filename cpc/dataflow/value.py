@@ -31,6 +31,7 @@ log=logging.getLogger('cpc.dataflow.value')
 import cpc.util
 import apperror
 import vtype
+import keywords
 
 class ValError(apperror.ApplicationError):
     pass
@@ -626,7 +627,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
         if name in vtype.basicTypes:
             basicType=vtype.basicTypes[name]
             if 'type' in attrs:
-                tpnm=attrs.getValue('type')
+                tpnm=keywords.fixID(attrs.getValue('type'))
                 if self.importList is not None:
                     tp=self.importList.getTypeByFullName(tpnm,
                                                          self.currentImport)
@@ -652,7 +653,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     if (len(self.typeStack)>0 
                         and self.typeStack[-1].isCompound()):
                         # if it's a field, it's named.
-                        itemStackAdd=attrs.getValue('field')
+                        itemStackAdd=keywords.fixID(attrs.getValue('field'))
                         createType=None
                         if self.allowUnknownTypes:
                             createType=tp
@@ -667,7 +668,8 @@ class ValueReader(xml.sax.handler.ContentHandler):
                                           attrs.getValue('field'), self)
                 elif 'subitem' in attrs:
                     # this is a single, directly addressed sub-item
-                    subitems=vtype.parseItemList(attrs.getValue('subitem'))
+                    subitems=vtype.parseItemList(
+                                    keywords.fixID(attrs.getValue('subitem')))
                     subVal=subVal.getSubValue(subitems, create=True,
                                               setCreateSourceTag=self.sourceTag)
                 elif ( len(self.typeStack) > 0 and 

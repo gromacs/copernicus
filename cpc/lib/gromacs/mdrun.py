@@ -229,9 +229,9 @@ def mdrun(inp):
             confFile=os.path.join(persDir, 'conf.gro')
             extractConf(newtpr, confFile)
             tune.tune(rsrc, confFile, newtpr, persDir)
-        if inp.cmd is not None:
-            log.debug("Canceling commands")
-            fo.cancelPrevCommands()
+        #if inp.cmd is not None:
+        #    log.debug("Canceling commands")
+        #    fo.cancelPrevCommands()
         pers.set('initialized', True)
     else:
         if rsrc.max.get('cores') is None:
@@ -489,6 +489,7 @@ def mdrun(inp):
         log.debug("Adding command")
         fo.addCommand(cmd)
         if inp.getInputValue('tpr').isUpdated():
+            log.debug("Canceling commands")
             fo.cancelPrevCommands()
     # and save for further invocations
     rsrc.save(rsrcFilename)

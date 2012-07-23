@@ -69,9 +69,9 @@ class Function(description.Describable):
                                      vtype.recordType, lib=lib)
         self.outputs=vtype.RecordType("%s:out"%self.name, 
                                       vtype.recordType, lib=lib)
-        self.subnetInputs=vtype.RecordType("%s:sub-in"%self.name, 
+        self.subnetInputs=vtype.RecordType("%s:sub_in"%self.name, 
                                            vtype.recordType, lib=lib)
-        self.subnetOutputs=vtype.RecordType("%s:sub-out"%self.name, 
+        self.subnetOutputs=vtype.RecordType("%s:sub_out"%self.name, 
                                             vtype.recordType, lib=lib)
         self.inputs.markImplicit()
         self.outputs.markImplicit()
