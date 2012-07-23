@@ -176,6 +176,10 @@ try:
         resp = clnt.listRequest("queue")
         renderMethod = CmdLine.listQueue
         ProcessedResponse(resp).pprint(renderMethod)
+        clnt=ClientMessage()
+        resp = clnt.listRequest("running")
+        renderMethod = CmdLine.listRunning
+        ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "running" or cmd == "r":
         clnt=ClientMessage()
         resp = clnt.listRequest("running")
