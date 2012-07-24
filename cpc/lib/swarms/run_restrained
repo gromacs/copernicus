@@ -107,9 +107,9 @@ def run(inp, out):
         mdruns=1
     pers.set('mdruns', mdruns)
 
-    confs=inp.getSubnetInput('confs')
-    if confs is not None and len(confs) > 0:
-        for i in range(len(confs)):
+    trrs=inp.getSubnetInput('trrs')
+    if trrs is not None and len(trrs) > 0:
+        for i in range(len(trrs)):
             trr=inp.getSubnetInputValue('trrs[%d]'%i)
             if trr.value is not None and trr.isUpdated():
                 out.setOut('restrained_trrs[%d]'%i, trr)

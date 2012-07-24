@@ -58,7 +58,7 @@ def run(inp, out):
     confs=inp.getSubnetInput('swarm_array')
     if confs is not None and len(confs) > 0:
         for i in range(len(confs)):
-            conf_array=getSubnetInputValue('confs[%d]'%i)
+            conf_array=inp.getSubnetInputValue('swarm_array[%d]'%i)
             if conf_array.value is not None and conf_array.isUpdated():
                 out.setOut('in_swarms[%d]'%i, conf_array)
 
