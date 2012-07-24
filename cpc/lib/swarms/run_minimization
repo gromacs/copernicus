@@ -109,7 +109,7 @@ def run(inp, out):
         for i in range(len(confs)):
             conf=inp.getSubnetInputValue('confs[%d]'%i)
             if conf.value is not None and conf.isUpdated():
-                out.setOut('minimized_conf_path[%d].conf'%i, conf)
+                out.setOut('minimized_conf_path[%d]'%i, conf)
     pers.write()
 
 # read the input data

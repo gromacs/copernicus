@@ -60,7 +60,7 @@ def run(inp, out):
         for i in range(len(confs)):
             conf_array=getSubnetInputValue('confs[%d]'%i)
             if conf_array.value is not None and conf_array.isUpdated():
-                out.setOut('out_swarms[%d]'%i, conf_array)
+                out.setOut('in_swarms[%d]'%i, conf_array)
 
     pers.write()
 

@@ -92,7 +92,7 @@ def run(inp, out):
         Nswarms=3 # TODO len(ArrayValue(in_confs[0]))
         for i in range(len(in_confs)):
             for j in range(Nswarms):
-                conf=inp.getInput('conf_path_array[%d][%d].conf'%(i,j))
+                conf=inp.getInput('conf_array_array[%d][%d]'%(i,j))
                 out.setSubOut('confs[%d]'%(i+j), FileValue(conf))
         mdruns=1
     pers.set('mdruns', mdruns)
@@ -100,7 +100,7 @@ def run(inp, out):
     # populate the out_swarms conf_path_array with the swarm output files
     # we need not include itp files, as they won't be used
     confs=inp.getSubnetInput('confs')
-    in_confs=inp.getInput('conf_path_array')
+    in_confs=inp.getInput('conf_array_array')
     if confs is not None and len(confs) > 0:
         for i in range(len(confs)):
             conf=inp.getSubnetInputValue('confs[%d]'%i)

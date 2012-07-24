@@ -221,7 +221,7 @@
             </field>
         </inputs>
         <outputs>
-            <field type="conf_array_array" id="out_swarms">
+            <field type="conf_array_array" id="in_swarms">
                     <desc>Initial swarm confs.</desc>
             </field>
         </outputs>
@@ -245,7 +245,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_path_array" id="conf_path_array">
+            <field type="conf_array_array" id="conf_array_array">
                     <desc>Initial swarm confs.</desc>
             </field>
             <field type="int" id="swarm_steps">
@@ -283,9 +283,11 @@
         </desc>
         <inputs>
             <field type="xvg_path_array" id="dihedrals">
-                    <desc>The swarm trajectory output, sent to
-                            g_rama to get points in z-space.
-                    </desc>
+                <desc>The swarm trajectory output, sent to
+                        g_rama to get points in z-space.</desc>
+            </field>
+            <field type="conf_path" id="restrained_out">
+                <desc>The output confs of restrained simulation"</desc>
             </field>
             <field type="file" id="init_top">
                 <desc>The topology to add restraints to.</desc>
@@ -295,15 +297,20 @@
                 </desc>
             </field>
             <field type="file" id="res_index">
-                <desc>The index file with a group that determines the phi/psi 
+                <desc>The index file with a single group that determines the phi/psi 
                         dihedrals to use for the z space. </desc>
             </field>
         </inputs>
         <outputs>
-            <field type="file" id="newtop">
+            <field type="conf_path" id="conf_path">
+                <desc>Output confs from restrained simulation together with
+                    .itp files containing the new set of dihedral restraint
+                    values for the next iteration. </desc>
+            </field>
+            <!-- <field type="file" id="newtop">
                  <desc>Topology file with restraints for 
                         next iteration.</desc>
-            </field>
+            </field>-->
         </outputs>
         <controller log="true" executable="reparametrize" 
                     persistent_dir="true" />
@@ -331,27 +338,28 @@
     <function id="dihedral_swarm_iteration" type="network">
         <desc>A single iteration of the swarm-based string method</desc>
         <inputs>
-            <field type="grompp_input" id="grompp">
+            <field type="file" id="start_conf">
+                <desc>The starting structure (state A)</desc>
+            </field>
+            <field type="grompp_input" id="minim_grompp">
                 <desc>A full set of input values for grompp (except 
-                      configuration).
+                      configuration) for the minimization runs.
                   </desc>
              </field>
-             <!-- <field type="grompp_input" id="restrained_grompp">
+             <field type="grompp_input" id="equi_grompp">
                 <desc>A full set of input values for grompp (except 
-                      configuration).
-                  </desc>
-             </field>
-             <field type="grompp_input" id="swarm_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                </desc>
-            </field> -->       
+                    configuration) for the restrained and swarm
+                    equilibrations.</desc>
+            </field>
+            <field type="file" id="tpr">
+                <desc>A tpr file for the system.</desc>
+            </field>
             <field type="conf_path" id="path">
                 <desc>A full set of structures along the path so far.</desc>
             </field>
-            <field type="resource::run_desc" id="resources" opt="true">
+            <!--<field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
-            </field>
+            </field>-->
             <field type="float" id="em_tolerance">
                 <desc>The number of minimization steps for the swarm iteration.
                 </desc>
@@ -359,7 +367,7 @@
             <field type="int" id="restrained_steps">
                 <desc>The number of steps of restrained equilibration.</desc>
             </field>
-            <field type="int" id="swarm_run_steps">
+            <field type="int" id="swarm_steps">
                 <desc>The number of steps to run in a free simulation for the 
                       swarm runs.</desc>
             </field>
@@ -371,32 +379,68 @@
             <field type="conf_path" id="path">
                 <desc>The full interpolated path so far.</desc>
             </field>
-            <field type="float" id="distance">
+            <!--<field type="float" id="distance">
                 <desc>The largest displacement in z-space for the new path.
                 </desc>
-            </field>
+            </field>-->
         </outputs>
         <network>
             <instance id="minimization" function="run_minimization"/>
             <instance id="equilibration" function="run_restrained"/>
+            <instance id="prep_swarms" function="prep_swarms"/>
             <instance id="swarms" function="run_swarms"/>
-            <instance id="reparametrization" function="reparametrize"/>
+            <instance id="reparametrize" function="reparametrize"/>
 
             <!-- connections to minimization -->
-            <connection src="self:ext_in.grompp_input"
-                        dest="minimization:in.grompp_input"/>
+            <connection src="self:ext_in.minim_grompp"
+                        dest="minimization:in.grompp"/>
             <connection src="self:ext_in.em_tolerance"
                         dest="minimization:in.em_tolerance"/>
             <connection src="self:ext_in.conf_path"
                         dest="minimization:in.conf_path"/>
 
+            <!-- connect minimization to restrained_runs -->
+            <connection src="minimization:out.minimized_conf_path"
+                        dest="equilibration:in.minimized_conf_path"/>
             <!-- connections to equilibration -->
             <connection src="self:ext_in.restrained_steps"
                         dest="equilibration:in.restrained_steps"/>
+            <connection src="self:ext_in.equi_grompp"
+                        dest="equilibration:in.grompp"/>
+            <connection src="self:ext_in.Nswarms"
+                dest="equilibration:in.Nswarms"/>
 
-            <!-- connections to swarms -->
-            <connection src="self:ext_in.swarm_run_steps"
-                        dest="swarms:in.swarm_run_steps"/>
+            <!-- TODO connect restrained_run out confs to reparam for global output-->
+            <connection src="equilibration:out.conf_path"
+                        dest="reparametrize:in.restrained_out"/>
+                    
+            <!-- connect restrained_runs to prep_swarms -->
+            <connection src="equilibration:out.restrained_trrs"
+                        dest="prep_swarms:in.trrs"/>
+            <connection src="self:ext_in.tpr"
+                        dest="prep_swarms:in.tpr"/>
+
+            <!-- connect prep_swarms to run_swarms-->
+            <connection src="prep_swarms:out.in_swarms"
+                        dest="swarms:in.conf_array_array"/>
+            <connection src="self:ext_in.swarm_steps"
+                        dest="swarms:in.swarm_steps"/>
+            <connection src="self:ext_in.equi_grompp"
+                        dest="swarms:in.grompp"/>
+
+            <!-- connect run_swarms to reparametrize-->
+            <connection src="swarms:out.dihedrals"
+                        dest="reparametrize:in.dihedrals"/>
+            <connection src="self:ext_in.equi_grompp.top"
+                        dest="reparametrize:in.init_top"/>
+            <connection src="self:ext_in.equi_grompp.ndx"
+                        dest="reparametrize:in.res_index"/>
+            <connection src="self:ext_in.start_conf"
+                        dest="reparametrize:in.start_conf"/>
+
+            <!-- connection reparam output to iteration output
+            <connection src="reparametrization:out."
+                dest="self:out."/>-->
         </network>
     </function>
 </cpc>

@@ -1,4 +1,0 @@
-[ dihedral_restraints ]
-; ai   aj   ak   al  type  label  phi  dphi  kfac  power
-    5    7    9   15    1    1-16.5775    0    1    2
-    5    7    9   15    1    1 -1.1439    0    1    2

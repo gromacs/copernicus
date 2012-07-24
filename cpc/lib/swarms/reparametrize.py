@@ -4,7 +4,6 @@
 #	swarm structure dihedral angles (.xvg)
 #	topology file (.itp)
 #	index.ndx
-#a	Nswarms - number of swarms
 #	n - number of interpolants 
 # outputs:
 #	topology file for use with next iteration
@@ -17,7 +16,10 @@ import os
 import res_selection
 
 
-def reparametrize(diheds, selection, top, newtop): #, Nswarms, n):
+def reparametrize(diheds, selection, start_conf, end_conf, top): 
+    n = len(diheds)+2 # no longer includes start and end confs
+    Nswarms = len(diheds[1])
+    #newtop = open(newtop,'w')
     # helper functions for list operations
     def add(x,y): return x+y
     def scale(k,v):
@@ -78,7 +80,7 @@ def reparametrize(diheds, selection, top, newtop): #, Nswarms, n):
     # extract initial and target dihedral values
     initpt = []
     for r in selection:
-            xvg = open('init.xvg','r')
+            xvg = open(start_conf,'r')
             for line in xvg:
                     if re.search(r'\-%s\n'%r,line):
                             phi_val = float(line.split()[0])
@@ -87,7 +89,7 @@ def reparametrize(diheds, selection, top, newtop): #, Nswarms, n):
 
     targetpt = []
     for r in selection:
-            xvg = open('target.xvg','r')
+            xvg = open(end_conf,'r')
             for line in xvg:
                     if re.search(r'\-%s\n'%r,line):
                             phi_val = float(line.split()[0])
@@ -107,10 +109,11 @@ def reparametrize(diheds, selection, top, newtop): #, Nswarms, n):
     # write the topology for the next iteration
     # treat the reparam values as a stack
     for k in range(1,n):
-            print "Writing restraints for interpolant number %i" %k
-            newtop.write("\n#ifdef %i_restraints\n"% k)
-            newtop.write("[ dihedral_restraints ]\n")
-            newtop.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
+            itp=open('%d.itp'%k,'w')
+            sys.stderr.write("Writing restraints for interpolant number %i\n" %k)
+            #newtop.write("\n#ifdef %i_restraints\n"% k)
+            itp.write("[ dihedral_restraints ]\n")
+            itp.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
             stack=adjusted[k-1]
             for r in selection:
                     i = 0 # there may be multiple residues matching the resnr, e.g., dimers
@@ -128,15 +131,15 @@ def reparametrize(diheds, selection, top, newtop): #, Nswarms, n):
                             phi_val=stack[i]
                             psi_val=stack[i+1]
                             # write phi, psi angles
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(phi[i*4].atomnr,phi[i*4+1].atomnr,
+                            itp.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(phi[i*4].atomnr,phi[i*4+1].atomnr,
                                               phi[i*4+2].atomnr,phi[i*4+3].atomnr,1,1,phi_val,0,1,2))
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(psi[i*4].atomnr,psi[i*4+1].atomnr,
+                            itp.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(psi[i*4].atomnr,psi[i*4+1].atomnr,
                                               psi[i*4+2].atomnr,psi[i*4+3].atomnr,1,1,psi_val,0,1,2))
 
                     # delete the already added values from the stack
                     stack = stack[numres*2-1:]
 
-            newtop.write("#endif\n")
+            itp.write("#endif\n")
 
 
 #Nswarms=200
