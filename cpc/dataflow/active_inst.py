@@ -491,6 +491,7 @@ class ActiveInstance(object):
                                self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, task.seqNr, task)
+                #log.debug("1 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
                 oval.propagate(task, task.seqNr)
@@ -509,6 +510,7 @@ class ActiveInstance(object):
                          self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, task.seqNr, task)
+                #log.debug("2 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
                 oval.propagate(task, task.seqNr)
@@ -574,9 +576,16 @@ class ActiveInstance(object):
                     self._genTask()
             if upd1:
                 self.stagedInputVal.setUpdated(False)
+                self.inputVal.setUpdated(False)
             if upd2:
                 self.stagedSubnetInputVal.setUpdated(False)
+                self.subnetInputVal.setUpdated(False)
 
+   
+    def resetUpdated(self):
+        with self.inputLock:
+            self.outputVal.setUpdated(False)
+            self.subnetOutputVal.setUpdated(False)
 
     #def resetUpdated(self):
     #    """Reset the updated tag."""
@@ -656,7 +665,8 @@ class ActiveInstance(object):
            from another source can take place in the mean time. 
            Normally, this is project.networkLock
           """
-        newVal.setUpdated(True)
+        #log.debug("3 - Marking update for %s"%newVal.getFullName())
+        newVal.markUpdated(True)
         val.update(newVal, None, sourceTag=sourceTag)
         val.propagate(sourceTag, None)
 

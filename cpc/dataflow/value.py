@@ -424,6 +424,8 @@ class Value(object):
     def setUpdated(self, updated):
         """Set the updated field for this value, and all its subvalues
            to 'updated'"""
+        #if updated:
+        #    log.debug("**Setting %s to updated"%self.getFullName())
         self.updated=updated
         if isinstance(self.value, list):
             for val in self.value:
@@ -434,6 +436,8 @@ class Value(object):
 
     def markUpdated(self, updated):
         """Set the updated field for this value and its parents."""
+        #if updated:
+        #    log.debug("Setting %s to updated"%self.getFullName())
         self.updated=updated
         if self.parent is not None:
             self.parent.markUpdated(updated)

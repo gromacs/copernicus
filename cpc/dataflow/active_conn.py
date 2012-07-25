@@ -199,6 +199,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
             if ( (dest.acp.direction == function_io.inputs) or 
                  (dest.acp.direction == function_io.subnetInputs) ):
                 dest.acp.activeInstance.handleNewInput(sourceTag, seqNr)
+            else:
+                dest.acp.activeInstance.resetUpdated()
             dest.acp.notifyDestinations(sourceTag, seqNr)
 
     def searchDestinations(self):

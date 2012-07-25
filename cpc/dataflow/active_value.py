@@ -112,7 +112,9 @@ class ActiveValue(value.Value):
         self.fileValue=None
         # check updated
         if srcVal.updated: 
+            #log.debug("10 - Marking update for %s from %s"%(self.getFullName(), srcVal.getFullName()))
             self.markUpdated(True)
+            #srcVal.updated=True
         # now set the value.
         if not srcVal.basetype.isCompound():
             #self.updated=srcVal.updated
