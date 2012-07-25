@@ -124,7 +124,12 @@ class Worker(object):
             self.runCondVar.acquire()
             stopWaiting=False
             while not stopWaiting:
-                if self.acceptCommands:
+                haveFinishedWorkloads=False
+                for workload in self.workloads:
+                    if not workload.running:
+                        haveFinishedWorkloads=True
+                        break
+                if self.acceptCommands and not haveFinishedWorkloads:
                     haveRemainingResources=self._haveRemainingResources()
                     if haveRemainingResources:
                         log.info("Have free resources. Waiting 30 seconds")
