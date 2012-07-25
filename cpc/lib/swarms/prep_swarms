@@ -51,16 +51,16 @@ def run(inp, out):
             out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
             out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
             out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
-            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.swarm_array[%d]'%i)
+            out.addConnection('conv%d:out.confs'%i, 'self:ext_out.in_swarms[%d]'%i)
         trjconvs=1
     pers.set('trjconvs', trjconvs)
     
-    confs=inp.getSubnetInput('swarm_array')
-    if confs is not None and len(confs) > 0:
-        for i in range(len(confs)):
-            conf_array=inp.getSubnetInputValue('swarm_array[%d]'%i)
-            if conf_array.value is not None and conf_array.isUpdated():
-                out.setOut('in_swarms[%d]'%i, conf_array)
+    #confs=inp.getSubnetInput('swarm_array')
+    #if confs is not None and len(confs) > 0:
+    #    for i in range(len(confs)):
+    #        conf_array=inp.getSubnetInputValue('swarm_array[%d]'%i)
+    #        if conf_array.value is not None and conf_array.isUpdated():
+    #            out.setOut('in_swarms[%d]'%i, conf_array)
 
     pers.write()
 

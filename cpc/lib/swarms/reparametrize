@@ -59,6 +59,7 @@ def rep(inp, out):
        dihedrals.append(di_array)
 
     # pass these inputs to the python script
+    # ensure that all the dihedral files exist at this point
     itp=os.path.join(inp.outputDir, '%d.itp'%k)
     reparametrize.reparametrize(dihedrals, ndx_file, start_conf, end_conf, init_top)
 

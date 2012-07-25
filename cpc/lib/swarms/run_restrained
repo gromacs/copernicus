@@ -46,7 +46,7 @@ def run(inp, out):
 
     # first create the right mdp file
     merge=pers.get('merge')
-    if merge is None or merge==0:
+    if merge is None and merge!=1:
         merge=1
         out.addInstance('merge', 'gromacs::merge_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
@@ -75,11 +75,8 @@ def run(inp, out):
         out.setSubOut('restrained_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
-    ## the multiple minimizations
-    ## the function from fe/binding
     mdruns=pers.get('mdruns')
-    if mdruns is None:
-        mdruns=0
+    if mdruns is None and mdruns!=1:
         out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
         # connect the minimization mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
@@ -90,7 +87,7 @@ def run(inp, out):
         out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
         out.addConnection('self:sub_out.restrained_settings', 
                           'runs:in.settings[0]')
-        out.addConnection('self:sub_out.confs', 'runs:in.conf')
+        #out.addConnection('self:sub_out.confs', 'runs:in.conf')
         out.addConnection('self:sub_out.includes', 'runs:in.include')
         # this is where we could set the dihedral restraints by merging in
         # the itp file with the rest of the includes.
@@ -100,19 +97,23 @@ def run(inp, out):
         # we fill the trr_array with the input confs
         in_confs=inp.getInput('minimized_conf_path')
         for i in range(len(in_confs)):
-            conf=inp.getInput('minimized_conf_path[%d].conf'%i)
+            #conf=inp.getInput('minimized_conf_path[%d].conf'%i)
             itp=inp.getInput('minimized_conf_path[%d].itp'%i)
             out.setSubOut('includes[%d][0]'%i, FileValue(itp))
-            out.setSubOut('confs[%d]'%i, FileValue(conf))
+            #out.setSubOut('confs[%d]'%i, FileValue(conf))
+            out.addConnection('self:ext_in.minimized_conf_path[%d].conf'%i,'runs:in.conf[%d]'%i)
+            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.path[%d].conf'%i)
+            out.addConnection('runs:out.trr[%d]'%i, 'self:ext_out.restrained_trrs[%d]'%i)
+
         mdruns=1
     pers.set('mdruns', mdruns)
 
-    trrs=inp.getSubnetInput('trrs')
-    if trrs is not None and len(trrs) > 0:
-        for i in range(len(trrs)):
-            trr=inp.getSubnetInputValue('trrs[%d]'%i)
-            if trr.value is not None and trr.isUpdated():
-                out.setOut('restrained_trrs[%d]'%i, trr)
+    #trrs=inp.getSubnetInput('trrs')
+    #if trrs is not None and len(trrs) > 0:
+    #    for i in range(len(trrs)):
+    #        trr=inp.getSubnetInputValue('trrs[%d]'%i)
+    #        if trr.value is not None and trr.isUpdated():
+    #            out.setOut('restrained_trrs[%d]'%i, trr)
     pers.write()
 
 # read the input data

@@ -76,8 +76,7 @@ def run(inp, out):
     ## the multiple minimizations
     ## the function from fe/binding
     mdruns=pers.get('mdruns')
-    if mdruns is None:
-        mdruns=0
+    if mdruns is None and mdruns<1:
         out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
         # connect the minimization mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')

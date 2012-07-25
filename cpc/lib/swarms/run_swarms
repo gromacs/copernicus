@@ -94,12 +94,12 @@ def run(inp, out):
         Nswarms = len(in_confs[0].value)
         for i in range(len(in_confs)):
             for j in range(Nswarms):
-                out.addInstance('rama_%d'%(i+j),"gromacs::g_rama")
+                out.addInstance('rama_%d_%d'%(i,j),"gromacs::g_rama")
                 conf=inp.getInput('conf_array_array[%d][%d]'%(i,j))
-                out.setSubOut('confs[%d]'%(i+j), FileValue(conf))
+                out.setSubOut('confs[%d]'%(i*Nswarms+j), FileValue(conf))
                 out.addConnection('self:ext_in.tpr', 'rama_%d:in.tpr'%(i+j))
                 out.addConnection('runs:out.conf[%d]'%(i+j),'rama_%d:in.traj'%(i+j))
-                out.addConnection('rama_%d:out.xvg'%(i+j),'self:ext_out.dihedrals[%d][%d]'%(i,j))
+                out.addConnection('rama_%d_%d:out.xvg'%(i,j),'self:ext_out.dihedrals[%d][%d]'%(i,j))
         mdruns=1
     pers.set('mdruns', mdruns)
 

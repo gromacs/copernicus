@@ -194,6 +194,7 @@
         </inputs>
         <outputs>
             <field type="trr_array" id="restrained_trrs" />
+            <field type="conf_path" id="path"/>
         </outputs>
         <subnet-inputs>
             <field type="gromacs::conf_array" id="confs" />
@@ -396,7 +397,7 @@
                         dest="minimization:in.grompp"/>
             <connection src="self:ext_in.em_tolerance"
                         dest="minimization:in.em_tolerance"/>
-            <connection src="self:ext_in.conf_path"
+            <connection src="self:ext_in.path"
                         dest="minimization:in.conf_path"/>
 
             <!-- connect minimization to restrained_runs -->
@@ -411,7 +412,7 @@
                 dest="equilibration:in.Nswarms"/>
 
             <!-- TODO connect restrained_run out confs to reparam for global output-->
-            <connection src="equilibration:out.conf_path"
+            <connection src="equilibration:out.path"
                         dest="reparametrize:in.restrained_out"/>
                     
             <!-- connect restrained_runs to prep_swarms -->
@@ -427,6 +428,8 @@
                         dest="swarms:in.swarm_steps"/>
             <connection src="self:ext_in.equi_grompp"
                         dest="swarms:in.grompp"/>
+            <connection src="self:ext_in.tpr"
+                        dest="swarms:in.tpr"/>
 
             <!-- connect run_swarms to reparametrize-->
             <connection src="swarms:out.dihedrals"
