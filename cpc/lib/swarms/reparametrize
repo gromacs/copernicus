@@ -49,18 +49,43 @@ def rep(inp, out):
     init_top=inp.getInput('init_top')
     start_conf=inp.getInput('start_conf')
     end_conf=inp.getInput('end_conf')
-
-    dihedrals=[]
+    Nswarms=inp.getInput('Nswarms')
+    # convert the xvg_array to a multi-dimensional array
+    # check that all the dihedral inputs are ready
+    finished=[]
     for i in range(len(diheds)):
-       di=inp.getInput('dihedrals[%d]'%i)
-       di_array=[]
-       for j in range(len(di)):
-            di_array.append(inp.getInput('dihedrals[%d][%d].conf'%(i,j)))
-       dihedrals.append(di_array)
+        xvg=inp.getInput('dihedrals[%d]'%i)
+        if xvg is None:
+            finished[i]=False 
 
+    if False not in finished:
+        dihedrals=[]
+        for i in range(len(diheds)):
+            dih_i=[]
+            for j in range(Nswarms):
+                dih_i.append(inp.getInput('dihedrals[%d]'%(i*Nswarms+j)))
+        dihedrals.append(dih_i)
+
+
+    #dihedrals=[]
+    #for i in range(len(diheds)):
+    #   dih_i=[]
+    #    diheds_i=inp.getInput('dihedrals[%d]'%i)
+    #    for j in range(len(diheds_i)):
+    #    dih_i.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
+            #dihedrals[i][j]=FileValue(inp.getInput('dihedrals[%d][%d]'%(i,j)))    
+    #	dihedrals.append(dih_i)
+#   di=inp.getInput('dihedrals[%d]'%i)
+    #   if di is not None:
+    #       di_array=[]
+    #       for j in range(len(di)):
+    #            #di_array.append(inp.getInput('dihedrals[%d][%d].conf'%(i,j)))
+    #  dihedrals.append(di_array)
     # pass these inputs to the python script
     # ensure that all the dihedral files exist at this point
-    itp=os.path.join(inp.outputDir, '%d.itp'%k)
+    #itp=os.path.join(inp.outputDir, '%d.itp'%k)
+
+
     reparametrize.reparametrize(dihedrals, ndx_file, start_conf, end_conf, init_top)
 
     # populate the conf_path with the output itps    

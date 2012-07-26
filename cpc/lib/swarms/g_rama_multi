@@ -59,7 +59,7 @@ def g_rama_multi(inp, out):
             j=insts[i]
             instname='g_rama_%d_%d'%(i,j)
             out.addInstance(instname, 'gromacs::g_rama')
-            out.addConnection('self:ext_in.confs[%d][%d].conf'%(i,j), 
+            out.addConnection('self:ext_in.confs[%d][%d]'%(i,j), 
                               '%s:in.traj'%instname)
             out.addConnection('self:ext_in.tpr', '%s:in.tpr'%instname)
             out.addConnection('%s:out.xvg'%instname, 

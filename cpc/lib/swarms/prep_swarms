@@ -51,6 +51,7 @@ def run(inp, out):
             out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
             out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
             out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+            # we don't want the 0 time point
             out.addConnection('conv%d:out.confs'%i, 'self:ext_out.in_swarms[%d]'%i)
         trjconvs=1
     pers.set('trjconvs', trjconvs)

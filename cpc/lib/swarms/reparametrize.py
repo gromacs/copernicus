@@ -18,7 +18,7 @@ import res_selection
 
 def reparametrize(diheds, selection, start_conf, end_conf, top): 
     n = len(diheds)+2 # no longer includes start and end confs
-    Nswarms = len(diheds[1])
+    Nswarms = len(diheds[0])
     #newtop = open(newtop,'w')
     # helper functions for list operations
     def add(x,y): return x+y
