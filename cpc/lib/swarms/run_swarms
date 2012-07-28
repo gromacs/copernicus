@@ -73,93 +73,42 @@ def run(inp, out):
         out.setSubOut('swarm_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
-    in_confs=inp.getInput('conf_array_array')
     mdruns=pers.get('mdruns')
-    if mdruns is None:
-        mdruns=len(in_confs)*[0]
-        for i in range(len(in_confs)):
-            subconfs=inp.getInput('conf_array_array[%d]'%i)
-            out.setOut('out_swarms[%d]'%i,ArrayValue(subconfs))
-            #out.setSubIn('out_swarms[%d]'%i,ArrayValue(subconfs))
-            if mdruns[i]==0 and subconfs is not None: #and len(subconfs)>0 
-                # won't work, sets out_swarms out of order
-                #out.setOut('out_swarms[%d]'%i,ArrayValue(subconfs))
-                out.addInstance('runs%d'%i, 'gromacs::grompp_mdrun_multi')
-                # connect the swarm mdp and resources
-                out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
-                out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
-                out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
-                                  'runs%d:in.cmdline_options[0]'%i)
-                out.addConnection('self:ext_in.resources', 'runs%d:in.resources[0]'%i)
-                out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
-                out.addConnection('self:sub_out.swarm_settings', 
-                                  'runs%d:in.settings[0]'%i)
-                out.addConnection('self:ext_in.conf_array_array[%d]'%i,'runs%d:in.conf'%i)
-                out.addConnection('runs%d:out.conf'%i,'self:ext_out.out_swarms[%d]'%i)
-                #out.addConnection('runs%d:out.conf'%i,'self:sub_in.out_swarms[%d]'%i)
-                mdruns[i]=1
+    if mdruns is None or mdruns<1:
+        mdruns=0
+        confs=inp.getInput('conf_array_array')
+        finished=True
+        if confs is not None and len(confs)>0:
+            for i in range(len(confs)):
+                subconfs=inp.getInput('conf_array_array[%d]'%i)
+                if subconfs is None or len(subconfs)==0:
+                    finished=False
+        else: 
+            finished=False
+        #    wait=True#in_confs=inp.getInput('conf_array_array')
+        #for i in range(len(in_confs)):
+        #    subconfs=inp.getInput('conf_array_array[%d]'%i)
+        #    while None in subconfs or len(subconfs)==0:
+        #        wait=True#subconfs=inp.getInput('conf_array_array[%d]'%i)
+                
+        # keep track of the mdruns
+        if finished==True:
+            for i in range(len(confs)):
+                    out.addInstance('runs%d'%i, 'gromacs::grompp_mdrun_multi')
+                    # connect the swarm mdp and resources
+                    out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
+                    out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
+                    out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                                      'runs%d:in.cmdline_options[0]'%i)
+                    out.addConnection('self:ext_in.resources', 'runs%d:in.resources[0]'%i)
+                    out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
+                    out.addConnection('self:sub_out.swarm_settings', 
+                                      'runs%d:in.settings[0]'%i)
+                    out.addConnection('self:ext_in.conf_array_array[%d]'%i,'runs%d:in.conf'%i)
+                    out.addConnection('runs%d:out.conf'%i,'self:ext_out.out_swarms[%d]'%i)
+            mdruns=1
     pers.set('mdruns', mdruns)
-
-    #ramas=pers.get('ramas')
-    #inconfs=inp.getInput('conf_array_array')
-    #ramas=0
-    #for i in range(len(inconfs)):
-    #    conf=inp.getInput('conf_array_array[%d]'%i)
-    #    out.setOut('dihedrals[%d]',ArrayValue(conf))
-    #    if conf is not None:
-    #        for j in range(len(conf)):
-    #            #out.setOut('dihedrals[%d][%d]',FileValue(conf[j]))
-    #            out.addInstance('grama%d_%d'%(i,j), 'gromacs::g_rama')
-    #            out.addConnection('self:ext_in.tpr', 'grama%d_%d:in.tpr'%(i,j))
-    #            out.addConnection('self:ext_out.out_swarms[%d][%d]'%(i,j), 'grama%d_%d:in.traj'%(i,j))
-    #            out.addConnection('grama%d_%d:out.xvg'%(i,j),'self:ext_out.dihedrals[%d][%d]'%(i,j))
-    #ramas=1
-    #pers.set('ramas',ramas)
-
-
-    #pers.set('confs')
-    #confs=pers.get('confs')
-    #conf_array_array=inp.getSubnetInput('self:sub_in.gramaconfs')
-    #if confs is not None and len(conf_array_array)>0:
-    #    for i in range(len(confs)):
-    #        conf_array=getSubnetInput('self:sub_in.gramaconfs[%d]'%i)
-    #        if conf_array.value is not None and len(conf_array)>0:
-    #            out.addConnection('runs%d:out.conf'%d, 'grama:in.confs[%d]'%i)
-    #            out.setOut('dihedrals[%d]', 'grama:out.xvgs[%d]'%i)
-    #out.addConnection('grama:out.xvgs','self:ext_out.dihedrals')
-    #pers.set('confs',confs)
-    # populate the out_swarms conf_path_array with the swarm output files
-    # we need not include itp files, as they won't be used
-    #confs=inp.getSubnetInput('confs')
-    #in_confs=inp.getInput('conf_array_array')
-    #n=len(in_confs)    
-    #if confs is not None and len(confs) > 0:
-    #    for i in range(len(confs)):
-    #        conf=inp.getSubnetInputValue('confs[%d]'%i)
-    #        if conf.value is not None and conf.isUpdated():
-    #        if n==1:
-    #                out.setOut('out_swarms[%d][%d].conf'%(0,i), conf)
-    #            else:
-    #                out.setOut('out_swarms[%d][%d].conf'%(i/n,i%n), conf)
-   
-   
-    #ramas=pers.get('ramas')
-    #if ramas is None:
-        #ramas=0
-        #out.addInstance('grama', 'g_rama_multi')
-        #out.addConnection('self:sub_out.out_swarms', 'grama:in.confs')
-        #out.addConnection('self:ext_in.tpr', 'grama:in.tpr')
-        #out.addConnection('grama:out.xvgs', 'self:sub_in.xvgs')
-     #   ramas=1
-    #pers.set('ramas', ramas)
- 
-    #xvgs=inp.getSubnetInput('xvgs')
-    #if xvgs is not None and len(xvgs) > 0:
-    #    for i in range(len(xvgs)):
-    #        xvg_array=inp.getSubnetInputValue('xvgs[%d]'%i)
-    #        if xvg_array.value is not None and conf.isUpdated():
-    #            out.setOut('dihedrals[%d]'%i,xvg_array)
-
+     
     pers.write()
 
 # read the input data

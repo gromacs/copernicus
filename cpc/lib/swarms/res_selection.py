@@ -34,7 +34,7 @@ class atom:
 
 # read a .gro file into atom types
 def protein(conf): 
-    conf = open(conf,'r').readlines()
+    conf=open(conf,'r').readlines()
     j=2 # skip the header of the .gro file
     prot = []
     while j < len(conf)-1:

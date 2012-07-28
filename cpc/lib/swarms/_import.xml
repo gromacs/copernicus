@@ -227,7 +227,7 @@
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="conf_array_array" id="swarm_array">
+            <field type="conf_array_array" id="in_swarms">
             </field>
         </subnet-inputs>
         <controller log="true" executable="prep_swarms" 
@@ -289,7 +289,12 @@
             <field type="xvg_path_array" id="xvgs">
             </field>
         </outputs>
-        <controller log="true" executable="run_swarms" 
+        <subnet-inputs>
+            <field type="xvg_path_array" id="xvgs">
+                <desc>Route around propagation error</desc>
+            </field>
+        </subnet-inputs>
+        <controller log="true" executable="get_dihedrals" 
                     persistent_dir="true" />
     </function>
    
@@ -299,7 +304,7 @@
                 restraint values for the next iteration.
         </desc>
         <inputs>
-            <field type="xvg_array" id="dihedrals">
+            <field type="xvg_path_array" id="dihedrals">
                 <desc>The swarm trajectory output, sent to
                         g_rama to get points in z-space.</desc>
             </field>
@@ -318,6 +323,13 @@
             <field type="file" id="end_conf">
                 <desc>The end conformation (state B)</desc>
             </field>
+            <field type="file" id="start_xvg">
+                <desc>The start conformation (state A)</desc>
+            </field>
+            <field type="file" id="end_xvg">
+                <desc>The end conformation (state B)</desc>
+            </field>
+
             <field type="file" id="res_index">
                 <desc>The index file with a single group that determines the phi/psi 
                         dihedrals to use for the z space. </desc>
@@ -363,8 +375,14 @@
             <field type="file" id="start_conf">
                 <desc>The start conformation (state A)</desc>
             </field>
+            <field type="file" id="start_xvg">
+                <desc>The start point (state A)</desc>
+            </field>
             <field type="file" id="end_conf">
                 <desc>The end conformation (state B)</desc>
+            </field>
+            <field type="file" id="end_xvg">
+                <desc>The end point in z-space (state B)</desc>
             </field>
             <field type="grompp_input" id="minim_grompp">
                 <desc>A full set of input values for grompp (except 
@@ -379,6 +397,10 @@
             <field type="file" id="tpr">
                 <desc>A tpr file for the system.</desc>
             </field>
+            <field type="file" id="resindex">
+                <desc>Dihedral selection.</desc>
+            </field>
+
             <field type="conf_path" id="path">
                 <desc>A full set of structures along the path so far.</desc>
             </field>
@@ -467,12 +489,16 @@
                         dest="reparametrize:in.dihedrals"/>
             <connection src="self:ext_in.equi_grompp.top"
                         dest="reparametrize:in.init_top"/>
-            <connection src="self:ext_in.equi_grompp.ndx"
+            <connection src="self:ext_in.resindex"
                         dest="reparametrize:in.res_index"/>
             <connection src="self:ext_in.start_conf"
                         dest="reparametrize:in.start_conf"/>
+            <connection src="self:ext_in.start_xvg"
+                        dest="reparametrize:in.start_xvg"/>
             <connection src="self:ext_in.end_conf"
                         dest="reparametrize:in.end_conf"/>
+            <connection src="self:ext_in.end_xvg"
+                        dest="reparametrize:in.end_xvg"/>
             <connection src="self:ext_in.Nswarms"
 	                dest="reparametrize:in.Nswarms"/>
 

@@ -16,10 +16,11 @@ import os
 import res_selection
 
 
-def reparametrize(diheds, selection, start_conf, end_conf, top): 
-    n = len(diheds)+2 # no longer includes start and end confs
+def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, top): 
     Nswarms = len(diheds[0])
     #newtop = open(newtop,'w')
+    rsel = res_selection.res_select('%s'%start_conf,'%s'%selection)
+    #sys.stderr.write('%s'%rsel)
     # helper functions for list operations
     def add(x,y): return x+y
     def scale(k,v):
@@ -30,25 +31,23 @@ def reparametrize(diheds, selection, start_conf, end_conf, top):
     def mapadd(x,y): return map(add,x,y)
     # for each interpolant:
     # calculate average drift in collective variables space
-    for interp in range(1,n):
-            newpts = []
+    newpts = []
+    for interp in range(len(diheds)):
             avg = []
-            for r in selection:
+            for r in rsel:
                     driftList = []
-                    vec = []
-                    for i in range(1,Nswarms):
-                            xvg = open('swarm_%s.xvg'%i)
+                    for i in range(len(diheds[interp])):
+                            vec=[]
+                            xvg = open(diheds[interp][i],'r')
                             for line in xvg:
                                     if re.search(r'\-%s\n'%r,line):
                                             phi_val = float(line.split()[0])
                                             psi_val = float(line.split()[1])
                                             vec+=[phi_val,psi_val]
-                            driftList+=[vec]
+                            driftList.append(vec)
                     # driftList has phi,psi values for residue in every swarm
-                    # average phi, psi values over swarms, list may contain multiple residues!
                     avg+=[scale((1/float(Nswarms)),reduce(mapadd,driftList))]
             newpts+=avg
-
     # reparametrize the points
     # see Maragliano et al, J. Chem Phys (125), 2006
     # we use a linear interpolation in Euclidean space
@@ -69,6 +68,7 @@ def reparametrize(diheds, selection, start_conf, end_conf, top):
                             i+=1
                     return pathlength
     def s(m):
+            n=len(newpts)-1
             return (m-1)*L(n)/(n-1)
     def dir(v1,v2):
             normed = []
@@ -79,8 +79,8 @@ def reparametrize(diheds, selection, start_conf, end_conf, top):
 
     # extract initial and target dihedral values
     initpt = []
-    for r in selection:
-            xvg = open(start_conf,'r')
+    for r in rsel:
+            xvg = open(start_xvg,'r')
             for line in xvg:
                     if re.search(r'\-%s\n'%r,line):
                             phi_val = float(line.split()[0])
@@ -88,35 +88,41 @@ def reparametrize(diheds, selection, start_conf, end_conf, top):
                             initpt+=[phi_val,psi_val]
 
     targetpt = []
-    for r in selection:
-            xvg = open(end_conf,'r')
+    for r in rsel:
+            xvg = open(end_xvg,'r')
             for line in xvg:
                     if re.search(r'\-%s\n'%r,line):
                             phi_val = float(line.split()[0])
                             psi_val = float(line.split()[1])
                             targetpt+=[phi_val,psi_val]
 
-
-    adjusted = {}
-    adjusted[0] = initpt 
-    adjusted[n] = targetpt
-    for i in range (2,n): # as defined s(1) = 0
+    newpts.insert(0,initpt)
+    newpts.append(targetpt)
+    adjusted = [initpt,targetpt]
+    sys.stderr.write('The new list of points is: %s' %newpts)
+    for i in range(1,len(newpts)-1): # as defined s(1) = 0
             k = 1
-            while s(i)<=L(k-1) or s(i)>L(k):
-                    k+=1
-            adjusted[i] = map(add,adjusted[k-1],scale((s(i)-L(k-1)),normed(adjusted[k],adjusted[k-1])))
+            #while k<len(newpts)-1:
+            #     while (L(k-1)>=s(i) or s(i)>L(k)):
+            #        k+=1
+            tail=adjusted[i:] 
+            adjusted[:i].append(map(add,adjusted[k-1],scale((s(i)-L(k-1)),dir(adjusted[k],adjusted[k-1]))))
+            adjusted=adjusted+tail
+            k+=1
+            
 
     # write the topology for the next iteration
     # treat the reparam values as a stack
-    for k in range(1,n):
+    for k in range(1,len(diheds)+1):
             itp=open('%d.itp'%k,'w')
             sys.stderr.write("Writing restraints for interpolant number %i\n" %k)
             #newtop.write("\n#ifdef %i_restraints\n"% k)
             itp.write("[ dihedral_restraints ]\n")
             itp.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
-            stack=adjusted[k-1]
-            for r in selection:
-                    i = 0 # there may be multiple residues matching the resnr, e.g., dimers
+            stack=adjusted[k]
+            protein = res_selection.protein('%s'%start_conf)
+            for r in rsel:
+                    # there may be multiple residues matching the resnr, e.g., dimers
                     phi = [a for a in protein if (a.resnr == int(r) and
                           (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C')) or
                           (a.resnr == int(r)-1 and a.atomname == 'C')]
@@ -127,7 +133,7 @@ def reparametrize(diheds, selection, start_conf, end_conf, top):
 
                     # get phi and psi values from the reparametrization vector
                     numres = len(phi)/4
-                    for i in range(i,numres):
+                    for i in range(numres):
                             phi_val=stack[i]
                             psi_val=stack[i+1]
                             # write phi, psi angles

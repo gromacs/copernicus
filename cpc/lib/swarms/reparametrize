@@ -43,57 +43,48 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def rep(inp, out):
-    
     diheds=inp.getInput('dihedrals')
     ndx_file=inp.getInput('res_index')
     init_top=inp.getInput('init_top')
     start_conf=inp.getInput('start_conf')
+    start_xvg=inp.getInput('start_xvg')
     end_conf=inp.getInput('end_conf')
-    Nswarms=inp.getInput('Nswarms')
-    # convert the xvg_array to a multi-dimensional array
+    end_xvg=inp.getInput('end_xvg')
     # check that all the dihedral inputs are ready
-    finished=[]
-    for i in range(len(diheds)):
-        xvg=inp.getInput('dihedrals[%d]'%i)
-        if xvg is None:
-            finished[i]=False 
-
-    if False not in finished:
+    finished=True
+    if diheds is not None and len(diheds)>0:
+        for i in range(len(diheds)):
+            xvgs=inp.getInput('dihedrals[%d]'%i)
+            #sys.stderr.write('This is the diheds array %d: %s'%(i,xvgs))
+            if xvgs is not None and len(xvgs)>0:
+                for j in range(len(xvgs)):
+                    xvg=inp.getInput('dihedrals[%d][%d]'%(i,j))
+                    if FileValue(xvg) is None:
+                        finished=False
+            else:
+                finished=False
+    else: 
+        finished=False
+        
+    if finished==True:
         dihedrals=[]
         for i in range(len(diheds)):
             dih_i=[]
-            for j in range(Nswarms):
-                dih_i.append(inp.getInput('dihedrals[%d]'%(i*Nswarms+j)))
-        dihedrals.append(dih_i)
+            xvgs=inp.getInput('dihedrals[%d]'%i)
+            for j in range(len(xvgs)):
+                dih_i.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
+            dihedrals.append(dih_i)
+        # check for file objects
+        reparametrize.reparametrize(dihedrals, ndx_file, start_conf, start_xvg, end_conf, end_xvg, init_top)
+        conf_path=inp.getInput('restrained_out')
+        for i in range(len(conf_path)):
+            #conf_path[i].itp=os.path.join(inp.outputDir, FileValue('%d.itp'%i))
+            itp=FileValue('run/reparametrize/_run0000/%d.itp'%(i+1))
+            out.setOut('conf_path[%d].itp'%i,itp)
+            conf=FileValue(inp.getInput('restrained_out[%d].conf'%i))
+            out.setOut('conf_path[%d].conf'%i,conf)
 
 
-    #dihedrals=[]
-    #for i in range(len(diheds)):
-    #   dih_i=[]
-    #    diheds_i=inp.getInput('dihedrals[%d]'%i)
-    #    for j in range(len(diheds_i)):
-    #    dih_i.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
-            #dihedrals[i][j]=FileValue(inp.getInput('dihedrals[%d][%d]'%(i,j)))    
-    #	dihedrals.append(dih_i)
-#   di=inp.getInput('dihedrals[%d]'%i)
-    #   if di is not None:
-    #       di_array=[]
-    #       for j in range(len(di)):
-    #            #di_array.append(inp.getInput('dihedrals[%d][%d].conf'%(i,j)))
-    #  dihedrals.append(di_array)
-    # pass these inputs to the python script
-    # ensure that all the dihedral files exist at this point
-    #itp=os.path.join(inp.outputDir, '%d.itp'%k)
-
-
-    reparametrize.reparametrize(dihedrals, ndx_file, start_conf, end_conf, init_top)
-
-    # populate the conf_path with the output itps    
-    conf_path=inp.getInput('restrained_out')
-    for i in range(len(conf_path)):
-        conf_path[i].itp=os.path.join(inp.outputDir, FileValue('%d.itp'%i))
-
-    out.setOut('conf_path', conf_path)
 
 # read the input data
 inf=StringIO()
