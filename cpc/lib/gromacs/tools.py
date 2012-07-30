@@ -96,12 +96,30 @@ def g_energy(inp):
     fo.setOut('unit', StringValue(unit))
     return fo 
 
+
+def checkUpdated(inp, items):
+    for item in items:
+        if inp.getInputValue(item).isUpdated():
+            return True
+    return False
+
 def _trjconv(inp, fo, split):
     """Internal implementation of trjconv and trjconv_split"""
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjconv -version")
         return 
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    if pers.get('init') is None:
+        init=True
+        pers.set('init', 1)
+    else:
+        inpItems=[ 'traj', 'tpr', 'ndx', 'dt', 'skip', 'dump', 'pbc', 'ur', 
+                   'center', 'fit', 'fit_type', 'cmdline_options' ]
+        if not checkUpdated(inp, inpItems):
+            return
+        init=False
     writeStdin=StringIO()
     trajfile=inp.getInput('traj')
     tprfile=inp.getInput('tpr')
@@ -184,6 +202,7 @@ def _trjconv(inp, fo, split):
                 break
             fo.setOut('confs[%d]'%i, FileValue(filename))
             i+=1
+    pers.write()
 
 def trjconv(inp):
     fo=inp.getFunctionOutput()
