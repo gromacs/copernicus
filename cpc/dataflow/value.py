@@ -260,7 +260,11 @@ class Value(object):
             return None
         if isinstance(self.value, list):
             if self.type.isSubtype(vtype.arrayType):
-                if (itemList[0] == "+") or (len(self.value) == itemList[0]):
+                index=itemList[0]
+                if index == "+":
+                    index=len(self.value)
+                #if (itemList[0] == "+") or (len(self.value) == itemList[0]):
+                while len(self.value) <= index:
                     if not create:
                         if closestValue:
                             return self
@@ -277,13 +281,13 @@ class Value(object):
                     nval=self._create(None, ntp, len(self.value), 
                                       setCreateSourceTag)
                     self.value.append(nval)
-                elif (itemList[0] > len(self.value)):
+                #elif (itemList[0] > len(self.value)):
                     # the list is too long, but in the context of a transaction
                     # might be OK
-                    if closestValue:
-                        return self
-                    else:
-                        return None
+                #    if closestValue:
+                #        return self
+                #    else:
+                #        return None
             else:
                 raise ValError("Array type not a list.")
         else:
