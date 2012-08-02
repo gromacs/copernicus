@@ -1,0 +1,243 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+import reparametrize
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+def run(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+
+    # first create the right mdp file
+    merge=pers.get('merge')
+    if merge is None or merge==0:
+        merge=1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # now we set our own mdp settings
+        steps=inp.getInput('swarm_steps')
+        settings=[] 
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('md') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue("%s"%steps) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+                                       'value' : StringValue('120') } ) )
+        out.setSubOut('swarm_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    mdruns=pers.get('mdruns')
+    if mdruns is None or mdruns<1:
+        mdruns=0
+        confs=inp.getInput('conf_array_array')
+        finished=True
+        if confs is not None and len(confs)>0:
+            for i in range(len(confs)):
+                subconfs=inp.getInput('conf_array_array[%d]'%i)
+                if subconfs is None or len(subconfs)==0:
+                    finished=False
+        else: 
+            finished=False
+               
+        # keep track of the mdruns
+        if finished==True:
+            out.addInstance('grama', 'g_rama_multi')
+            for i in range(len(confs)):
+                    out.addInstance('runs%d'%i, 'gromacs::grompp_mdrun_multi')
+                    # connect the swarm mdp and resources
+                    out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
+                    out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
+                    out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                                      'runs%d:in.cmdline_options[0]'%i)
+                    out.addConnection('self:ext_in.resources', 'runs%d:in.resources[0]'%i)
+                    out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
+                    out.addConnection('self:sub_out.swarm_settings', 
+                                      'runs%d:in.settings[0]'%i)
+                    out.addConnection('self:ext_in.conf_array_array[%d]'%i,'runs%d:in.conf'%i)
+                    #out.addConnection('runs%d:out.conf'%i,'grama:in.confs[%d]'%i)
+                    out.addConnection('runs%d:out.conf'%i,'self:sub_in.out_swarms[%d]'%i)
+            mdruns=1
+    pers.set('mdruns', mdruns)
+    
+    Nswarms=inp.getInput('Nswarms')
+    Ninterpolants=inp.getInput('Ninterpolants')
+    
+    ramas=pers.get('ramas')
+    if ramas is None and mdruns==1:
+        
+        # this fails, grama not globally defined-- any way to refernce these values?
+        #finished=True
+        #outswarms=grama.getInput('confs')
+        #if len(outswarms)==Ninterpolants:
+        #    for i in range(len(outswarms)):
+        #       subswarms=grama.getInput('confs[%d]'%i)
+        #        if len(subswarms)==Nswarms:
+        #            for j in range(len(subswarms)):
+        #                conf=grama.getInput('confs[%d][%d]'%(i,j))
+        #                if conf is None:
+        #                    finished=False
+        #        else:
+        #            finished=False
+        #else:
+        #    finished=False
+
+        finished=True
+        Ninterpolants=inp.getInput('Ninterpolants')
+        Nswarms=inp.getInput('Nswarms')
+        outconfs=inp.getSubnetInput('out_swarms')
+        if outconfs is not None and len(outconfs)==Ninterpolants-2:
+            for i in range(len(outconfs)):
+                suboutconfs=inp.getSubnetInput('out_swarms[%d]'%i)
+                if suboutconfs is not None and len(suboutconfs)==Nswarms:
+                    for j in range(len(suboutconfs)):
+                        outconf=inp.getSubnetInput('out_swarms[%d][%d]'%(i,j))
+                        if outconf is None:
+                                finished=False
+                else:
+                    finished=False
+        else:
+            finished=False
+
+        if finished==True:
+            for i in range(len(outconfs)):
+                out.addConnection('runs%d:out.conf'%i, 'grama:in.confs[%d]'%i)
+            out.addConnection('self:ext_in.tpr', 'grama:in.tpr')
+            out.addConnection('grama:out.xvgs', 'self:sub_in.xvgs')
+            ramas=1
+        pers.set('ramas', ramas)
+
+
+    # reparametrize
+
+    ndx_file=inp.getInput('res_index')
+    init_top=inp.getInput('init_top')
+    start_conf=inp.getInput('start_conf')
+    start_xvg=inp.getInput('start_xvg')
+    end_conf=inp.getInput('end_conf')
+    end_xvg=inp.getInput('end_xvg')
+    # check that all the dihedral inputs are ready
+    finished=True
+    xvgs=inp.getSubnetInput('xvgs')
+    if xvgs is not None and len(xvgs)==Ninterpolants-2:
+        for i in range(len(xvgs)):
+            subxvgs=inp.getSubnetInput('xvgs[%d]'%i)
+            if subxvgs is not None and len(subxvgs)==Nswarms:
+                for j in range(len(subxvgs)):
+                    xvg=inp.getSubnetInput('xvgs[%d][%d]'%(i,j))
+                    if xvg is None:
+                            finished=False
+            else:
+                finished=False
+    else:
+        finished=False
+       
+        
+    if finished==True:
+        diheds=inp.getSubnetInput('xvgs')
+        dihedrals=[]
+        for i in range(len(diheds)):
+            dih_i=[]
+            xvgs=inp.getSubnetInput('xvgs[%d]'%i)
+            for j in range(len(xvgs)):
+                xvg=inp.getSubnetInput('xvgs[%d][%d]'%(i,j))
+                if xvg is not None:
+                    dih_i.append(xvg)
+                else:
+                    sys.stderr.write('Swarm trajectory %d %d failed\n'%(i,j))
+                    sys.stderr.write('The xvg is: %s %s\n'%(xvg,FileValue(xvg)))
+            dihedrals.append(dih_i)
+        # call the external python script
+        sys.stderr.write('The dihedrals array: %s\n'%dihedrals)
+        reparametrize.reparametrize(dihedrals, ndx_file, start_conf, start_xvg, end_conf, end_xvg, init_top)
+        conf_path=inp.getInput('restrained_out')
+        for i in range(len(conf_path)):
+            #conf_path[i].itp=os.path.join(inp.outputDir, FileValue('%d.itp'%i))
+            ## TODO, safe recovery of itp!
+            itp=""
+            itp=os.path.join(inp.outputDir, '%d.itp'%(i+1))
+            out.setOut('conf_path[%d].itp'%i,FileValue(itp))
+            conf=FileValue(inp.getInput('restrained_out[%d].conf'%i))
+            out.setOut('conf_path[%d].conf'%i,conf)
+    
+    pers.write()
+
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+run(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+
