@@ -179,6 +179,8 @@ class SCReadConf(ServerCommand):
 
 
 
+
+#@DEPRACATED 2012-08-12
 #Clients request a connection
 #HTTP message
 class ScAddClientRequest(ServerCommand):
