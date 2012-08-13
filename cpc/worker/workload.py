@@ -187,8 +187,17 @@ class WorkLoad(object):
     def returnResults(self):
         log.debug("Returning run data for cmd id %s"%self.cmd.id)
         tff=tempfile.TemporaryFile()
+        outputFiles=self.cmd.getOutputFiles()
         tf=tarfile.open(fileobj=tff, mode="w:gz")
-        tf.add(self.rundir, arcname=".", recursive=True)
+        if outputFiles is None or len(outputFiles)==0:
+            tf.add(self.rundir, arcname=".", recursive=True)
+        else:
+            outputFiles.append('stdout')
+            outputFiles.append('stderr')
+            for name in outputFiles:
+                fname=os.path.join(self.rundir,name)
+                if os.path.exists(fname):
+                    tf.add(fname, arcname=name, recursive=False)
         tf.close()
         tff.seek(0)
         shutil.rmtree(self.rundir, ignore_errors=True)

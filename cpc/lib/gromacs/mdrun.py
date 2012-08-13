@@ -100,7 +100,6 @@ def procSettings(inp, outMdpDir):
 
 
 
-
 def grompp(inp):
     if inp.testing(): 
         # if there are no inputs, we're testing wheter the command can run
@@ -167,6 +166,164 @@ def grompp(inp):
     pers.write()
     return fo
 
+
+class TrajFileCollection(object):
+    def __init__(self, persDir):
+        self.persDir=persDir
+        lastfound=True
+        self.trajlist=[]
+        self.lastcpt=None
+        lastrundir=None
+        i=0
+        while lastfound:
+            i+=1
+            currundir=os.path.join(persDir, "run_%03d"%i)
+            lastfound=False
+            try:
+                st=os.stat(currundir)
+                if st.st_mode & stat.S_IFDIR:
+                    lastfound=True
+                    lastrundir=currundir
+                    cpt=os.path.join(lastrundir, "state.cpt")
+                    if os.path.exists(cpt):
+                        # and check the size
+                        st=os.stat(cpt)
+                        if st.st_size>0: 
+                            self.lastcpt=cpt
+                    # now check if this has produced trajectories
+                    trajl=dict()
+                    xtc = glob.glob(os.path.join(lastrundir, "traj.part*.xtc"))
+                    trr = glob.glob(os.path.join(lastrundir, "traj.part*.trr"))
+                    edr = glob.glob(os.path.join(lastrundir, "ener.part*.edr"))
+                    trajl['xtc']=None
+                    if len(xtc) > 0:
+                        trajl['xtc']=xtc[-1]
+                    if len(trr) > 0:
+                        trajl['trr']=trr[-1]
+                    if len(edr) > 0:
+                        trajl['edr']=edr[-1]
+                    #if len(xtc) == 0 and len(trr)==0 and len(edr)==0:
+                    #    self.prevtraj.append(False)
+                    #else:
+                    #    # extract the last number
+                    #    xtcn=lastxtc[-1].replace('traj.part','').\
+                    #                     replace('.xtc','')
+                    #    trrn=lasttrr[-1].replace('traj.part','').\
+                    #                     replace('.trr','')
+                    #    edrn=lastedr[-1].replace('traj.part','').\
+                    #                     replace('.edr','')
+                    #    self.prevtraj.append(True)
+                    self.trajlist.append(trajl)
+            except OSError:
+                pass
+        self.lastDirNr=i
+        self.lastDir=lastrundir
+        self.newRunDir=currundir
+        self.lastTrajNr=self._extractLastTrajNr()
+
+    def getLastDir(self):
+        """Return the last run directory."""
+        return self.lastDir
+
+    def getLastDirNr(self):
+        """Return the last run directory number."""
+        return self.lastDirNr
+
+    def getNewRunDir(self):
+        """Get the new run directory"""
+        return self.newRunDir
+
+    def getLastCpt(self):
+        """return the last checkpoint."""
+        return self.lastcpt
+
+    def getTrajList(self):
+        """Return the list of trajectories (a list of lists)."""
+        return self.trajlist
+
+    def _extractLastTrajNr(self):
+        """Return the trajectory number of the last run (or None if there
+           were no trajectory files in that run)"""
+        if len(self.trajlist) <= 0:
+            return None
+        edr=self.trajlist[-1].get('edr')
+        xtc=self.trajlist[-1].get('xtc')
+        trr=self.trajlist[-1].get('trr')
+        log.debug("edr=%s"%edr)
+        log.debug("xtc=%s"%xtc)
+        log.debug("trr=%s"%trr)
+        nr=None
+        try:
+            if edr is not None:
+                # extract all numbers, and get the final one:
+                nrs=re.findall(r'\d+', edr)
+                if len(nrs)>0:
+                    nr=int(nrs[-1])
+            elif xtc is not None:
+                nrs=re.findall(r'\d+', xtc)
+                if len(nrs)>0:
+                    nr=int(nrs[-1])
+            elif trr is not None:
+                nrs=re.findall(r'\d+', trr)
+                if len(nrs)>0:
+                    nr=int(nrs[-1])
+        except ValueError:
+            pass
+        return nr
+
+    def getLastTrajNr(self):
+        if self.lastTrajNr is not None:
+            return self.lastTrajNr
+        else:
+            return 0
+
+    def getFractionCompleted(self, tpr):
+        """Get the fraction of steps completed."""
+        # also check whether we need to check file numbers:
+        checkFileNumbers=False
+        if self.lastTrajNr is None:
+            checkFileNumbers=True
+        newFileNumber=0
+        if self.lastcpt is not None:
+            # now check how far along the run is by inspecting the
+            # step number we're at.
+            cmd=['gmxdump', '-cp', self.lastcpt ]
+            sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+            stepline=re.compile('step = .*')
+            outfileline=re.compile('output_filename = .*')
+            for line in sp.stdout:
+                if stepline.match(line):
+                    stepnr=int(line.split()[2])
+                    if not checkFileNumbers:
+                        break
+                elif checkFileNumbers and outfileline.match(line):
+                    filename=line.split[2]
+                    nrs=re.findall(r'\d+', filename)
+                    #for nr in nrs:
+                    if len(nrs)>0:
+                        nr=nrs[-1]
+                        if int(nr) > newFileNumber:
+                            newFileNumber = nr
+            sp.stdout.close()
+            if checkFileNumbers:
+                self.lastTrajNr=newFileNumber
+            #sp.communicate()
+            # and get the total step number
+            cmd=['gmxdump', '-s', tpr ]
+            sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+            stepline=re.compile('[ ]*nsteps.*')
+            for line in sp.stdout:
+                if stepline.match(line):
+                    nsteps=int(line.split()[2])
+                    break
+            sp.stdout.close()
+            #sp.communicate()
+            return float(stepnr)/float(nsteps)
+        return 0
+
+
 def mdrun(inp):
     if inp.testing(): 
         # if there are no inputs, we're testing wheter the command can run
@@ -219,9 +376,6 @@ def mdrun(inp):
         init=True
         pers.set('lasttpr', lasttpr)
     elif inp.cmd is None:
-        #if pers.get('initialized') is None:
-        #    init=True    
-        #else:
         return fo
     if init:
         if rsrc.max.get('cores') is None:
@@ -274,8 +428,7 @@ def mdrun(inp):
             cmd.extend(xtcs)
             cmd.extend(["-o", xtcoutname])
             stdo=open(os.path.join(persDir,"trjcat_xtc.out"),"w")
-            sp=subprocess.Popen(cmd, stdout=stdo,
-                                stderr=subprocess.STDOUT)
+            sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
             sp.communicate(None)
             stdo.close()
             #outputs['xtc'] = Value(xtcoutname, 
@@ -306,8 +459,7 @@ def mdrun(inp):
             cmd.extend(trrs)
             cmd.extend(["-o", trroutname])
             stdo=open(os.path.join(persDir,"trjcat_trr.out"),"w")
-            sp=subprocess.Popen(cmd, stdout=stdo,
-                                stderr=subprocess.STDOUT)
+            sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
             sp.communicate(None)
             stdo.close()
             #outputs['trr'] = Value(trroutname, 
@@ -337,8 +489,7 @@ def mdrun(inp):
             cmd.extend(edrs)
             cmd.extend(["-o", edroutname])
             stdo=open(os.path.join(persDir,"eneconv.out"),"w")
-            sp=subprocess.Popen(cmd, stdout=stdo,
-                                stderr=subprocess.STDOUT)
+            sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
             sp.communicate(None)
             stdo.close()
             #outputs['edr'] = Value(edroutname, 
@@ -373,42 +524,14 @@ def mdrun(inp):
         log.debug("fo.cmds=%s"%str(fo.cmds))
         return fo
     else:
-        # we're not finished. Find the last run directory and checkpoint
-        lastrundir=None
-        lastcpt=None
-        lastfound=True
-        prevtraj=[]
-        i=0
-        while lastfound:
-            i+=1
-            currundir=os.path.join(persDir, "run_%03d"%i)
-            lastfound=False
-            try:
-                st=os.stat(currundir)
-                if st.st_mode & stat.S_IFDIR:
-                    lastfound=True
-                    lastrundir=currundir
-                    cpt=os.path.join(lastrundir, "state.cpt")
-                    if os.path.exists(cpt):
-                        # and check the size
-                        st=os.stat(cpt)
-                        if st.st_size>0: 
-                            lastcpt=cpt
-                    # now check if this has produced trajectories
-                    xtc = glob.glob(os.path.join(lastrundir, "traj.part*.xtc"))
-                    trr = glob.glob(os.path.join(lastrundir, "traj.part*.trr"))
-                    edr = glob.glob(os.path.join(persDir, "ener.part*.trr"))
-                    if len(xtc) == 0 and len(trr)==0 and len(edr)==0:
-                        prevtraj.append(False)
-                    else:
-                        prevtraj.append(True)
-            except OSError:
-                pass
-        # now check whether the last 4 iterations produced trajectories
-        if len(prevtraj) > 4:
+        tfc=TrajFileCollection(persDir)
+        # now check whether any of the last 4 iterations produced trajectories
+        trajlist=tfc.getTrajList()
+        if len(trajlist) > 4:
             ret=False
             for j in range(4):
-                ret=ret or prevtraj[-j-1]
+                haveTraj=(len(trajlist[-j-1]) > 0)
+                ret=ret or haveTraj  #prevtraj[-j-1]
             if not ret:
                 stde=os.path.join(lastrundir, "stderr")
                 if os.path.exists(stde):
@@ -421,14 +544,17 @@ def mdrun(inp):
                 raise GromacsError("Error running mdrun. No trajectories: %s"%
                                    errmsg)
         # Make a new directory with the continuation of this run
-        newdirname=currundir #"run_%03d"%(i+1)
+        #newdirname=currundir #"run_%03d"%(i+1)
+        newdirname=tfc.getNewRunDir()
         try:
             os.mkdir(newdirname)
         except OSError:
             pass
-        tpr=newtpr #inp.getInput('tpr')
+        tpr=newtpr 
         src=os.path.join(inp.getBaseDir(), tpr)
         dst=os.path.join(newdirname,"topol.tpr")
+        shutil.copy(src,dst)
+        # handle command line inputs
         if inp.getInput('cmdline_options') is not None:
             cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
         else:
@@ -437,38 +563,18 @@ def mdrun(inp):
             prio=inp.getInput('priority')
         else:
             prio=0
-        # now add to the priority if this run has already been started
+        lastcpt=tfc.getLastCpt()
+        # copy the checkpoint to the new cmd dir
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
-            # now check how far along the run is by inspecting the
-            # step number we're at.
-            cmd=['gmxdump', '-cp', lastcpt ]
-            sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-            stepline=re.compile('step = .*')
-            for line in sp.stdout:
-                if stepline.match(line):
-                    stepnr=int(line.split()[2])
-                    break
-            sp.stdout.close()
-            #sp.communicate()
-            # and get the total step number
-            cmd=['gmxdump', '-s', tpr ]
-            sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-            stepline=re.compile('[ ]*nsteps.*')
-            for line in sp.stdout:
-                if stepline.match(line):
-                    nsteps=int(line.split()[2])
-                    break
-            sp.stdout.close()
-            #sp.communicate()
+        # now add to the priority if this run has already been started
+        completed=tfc.getFractionCompleted(tpr)
+        if completed > 0:
             # now the priority ranges from 1 to 4, depending on how
             # far along the simulation is.
-            prio += 1+int(3*(float(stepnr)/float(nsteps)))
+            prio += 1+int(3*(completed))
             log.debug("Setting new priority to %d because it's in progress"%
                       prio)
-        shutil.copy(src,dst)
         # we can always add state.cpt, even if it doesn't exist.
         args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt",
                "-rcon", "0.7"  ]
@@ -478,9 +584,21 @@ def mdrun(inp):
         cenv={ 'GMX_VERLET_SCHEME': '1' }
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
+        # any expected output files.
+        newFileNr=tfc.getLastTrajNr()+1
+        outputFiles=[ "traj.part%04d.xtc"%newFileNr, 
+                      "traj.part%04d.trr"%newFileNr, 
+                      "confout.part%04d.gro"%newFileNr, 
+                      "ener.part%04d.edr"%newFileNr, 
+                      "dhdl.part%04d.xvg"%newFileNr, 
+                      "pullx.part%04d.xvg"%newFileNr, 
+                      "pullf.part%04d.xvg"%newFileNr, 
+                      "state.cpt", "state_prev.cpt" ]
+        log.debug("Expected output files: %s"%outputFiles)
         cmd=cpc.server.command.Command(newdirname, "gromacs/mdrun",args,
                                  minVersion=cpc.server.command.Version("4.5"),
-                                 addPriority=prio, env=cenv)
+                                 addPriority=prio, env=cenv, 
+                                 outputFiles=outputFiles)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
             #log.debug("resources is %s"%(inp.getInput("resources")))
             #rsrc=Resources(inp.getInputValue("resources"))

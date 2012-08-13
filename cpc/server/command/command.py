@@ -66,7 +66,7 @@ class Command(object):
     def __init__(self, dir, executable, args, 
                  addPriority=0, minVersion=None, maxVersion=None, 
                  id=None, task=None, running=False, workerServer=None,
-                 env=None):
+                 env=None, outputFiles=None):
         """Create a command
             dir = the directory 
             executable = the name of the executable object
@@ -81,11 +81,13 @@ class Command(object):
             workerServer = the server the worker executing this command is 
                            connected to.
             env = environment variables to set: a dict of values (or None).
+            outputFiles = the list of any expected output files.
            """
         #self.taskID=taskID
         self.dir=dir
         self.executable=executable
-        self.files=[]
+        self.inputFiles=[]
+        self.outputFiles=outputFiles
         self.args=args
         self.minVersion=minVersion
         self.maxVersion=maxVersion
@@ -152,6 +154,18 @@ class Command(object):
         return self.env
 
 
+    def getOutputFiles(self):
+        """Get the list of all possible relevant output files this command 
+           generates."""
+        return self.outputFiles
+
+    def addOutputFile(self, filename):
+        """Add a file name to the list of output files that this command may
+           generate. The file name is relative to the run directory, and 
+           does not include the standard 'stdout' and 'stderr'"""
+        if self.outputFiles is None:
+            self.outputFiles=[]
+        self.outputFiles.append(filename)
 
     def addFile(self, file):
         """Add a commandInputFile object"""
@@ -305,6 +319,9 @@ class Command(object):
             for name, value in self.env.iteritems():
                 outf.write('%s<env name="%s" value="%s"/>\n'%(iindstr, name, 
                                                               value))
+        if self.outputFiles is not None:
+            for name in self.outputFiles:
+                outf.write('%s<output_file name="%s"/>\n'%(iindstr, name))
         outf.write('%s<min-required>\n'%iindstr)
         for rsrc in self.minRequired.itervalues():
             rsrc.writeXML(outf, indent+2)
@@ -451,6 +468,10 @@ class CommandReader(xml.sax.handler.ContentHandler):
                                          self.loc)
             else:
                 self.curCommand.addArg(attrs.getValue('value'))
+        elif name == 'output_file':
+            if not attrs.has_key('name'):
+                raise CommandReaderError("output_file has no name", self.loc)
+            self.curCommand.addOutputFile(attrs.getValue('name'))
         elif name == 'env':
             if not attrs.has_key('name'):
                 raise CommandReaderError("environment variable has no name",

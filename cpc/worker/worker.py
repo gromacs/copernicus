@@ -143,6 +143,8 @@ class Worker(object):
                         finishedWorkloads.append(workload)
                         log.info("Command id %s finished"%workload.cmd.id)
                         stopWaiting=True
+                # TODO: fix this becasue it leads to unassigned value errors
+                # if the worker is killed immediately after being started
                 if haveRemainingResources:
                     stopWaiting=True
             self.runCondVar.release()
