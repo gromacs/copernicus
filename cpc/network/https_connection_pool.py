@@ -24,6 +24,7 @@ Created on Jul 18, 2011
 '''
 import logging
 from Queue import Queue,Empty,Full
+import threading
 import httplib
 import cpc.util.log
 from cpc.network.https.real_https_connection import RealHttpsConnection
@@ -41,6 +42,7 @@ class HTTPSConnectionPool(object):
         
         log.log(cpc.util.log.TRACE,"instantiation of connectionPool")
         self.pool = {}        
+        self.listlock=threading.Lock()
         
     #tries to see if there exists a connection for the host, if not it creates one and returns it
     
@@ -49,15 +51,15 @@ class HTTPSConnectionPool(object):
         
           
     def getConnection(self,host,port,privateKeyFile,keyChain,cert):
-        
         key = self.getKey(host, port)
         #check if we have a queue instantiated for that host
-        if key not in self.pool:
-            log.log(cpc.util.log.TRACE,"instantiating connection pool for host:%s:%s"%(host,port))
-            q =  Queue()
-            self.pool[key] = q
-        
-        else: q= self.pool[key]
+        with self.listlock:
+            if key not in self.pool:
+                log.log(cpc.util.log.TRACE,"instantiating connection pool for host:%s:%s"%(host,port))
+                q =  Queue()
+                self.pool[key] = q
+            else: 
+                q= self.pool[key]
         try:
             connection = q.get(False)
             log.log(cpc.util.log.TRACE,"got a connection from pool form host:%s:%s"%(host,port))
@@ -71,7 +73,7 @@ class HTTPSConnectionPool(object):
     
     def putConnection(self,connection,host,port):
         key = self.getKey(host, port)
-        self.pool[key].put(connection,False)
-        log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))
-
+        with self.listlock:
+            self.pool[key].put(connection,False)
+            log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))
         

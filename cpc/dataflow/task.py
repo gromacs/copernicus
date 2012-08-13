@@ -30,6 +30,7 @@ import threading
 
 
 import cpc.util
+from cpc.util.conf.server_conf import ServerConf
 import apperror
 import function
 import instance
@@ -54,7 +55,7 @@ class TaskQueue(object):
     """A task queue holds the a list of tasks to execute in order."""
     def __init__(self, cmdQueue):
         log.debug("Creating new task queue.")
-        self.queue=Queue.Queue()
+        self.queue=Queue.Queue(maxsize=ServerConf().getTaskQueueSize())
         self.cmdQueue=cmdQueue
     
     def put(self, task):

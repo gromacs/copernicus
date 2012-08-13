@@ -131,6 +131,12 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         self._add('heartbeat_file', "heartbeatlist.xml",
                   "Heartbeat monitor list", False,
                   relTo='conf_dir')
+
+        # Task exec queue size. If it exceeds this size, the dataflow 
+        # propagation blocks.
+        self._add('task_queue_size', 1024,
+                  "Dataflow execution task queue size",
+                  True, validation='\d+')
         
                 #static configuration
         self._add('web_root', 'web',
@@ -305,8 +311,8 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
     def setRunDir(self, rundir):
         self.set('run_dir', rundir)
 
-
-  
+    def getTaskQueueSize(self):
+        return self.conf['task_queue_size'].get()
     
     def getWebRootPath(self):        
         return os.path.join(self.execBasedir,self.get('web_root'))
