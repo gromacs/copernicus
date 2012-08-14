@@ -35,7 +35,7 @@ def printSortedConfigListDescriptions(configs):
             for i in range(20-len(value.name)):
                 spaces = spaces + " "
                 
-            print value.name + spaces + value.description + '\n' 
+            print value.name + spaces + value.description #+ '\n' 
     
 def printSortedConfigListValues(configs):    
     for key in sorted(configs.keys()): 
@@ -44,7 +44,7 @@ def printSortedConfigListValues(configs):
         for i in range(20-len(value.name)):
             spaces = spaces + " "
          
-        print value.name + spaces + str(value.get()) + '\n'    
+        print value.name + spaces + str(value.get()) #+ '\n'    
 
 
 

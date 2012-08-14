@@ -46,9 +46,10 @@ from cpc.util import cmd_line_utils
 def print_usage():
     print "Usage: cpc-server start [-d]"
     print "       cpc-server config-list"
+    print "       cpc-server config-values"   
     print "       cpc-server config param value"   
     print "       cpc-server setup default-project-directory"
-    print "       cpc-server create-connection-bundle"
+    print "       cpc-server create-connection-bundle|bundle"
     print ""
     print "Common options:"
     print "       cpc-server [-c confdir]"
@@ -72,15 +73,17 @@ while len(args)>0:
     elif args[0]=='-c':
         option = args.pop(0)
         if len(args) < 1:
-            sys.stdout.write("ERROR: no value specified for global option '%s'"%option)
+            sys.stdout.write(
+                        "ERROR: no value specified for global option '%s'\n"%
+                        option)
             print_usage()
         confdir=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
         debug=cpc.util.log.MODE_DEBUG
     else:
-        sys.stdout.write("ERROR: no command or faulty global option '%s'"%
-              args[0])
+        sys.stdout.write("ERROR: no command or faulty global option '%s'\n"%
+                         args[0])
         print_usage()
 
 
@@ -118,7 +121,8 @@ try:
     elif cmd == "setup":    
         
         # the -c option will be ignored here.
-        # by default we do a setup with the hostname as base config dir or a name defined by user input
+        # by default we do a setup with the hostname as base config dir or a 
+        # name defined by user input
         rundir = getArg(1, 
                         "Run directory: the base directory for project output")
         cn=None
@@ -133,9 +137,6 @@ try:
         if(len(args)>2):
             cn = getArg(2,"distinguished name for the server")
 
-
-
-
         cmd_line_utils.initiateServerSetup(rundir, cn,forceReset=forceReset)
 
         sys.exit(0)
@@ -145,25 +146,24 @@ try:
     # initialize the tracker
     cpc.server.tracking.tracker.initTracker()     
     if cmd == "config-list":
-        print '\n'
+        #print '\n'
         conf = ServerConf()
         configs = conf.getUserSettableConfigs()
         cmd_line_utils.printSortedConfigListDescriptions(configs)           
     
     elif cmd == "config-values":
-        print '\n'
+        #print '\n'
         conf = ServerConf()
         configs = conf.getUserSettableConfigs()
         cmd_line_utils.printSortedConfigListValues(configs)
 
     elif cmd == "config":
-        param = args[1]
-        value = args[2]
-        
+        param = getArg(1, "parameter name") 
+        value = getArg(2, "parameter value")
         conf = ServerConf()
         conf.set(param,value)
 
-    elif cmd == "create-connection-bundle":
+    elif cmd == "bundle" or cmd == "create-connection-bundle":
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
         print connectionBundle.toJson()
     else: 
