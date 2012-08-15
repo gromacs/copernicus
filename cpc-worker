@@ -100,14 +100,12 @@ try:
         for i in range(1, len(args)):
             restargs.append(args[i])
         worker=cpc.worker.Worker(cf, type, restargs)
-
-        def shutdownHandler(signum,frame):
-          worker.shutdown()
-
-        signal.signal(signal.SIGINT,shutdownHandler)
-
+        #def shutdownHandler(signum,frame):
+        #  worker.shutdown()
+        #signal.signal(signal.SIGINT,shutdownHandler)
         worker.run()
 except ClientError as e:
     print("ERROR: %s"%e)
 except cpc.util.CpcError as e:
     print("ERROR: %s"%e)
+

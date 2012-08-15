@@ -24,6 +24,7 @@ import shutil
 import tempfile
 import logging
 import threading
+import signal
 
 
 import cpc.util.file
@@ -36,8 +37,44 @@ from cpc.worker.message import WorkerMessage
 
 log=logging.getLogger('cpc.worker')
 import sys
+
 class WorkerError(cpc.util.CpcError):
     pass
+
+
+# variables for the signal handler associated with workers
+signalHandlerLock=threading.Lock() # the lock for the workers list
+signalHandlerWorkers=[] # the list of workers to shutdown 
+signalHandlerWorking=False # whether the signal handler has been installed
+
+def _signalHandlerFunction(signum, frame):
+    """The signal handler function. """
+    # Start a thread and handle signals in that thread. This allows us to 
+    # safely lock mutexes.
+    th=threading.Thread(target=_signalHandlerThread) 
+    th.daemon=True
+    th.start()
+
+def _signalHandlerThread():
+    """Helper function for signal handling."""
+    global signalHandlerLock
+    global signalHandlerWorkers
+    global signalHandlerWorking
+    with signalHandlerLock:
+        for worker in signalHandlerWorkers:
+            worker.shutdown()    
+
+def signalHandlerAddWorker(worker):
+    """Add one worker to the list of workers to notify when a signal arrives."""
+    global signalHandlerLock
+    global signalHandlerWorkers
+    global signalHandlerWorking
+    """Add a worker to the list of workers for the signal handler"""
+    with signalHandlerLock:
+        signalHandlerWorkers.append(worker)
+        if not signalHandlerWorking:
+            signalHandlerWorking=True
+            signal.signal(signal.SIGINT, _signalHandlerFunction)
 
 
 class Worker(object):
@@ -54,8 +91,7 @@ class Worker(object):
         self.quit=False
         self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
         # Process (untar) the run request into a directory name
-        # that is unique for this process+hostname, and worker 
-        # job iteration
+        # that is unique for this process+hostname, and worker job iteration
         self.maindir=os.path.join(self.conf.getRunDir(), self.id)
         os.makedirs(self.maindir)
         self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id, 
@@ -67,8 +103,7 @@ class Worker(object):
             raise WorkerError("Plugin can't run.")  
         self.platforms=self._getPlatforms(self.plugin)
         
-        
-        # we make copies to be able to subtract our usage off the max resources        
+        # we make copies to be able to subtract our usage off the max resources
         self.remainingPlatforms=copy.deepcopy(self.platforms)
         # Then check what executables we already have
         self._getExecutables()
@@ -79,20 +114,22 @@ class Worker(object):
             sys.exit(1)
         
         self._printAvailableExes() 
-        
         self.workloads=[]
         # the run lock and condition variable
         self.runLock=threading.Lock()
         self.runCondVar=threading.Condition(self.runLock)
         self.iteration=0
-
         self.acceptCommands = True
+        # install the signal handler
+        signalHandlerAddWorker(self)
 
     def run(self):
         """Ask for tasks until told to quit."""
         while not self.quit:
             # send a request for a command to run
-            if self.acceptCommands:
+            with self.runCondVar:
+                acceptCommands=self.acceptCommands
+            if acceptCommands:
                 resp=self._obtainCommands()
                 # and extract the command and run directory
                 workloads=self._extractCommands(resp)
@@ -113,12 +150,16 @@ class Worker(object):
                     self.workloads.extend(workloads)
                     self.heartbeat.addWorkloads(workloads)
                     # Now we run.
-                    #if len(workloads)>1:
-                    #   raise WorkerError("More than 1 command: %d"% len(workloads))
                     log.debug("Running workloads: %d"%len(self.workloads))
                     #hb=heartbeat.Heartbeat(cmd.id, origServer, rundir)
-                    for workload in workloads:
-                        workload.run(self.runCondVar, self.plugin, self.args)
+                    # just before starting to run, we again check whether we
+                    # should.
+                    with self.runCondVar:
+                        acceptCommands=self.acceptCommands
+                    if acceptCommands:
+                        for workload in workloads:
+                            workload.run(self.runCondVar, self.plugin, 
+                                         self.args)
             # now wait until a workload finishes
             finishedWorkloads = []
             self.runCondVar.acquire()
@@ -134,6 +175,7 @@ class Worker(object):
                     if haveRemainingResources:
                         log.info("Have free resources. Waiting 30 seconds")
                         self.runCondVar.wait(30)
+                        stopWaiting=True
                     else:
                         # we can't ask for new jobs, so we wait indefinitely
                         self.runCondVar.wait()
@@ -143,10 +185,6 @@ class Worker(object):
                         finishedWorkloads.append(workload)
                         log.info("Command id %s finished"%workload.cmd.id)
                         stopWaiting=True
-                # TODO: fix this becasue it leads to unassigned value errors
-                # if the worker is killed immediately after being started
-                if haveRemainingResources:
-                    stopWaiting=True
             self.runCondVar.release()
             for workload in finishedWorkloads:
                 workload.finish(self.plugin, self.args)
@@ -157,7 +195,9 @@ class Worker(object):
                 for workload in finishedWorkloads:
                     self.workloads.remove(workload)
 
-            if not self.acceptCommands and len(self.workloads)==0:
+            with self.runCondVar:
+                acceptCommands=self.acceptCommands
+            if not acceptCommands and len(self.workloads)==0:
                 self.quit = True
         self.heartbeat.stop()
     
@@ -332,14 +372,14 @@ class Worker(object):
         return True
 
     def shutdown(self):
-        log.log(cpc.util.log.TRACE,"Received shutdown signal")
+        """Shut down this worker cleanly. This must be called from a thread,
+           not directly from a signal handler."""
+        #log.log(cpc.util.log.TRACE,"Received shutdown signal")
+        log.debug("Received shutdown signal")
+        # now set the variable and notify
+        self.runCondVar.acquire()
         self.acceptCommands = False
+        self.runCondVar.notify()
+        self.runCondVar.release()
 
-        th=threading.Thread(target=sendNotify, args=(self,self.runCondVar))
-        th.daemon=True
-        th.start()
 
-def sendNotify(worker,condVar):
-    condVar.acquire()
-    condVar.notify()
-    condVar.release()
