@@ -163,19 +163,22 @@ def g_bar(inp):
             else:
                 spl=line.split()
                 if len(spl) >= 9:
-                    lam_A=      float(spl[0])
-                    lam_B=      float(spl[1])
-                    dG=         float(spl[2])
-                    dG_err=     float(spl[3])
-                    s_A=        float(spl[4])
-                    s_A_err=    float(spl[5])
-                    s_B=        float(spl[6])
-                    s_B_err=    float(spl[7])
-                    stdev=      float(spl[8])
-                    stdev_err=  float(spl[9])
-                    rs=res(lam_A, lam_B, dG, dG_err, s_A, s_A_err, s_B, s_B_err,
-                           stdev, stdev_err)
-                    results.append(rs)
+                    try:
+                        lam_A=      float(spl[0])
+                        lam_B=      float(spl[1])
+                        dG=         float(spl[2])
+                        dG_err=     float(spl[3])
+                        s_A=        float(spl[4])
+                        s_A_err=    float(spl[5])
+                        s_B=        float(spl[6])
+                        s_B_err=    float(spl[7])
+                        stdev=      float(spl[8])
+                        stdev_err=  float(spl[9])
+                        rs=res(lam_A, lam_B, dG, dG_err, s_A, s_A_err, s_B, 
+                               s_B_err, stdev, stdev_err)
+                        results.append(rs)
+                    except ValueError:
+                        pass
         elif phase == 2:
             spl=line.split()
             #log.debug("phase 2 line: %s, %s"%(line, spl))

@@ -376,9 +376,9 @@ class Value(object):
     def haveAllRequiredValues(self):
         """Return a boolean indicating whether this value and all of its
            subvalues are present (if they're not optional)."""
-        return self._haveAllRequiredValues(False)
+        return self._haveAllRequiredValues(False, False)
 
-    def _haveAllRequiredValues(self, complete):
+    def _haveAllRequiredValues(self, complete, optional):
         if self.type.isSubtype(vtype.recordType):
             kv=self.type.getMemberKeys()
             for item in kv:
@@ -396,7 +396,8 @@ class Value(object):
                     #if ncomplete:
                     #    log.debug('%s: checking for missing record value %s'%
                     #              (self.getFullName(), item))
-                    if not self.value[item]._haveAllRequiredValues(ncomplete):
+                    if not self.value[item]._haveAllRequiredValues(ncomplete,
+                                                                   rm.opt):
                         #log.debug('%s: * missing record value %s'%
                         #          (self.getFullName(), item))
                         return False
@@ -404,17 +405,17 @@ class Value(object):
         elif (isinstance(self.value, list) or isinstance(self.value, dict)):
             # and if it's not optional, arrays and dicts
             # must have more than 0 items.
-            if len(self.value) == 0:
+            if not optional and len(self.value) == 0:
                 return False
             if complete:
                 # check whether all sub-items are complete.
                 if isinstance(self.value, list):
                     for val in self.value:
-                        if not val._haveAllRequiredValues(True):
+                        if not val._haveAllRequiredValues(True, False):
                             return False
                 else:
                     for val in self.value.itervalues():
-                        if not val._haveAllRequiredValues(True):
+                        if not val._haveAllRequiredValues(True, False):
                             return False
             return True
         else:
