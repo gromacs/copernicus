@@ -409,8 +409,9 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                         raise ProjectXMLError("No id in list field", self)
                     const=cpc.util.getBooleanAttribute(attrs,"const")
                     opt=cpc.util.getBooleanAttribute(attrs,"opt")
+                    complete=cpc.util.getBooleanAttribute(attrs, "complete")
                     nm=keywords.fixID(attrs.getValue("id"))
-                    self.type.addMember(nm, tp, opt, const)
+                    self.type.addMember(nm, tp, opt, const, complete)
                 # add it to the stack
                 self.type=tp
                 self.typeStack.append((tp, nm))

@@ -14,10 +14,12 @@
         <field type="file" id="ndx" opt="true">
             <desc>A .ndx index file</desc>
         </field>
-        <field type="gromacs::grompp_include_array" id="include" opt="true">
+        <field type="gromacs::grompp_include_array" id="include" opt="true" 
+               complete="true">
             <desc>array of files to include</desc>
         </field>
-        <field type="gromacs::mdp_array" id="settings" opt="true">
+        <field type="gromacs::mdp_array" id="settings" opt="true" 
+               complete="true">
             <desc>array of settings</desc>
         </field>
         <field type="string" id="mdrun_cmdline_options" opt="true">

@@ -297,16 +297,18 @@ class FileType(Type):
 
 class RecordMember(description.Describable):
     """Class containing information about a record member."""
-    def __init__(self, tp, name, opt=False, const=False):
+    def __init__(self, tp, name, opt=False, const=False, complete=False):
         """Initialize based on type, name, description.
            tp = the type
            name = the name
            opt = whether this member is optional
-           const = whether this member is const"""
+           const = whether this member is const
+           complete = whether this member's sub-items must not be None """
         self.type=tp
         self.name=name
         self.opt=opt
         self.const=const
+        self.complete=complete
         description.Describable.__init__(self)
 
     def isOptional(self):
@@ -314,7 +316,12 @@ class RecordMember(description.Describable):
         return self.opt
 
     def isConst(self):
+        """Return whether the field is constant."""
         return self.const
+
+    def isComplete(self):
+        """Return whether all sub-items of this item must be non-None"""
+        return self.complete
 
 
 class RecordType(Type):
@@ -356,16 +363,21 @@ class RecordType(Type):
             return True
         if self.parent.isSubtype(recordType):
             return self.parent.hasMember(name) 
-    def addMember(self, name, type, opt, const):
+    def addMember(self, name, vtype, opt, const, complete):
         """Add/override a new member to the record.
+           name = the name of the new member item
+           vtype = the type of the new member item
            opt = whether the member is optional
-           const = hwehter the member is const"""
+           const = hwehter the member is const
+           complete = whether the member's subvalues must be non-None"""
         if name in self.recordMembers:
-            self.recordMembers[name].type=type
+            self.recordMembers[name].type=vtype
             self.recordMembers[name].opt=opt
             self.recordMembers[name].const=const
+            self.recordMembers[name].complete=complete
         else:
-            self.recordMembers[name]=RecordMember(type, name, opt, const)
+            self.recordMembers[name]=RecordMember(vtype, name, opt, const, 
+                                                  complete)
     def addDescription(self, name, desc):
         """Add a description of a member to the record"""
         self.descs[name]=desc
@@ -387,26 +399,27 @@ class RecordType(Type):
             else:
                 #tpname="%s::%s"%(tp.lib.getName(), tp.name)
                 tpname=tp.getFullName()
-            optstr=""
+            attrstr=' '
             if mem.opt:
-                optstr=' opt="true"'
-            conststr=""
+                attrstr=' opt="true"'
             if mem.const:
-                conststr='const="true"'
+                attrstr=' const="true"%s'%attrstr
+            if mem.complete:
+                attrstr=' complete="true"%s'%attrstr
             if tp.hasMembers() and tp.isAnonymous():
-                outf.write('%s<field id="%s" %s %s type="%s">\n'%
-                           (indstr, name, optstr, conststr, tpname))
+                outf.write('%s<field id="%s"%s type="%s">\n'%
+                           (indstr, name, attrstr, tpname))
                 tp.writePartsXML(outf, indent+1)
                 if mem.desc is not None:
                     mem.desc.writeXML(outf, indent+1)
                 outf.write('%s</field>\n'%indstr)
             else:
                 if mem.desc is None:
-                    outf.write('%s<field id="%s" %s %s type="%s" />\n'%
-                               (indstr, name, optstr, conststr, tpname))
+                    outf.write('%s<field id="%s"%s type="%s" />\n'%
+                               (indstr, name, attrstr, tpname))
                 else:
-                    outf.write('%s<field id="%s" %s %s type="%s">\n'%
-                               (indstr, name, optstr, conststr, tpname))
+                    outf.write('%s<field id="%s"%s type="%s">\n'%
+                               (indstr, name, attrstr, tpname))
                     mem.desc.writeXML(outf, indent+1)
                     outf.write('%s</field>\n'%indstr)
 

@@ -376,32 +376,47 @@ class Value(object):
     def haveAllRequiredValues(self):
         """Return a boolean indicating whether this value and all of its
            subvalues are present (if they're not optional)."""
+        return self._haveAllRequiredValues(False)
+
+    def _haveAllRequiredValues(self, complete):
         if self.type.isSubtype(vtype.recordType):
             kv=self.type.getMemberKeys()
             for item in kv:
-                if not self.type.getRecordMember(item).opt:
-                    if (not item in self.value) or (self.value[item].value 
-                                                    is None):
+                rm=self.type.getRecordMember(item)
+                ncomplete = complete or rm.complete
+                #log.debug('%s: checking for record value %s; ncomplete=%s'%
+                #          (self.getFullName(), item, ncomplete))
+                if not rm.opt:
+                    if ( (not item in self.value) or 
+                           (self.value[item].value is None) ):
                         #log.debug('%s: missing record value %s'%
                         #          (self.getFullName(), item))
                         return False
-                    if not self.value[item].haveAllRequiredValues():
+                if (not rm.opt) or ncomplete:
+                    #if ncomplete:
+                    #    log.debug('%s: checking for missing record value %s'%
+                    #              (self.getFullName(), item))
+                    if not self.value[item]._haveAllRequiredValues(ncomplete):
                         #log.debug('%s: * missing record value %s'%
                         #          (self.getFullName(), item))
                         return False
-                    #if self.value[item].type.isSubtype(vtype.recordType):
-                    #    # check whether it's a list: then check the list
-                    #elif (isinstance(self.value[item].value, list) or
-                    #      isinstance(self.value[item].value, dict)):
-                    #    # and if it's not optional, arrays and dicts
-                    #    # must have more than 0 items.
-                    #    if len(self.value[item].value) == 0:
-                    #        return False
             return True
         elif (isinstance(self.value, list) or isinstance(self.value, dict)):
             # and if it's not optional, arrays and dicts
             # must have more than 0 items.
-            return len(self.value) > 0
+            if len(self.value) == 0:
+                return False
+            if complete:
+                # check whether all sub-items are complete.
+                if isinstance(self.value, list):
+                    for val in self.value:
+                        if not val._haveAllRequiredValues(True):
+                            return False
+                else:
+                    for val in self.value.itervalues():
+                        if not val._haveAllRequiredValues(True):
+                            return False
+            return True
         else:
             # if it's a simple value, just check whether it's not None
             return (self.value is not None)

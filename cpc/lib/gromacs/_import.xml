@@ -64,10 +64,11 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp_include_array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true" 
+                    complete="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp_array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true" complete="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -136,7 +137,7 @@
             <field type="file" id="mdp">
                 <desc>The .mdp file</desc>
             </field>
-            <field type="mdp_array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true" complete="true">
                 <desc>Array of settings</desc>
             </field>
         </inputs>
@@ -157,7 +158,7 @@
                 <desc>The .mdp file</desc>
             </field>
 
-            <field type="mdp_array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true" complete="true">
                 <desc>Array of settings</desc>
             </field>
             <field type="string" id="name">
@@ -189,10 +190,11 @@
             <field type="file" id="top" >
                 <desc>A .top topology file</desc>
             </field>
-            <field type="grompp_include_array" id="include" opt="true">
+            <field type="grompp_include_array" id="include" opt="true" 
+                    complete="true">
                 <desc>array of files to include</desc>
             </field>
-            <field type="mdp_array" id="settings" opt="true">
+            <field type="mdp_array" id="settings" opt="true" complete="true">
                 <desc>array of settings</desc>
             </field>
             <field type="file" id="ndx" opt="true">
@@ -519,7 +521,7 @@
 
     <function id="g_bar" type="python-extended">
         <inputs>
-            <field type="edr_array" id="edr">
+            <field type="edr_array" id="edr" complete="true">
                 <desc>An array of .edr files with free energy data.</desc>
             </field>
         </inputs>

@@ -203,6 +203,8 @@ class CmdLine(object):
                     co.write(", optional")
                 if "const" in item:
                     co.write(", const")
+                if "complete" in item:
+                    co.write(", complete")
                 #if "desc" in item:
                 #    co.write("\n         %s"%item["desc"])
                 co.write('\n')

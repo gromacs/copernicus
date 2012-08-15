@@ -260,6 +260,8 @@ class Project(object):
                                 subi["optional"]=1
                             if mem.isConst():
                                 subi["const"]=1
+                            if mem.isComplete():
+                                subi["complete"]=1
                             if mem.desc is not None:
                                 subi["desc"]=mem.desc.get()
                             ret["subitems"].append( subi )
