@@ -202,17 +202,6 @@ class TrajFileCollection(object):
                         trajl['trr']=trr[-1]
                     if len(edr) > 0:
                         trajl['edr']=edr[-1]
-                    #if len(xtc) == 0 and len(trr)==0 and len(edr)==0:
-                    #    self.prevtraj.append(False)
-                    #else:
-                    #    # extract the last number
-                    #    xtcn=lastxtc[-1].replace('traj.part','').\
-                    #                     replace('.xtc','')
-                    #    trrn=lasttrr[-1].replace('traj.part','').\
-                    #                     replace('.trr','')
-                    #    edrn=lastedr[-1].replace('traj.part','').\
-                    #                     replace('.edr','')
-                    #    self.prevtraj.append(True)
                     self.trajlist.append(trajl)
             except OSError:
                 pass
@@ -291,19 +280,21 @@ class TrajFileCollection(object):
             sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
             stepline=re.compile('step = .*')
-            outfileline=re.compile('output_filename = .*')
+            outfileline=re.compile('output filename = .*')
             for line in sp.stdout:
                 if stepline.match(line):
-                    stepnr=int(line.split()[2])
+                    stepnr=int(line.split('=')[1])
                     if not checkFileNumbers:
                         break
                 elif checkFileNumbers and outfileline.match(line):
-                    filename=line.split[2]
+                    filename=line.split('=')[1]
                     nrs=re.findall(r'\d+', filename)
+                    #log.debug("**NRS=%s, line=%s"%(nrs, line))
                     #for nr in nrs:
                     if len(nrs)>0:
-                        nr=nrs[-1]
-                        if int(nr) > newFileNumber:
+                        nr=int(nrs[-1])
+                        if nr > newFileNumber:
+                            #log.debug("found new file number: %d"%(nr))
                             newFileNumber = nr
             sp.stdout.close()
             if checkFileNumbers:
