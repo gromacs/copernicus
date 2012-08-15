@@ -232,10 +232,9 @@ class WorkLoad(object):
         log.debug("Full command string: %s"%cmdstring)
         self.args=shlex.split(str(cmdstring))
         # set the status to running
-        condVar.acquire()
-        prevRun=self.running
-        self.running=True
-        condVar.release()
+        with condVar:
+            prevRun=self.running
+            self.running=True
         if prevRun:
             raise cpc.util.CpcError("workload already running.")
         # start the thread in which to run.
@@ -288,6 +287,14 @@ class WorkLoad(object):
         log.debug("Run with cmd id=%s finished"%self.cmd.id)
         #self._returnResults()
 
+    def signalMainThread(self, startTime, endTime, condVar):
+        # now signal the main thread that we're finished.
+        with condVar:
+            log.debug("signaling end of run for %s"%self.cmd.id)
+            self.running=False
+            self.realTimeSpent += endTime-startTime
+            condVar.notifyAll() 
+
 def runThreadFn(workload, condVar):
     startTime=time.time()
     try:
@@ -300,9 +307,6 @@ def runThreadFn(workload, condVar):
         log.error("Worker error: %s"%(fo.getvalue()))
         workload.failed=True
     endTime=time.time()
-    condVar.acquire()
-    workload.running=False
-    workload.realTimeSpent += endTime-startTime
-    condVar.notify() 
-    condVar.release()
+    # now signal the main thread that we're finished.
+    workload.signalMainThread(startTime, endTime, condVar)
 

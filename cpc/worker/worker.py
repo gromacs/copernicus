@@ -163,8 +163,8 @@ class Worker(object):
             # now wait until a workload finishes
             finishedWorkloads = []
             self.runCondVar.acquire()
-            stopWaiting=False
-            while not stopWaiting:
+            continueWaiting=True
+            while continueWaiting:
                 haveFinishedWorkloads=False
                 for workload in self.workloads:
                     if not workload.running:
@@ -175,16 +175,22 @@ class Worker(object):
                     if haveRemainingResources:
                         log.info("Have free resources. Waiting 30 seconds")
                         self.runCondVar.wait(30)
-                        stopWaiting=True
+                        continueWaiting=False
                     else:
                         # we can't ask for new jobs, so we wait indefinitely
                         self.runCondVar.wait()
+                else:
+                    continueWaiting=False
                 # loop over all workloads
                 for workload in self.workloads:
                     if not workload.running:
                         finishedWorkloads.append(workload)
                         log.info("Command id %s finished"%workload.cmd.id)
-                        stopWaiting=True
+                        continueWaiting=False
+                    #else:
+                    #    log.debug("Command %s still running"%workload.cmd.id)
+                #log.debug("End of waiting loop")
+            #log.debug("Out of waiting loop")
             self.runCondVar.release()
             for workload in finishedWorkloads:
                 workload.finish(self.plugin, self.args)
@@ -194,7 +200,6 @@ class Worker(object):
                 self.heartbeat.delWorkloads(finishedWorkloads)
                 for workload in finishedWorkloads:
                     self.workloads.remove(workload)
-
             with self.runCondVar:
                 acceptCommands=self.acceptCommands
             if not acceptCommands and len(self.workloads)==0:
@@ -379,7 +384,7 @@ class Worker(object):
         # now set the variable and notify
         self.runCondVar.acquire()
         self.acceptCommands = False
-        self.runCondVar.notify()
+        self.runCondVar.notifyAll()
         self.runCondVar.release()
 
 
