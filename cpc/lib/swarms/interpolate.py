@@ -5,12 +5,12 @@
 
 # The structures must be aligned beforehand! And centered in the pbc box!
 
-import argparse
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', required=True, help='The initial .gro file.')
-parser.add_argument('-f', required=True, help='The target .gro file.')
-parser.add_argument('-n', required=True, help='The number of interpolants.')
-args = vars(parser.parse_args())
+#import argparse
+#parser = argparse.ArgumentParser()
+#parser.add_argument('-i', required=True, help='The initial .gro file.')
+#parser.add_argument('-f', required=True, help='The target .gro file.')
+#parser.add_argument('-n', required=True, help='The number of interpolants.')
+#args = vars(parser.parse_args())
 
 import os
 import sys
@@ -37,46 +37,47 @@ class atom:
             self.vset=False
         self.group=[]
 
-i = open(args['i'],'r').readlines()
-f = open(args['f'],'r').readlines()
-n = int(args['n'])
 
-# open n files for writing out conf files
-# store the file names in a dictionary
-files = {}
-for k in range(1,n):
-	files[k] = open(str(k)+'.gro','w')
-	files[k].write(i[0])
-	files[k].write(i[1])
+def make_path(start, end, n):
+    i = open(start,'r').readlines()
+    f = open(end,'r').readlines()
 
-j=2 # start reading after the header
-while j < len(i)-1:
-	line = i[j]
-    # TODO prevent interpolation of non-protein part in general.
-    # this if the protein is not the only group, there will be an error in topology set-up.
-	if "SOL" not in line or "DOPC" not in line: 
-		i_atom = atom(line)
-		f_atom = atom(f[j])
-		dx = f_atom.x - i_atom.x
-		dy = f_atom.y - i_atom.y
-		dz = f_atom.z - i_atom.z
-		for k in range (1,n):
-			newx = i_atom.x + k*(dx/n)
-			newy = i_atom.y + k*(dy/n)
-			newz = i_atom.z + k*(dz/n)
-			if i_atom.vset:
-				files[k].write("%5d%5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f\n"%
-                       		(i_atom.resnr, i_atom.resname, i_atom.atomname, i_atom.atomnr,
-                        	newx, newy, newz, i_atom.vx, i_atom.vy, i_atom.vz))
-			else:
-				files[k].write("%5d%5s%5s%5d%8.3f%8.3f%8.3f\n"%
+    # open n files for writing out conf files
+    # store the file names in a dictionary
+    files = {}
+    for k in range(n):
+        files[k] = open(str(k)+'.gro','w')
+        files[k].write(i[0])
+        files[k].write(i[1])
+
+    j=2 # start reading after the header
+    while j < len(i)-1:
+        line = i[j]
+        # TODO prevent interpolation of non-protein part in general.
+        # TODO allow optional ignore groups, or specific index files
+        if "SOL" not in line or "DOPC" not in line: 
+            i_atom = atom(line)
+            f_atom = atom(f[j])
+            dx = f_atom.x - i_atom.x
+            dy = f_atom.y - i_atom.y
+            dz = f_atom.z - i_atom.z
+            for k in range (n):
+                newx = i_atom.x + (k+1)*(dx/n)
+                newy = i_atom.y + (k+1)*(dy/n)
+                newz = i_atom.z + (k+1)*(dz/n)
+                if i_atom.vset:
+                    files[k].write("%5d%5s%5s%5d%8.3f%8.3f%8.3f%8.4f%8.4f%8.4f\n"%
                                 (i_atom.resnr, i_atom.resname, i_atom.atomname, i_atom.atomnr,
-                                newx, newy, newz))
-	else: 
-		for k in range(1,n):
-			files[k].write(i[j])
-	j+=1
+                                newx, newy, newz, i_atom.vx, i_atom.vy, i_atom.vz))
+                else:
+                    files[k].write("%5d%5s%5s%5d%8.3f%8.3f%8.3f\n"%
+                                    (i_atom.resnr, i_atom.resname, i_atom.atomname, i_atom.atomnr,
+                                    newx, newy, newz))
+        else: 
+            for k in range(n):
+                files[k].write(i[j])
+        j+=1
 
-for k in range(1,n):
-	files[k].write(f[-1]) # append the last line of the target .gro file
-	files[k].close()
+    for k in range(n):
+        files[k].write(f[-1]) # append the last line of the target .gro file
+        files[k].close()

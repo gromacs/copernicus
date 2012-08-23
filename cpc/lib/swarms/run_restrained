@@ -79,7 +79,7 @@ def run(inp, out):
     if mdruns is None and mdruns!=1:
         out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
         # connect the minimization mdp and resources
-        out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+        #out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
@@ -87,18 +87,17 @@ def run(inp, out):
         out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
         out.addConnection('self:sub_out.restrained_settings', 
                           'runs:in.settings[0]')
-        out.addConnection('self:sub_out.includes', 'runs:in.include')
-        # this is where we could set the dihedral restraints by merging in
-        # the itp file with the rest of the includes.
+        #out.addConnection('self:sub_out.includes', 'runs:in.include')
         out.addConnection('runs:out.trr', 'self:sub_in.trrs')
 
         # create the include array array, and populate the output trr_array
         # we fill the trr_array with the input confs
         in_confs=inp.getInput('minimized_conf_path')
         for i in range(len(in_confs)):
-            itp=inp.getInput('minimized_conf_path[%d].itp'%i)
-            out.setSubOut('includes[%d][0]'%i, FileValue(itp))
+            #itp=inp.getInput('minimized_conf_path[%d].itp'%i)
+            #out.setSubOut('includes[%d][0]'%i, FileValue(itp))
             out.addConnection('self:ext_in.minimized_conf_path[%d].conf'%i,'runs:in.conf[%d]'%i)
+            out.addConnection('self:ext_in.minimized_conf_path[%d].top'%i,'runs:in.top[%d]'%i)
             out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.path[%d].conf'%i)
             out.addConnection('runs:out.trr[%d]'%i, 'self:ext_out.restrained_trrs[%d]'%i)
 

@@ -22,6 +22,7 @@
 import sys
 import os
 import math
+from subprocess import Popen
 import os.path
 try:
     from cStringIO import StringIO
@@ -32,52 +33,54 @@ import cpc.dataflow
 from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
-from cpc.dataflow import FileValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
-
-import reparametrize
-
+from cpc.dataflow import FileValue
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
-def rep(inp, out):
-    diheds=inp.getInput('dihedrals')
-    ndx_file=inp.getInput('res_index')
-    top=inp.getInput('restraint_top') 
-    start_conf=inp.getInput('start_conf')
-    start_xvg=inp.getInput('start_xvg')
-    end_conf=inp.getInput('end_conf')
-    end_xvg=inp.getInput('end_xvg')
-    Nswarms=inp.getInput('Nswarms')
-    Ninterpolants=inp.getInput('Ninterpolants')
-    
-    # create a python object from the xvg_array_array
-    dihedrals=[]
-    for i in range(len(diheds)):
-        dih_i=[]
-        xvgs=inp.getInput('dihedrals[%d]'%i)
-        for j in range(len(xvgs)):
-            xvg=inp.getInput('dihedrals[%d][%d]'%(i,j))
-            if xvg is not None:
-                dih_i.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
-            else:
-                sys.stderr.write('Swarm trajectory %d %d failed\n'%(i,j))
-                sys.stderr.write('The xvg is: %s %s\n'%(xvg,FileValue(xvg)))
-        dihedrals.append(dih_i)
-    # call the external python script
-    reparametrize.reparametrize(dihedrals, ndx_file, start_conf, start_xvg, end_conf, end_xvg, top)
-    conf_path=inp.getInput('restrained_out')
-    for i in range(len(conf_path)):
-        topol=""
-        topol=os.path.join(inp.getOutputDir(),'%d.top'%(i+1))
-        out.setOut('path[%d].top'%i,FileValue(topol))
-        conf=FileValue(inp.getInput('restrained_out[%d].conf'%i))
-        out.setOut('path[%d].conf'%i,conf)
+def run(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+                                               "persistent.dat"))
+    # ensure that the mdruns are finished and call g_rama multi
+    ramas=pers.get('ramas')
+    if ramas is None or ramas<1:
+        #confs=inp.getInput('confs')
+        # ensure swarms have finished running
+        #finished=True
+        #if confs is not None and len(confs)>0:
+        #    for i in range(len(confs)):
+        #        subconfs=inp.getInput('confs[%d]'%i)
+        #        if subconfs is not None or len(subconfs)>0:
+        #            for j in range(len(subconfs)):
+        #                conf=inp.getInput('confs[%d][%d]'%(i,j))
+        #                if FileValue(conf) is None:
+        #                    finished=False
+        #        else:
+        #            finished=False
+        #else: 
+        #    finished=False
+                     
+        #out.addInstance('grama','g_rama_multi')
+        #out.addConnection('self:ext_in.tpr', 'grama:in.tpr')
+        #out.addConnection('self:ext_in.confs', 'grama:in.confs')
+        #out.addConnection('grama:out.xvgs', 'self:ext_out.xvgs')
+        confs=inp.getInput('confs')
+        tpr=inp.getInput('tpr')
+        for i in range(len(confs)):
+            subconfs=inp.getInput('confs[%d]'%i)
+            for j in range(len(subconfs)):
+                conf=inp.getInput('confs[%d][%d]'%(i,j))
+                Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '%d.xvg'%j])
+                xvg_i_j=os.path.join(inp.getOutputDir(), '%d.xvg'%j)
+                out.setOut('xvgs[%d][%d]'%(i,j),FileValue(xvg_i_j))
 
+        ramas=1
+    ramas=pers.set('ramas', ramas)
 
+    pers.write()
 
 # read the input data
 inf=StringIO()
@@ -97,11 +100,10 @@ if inp.testing():
     sys.exit(0)
 
 
-
 # prepare the output data
 out=inp.getFunctionOutput()
 
-rep(inp, out)
+run(inp, out)
 
 out.writeXML(sys.stdout)
 #sys.stderr.write('\n')

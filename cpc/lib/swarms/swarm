@@ -22,6 +22,9 @@
 import sys
 import os
 import math
+import time
+import interpolate
+import dihedral_restraints
 import os.path
 try:
     from cStringIO import StringIO
@@ -34,19 +37,84 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
 
+from subprocess import Popen
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
 def swarm(inp, out):
-    return
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
     # the function...
-    pers.write()
+    iterations=pers.get('iterations')
+    if iterations is None or iterations<1:
+        Niterations=inp.getInput('Niterations')
+        # Niterations is an optional input, path converge may also be used to monitor iterations
+        if Niterations is not None:
 
+            start=inp.getInput('start_conf')
+            end=inp.getInput('end_conf')
+            n=inp.getInput('Ninterpolants')
+            top=inp.getInput('restraint_top')
+            ndx=inp.getInput('res_index')
+            tpr=inp.getInput('tpr')
+            interpolate.make_path(start, end, n)
+            for i in range(n):
+                conf_i=os.path.join(inp.getOutputDir(),'%d.gro'%i)
+                out.setSubOut('path[%d].conf'%i, FileValue(conf_i))
+                Popen(['g_rama','-f','%s'%conf_i,'-o','%d.xvg'%i,'-s','%s'%tpr])
+                #xvg_i=os.path.join(inp.getOutputDir(),'%d.xvg'%i)
+                #out.setSubOut('xvg[%d]'%i, FileValue(xvg_i))
+            last_xvg=os.path.join(inp.getOutputDir(),'%d.gro'%(n-1))
+            time.sleep(5)
+            dihedral_restraints.write_restraints(start, top, n, ndx)
+            for i in range(n):
+                top_i=os.path.join(inp.getOutputDir(),'%d.top'%i)
+                out.setSubOut('path[%d].top'%i, FileValue(top_i))
+
+            for i in range(Niterations):
+                out.addInstance('iter%d'%i, 'dihedral_swarm_iteration')
+                # initial inputs
+                out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf'%i)
+                out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg'%i)
+                out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf'%i)
+                out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg'%i)
+                out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants'%i)
+                out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
+                out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
+                out.addConnection('self:ext_in.top', 'iter%d:in.top'%i)
+                out.addConnection('self:ext_in.restraint_top', 'iter%d:in.restraint_top'%i)
+                
+                # call the external python scripts to produce the input conf_path
+                # subnet inputs connected...
+
+             
+                # set the various run settings
+                out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
+                out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
+                out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
+                out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
+                out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
+                out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms'%i)
+                out.addConnection('iter%d:out.path'%i, 'self:sub_in.paths[%d]'%i)
+            
+            # connect the iterations
+            out.addConnection('self:sub_out.path', 'iter0:in.path')
+            iterations=1
+    # use pers.get to pass the function args to the various subfunctions
+    pers.set('iterations', iterations)
+
+    
+    for i in range(Niterations-1):
+        next_iter=inp.getSubnetInput('paths[%d]'%i)
+        if next_iter is not None:
+            out.setSubOut('paths[%d]'%i, ArrayValue(next_iter))
+            out.addConnection('self:sub_out.paths[%d]'%i, 'iter%d:in.path'%(i+1))
+
+    pers.write()
 # read the input data
 inf=StringIO()
 inf.write(sys.stdin.read())
@@ -63,8 +131,6 @@ if inp.testing():
     cpc.util.plugin.testCommand("gmxdump -version")
     # try to import msmproject and thereby msmbuilder
     sys.exit(0)
-
-
 
 # prepare the output data
 out=inp.getFunctionOutput()
