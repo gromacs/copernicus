@@ -27,7 +27,7 @@ except ImportError:
 
 import platform
 import executable
-
+import worker_requirements
 
 class PlatformExecutableReader(xml.sax.handler.ContentHandler):
     """XML Reader for platforms and executables. User at the server
@@ -35,14 +35,19 @@ class PlatformExecutableReader(xml.sax.handler.ContentHandler):
     def __init__(self, executableDir=None):
         self.platformReader=platform.PlatformReader()
         self.executableReader=executable.ExecutableReader(executableDir)
+        self.workerReqReader=worker_requirements.WorkerRequirementsReader()
         self.inPlatform=False
         self.inExecutable=False
+        self.inWorkerRequirements=False
 
     def getPlatforms(self):
         return self.platformReader.getPlatforms()
 
     def getExecutableList(self):
         return executable.ExecutableList(self.executableReader.getExecutables())
+
+    def getWorkerRequirements(self):
+            return self.workerReqReader.getWorkerRequirements()
 
     def read(self,filename):
         parser=xml.sax.make_parser()
@@ -66,6 +71,7 @@ class PlatformExecutableReader(xml.sax.handler.ContentHandler):
         self.loc=locator
         self.platformReader.setDocumentLocator(locator)
         self.executableReader.setDocumentLocator(locator)
+        self.workerReqReader.setDocumentLocator(locator)
 
     def startElement(self, name, attrs):
         if name == 'worker-arch-capabilities':
@@ -74,19 +80,28 @@ class PlatformExecutableReader(xml.sax.handler.ContentHandler):
             self.inPlatform=True
         elif name == 'executable':
             self.inExecutable=True
+        elif name == 'worker-requirements':
+            self.inWorkerRequirements=True
         if self.inPlatform:
             self.platformReader.startElement(name, attrs)
         elif self.inExecutable:
             self.executableReader.startElement(name, attrs)
+        elif self.inWorkerRequirements:
+            self.workerReqReader.startElement(name,attrs)
 
     def endElement(self, name):
         if self.inPlatform:
             self.platformReader.endElement(name)
         if self.inExecutable:
             self.executableReader.endElement(name)
+        if self.inWorkerRequirements:
+            self.workerReqReader.endElement(name)
         if name == 'platform':
             self.inPlatform=False
         elif name == 'executable':
             self.inExecutable=False
+        elif name == 'worker-requirements':
+            self.inWorkerRequirements=False
+
 
 

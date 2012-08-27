@@ -48,9 +48,10 @@ log=logging.getLogger('cpc.server.workercmd')
 class CommandWorkerMatcher(object):
     """Object that stores information about a worker for the 
        matchCommandWorker() function that is used in queue.getUntil()"""
-    def __init__(self, platforms, executableList):
+    def __init__(self, platforms, executableList, workerReqDict):
         self.platforms=platforms
         self.executableList=executableList
+        self.workerReqDict=workerReqDict
         maxPlatform=platforms[0]
         # get the platform with the biggest number of cores.
         ncores_max=0
@@ -91,6 +92,16 @@ class CommandWorkerMatcher(object):
                 return ret.getID()
         return None
 
+    def checkWorkerRequirements(self, cmd):
+        #Check if worker is project dedicated
+        if 'project' in self.workerReqDict:
+            name=cmd.getTask().getProject().getName()
+            reqName=self.workerReqDict['project']
+            log.debug("Worker is dedicated to proj. %s, command belongs to %s"%
+                      (reqName, name))
+            if name != reqName:
+                return False
+        return True
 
     def checkAddResources(self, cmd):
         """Check whether a command falls within the current resource allocation
@@ -141,7 +152,8 @@ def matchCommandWorker(matcher, command):
     execID=matcher.getExecID(command)
     log.log(cpc.util.log.TRACE,'exec id is %s'%execID)
     if execID is not None:
-        use=matcher.checkType(command.getTask().getFunctionName())
+        use=(matcher.checkType(command.getTask().getFunctionName()) and
+             matcher.checkWorkerRequirements(command))
     if use:
         if matcher.checkAddResources(command):
             use=True
@@ -167,7 +179,8 @@ class SCWorkerReady(ServerCommand):
         log.debug("Worker platform + executables: %s"%workerData)
         rdr.readString(workerData,"Worker-reported platform + executables")
         # match queued commands to executables.
-        cwm=CommandWorkerMatcher(rdr.getPlatforms(), rdr.getExecutableList())
+        cwm=CommandWorkerMatcher(rdr.getPlatforms(), rdr.getExecutableList(),
+                                 rdr.getWorkerRequirements())
         cmds=serverState.getCmdQueue().getUntil(matchCommandWorker, cwm)
         if request.headers.has_key('originating-server'):
             originating = request.headers['originating-server']

@@ -44,14 +44,14 @@ class WorkerError(cpc.util.CpcError):
 
 # variables for the signal handler associated with workers
 signalHandlerLock=threading.Lock() # the lock for the workers list
-signalHandlerWorkers=[] # the list of workers to shutdown 
+signalHandlerWorkers=[] # the list of workers to shutdown
 signalHandlerWorking=False # whether the signal handler has been installed
 
 def _signalHandlerFunction(signum, frame):
     """The signal handler function. """
-    # Start a thread and handle signals in that thread. This allows us to 
+    # Start a thread and handle signals in that thread. This allows us to
     # safely lock mutexes.
-    th=threading.Thread(target=_signalHandlerThread) 
+    th=threading.Thread(target=_signalHandlerThread)
     th.daemon=True
     th.start()
 
@@ -62,7 +62,7 @@ def _signalHandlerThread():
     global signalHandlerWorking
     with signalHandlerLock:
         for worker in signalHandlerWorkers:
-            worker.shutdown()    
+            worker.shutdown()
 
 def signalHandlerAddWorker(worker):
     """Add one worker to the list of workers to notify when a signal arrives."""
@@ -80,12 +80,14 @@ def signalHandlerAddWorker(worker):
 class Worker(object):
     """The worker class creates a worker client that contacts a server
        and asks for tasks."""
-    def __init__(self, cf, type, args):
+    def __init__(self, cf, opts, type, args):
         """Initialize the object as a client, given a configuration.
            cf =  the configuration class
+		   opts = dictionary with options
            type = the worker plugin name to start.
            args = arguments for the worker plugin."""
         self.conf=cf
+        self.opts = opts
         self.type=type
         self.args=args
         self.quit=False
@@ -94,26 +96,26 @@ class Worker(object):
         # that is unique for this process+hostname, and worker job iteration
         self.maindir=os.path.join(self.conf.getRunDir(), self.id)
         os.makedirs(self.maindir)
-        self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id, 
+        self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id,
                                                             self.maindir)
         # First get our architecture(s) (hw + sw) from the plugin
         self.plugin=PlatformPlugin(self.type, self.maindir,self.conf)
         canRun=self.plugin.canRun()
         if not canRun:
-            raise WorkerError("Plugin can't run.")  
+            raise WorkerError("Plugin can't run.")
         self.platforms=self._getPlatforms(self.plugin)
-        
+
         # we make copies to be able to subtract our usage off the max resources
         self.remainingPlatforms=copy.deepcopy(self.platforms)
         # Then check what executables we already have
         self._getExecutables()
-        # start without workloads  
-        
+        # start without workloads
+
         if len(self.exelist.findAllByPlattform(self.type)) == 0:
             print "No executables found for platform %s"%self.type
             sys.exit(1)
-        
-        self._printAvailableExes() 
+
+        self._printAvailableExes()
         self.workloads=[]
         # the run lock and condition variable
         self.runLock=threading.Lock()
@@ -158,7 +160,7 @@ class Worker(object):
                         acceptCommands=self.acceptCommands
                     if acceptCommands:
                         for workload in workloads:
-                            workload.run(self.runCondVar, self.plugin, 
+                            workload.run(self.runCondVar, self.plugin,
                                          self.args)
             # now wait until a workload finishes
             finishedWorkloads = []
@@ -205,19 +207,19 @@ class Worker(object):
             if not acceptCommands and len(self.workloads)==0:
                 self.quit = True
         self.heartbeat.stop()
-    
+
     def _printAvailableExes(self):
-        
+
         print "Available executables for platform %s:"%self.type
         for exe in self.exelist.findAllByPlattform(self.type):
             print "%s %s"%(exe.name,exe.version.getStr())
-       
-      
+
+
     def _getPlatforms(self, plugin):
         """Get the list of platforms als an XML string from the run plugin."""
         # make an empty platform reservation
         plr=PlatformReservation(self.maindir)
-        plugin_retmsg=plugin.run(".", "platform", self.args, 
+        plugin_retmsg=plugin.run(".", "platform", self.args,
                                  str(plr.printXML()))
         if plugin_retmsg[0] != 0:
             log.error("Platform plugin failed: %s"%plugin_retmsg[1])
@@ -225,33 +227,40 @@ class Worker(object):
         log.debug("From platform plugin, platform cmd: '%s'"%plugin_retmsg[1])
         pfr=cpc.server.command.PlatformReader()
         # we also parse it for later.
-        pfr.readString(plugin_retmsg[1], 
+        pfr.readString(plugin_retmsg[1],
                        ("Platform description from platform plugin %s"%
                         plugin.name) )
         platforms=pfr.getPlatforms()
         return platforms
-    
+
     def _getExecutables(self):
         """Get a list of executables as an ExecutableList object."""
         execdirs=self.conf.getExecutablesPath()
         self.exelist=cpc.server.command.ExecutableList()
-        for execdir in execdirs:                        
+        for execdir in execdirs:
             self.exelist.readDir(execdir, self.platforms)
         self.exelist.genIDs()
-        
+
         log.debug("Found %d executables."%(len(self.exelist.executables)))
-    
+
     def _obtainCommands(self):
-        """Obtain a command from the up-most server given a list of 
+        """Obtain a command from the up-most server given a list of
            platforms and exelist. Returns the client response object."""
         # Send a run request with our arch+binaries
         req=u'<?xml version="1.0"?>\n'
+        req+=u'<worker-request>\n'
         req+=u'<worker-arch-capabilities>\n'
         for platform in self.remainingPlatforms:
             req+=platform.printXML()
         req+='\n'
         req+=self.exelist.printPartialXML()
-        req+='\n</worker-arch-capabilities>'
+        req+=u'\n</worker-arch-capabilities>'
+        #Append optional project specifics
+        req+=u'\n<worker-requirements>\n'
+        if "project" in self.opts:
+            req+=u'  <option key="project" value="%s"/>\n'%self.opts['project']
+        req+=u'</worker-requirements>\n'
+        req+=u'</worker-request>\n'
         log.debug('request string is: %s'%req)
         runreq_clnt=WorkerMessage()
         resp=runreq_clnt.workerRequest(req)
@@ -295,14 +304,14 @@ class Worker(object):
                     if (exe is None):
                         raise WorkerError("Executable not found")
                     id="%d/%d"%(self.iteration, i)
-                    workloads.append(workload.WorkLoad(self.maindir, cmd, 
-                                                       cmddir, origServer, 
+                    workloads.append(workload.WorkLoad(self.maindir, cmd,
+                                                       cmddir, origServer,
                                                        exe, pf, id))
                     i+=1
             resp.close()
         self.iteration+=1
         return workloads
-    
+
     def _findExecutable(self, cmd):
         """Find the right executable for a command given the list of platforms.
            cmd = the command
@@ -312,7 +321,7 @@ class Worker(object):
             # we iterate in the order we got from the run plugin. This
             # might be important: it should return in the order it thinks
             # goes from most to least optimal.
-            
+
             log.debug("Using platform %s for executable search"%platform.name)
             exe=self.exelist.find(cmd.executable, platform,
                                   cmd.minVersion, cmd.maxVersion)
@@ -326,7 +335,7 @@ class Worker(object):
         # do a join
         joinableWorkloads=[]
         for workload in workloadlist:
-            if (workload.platform.isJoinPrefered() and 
+            if (workload.platform.isJoinPrefered() and
                 workload.executable.isJoinable()):
                 joinableWorkloads.append(workload)
         while len(joinableWorkloads)>0:
@@ -345,9 +354,9 @@ class Worker(object):
                     # now remove those from the original lists
                     joinableWorkloads.remove(j)
                     workloadlist.remove(j)
-                    
+
     def _notifyWorkerFinished(self, cmd, origServer, rundir):
-        """Package the files resulting from a run and notify the upstream 
+        """Package the files resulting from a run and notify the upstream
             server about the run that has just finished."""
         # tar and zip the result
         #tarfilename="%s.tar.gz"%rundir
@@ -366,8 +375,8 @@ class Worker(object):
 
 
     def _haveRemainingResources(self):
-        """Check whether any of the resources has been depleted. 
-           returns: True if none of the resources have been depleted, False 
+        """Check whether any of the resources has been depleted.
+           returns: True if none of the resources have been depleted, False
                     otherwise
            """
         for platform in self.remainingPlatforms:
