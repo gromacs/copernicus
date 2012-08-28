@@ -301,7 +301,8 @@
 
 
     <function id="fe_init" type="external">
-        <desc>Initialize a free energy run, by generating a set of 
+        <desc>Initialize a free energy run, by generating a set of configurations
+              plus lambda values.
               </desc>
         <inputs>
             <field type="grompp_input" id="grompp">
@@ -428,6 +429,7 @@
             <field type="gromacs::conf_array" id="confs" />
             <field type="meas::meas" id="dG" />
             <field type="gromacs::bar_detailed_value_array" id="bar_values" />
+            <field type="lambda_array" id="new_lambdas"/>
         </subnet-inputs>
         <subnet-outputs>
             <field type="gromacs::mdp_array_array" id="settings_array"/>
@@ -498,6 +500,26 @@
             <field type="priority_array" id="priority"/>
         </subnet-outputs>
         <controller log="true" executable="decouple" persistent_dir="true" />
+    </function>
+
+    <function id="calc_path" type="external">
+        <desc>Calculates a new set of lambdas for a next iteration.</desc>
+        <inputs>
+            <field type="gromacs::bar_detailed_value_array" id="bar_values">
+                <desc>The output in kT of a g_bar calculation.</desc>
+            </field>
+            <field type="float" id="desired_stddev_spacing" opt="true">
+                <desc>Optional per-sample standard deviation spacing of 
+                      lambda points in kT. If not set, will use 1kT.
+                </desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="lambda_array" id="lambdas">
+                <desc>New set of lambda points, with optimal spacing.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="calc_path"/>
     </function>
 
 

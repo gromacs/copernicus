@@ -78,9 +78,14 @@ def fe_iteration(inp, out):
     if g_bar is None:
         g_bar=1
         out.addInstance('g_bar', 'gromacs::g_bar')
+        out.addInstance('calc_path', 'calc_path')
         out.addConnection('g_bar:out.dG', 'self:sub_in.dG')
-        out.addConnection('g_bar:out.bar_values', 'self:sub_in.bar_values')
+        #out.addConnection('g_bar:out.bar_values', 'self:sub_in.bar_values')
+        out.addConnection('g_bar:out.bar_values', 'calc_path:in.bar_values')
+        out.addConnection('calc_path:out.lambdas', 'self:sub_in.new_lambdas')
     pers.set('g_bar', g_bar)
+
+
 
     mdruns=pers.get('mdruns')
     if mdruns is None:
@@ -125,33 +130,31 @@ def fe_iteration(inp, out):
             i+=1
         for i in range(mdruns, len(lambdas)):
             lam=lambdas[i]
-            sys.stderr.write("lambda %d: %g\n"%(i, lam))
+            #sys.stderr.write("lambda %d: %g\n"%(i, lam))
             lami=findClosest(path_lambdas, lam)
             out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
                               'runs:in.conf[%d]'%i)
-            #out.addConnection('runs:out.conf[%d]'%i, 
-            #                  'self:ext_out.path.lambdas[%d].conf'%i)
             out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
-            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+            #out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         out.setSubOut('settings_array', ArrayValue(settings_array))
         mdruns=len(lambdas)
     pers.set('mdruns', mdruns)
 
-    # now compare the outputs to the inputs
-    if inp.getSubnetInput('confs') is not None:
-        lnInConfs=len(inp.getSubnetInput('confs'))
-        sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
-        #lnInConfs=len(self.getOutput('confs'))
-        for i in range(lnInConfs):
-            inConf=inp.getSubnetInput('confs[%d]'%i)
-            sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
-            if inConf is not None:
-                #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
-                outConf=pers.get('conf_%d'%i)
-                sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
-                if inConf != outConf:
-                    out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
-                    pers.set('conf_%d'%i, inConf)
+    ## now compare the outputs to the inputs
+    #if inp.getSubnetInput('confs') is not None:
+    #    lnInConfs=len(inp.getSubnetInput('confs'))
+    #    sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
+    #    #lnInConfs=len(self.getOutput('confs'))
+    #    for i in range(lnInConfs):
+    #        inConf=inp.getSubnetInput('confs[%d]'%i)
+    #        sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
+    #        if inConf is not None:
+    #            #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+    #            outConf=pers.get('conf_%d'%i)
+    #            sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
+    #            if inConf != outConf:
+    #                out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
+    #                pers.set('conf_%d'%i, inConf)
 
     if inp.getSubnetInputValue('dG').isUpdated():
         dgVal=inp.getSubnetInput('dG.value')
@@ -159,9 +162,52 @@ def fe_iteration(inp, out):
         if dgVal is not None: 
             out.setOut('dG.value', FloatValue(dgVal))
             out.setOut('dG.error', FloatValue(dgErr))
-    if inp.getSubnetInputValue('bar_values').isUpdated():
-        pass
-        # TODO: calculate new lambda values
+    #if inp.getSubnetInputValue('bar_values').isUpdated():
+    #    pass
+
+    new_lambda_values=pers.get('new_lambda_values')
+    new_lambda_values=0
+    nv=inp.getSubnetInputValue('new_lambdas')
+    if nv is not None and nv.isUpdated():
+        N=len(inp.getSubnetInput('new_lambdas'))
+        newLambdas=[]
+        new_lambda_values=N
+        for i in range(N):
+            lam=inp.getSubnetInput('new_lambdas[%d]'%i)
+            #newLambdas.append(lam)
+            #lami=findClosest(path_lambdas, lam)
+            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+    pers.set('new_lambda_values', new_lambda_values)
+
+    confs=pers.get('confs')
+    if confs is None:
+        confs=0
+    if new_lambda_values > 0 and new_lambda_values != confs:
+        for i in range(new_lambda_values):
+            if pers.get('conf_%d'%i) is None:
+                lami=findClosest(path_lambdas, 
+                                 inp.getSubnetInput('new_lambdas[%d]'%i))
+                confi=inp.getSubnetInput('confs[%d]'%lami)
+                if confi is not None:
+                    pers.set('conf_%d'%i, lami)
+                    out.setOut('path.lambdas[%d].conf'%i, FileValue(confi))
+                    confs+=1
+        ## now compare the outputs to the inputs
+        #if inp.getSubnetInput('confs') is not None:
+        #    lnInConfs=len(inp.getSubnetInput('confs'))
+        #    sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
+        #    #lnInConfs=len(self.getOutput('confs'))
+        #    for i in range(lnInConfs):
+        #        inConf=inp.getSubnetInput('confs[%d]'%i)
+        #        sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
+        #        if inConf is not None:
+        #            #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
+        #            outConf=pers.get('conf_%d'%i)
+        #            #sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
+        #            if inConf != outConf:
+        #               out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
+        #                pers.set('conf_%d'%i, inConf)
+    pers.set('confs', confs)
 
     pers.write()
     return out
