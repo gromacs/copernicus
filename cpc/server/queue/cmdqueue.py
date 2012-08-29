@@ -29,13 +29,13 @@ Created on Oct 26, 2010
 log=logging.getLogger('cpc.server.queue.cmdqueue')
 
 class CmdQueue():
-    PRIO_LOW_BOUND = -10 #Constant
-    PRIO_HIGH_BOUND = 10 #Constant
+    PRIO_LOW_BOUND = -12 #Constant
+    PRIO_HIGH_BOUND = 12 #Constant
 
     def __init__(self):
         self.data = [] 
         # this is a list of deques with the highest priority queue first. 
-        self.queue = [ deque() for x in range(CmdQueue.PRIO_LOW_BOUND, 
+        self.queue = [ deque() for x in range(CmdQueue.PRIO_LOW_BOUND-1, 
                                               CmdQueue.PRIO_HIGH_BOUND)]
         # TODO: finer grained locks. For now we have a single global lock.
         self.lock=Lock()
@@ -54,9 +54,9 @@ class CmdQueue():
                                 and minimum priorities).
            returns: a deque. """
         if prio < CmdQueue.PRIO_LOW_BOUND:
-            prio = CmdQueue.PRIO_LOW_BOUND
-        if prio >= CmdQueue.PRIO_HIGH_BOUND:
-            prio = CmdQueue.PRIO_HIGH_BOUND-1
+            prio = CmdQueue.PRIO_LOW_BOUND 
+        if prio > CmdQueue.PRIO_HIGH_BOUND:
+            prio = CmdQueue.PRIO_HIGH_BOUND
         # the highest priority queue is first
         p= (CmdQueue.PRIO_HIGH_BOUND - prio) 
         return self.queue[p]

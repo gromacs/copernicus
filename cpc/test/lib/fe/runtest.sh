@@ -28,7 +28,7 @@ fi
 
 ./cpcc set fe:in.molecule_name  ethanol
 ./cpcc set fe:in.solvation_relaxation_time 500
-./cpcc set fe:in.precision 1
+./cpcc set fe:in.precision 0.1
 
 #./cpcc set fe_init:in.n_lambdas 10
 #
