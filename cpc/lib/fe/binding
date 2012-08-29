@@ -89,6 +89,8 @@ def fe_binding(inp, out):
         out.addConnection('solv:out.partial_results', 
                           'self:sub_in.partial_results_solv')
         out.addConnection('self:sub_out.mult_solv', 'solv:in.multiplier')
+        out.addConnection('self:ext_in.stddev_spacing', 
+                          'solv:in.stddev_spacing')
     pers.set('run_solv', run_solv)
 
     run_bound=pers.get('run_bound')
@@ -108,6 +110,8 @@ def fe_binding(inp, out):
         out.addConnection('bound:out.partial_results', 
                           'self:sub_in.partial_results_bound')
         out.addConnection('self:sub_out.mult_bound', 'bound:in.multiplier')
+        out.addConnection('self:ext_in.stddev_spacing', 
+                          'bound:in.stddev_spacing')
     pers.set('run_bound', run_bound)
 
     boundfValue=inp.getSubnetInputValue('dG_bound')

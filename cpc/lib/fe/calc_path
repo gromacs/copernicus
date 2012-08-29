@@ -1,0 +1,178 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import FileValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+class path_point:
+    def __init__(self, lambda_a, lambda_b, stddev, stddev_err, dG, dG_err):
+        self.lambda_a=lambda_a
+        self.lambda_b=lambda_b
+        self.stddev=stddev
+        self.stddev_err=stddev_err
+        self.dG=dG
+        self.dG_err=dG_err
+
+def piecewiseLinearInterpolation(x, xpoints, ypoints):
+    # first seek out the right interval
+    for i in range(1, len(xpoints)-1):
+        if xpoints[i] >= x:
+            break
+    # then do a linear interpolation
+    x1 = xpoints[i-1]
+    x2 = xpoints[i]
+    y1 = ypoints[i-1]
+    y2 = ypoints[i]
+    #sys.stderr.write("Interpolating %g between [%g, %g]->[%g, %g]\n"%
+    #                 (x, x1, x2, y1, y2))
+    return y1 + (y2-y1)*((x-x1)/(x2-x1))
+
+class path:
+    def __init__(self, inp):
+        """Get the values from the inp object."""
+        self.res=[]
+        # read in the results
+        for i in range(len(inp.getInput('bar_values'))):
+            la=inp.getInput('bar_values[%d].lambda_A'%i)
+            lb=inp.getInput('bar_values[%d].lambda_B'%i)
+            stddev=inp.getInput('bar_values[%d].stdev.value'%i)
+            stddev_err=inp.getInput('bar_values[%d].stdev.error'%i)
+            dG=inp.getInput('bar_values[%d].dG_kT.value'%i)
+            dG_err=inp.getInput('bar_values[%d].dG_kT.error'%i)
+            self.res.append(path_point(la, lb, stddev, stddev_err, dG, dG_err))
+        # and sort the results in lambda_a
+        self.res.sort(key=lambda b: b.lambda_a)
+
+
+    def makeLambdaSpacing(self, targetStddev=1):
+        """Return an array with a new set of lambda values to use as optimal
+           spacings. This is based on the results from the current path:
+           it tries to space the lambda points so that the expected per
+           sample standard deviation is equal at all points, and sized around
+           targetStddev (in kT).
+
+           The optimum way to space lambda points is to have them such
+           that the likelihood of transitioning from one state to the other
+           is equally distributed, and roughly equal to exp(-1kT/kT). That
+           is met when the expected per sample standard deviation is 
+           equal to ~1kT for all lambda points. 
+           
+           The algorithm works by constructing a piecewise linear function
+           sstd(lambda) that is defined by the points 
+           (lambda(i), sum stddev(i)), inverting that, and distributing 
+           values among it so the points are spaced targetStddev away from 
+           each other."""
+        Norig = len(self.res)
+        # first create the x and y points
+        lambdas=[ self.res[0].lambda_a ]
+        stddevs = [ 0 ]
+        stddev_sum=0.
+        for i in range(Norig):
+            stddev_sum += self.res[i].stddev
+            lambdas.append( self.res[i].lambda_b )
+            stddevs.append(stddev_sum)
+        #sys.stderr.write("Old stdev spacing: %s\n"%str(stddevs))
+        # we now have a set of points, and the total sum in stddev_sum. 
+        # First choose the number of new lambda points:
+        Nintervals=int( (stddev_sum+0.5*targetStddev)/targetStddev ) 
+        # now generate the points
+        newLambdas=[]
+        newLambdas.append( self.res[0].lambda_a )
+        for i in range(Nintervals-1):
+            newTarget=(float(i+1)/float(Nintervals)) * stddev_sum
+            lam=piecewiseLinearInterpolation(newTarget, stddevs, lambdas) 
+            newLambdas.append(lam)
+        # and respect the original total interval
+        newLambdas.append( self.res[ Norig - 1 ].lambda_b )
+        #sys.stderr.write("New lambda spacing: %s\n"%str(newLambdas))
+        return newLambdas
+
+
+    
+
+
+def calc_path(inp, out):
+    #pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    #                                           "persistent.dat"))
+
+    spVal=inp.getInput('stddev_spacing') 
+    if spVal is not None:
+        spacing=spVal
+    else:
+        spacing=1.
+    # construct the input path
+    p=path(inp)
+    newLambdas=p.makeLambdaSpacing(spacing)
+    #pers.write()
+    for i in range(len(newLambdas)):
+        out.setOut('lambdas[%d]'%i, FloatValue( newLambdas[i] ) )
+    return out
+
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    #cpc.util.plugin.testCommand("g_bar -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+calc_path(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+
