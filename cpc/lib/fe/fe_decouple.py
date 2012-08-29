@@ -164,6 +164,8 @@ def addIteration(name, i, inp, out):
     # connect the outputs
     out.addConnection('%s:out.dG'%iname, 'self:sub_in.dG_%s_array[%d]'%(name,i))
     out.addConnection('%s:out.path'%iname, 'self:sub_in.path_%s[%d]'%(name,i))
+    out.addConnection('self:ext_in.stddev_spacing', 
+                      '%s:in.stddev_spacing'%iname)
 
 def decouple(inp, out, relaxation_time, mult):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
