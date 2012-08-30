@@ -598,6 +598,11 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if attrs.has_key('errmsg'):
                 ai.setErrmsg(xml.sax.saxutils.unescape(attrs.
                                                        getValue('errmsg')))
+            if attrs.has_key('cputime'):
+                try:
+                    ai.setCputime(float(attrs.getValue('cputime')))
+                except ValueError:
+                    pass
             self.activeInstStack.append(ai)
             self.activeInst=ai
             self.affectedInputAIs.add(ai)

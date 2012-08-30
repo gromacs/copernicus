@@ -104,7 +104,7 @@ class ActiveInstance(object):
         self.runSeqNr=0 
         # counts the number of CPU seconds that this instance has used
         # on workers. Locked with outputLock
-        self.cputime=0
+        self.cputime=0.
         # a run lock used for running a task with this active instance if
         # there is a persistent directory.
         if self.function.persistentDirNeeded():
@@ -288,13 +288,20 @@ class ActiveInstance(object):
     def addCputime(self, cputime):
         """add used cpu time to this active instance."""
         with self.outputLock:
-            self.cputime=cputime
+            self.cputime+=cputime
 
     def getCputime(self):
         with self.outputLock:
             return self.cputime
 
+    def setCputime(self, cputime):
+        """set used cpu time to this active instance."""
+        with self.outputLock:
+            self.cputime=cputime
+
     def getCumulativeCputime(self):
+        """Get the total CPU time used by active instance and its 
+            internal network."""
         with self.outputLock:
             cputime = self.cputime
         cputime += self.subnet.getCumulativeCputime()
@@ -865,14 +872,16 @@ class ActiveInstance(object):
         indstr=cpc.util.indStr*indent
         iindstr=cpc.util.indStr*(indent+1)
         with self.lock:
+            outf.write('%s<active ')
+            outf.write(' id="%s" state="%s" seqnr="%d" cputime="%g"'%
+                       (self.name, str(self.state), 
+                        self.runSeqNr, self.cputime))
             if self.state==ActiveInstance.error:
                 strn=self.errmsg
                 msg='errmsg=%s'%xml.sax.saxutils.quoteattr(strn).encode('utf-8')
             else:
                 msg=""
-            outf.write('%s<active id="%s" state="%s" %s seqnr="%d">\n'%
-                       (indstr, self.name, str(self.state), msg,
-                        self.runSeqNr))
+            outf.write('>\n')
             outf.write('%s<inputs>\n'%(iindstr))
             self.inputVal.writeContentsXML(outf, indent+2)
             outf.write('%s</inputs>\n'%(iindstr))

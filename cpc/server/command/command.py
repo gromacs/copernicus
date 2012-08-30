@@ -97,7 +97,7 @@ class Command(object):
         self.id=id
         self.workerServer=workerServer
         # the cpu time in seconds used by this command
-        self.cputime=0
+        self.cputime=0.
         # dictionary of reserved resource objects
         self.reserved={}
         # dictionary of required resource objects
@@ -308,7 +308,7 @@ class Command(object):
         if self.maxVersion is not None:
             outf.write(' max_version="%s"'%self.maxVersion.getStr())
         if self.cputime > 0:
-            outf.write(' used_cpu_time="%d"'%self.cputime)
+            outf.write(' used_cpu_time="%g"'%self.cputime)
         outf.write('>\n')
         for arg in self.args:
             outf.write('%s<arg value="%s"/>\n'%(iindstr, arg))
