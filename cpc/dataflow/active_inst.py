@@ -877,10 +877,8 @@ class ActiveInstance(object):
                        (self.name, str(self.state), 
                         self.runSeqNr, self.cputime))
             if self.state==ActiveInstance.error:
-                strn=self.errmsg
-                msg='errmsg=%s'%xml.sax.saxutils.quoteattr(strn).encode('utf-8')
-            else:
-                msg=""
+                outf.write(' errmsg=%s'%
+                        xml.sax.saxutils.quoteattr(self.errmsg).encode('utf-8'))
             outf.write('>\n')
             outf.write('%s<inputs>\n'%(iindstr))
             self.inputVal.writeContentsXML(outf, indent+2)
