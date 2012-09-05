@@ -29,7 +29,7 @@ fi
 ./cpcc set grompp:in.settings[0].name nsteps
 ./cpcc set grompp:in.settings[0].value 10000
 ./cpcc set grompp:in.settings[1].name integrator
-./cpcc set grompp:in.settings[1].value md
+./cpcc set grompp:in.settings[1].value mdq
 # and commit this set of updates
 
 
