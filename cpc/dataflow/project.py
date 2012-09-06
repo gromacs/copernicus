@@ -478,14 +478,17 @@ class Project(object):
                 item=self.active.getNamedActiveInstance(pathname)
                 item.deactivate()
 
-    def clearError(self, pathname, recursive, outf):
-        """Clear an error on an item."""
+    def rerun(self, pathname, recursive, clearError, outf):
+        """Re-run and optionally clear an error on an item."""
         pathname=keywords.fixID(pathname)
         with self.networkLock:
             item=self.active.getNamedActiveInstance(pathname)
-            ret=item.clearError(recursive, outf)
+            ret=item.rerun(recursive, clearError, outf)
             if ret==0:
-                outf.write("No errors cleared.")
+                if clearError:
+                    outf.write("No errors cleared.")
+                else:
+                    outf.write("No reruns performed.")
 
     def getQueue(self):
         """Get the task queue."""

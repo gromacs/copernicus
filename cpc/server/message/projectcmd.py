@@ -130,10 +130,10 @@ class SCProjectDeactivate(ServerCommand):
         else:
             response.add("%s in project %s de-activated."%(item, prj.getName()))
 
-class SCProjectClearError(ServerCommand):
-    """Clear an error in an active instance."""
+class SCProjectRerun(ServerCommand):
+    """Force a rerun and optionally clear an error in an active instance."""
     def __init__(self):
-        ServerCommand.__init__(self, "project-clear-error")
+        ServerCommand.__init__(self, "project-rerun")
     def run(self, serverState, request, response):
         if request.hasParam('project'):
             prj=serverState.getProjectList().get(request.getParam('project'))
@@ -148,10 +148,15 @@ class SCProjectClearError(ServerCommand):
             recursive=True
         else:
             recursive=False
+        if ( request.hasParam('clear-error') and 
+             int(request.getParam('clear-error')) == 1):
+            clearError=True
+        else:
+            clearError=False
         outf=StringIO()
-        lst=prj.clearError(item, recursive, outf)
+        lst=prj.rerun(item, recursive, clearError, outf)
         response.add(outf.getvalue())
-        
+
 class SCProjectList(ServerCommand):
     """List named items in a project: instances or networks."""
     def __init__(self):
@@ -368,7 +373,8 @@ class SCProjectLoad(ServerCommand):
                 serverState.readProjectState(projectName)
 
             except:
-                raise
+                response.add("No project file provided",status="ERROR")
+                return
 
             response.add("Project restored as %s"%projectName)
         else:
