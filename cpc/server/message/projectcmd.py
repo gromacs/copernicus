@@ -257,8 +257,7 @@ class SCProjectAddInstance(ServerCommand):
         name=request.getParam('name')
         functionName=request.getParam('function')
         prj.addInstance(name, functionName)
-        response.add("Added instance '%s' of function %s"%
-                          (name, functionName))
+        response.add("Added instance '%s' of function %s"%(name, functionName))
 
 class SCProjectConnect(ServerCommand):
     """Add a connection to the top-level active network."""

@@ -138,19 +138,17 @@ class ActiveNetwork(network.Network):
 
     def addInstance(self, inst):
         """Add a new instance, and return its activeInstance."""
-        name=inst.getName()
-        dirn=os.path.join(self.baseDir,name)
-        ai=active_inst.ActiveInstance(inst, self.project, self, dirn)
         with self.lock:
-            if inst.getName() in self.activeInstances:
+            name=inst.getName()
+            if name in self.activeInstances:
                 raise ActiveError(
                             "Tried to start instance %s which already exists"%
-                            inst.getName())
-            #if inst.getName() not in self.activeInstances:
-            else:
-                log.debug("Adding active instance %s"%ai.name)
-                self.activeInstances[inst.getName()]=ai 
-                network.Network.addInstance(self, inst)
+                            name)
+            dirn=os.path.join(self.baseDir,name)
+            ai=active_inst.ActiveInstance(inst, self.project, self, dirn)
+            log.debug("Adding active instance %s"%ai.name)
+            self.activeInstances[name]=ai 
+            network.Network.addInstance(self, inst)
         return ai
 
     #def removeInstance(self, instance):
@@ -233,23 +231,56 @@ class ActiveNetwork(network.Network):
                                   None ] )
         return ret
 
-    def _getNamedInstanceFromList(self, instancePathList):
-        """Get an instance/network in a sequence of path names. """
-        top=instancePathList[0]
-        if top=="":
-           return self
-        with self.lock:
-            topItem=self._getActiveInstance(top)
+    #def _getNamedInstanceFromList(self, instancePathList):
+    #    """Get an instance/network in a sequence of path names. """
+    #    getContainingNet(instancePathList)
+    #    top=instancePathList[0]
+    #    if top=="":
+    #       return self
+    #    with self.lock:
+    #        topItem=self._getActiveInstance(top)
+    #    rest=instancePathList[1:]
+    #    return topItem._getNamedInstanceFromList(rest)
+
+    def _getContainingNet(self, instancePathList):
+        """Return the tuple of (network, instanceName), for an 
+           instancePathList"""
+        #log.debug("instance path list: %s"%(instancePathList))
+        if len(instancePathList)==0 or instancePathList[0] == '':
+            return (self, None)
+        elif len(instancePathList) < 2:
+            return (self, instancePathList[0])
+        # otherwise, get the network of the next item in the path.
+        topItem=self._getActiveInstance(instancePathList[0])
+        topNet=topItem.getNet()
+        if topNet is None:
+            raise ActiveError("Active instance %s has not subnet"%
+                              topInst.getName())
         rest=instancePathList[1:]
-        return topItem._getNamedInstanceFromList(rest)
+        return topNet._getContainingNet( rest )
 
     def getNamedActiveInstance(self, instancePath):
         """Get and instance/network in a path specifier according to 
-           [instance]:[instance]:... """
+           [instance]:[instance]:... 
+           """
         sp=instancePath.split(':')
-        if len(sp) == 1 and sp[0]=="":
-            return self
-        return self._getNamedInstanceFromList(sp)
+        ( net, instanceName ) = self._getContainingNet(sp)
+        if instanceName is not None:
+            ret = net._getActiveInstance(instanceName)    
+        else:
+            ret = net
+        return ret #self._getNamedInstanceFromList(sp)
+
+    def getContainingNetwork(self, instancePath):
+        """Get the network and instanceName that contains the item in a 
+           path specifier according to 
+           [instance]:[instance]:... 
+
+           returns a tuple (network, instanceName)
+           """
+        sp=instancePath.split(':')
+        ( net, instanceName ) = self._getContainingNet(sp)
+        return (net, instanceName)
 
     def getTaskQueue(self):
         """Get the task queue associated with this network."""

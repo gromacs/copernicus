@@ -872,7 +872,7 @@ class ActiveInstance(object):
         indstr=cpc.util.indStr*indent
         iindstr=cpc.util.indStr*(indent+1)
         with self.lock:
-            outf.write('%s<active '%iindstr)
+            outf.write('%s<active '%indstr)
             outf.write(' id=%s state="%s" seqnr="%d" cputime="%g"'%
                        (xml.sax.saxutils.quoteattr(self.name).encode('utf-8'), 
                         str(self.state), self.runSeqNr, self.cputime) )

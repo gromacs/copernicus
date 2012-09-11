@@ -412,8 +412,14 @@ class Project(object):
         with self.networkLock:
             func=self.imports.getFunctionByFullName(functionName, 
                                                     self.topLevelImport)
-            inst=instance.Instance(name, func, functionName)
-            self.active.addInstance(inst)
+            (net, instanceName)=self.active.getContainingNetwork(name)
+            nm=""
+            if net.inActiveInstance is not None:
+                nm=net.inActiveInstance.getCanonicalName()
+            log.debug("net=%s, instanceName=%s"%(nm, instanceName))
+            inst=instance.Instance(instanceName, func, functionName)
+            #self.active.addInstance(inst)
+            net.addInstance(inst)
 
     def importTopLevelFile(self, fileObject, filename):
         """Read a source file as a top-level description."""
