@@ -65,7 +65,7 @@ def print_usage():
     print "       cpcc rollback    [-p projectname]"
     print "       cpcc upload      [-p projectname] upload.xml"
     print "       cpcc clear-error [-p projectname] [item]"
-    print "       cpcc clear-error [-p projectname] [item]"
+    print "       cpcc force-rerun [-p projectname] item"
     print ""
     print "Worker and heartbeat monitoring commands."
     print "       cpcc queue|q"
@@ -286,7 +286,16 @@ try:
         else:
             item=""
         clnt=ClientMessage()
-        ProcessedResponse(clnt.projectClearErrorRequest(project, item)).pprint()
+        ProcessedResponse(clnt.projectRerunRequest(project, 
+                                                   item, 
+                                                   True)).pprint()
+    elif cmd == "force-rerun":
+        project, pargs = getProjectArgs(args)
+        item=getArg(pargs, 1, "project item to list")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectRerunRequest(project, 
+                                                   item, 
+                                                   False)).pprint()
     elif cmd == "upload":
         project, pargs = getProjectArgs(args)
         filename=getArg(pargs, 1, "project XML file")

@@ -846,22 +846,33 @@ class ActiveInstance(object):
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
                                                   self.function.getName(), 
                                                   self.errmsg))
-    def clearError(self, recursive, outf=None):
-        """Clear the error state of this instance, and if recursive is set, 
-           for any subinstances. Returns the number of errors cleared"""
+    def rerun(self, recursive, clearError, outf=None):
+        """Force the rerun of this instance, or clear the error if in error
+           state and clearError is True. If recursive is set, 
+           do the same for any subinstances. 
+           Returns the number of reruns forced"""
         ret=0
+        changed=False
         with self.inputLock:
             with self.lock:
-                if self.state == ActiveInstance.error:
+                if clearError:
+                    if self.state == ActiveInstance.error:
+                        self.updated=True
+                        self.state=ActiveInstance.active
+                        log.debug("Clearing error on %s"%
+                                  self.getCanonicalName())
+                        outf.write("Cleared error state on %s\n"%
+                                   self.getCanonicalName())
+                        changed=True
+                        ret+=1
+                else:
+                    log.debug("Forcing rerun on %s"%self.getCanonicalName())
+                    outf.write("Forcing rerun on %s\n"%self.getCanonicalName())
                     self.updated=True
-                    self.state=ActiveInstance.active
-                    log.debug("Clearing error on %s"%self.getCanonicalName())
-                    outf.write("Cleared error state on %s\n"%
-                               self.getCanonicalName())
                     changed=True
                     ret+=1
                 if recursive and (self.subnet is not None):
-                    ret+=self.subnet.clearError(recursive, outf)
+                    ret+=self.subnet.rerun(recursive, clearError, outf)
             if changed:
                 if self._canRun():
                     self._genTask()

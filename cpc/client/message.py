@@ -380,15 +380,19 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
-    def projectClearErrorRequest(self, project, item):
-        """Clear an error."""
-        cmdstring="project-clear-error"
+    def projectRerunRequest(self, project, item, clearError):
+        """Force a rerun and optionally clear an error."""
+        cmdstring="project-rerun"
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('item', item))
+        if clearError:
+            fields.append(Input('clear-error', 1))
+            fields.append(Input('recursive', 1))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
- 
+
+
     def projectUploadRequest(self, project, file):
         """Upload project file"""
         cmdstring="project-upload"
