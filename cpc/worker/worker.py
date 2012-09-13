@@ -18,6 +18,7 @@
 
 
 import os
+import os.path
 import copy
 import tarfile
 import shutil
@@ -80,7 +81,7 @@ def signalHandlerAddWorker(worker):
 class Worker(object):
     """The worker class creates a worker client that contacts a server
        and asks for tasks."""
-    def __init__(self, cf, opts, type, args):
+    def __init__(self, cf, opts, type, args, workdir):
         """Initialize the object as a client, given a configuration.
            cf =  the configuration class
 		   opts = dictionary with options
@@ -94,8 +95,24 @@ class Worker(object):
         self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
         # Process (untar) the run request into a directory name
         # that is unique for this process+hostname, and worker job iteration
-        self.maindir=os.path.join(self.conf.getRunDir(), self.id)
-        os.makedirs(self.maindir)
+        if workdir is None:
+            self.maindir=os.path.join(self.conf.getRunDir(), self.id)
+        else:
+            self.maindir=workdir
+        try:
+            os.makedirs(self.maindir)
+        except:
+            if os.path.isabs(self.maindir):
+                absn=""
+            else:
+                absn="in the current working directory"
+            log.error("Can't create the directory '%s' %s."%
+                      (self.maindir, absn))
+            log.error("cpc-worker must be able to write files in a temporary")
+            log.error("place. Run cpc-worker from a place (e.g. /tmp)")
+            log.error("where this is possible")
+            raise WorkerError("Can't create directory '%s' %s."%
+                              (self.maindir, absn))
         self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id,
                                                             self.maindir)
         # First get our architecture(s) (hw + sw) from the plugin

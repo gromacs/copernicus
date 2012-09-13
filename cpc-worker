@@ -38,7 +38,7 @@ from cpc.network.com.client_base import ClientError
 
 def print_usage():
 
-    print "Usage: [-c conf-file] [-p project] [-d] cpc-worker worker-type"
+    print "Usage: [-c conf-file] [-p project] [-wd work-directory] [-d] cpc-worker worker-type"
     print ""
     sys.exit(1)
 
@@ -54,6 +54,10 @@ conffile=None
 
 #opts to be passed to the worker
 opts = {}
+
+
+# workdir is None (to get it from the conf) or a value set with -wd
+workdir=None
 
 debug=False
 # first parse common options
@@ -74,11 +78,18 @@ while len(args)>0:
                 "ERROR: no value specified for global option '%s'"%option)
             print_usage()
         opts['project']=args.pop(0)
+    elif args[0]=='-wd':
+        option = args.pop(0)
+        if len(args) < 1:
+            sys.stdout.write(
+                "ERROR: no value specified for global option '%s'"%option)
+            print_usage()
+        workdir=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
         debug=True
     else:
-        sys.stdout.write("ERROR: no command or faulty global option '%s'"%
+        sys.stdout.write("ERROR: no command or faulty global option '%s'\n"%
               args[0])
         print_usage()
 
@@ -110,7 +121,7 @@ try:
         restargs=[]
         for i in range(1, len(args)):
             restargs.append(args[i])
-        worker=cpc.worker.Worker(cf, opts, type, restargs)
+        worker=cpc.worker.Worker(cf, opts, type, restargs, workdir)
         #def shutdownHandler(signum,frame):
         #  worker.shutdown()
         #signal.signal(signal.SIGINT,shutdownHandler)

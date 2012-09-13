@@ -147,11 +147,12 @@ class ConnectionBundle(Conf):
             "Colon-separated directory list to search for executables",
             True,writable=False)
 
-        self._add('run_dir', os.path.join(os.environ["HOME"],
-            "worker",
-            "run"),
-            "The run directory for the run client",
-            True,writable=False)
+        # the worker's run directory should NEVER be fixed relative to
+        # anything else; instead, it should just run in the current directory
+        self._add('run_dir', #os.path.join(os.environ["HOME"],
+                  "cpc-worker-workload",
+                  "The run directory for the run client",
+                  True,writable=False)
 
         self.conf['global_dir'].writable=False
 
