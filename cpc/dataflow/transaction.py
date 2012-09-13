@@ -38,6 +38,10 @@ import value
 
 log=logging.getLogger('cpc.dataflow.transaction')
 
+class TransactionError(apperror.ApplicationError):
+    pass
+
+
 
 class TransactionList(object):
     """A list of transaction items (TransactionItem objects)"""
@@ -187,7 +191,7 @@ class Set(TransactionItem):
                 newVal=self.literal
                 if not (tp.isSubtype(rval.getType()) or
                         rval.getType().isSubtype(tp) ):
-                    raise ActiveError(
+                    raise TransactionError(
                               "Incompatible types in assignment: %s to %s"%
                               (rval.getType().getName(), tp.getName()))
         self.activeInstance.stageNamedInput(oldVal, newVal, sourceTag)
@@ -211,19 +215,27 @@ class Connect(TransactionItem):
         """Get the affected items of this transaction"""
         # we can do this because the global lock prevents other updates
         # at the same time.
-        srcInstName,srcDir,srcItemName=connection.splitIOName(self.src, None)
-        dstInstName,dstDir,dstItemName=connection.splitIOName(self.dst, None)
-        cn=connection.makeConnection(project.active,
+        fullSrcInstName,srcDir,srcItemName=connection.splitIOName(self.src, 
+                                                                  None)
+        fullDstInstName,dstDir,dstItemName=connection.splitIOName(self.dst, 
+                                                                  None)
+        srcNet,srcInstName=project.active.getContainingNetwork(fullSrcInstName)
+        dstNet,dstInstName=project.active.getContainingNetwork(fullDstInstName)
+        if srcNet != dstNet:
+            raise TransactionError(
+                        "Source %s and destination %s not in same network"%
+                        (fullSrcInstName, fullDstInstName))
+        self.net=srcNet
+        cn=connection.makeConnection(self.net,
+                                     #project.active,
                                      srcInstName, srcDir, srcItemName,
                                      dstInstName, dstDir, dstItemName)
         self.connection=cn
-        project.active.findConnectionSrcDest(cn,
-                                             affectedInputAIs,
-                                             affectedOutputAIs)
+        self.net.findConnectionSrcDest(cn, affectedInputAIs, affectedOutputAIs)
 
     def run(self, project, sourceTag, outf=None):
         """Run the transaction item."""
-        project.active.addConnection(self.connection, sourceTag)
+        self.net.addConnection(self.connection, sourceTag)
         if outf is not None:
             outf.write("Connected %s to %s\n"%(self.connection.srcString(),
                                                self.connection.dstString()))
