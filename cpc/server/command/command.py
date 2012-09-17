@@ -96,6 +96,8 @@ class Command(object):
         self.running=running # whether the command is running
         self.id=id
         self.workerServer=workerServer
+        # the return code 
+        self.returncode=None
         # the cpu time in seconds used by this command
         self.cputime=0.
         # dictionary of reserved resource objects
@@ -200,6 +202,14 @@ class Command(object):
             return self.workerServer
         else:
             return None
+
+    def getReturncode(self):
+        """Set the latest return code."""
+        return self.returncode 
+
+    def setReturncode(self, returncode):
+        """Set the latest return code."""
+        self.returncode = returncode
 
     def addCputime(self, cputime):
         """Add a number of cpu seconds used."""
@@ -307,6 +317,8 @@ class Command(object):
             outf.write(' min_version="%s"'%self.minVersion.getStr())
         if self.maxVersion is not None:
             outf.write(' max_version="%s"'%self.maxVersion.getStr())
+        if self.returncode is not None:
+            outf.write(' return_code="%d"'%self.returncode)
         if self.cputime > 0:
             outf.write(' used_cpu_time="%g"'%self.cputime)
         outf.write('>\n')
@@ -435,6 +447,9 @@ class CommandReader(xml.sax.handler.ContentHandler):
                 workerServer=attrs.getValue('worker_server')
             if not attrs.has_key('executable'):
                 raise CommandReaderError("command has no executable", self.loc)
+            returncode=None
+            if attrs.has_key('return_code'):
+                returncode=int(attrs.getValue('return_code'))
             if attrs.has_key('used_cpu_time'):
                 cputime=float(attrs.getValue('used_cpu_time'))
             executable=attrs.getValue('executable')
@@ -461,7 +476,8 @@ class CommandReader(xml.sax.handler.ContentHandler):
                                     id=id, running=running, 
                                     workerServer=workerServer)
             if cputime > 0:
-                self.setCputime(cputime)
+                self.curCommand.setCputime(cputime)
+            self.curCommand.setReturncode(returncode)
         elif name == 'arg':
             if not attrs.has_key('value'):
                 raise CommandReaderError("command argument has no value",

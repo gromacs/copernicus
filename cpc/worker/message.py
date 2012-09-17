@@ -68,7 +68,8 @@ class WorkerMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
         return response
     
-    def commandFinishedRequest(self, cmdID, origServer, cputime, jobTarFileobj):
+    def commandFinishedRequest(self, cmdID, origServer, returncode, cputime, 
+                               jobTarFileobj):
         cmdstring='command-finished'
         fields = []
         input = Input('cmd', cmdstring)
@@ -76,13 +77,16 @@ class WorkerMessage(ClientBase):
         fields.append(input)
         fields.append(cmdIdInput)
         fields.append(Input('project_server', origServer))
+        if returncode is not None:
+            fields.append(Input('return_code', str(returncode)))
         fields.append(Input('used_cpu_time', str(cputime)))
         jobTarFileobj.seek(0)
         files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
         headers = dict()
         headers['end-node'] = origServer
         log.debug("sending command finished for cmd id %s"%cmdID)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files, headers))
+        response=self.putRequest(ServerRequest.prepareRequest(fields, 
+                                                              files, headers))
         return response
     
     #def commandFailedRequest(self, cmdID, origServer, jobTarFileobj=None):

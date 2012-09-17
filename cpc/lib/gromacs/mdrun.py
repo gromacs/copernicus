@@ -380,10 +380,12 @@ def mdrun(inp):
     else:
         if rsrc.max.get('cores') is None:
             rsrc.load(rsrcFilename)
+    if inp.cmd is not None:
+        log.debug("Return code was %s"%str(inp.cmd.getReturncode()))
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
-        log.debug("Extracting data")
+        log.debug("Extracting data. ")
         # confout exists. we're finished. Concatenate all the runs if
         # we need to, but first create the output dict
         #outputs=dict()

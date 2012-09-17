@@ -200,7 +200,7 @@ class HeartbeatList(object):
             raise HeartbeatNotFoundError(workerID)
         with self.lock:
             worker=self.workers[workerID]
-            worker.notifyServer(worker)
+            worker.notifyServer()
             del self.workers[workerID]
         return True
 

@@ -83,6 +83,8 @@ class WorkLoad(object):
         # the amount of cpu time used for this workload
         #self.cputime=0
         self.realTimeSpent=0
+        # the return code
+        self.returncode=None
         # for now, the number of cores is the multiplier factor
         self.cputimeMultiplier=self.used['cores'].value
 
@@ -206,7 +208,7 @@ class WorkLoad(object):
         clnt= WorkerMessage()
         # the cmddir, taskID and projectID together define a unique command.
         clnt.commandFinishedRequest(self.cmd.id, self.originatingServer, 
-                                    self.getCputime(), tff)
+                                    self.returncode, self.getCputime(), tff)
         tff.close()
         for workload in self.joinedTo:
             workload.returnResults()
@@ -281,6 +283,7 @@ class WorkLoad(object):
                                 stdout=stdoutf, stderr=stderrf,
                                 cwd=self.rundir, env=nenv)
         sp.wait() 
+        self.returncode=sp.returncode
         stdoutf.close()
         stderrf.close()
         self.args=None

@@ -263,7 +263,6 @@ class SCWorkerReady(ServerCommand):
                         response.headers['originating-server']=\
                                   clientResponse.headers['originating-server']
                     #OPTIMIZE leads to a lot of folding and unfolding of packages 
-                    
             if not hasJob:           
                 response.add("No command")
 
@@ -278,6 +277,9 @@ class SCCommandFinishedForward(ServerCommand):
         cmdID=request.getParam('cmd_id')
         workerServer=request.getParam('worker_server')
         cmd=serverState.getRunningCmdList().get(cmdID)
+        returncode=None
+        if request.hasParam('return_code'):
+            returncode=int(request.getParam('return_code'))
         cputime=0
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
@@ -302,6 +304,7 @@ class SCCommandFinishedForward(ServerCommand):
         #TODO should be located elsewhere
         with self.lock:
             cmd.running = False
+            cmd.setReturncode(returncode)
             cmd.addCputime(cputime)
             if runfile is not None:
                 log.debug("extracting file for %s to dir %s"%(cmdID,cmd.dir))
@@ -332,6 +335,9 @@ class SCCommandFinished(ServerCommand):
         cmdID=request.getParam('cmd_id')
         runfile=request.getFile('rundata')
         projServer=request.getParam('project_server')
+        returncode=None
+        if request.hasParam('return_code'):
+            returncode=int(request.getParam('return_code'))
         cputime=0
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
@@ -349,8 +355,8 @@ class SCCommandFinished(ServerCommand):
         #msg=ServerToServerMessage(projServer)
         #ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
         msg=ServerToServerMessage(projServer)  #FIXME if this is current server do not make a connection to self??
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime,
-                                              True)
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, 
+                                              returncode, cputime, True)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -364,6 +370,9 @@ class SCCommandFailed(ServerCommand):
             runfile=request.getFile('rundata')
         except cpc.util.CpcError:
             runfile=None
+        returncode=None
+        if request.hasParam('return_code'):
+            returncode=int(request.getParam('return_code'))
         cputime=0
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
@@ -383,8 +392,8 @@ class SCCommandFailed(ServerCommand):
         #forward CommandFinished-signal to project server
         log.debug("Run failure reported")
         msg=ServerToServerMessage(projServer)
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime, 
-                                              (runfile is not None))
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, returncode, 
+                                              cputime, (runfile is not None))
         #found=False
         #try:
         #    cmd=serverState.getRunningCmdList().get(cmdID)

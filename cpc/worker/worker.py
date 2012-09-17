@@ -109,6 +109,9 @@ class Worker(object):
         # fix the path so the server knows where it is
         if not os.path.isabs(self.workerTopDir):
             self.workerTopDir=os.path.join(os.getcwd(), self.workerTopDir)
+            isabs=False
+        else:
+            isabs=True
 
         # set the actual path being used.
         self.mainDir=os.path.join(self.workerTopDir, self.id)
@@ -123,15 +126,16 @@ class Worker(object):
                 self.workerTopDirCreated=False
             os.mkdir(self.mainDir)
         except:
-            if os.path.isabs(self.mainDir):
+            if isabs:
                 absn=""
             else:
                 absn="in the current working directory"
-            log.error("Can't create the directory '%s' %s."%
-                      (self.mainDir, absn))
-            log.error("cpc-worker must be able to write files in a temporary")
-            log.error("place. Run cpc-worker from a place (e.g. /tmp)")
-            log.error("where this is possible")
+            log.error("Can't create the directory '%s' %s."% (self.mainDir, 
+                                                              absn))
+            log.error(
+                   "cpc-worker must be able to write in a temporary directory")
+            log.error(
+                   "Run cpc-worker from a user-writeable directory (e.g. /tmp)")
             raise WorkerError("Can't create directory '%s' %s."%
                               (self.mainDir, absn))
         self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id,
