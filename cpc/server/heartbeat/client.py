@@ -43,7 +43,7 @@ class HeartbeatSender(object):
         self.lock=threading.Lock()
         self.workerID=workerID
         self.workerDir=workerDir
-        self.run=True
+        self.run=False
         # dict by cmd id of a tuple of cmd id and originating server:
         self.cmds=dict() 
         self.cmdsChanged=True
@@ -53,6 +53,9 @@ class HeartbeatSender(object):
     def addWorkloads(self, workloads):
         """Add a workload list."""
         with self.lock:
+            # set run for the first time a workload is added.
+            if len(workloads) > 0:
+                self.run=True
             self.cmdsChanged=True
             for workload in workloads:
                 hbi=item.HeartbeatItem(workload.cmd.id, 
@@ -84,19 +87,27 @@ class HeartbeatSender(object):
             self.thread.daemon=True
             self.thread.start()
         else:
-            self._sendPing(False, False)
+            if self.run:
+                self._sendPing(False, False)
 
     def stop(self):
         """Tell the hearbeat thread to stop running."""
         with self.lock:
             log.debug("Stopping heartbeat thread")
+            if self.run:
+                self._sendPing(False, True)
             self.run=False
-            self._sendPing(False, True)
 
     def getRun(self):
-        """Check whether the heartbeat thread should still run."""
+        """Check whether the heartbeat thread should run."""
         with self.lock:
             return self.run
+
+    def setRun(self, run):
+        """Set whether the heartbeat thread should run."""
+        with self.lock:
+            self.run=run
+
 
     def sendHeartbeat(self, first):
         """Try to send a hearbeat signal (if we're still supposed to be running)
