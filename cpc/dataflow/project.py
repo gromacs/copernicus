@@ -475,7 +475,8 @@ class Project(object):
                 item.activate()
 
     def deactivate(self, pathname):
-        """De-activate all active instances."""
+        """De-activate all active instances contained in pathname (or 
+           everything if pathname is empty)."""
         pathname=keywords.fixID(pathname)
         with self.networkLock:
             if pathname.strip() == "":

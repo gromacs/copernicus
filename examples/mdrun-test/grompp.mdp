@@ -6,7 +6,7 @@
 ;
 
 ; RUN CONTROL PARAMETERS
-integrator               = sd
+integrator               = steep
 ; Start time and timestep in ps
 tinit                    = 0
 dt                       = 0.002

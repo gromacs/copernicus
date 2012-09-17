@@ -156,7 +156,8 @@ class ServerToServerMessage(ClientBase):
         return response
     
     
-    def commandFinishForwardRequest(self, cmdID, workerServer, cputime):
+    def commandFinishForwardRequest(self, cmdID, workerServer, cputime, 
+                                    haveData):
         cmdstring='command-finished-forward'
         fields = []
         input = Input('cmd', cmdstring)
@@ -164,6 +165,8 @@ class ServerToServerMessage(ClientBase):
         fields.append(Input('cmd_id', cmdID))
         fields.append(Input('worker_server', workerServer))
         fields.append(Input('used_cpu_time', cputime))
+        if haveData:
+            fields.append(Input('run_data', 1))
         
         #the files are not sent in this message, instead they are pulled from the
         #project server upon receiving this message (for now)

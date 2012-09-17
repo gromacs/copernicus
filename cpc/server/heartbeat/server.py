@@ -130,44 +130,12 @@ class HeartbeatList(object):
             if len(todelete) > 0:
                 stateChanged=True
             for worker in todelete:
-                self._notifyServer(worker)
+                #self._notifyServer(worker)
+                worker.notifyServer()
                 del self.workers[worker.workerID]
             if stateChanged:
                 self._writeStateLocked()
         return oldestItem
-
-    def _notifyServer(self, worker):
-        """Notify the server that a worker has died.
-           Returns the client response."""
-        log.info("Worker %s has died."%(worker.workerID))
-        items=worker.getItems()
-        # now notify all the appropriate servers.
-        #sendSucceeded=False
-        for item in items:
-            log.info("Notifying %s that worker of cmd %s has died."%
-                     (item.serverName, item.cmdID))
-            tff=None
-            try:
-                if item.haveRunDir():
-                    # if it exists, we create a tar file and send it.
-                    tff=tempfile.TemporaryFile()
-                    tf=tarfile.open(fileobj=tff, mode="w:gz")
-                    tf.add(item.getRunDir(), arcname=".", recursive=True)
-                    tf.close()
-                    tff.seek(0)
-                    #sendSucceeded=True
-            except:
-                # we make sure we don't upload in case of doubt
-                pass
-            clnt=cpc.server.message.server_message.ServerMessage()
-            clnt.commandFailedRequest(item.cmdID, item.serverName, tff)
-        if worker.haveWorkerDir():
-            try:
-                # remove the worker directory
-                shutil.rmtree(worker.getWorkerDir(), ignore_errors=True)
-            except:
-                # and duly ignore the response.
-                pass
 
     def _writeStateLocked(self):
         """Write the state of the list to a file, assuming a locked state."""
@@ -230,9 +198,10 @@ class HeartbeatList(object):
                     the originating server."""
         if not self.workers.has_key(workerID):
             raise HeartbeatNotFoundError(workerID)
-        worker=self.workers[workerID]
-        self._notifyServer(worker)
-        del self.workers[workerID]
+        with self.lock:
+            worker=self.workers[workerID]
+            worker.notifyServer(worker)
+            del self.workers[workerID]
         return True
 
     def toJSON(self):

@@ -77,7 +77,7 @@ class HeartbeatSender(object):
             self._startThread()
 
     def _startThread(self):
-        """Assume locked object."""
+        #Assume locked object.
         if self.thread is None:
             self.thread=threading.Thread(target=heartbeatSenderThread, 
                                          args=(self,))
@@ -148,7 +148,7 @@ class HeartbeatSender(object):
 
 def heartbeatSenderThread(hb):
     """The worker's heartbeat thread function. Sends a heartbeat within the 
-       time requested by the server, as long as the process is running."""       
+       time requested by the server, as long as the process is running."""
     keepRunning=True
     first=True
     while keepRunning:

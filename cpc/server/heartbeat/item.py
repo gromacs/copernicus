@@ -21,6 +21,7 @@ import time
 import logging
 import os
 import xml.sax
+import threading
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -28,6 +29,7 @@ except ImportError:
 
 
 import cpc.util
+import cpc.server.message
 
 log=logging.getLogger('cpc.heartbeat.item')
 
@@ -43,6 +45,7 @@ class HeartbeatWorker(object):
         self.workerDir=workerDir
         self.items=[]
         self.lastHeard=time.time()
+        self.lock=threading.Lock()
 
     def getWorkerDir(self):
         return self.workerDir
@@ -52,38 +55,80 @@ class HeartbeatWorker(object):
 
     def ping(self):
         """Update the time associated with the last heard ping to now."""
-        self.lastHeard=time.time()
+        with self.lock:
+            self.lastHeard=time.time()
     def addItem(self, item):
         """Add a single heartbeat item to the worker."""
-        self.items.append(item)
+        with self.lock:
+            self.items.append(item)
 
     def setItems(self, items):
         """Set the heartbeat item list."""
-        self.items=items
+        with self.lock:
+            self.items=items
 
-    def getItems(self):
-        """Get the full heartbeat item list."""
-        return self.items
+    #def getItems(self):
+    #    """Get the full heartbeat item list."""
+    #    with self.lock:
+    #        return self.items
     def clearItems(self):
         """clear the full heartbeat item list."""
-        self.items=[]
+        with self.lock:
+            self.items=[]
+
+
+    def notifyServer(self):
+        """Notify the server that a worker has died.
+           Returns the client response."""
+        log.info("Worker %s has died."%(self.workerID))
+        with self.lock:
+            # now notify all the appropriate servers.
+            #sendSucceeded=False
+            for item in self.items:
+                log.info("Notifying %s that worker of cmd %s has died."%
+                         (item.serverName, item.cmdID))
+                tff=None
+                try:
+                    if item.haveRunDir():
+                        # if it exists, we create a tar file and send it.
+                        tff=tempfile.TemporaryFile()
+                        tf=tarfile.open(fileobj=tff, mode="w:gz")
+                        tf.add(item.getRunDir(), arcname=".", recursive=True)
+                        tf.close()
+                        tff.seek(0)
+                        #sendSucceeded=True
+                except:
+                    # we make sure we don't upload in case of doubt
+                    pass
+                clnt=cpc.server.message.server_message.ServerMessage()
+                clnt.commandFailedRequest(item.cmdID, item.serverName, tff)
+            if self.haveWorkerDir():
+                try:
+                    # remove the worker directory
+                    shutil.rmtree(self.workerDir, ignore_errors=True)
+                except:
+                    # and duly ignore the response.
+                    pass
+
 
     def writeXML(self, outf):
-        outf.write('<worker id="%s" dir="%s">\n'%(self.workerID, 
-                                                  self.workerDir))
-        for item in self.items:
-            item.writeXML(outf)
-        outf.write('</worker>\n')
+        with self.lock:
+            outf.write('<worker id="%s" dir="%s">\n'%(self.workerID, 
+                                                      self.workerDir))
+            for item in self.items:
+                item.writeXML(outf)
+            outf.write('</worker>\n')
 
     def toJSON(self):
         """Returns a dict with the object contents so it can be 
            JSON-serialized."""
         ret=dict()
-        ret['worker_id'] = self.workerID
-        ret['worker_dir'] = self.workerDir
-        ret['items'] = []
-        for item in self.items:
-            ret['items'].append(item.toJSON())
+        with self.lock:
+            ret['worker_id'] = self.workerID
+            ret['worker_dir'] = self.workerDir
+            ret['items'] = []
+            for item in self.items:
+                ret['items'].append(item.toJSON())
         return ret
 
 
@@ -114,6 +159,7 @@ class HeartbeatItem(object):
         return self.runDir
     def haveRunDir(self):
         """Return whether the item's run directory is accessible."""
+        #log.debug("Checking whether %s exists."%(self.runDir))
         return os.path.exists(self.runDir)
 
     def toJSON(self):

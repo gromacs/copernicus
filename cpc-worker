@@ -126,6 +126,7 @@ try:
         #  worker.shutdown()
         #signal.signal(signal.SIGINT,shutdownHandler)
         worker.run()
+        worker.cleanup()
 except ClientError as e:
     print("ERROR: %s"%e)
 except cpc.util.CpcError as e:

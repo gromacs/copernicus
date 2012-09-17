@@ -96,27 +96,48 @@ class Worker(object):
         # Process (untar) the run request into a directory name
         # that is unique for this process+hostname, and worker job iteration
         if workdir is None:
-            self.maindir=os.path.join(self.conf.getRunDir(), self.id)
+            self.workerTopDir=self.conf.getRunDir()
+            createTopDir=True
+            #self.mainDir=os.path.join(self.conf.getRunDir(), self.id)
         else:
-            self.maindir=workdir
+            if not os.path.exists(workdir):
+                raise WorkerError("Given run directory %s does not exist."%
+                                  (workdir))
+            self.workerTopDir=workdir
+            createTopDir=False
+
+        # fix the path so the server knows where it is
+        if not os.path.isabs(self.workerTopDir):
+            self.workerTopDir=os.path.join(os.getcwd(), self.workerTopDir)
+
+        # set the actual path being used.
+        self.mainDir=os.path.join(self.workerTopDir, self.id)
+
         try:
-            os.makedirs(self.maindir)
+            log.debug("Creating work directory %s"%(self.mainDir))
+            if createTopDir:
+                if not os.path.exists(self.workerTopDir):
+                    os.mkdir(self.workerTopDir)
+                self.workerTopDirCreated=True
+            else:
+                self.workerTopDirCreated=False
+            os.mkdir(self.mainDir)
         except:
-            if os.path.isabs(self.maindir):
+            if os.path.isabs(self.mainDir):
                 absn=""
             else:
                 absn="in the current working directory"
             log.error("Can't create the directory '%s' %s."%
-                      (self.maindir, absn))
+                      (self.mainDir, absn))
             log.error("cpc-worker must be able to write files in a temporary")
             log.error("place. Run cpc-worker from a place (e.g. /tmp)")
             log.error("where this is possible")
             raise WorkerError("Can't create directory '%s' %s."%
-                              (self.maindir, absn))
+                              (self.mainDir, absn))
         self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id,
-                                                            self.maindir)
+                                                            self.mainDir)
         # First get our architecture(s) (hw + sw) from the plugin
-        self.plugin=PlatformPlugin(self.type, self.maindir,self.conf)
+        self.plugin=PlatformPlugin(self.type, self.mainDir, self.conf)
         canRun=self.plugin.canRun()
         if not canRun:
             raise WorkerError("Plugin can't run.")
@@ -225,6 +246,17 @@ class Worker(object):
                 self.quit = True
         self.heartbeat.stop()
 
+
+    def cleanup(self):
+        shutil.rmtree(self.mainDir)
+        # now clean up the worker top dir. This might be in use by other workers
+        # so we use rmDir
+        try:
+            if self.workerTopDirCreated:
+                os.rmdir(self.workerTopDir)
+        except:
+            log.debug("Couldn't erase worker top dir %s"%self.workerTopDir)
+
     def _printAvailableExes(self):
 
         print "Available executables for platform %s:"%self.type
@@ -235,7 +267,7 @@ class Worker(object):
     def _getPlatforms(self, plugin):
         """Get the list of platforms als an XML string from the run plugin."""
         # make an empty platform reservation
-        plr=PlatformReservation(self.maindir)
+        plr=PlatformReservation(self.mainDir)
         plugin_retmsg=plugin.run(".", "platform", self.args,
                                  str(plr.printXML()))
         if plugin_retmsg[0] != 0:
@@ -297,7 +329,7 @@ class Worker(object):
             else:
                 raise WorkerError("Originating server not found")
             log.debug("Originating server: %s"%origServer)
-            rundir=os.path.join(self.maindir, "%d"%self.iteration)
+            rundir=os.path.join(self.mainDir, "%d"%self.iteration)
             log.debug("run directory: %s"%rundir)
             #os.mkdir(rundir)
             cpc.util.file.extractSafely(rundir,
@@ -321,7 +353,7 @@ class Worker(object):
                     if (exe is None):
                         raise WorkerError("Executable not found")
                     id="%d/%d"%(self.iteration, i)
-                    workloads.append(workload.WorkLoad(self.maindir, cmd,
+                    workloads.append(workload.WorkLoad(self.mainDir, cmd,
                                                        cmddir, origServer,
                                                        exe, pf, id))
                     i+=1

@@ -281,8 +281,10 @@ class SCCommandFinishedForward(ServerCommand):
         cputime=0
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
-      
-        if workerServer is not None:  
+
+        if ( workerServer is not None and 
+            ( request.hasParam('run_data') and 
+              int(request.getParam('run_data'))!=0 ) ): 
             #remote asset tracking
             serverState.getRemoteAssets().addAsset(cmdID, workerServer)
             
@@ -347,7 +349,8 @@ class SCCommandFinished(ServerCommand):
         #msg=ServerToServerMessage(projServer)
         #ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
         msg=ServerToServerMessage(projServer)  #FIXME if this is current server do not make a connection to self??
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime,
+                                              True)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -380,7 +383,8 @@ class SCCommandFailed(ServerCommand):
         #forward CommandFinished-signal to project server
         log.debug("Run failure reported")
         msg=ServerToServerMessage(projServer)
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
+        ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime, 
+                                              (runfile is not None))
         #found=False
         #try:
         #    cmd=serverState.getRunningCmdList().get(cmdID)
