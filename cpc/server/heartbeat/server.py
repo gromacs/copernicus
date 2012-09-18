@@ -66,7 +66,7 @@ class HeartbeatList(object):
         heartbeatTime=ServerConf().getHeartbeatTime()
         stateChanged=False
         with self.lock:
-            #log.debug("heartbeat item: worker %s, dir %s, iteration %s, items '%s'"%
+            #log.debug("heartbeat: worker %s, dir %s, iteration %s, items '%s'"%
             #          (workerID, workerDir, iteration, heartbeatItemsXML))
             if iteration=="first":
                 # this is a new worker. Add it to the worker list.

@@ -32,12 +32,13 @@ import cpc.server.state.cmdlist
 import cpc.util
 import cpc.util.log
 
+from cpc.server.command.worker_matcher import CommandWorkerMatcher
+
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util import json_serializer
 from cpc.network.node import Nodes,Node
 from cpc.network.server_to_server_message import ServerToServerMessage
-from cpc.server.command import Resource
 from cpc.server.tracking.tracker import Tracker
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.connection_bundle import ConnectionBundle
@@ -45,122 +46,6 @@ from server_command import ServerCommand
 
 log=logging.getLogger('cpc.server.workercmd')
 
-class CommandWorkerMatcher(object):
-    """Object that stores information about a worker for the 
-       matchCommandWorker() function that is used in queue.getUntil()"""
-    def __init__(self, platforms, executableList, workerReqDict):
-        self.platforms=platforms
-        self.executableList=executableList
-        self.workerReqDict=workerReqDict
-        maxPlatform=platforms[0]
-        # get the platform with the biggest number of cores.
-        ncores_max=0
-        for platform in platforms:
-            if (platform.hasMaxResource('cores')):
-                ncores_now=platform.getMaxResource('cores')
-                if ncores_now > ncores_max:
-                    ncores_max=ncores_now
-                    maxPlatform=platform
-        self.usePlatform=maxPlatform
-        # construct a list of all max. resources with settings for the
-        # platform we use.
-        self.used=dict()
-        for rsrc in self.usePlatform.getMaxResources().itervalues():
-            self.used[rsrc.name]=Resource(rsrc.name, 0)
-        self.type=None
-
-    def checkType(self, type):
-        """Check whether the command type is the same as one used before in the
-           list of commands to send back"""
-        if self.type is None:
-            self.type=type
-            return True
-        return type == self.type
-
-    def getExecID(self, cmd):
-        """Check whether the worker has the right executable."""
-        # first try the usePlatform
-        
-        ret=self.executableList.find(cmd.executable, self.usePlatform,
-                                     cmd.minVersion, cmd.maxVersion)
-        if ret is not None:
-            return ret.getID()
-        for platform in self.platforms:
-            ret=self.executableList.find(cmd.executable, platform,
-                                         cmd.minVersion, cmd.maxVersion)
-            if ret is not None:
-                return ret.getID()
-        return None
-
-    def checkWorkerRequirements(self, cmd):
-        #Check if worker is project dedicated
-        if 'project' in self.workerReqDict:
-            name=cmd.getTask().getProject().getName()
-            reqName=self.workerReqDict['project']
-            log.debug("Worker is dedicated to proj. %s, command belongs to %s"%
-                      (reqName, name))
-            if name != reqName:
-                return False
-        return True
-
-    def checkAddResources(self, cmd):
-        """Check whether a command falls within the current resource allocation
-           and add its requirements to teh used resources if it does.
-           cmd = the command to check
-           returns: True if the command fits within the capabilities is added,
-                    False if the command doesn't fit."""
-        for rsrc in self.used.itervalues():
-            platformMax = self.usePlatform.getMaxResource(rsrc.name)
-            cmdMinRsrc = cmd.getMinRequired(rsrc.name)
-            rsrcLeft = platformMax - rsrc.value
-            if cmdMinRsrc is not None:
-                # check whether there's any left
-                if rsrcLeft < cmdMinRsrc:
-                    log.debug("Left: %d, max=%d, minimum resources: %d"%
-                              (rsrcLeft, platformMax, cmdMinRsrc))
-                    return False
-        # now reserve the resources
-        cmd.resetReserved()
-        for rsrc in self.used.itervalues():
-            platformMax = self.usePlatform.getMaxResource(rsrc.name)
-            platformPref = self.usePlatform.getPrefResource(rsrc.name)
-            cmdMinRsrc = cmd.getMinRequired(rsrc.name)
-            cmdMaxRsrc = cmd.getMaxAllowed(rsrc.name)
-            if cmdMinRsrc is not None:
-                # the total amount of resources left on the current platform:
-                rsrcLeft = platformMax - rsrc.value
-                if platformPref is not None and rsrcLeft>platformPref:
-                    value=platformPref
-                elif cmdMaxRsrc is not None and rsrcLeft>cmdMaxRsrc:
-                    value=cmdMaxRsrc
-                else:
-                    value=rsrcLeft
-                # now we know how many
-                log.debug("Reserving %d cores"%value)
-                cmd.setReserved(rsrc.name, value)
-                rsrc.value += value
-        return True
-
-
-def matchCommandWorker(matcher, command):
-    """Function to use in queue.getUntil() to get a number of commands from
-       the queue.
-       TODO: this is where performance tuning results should be used."""
-    cont=True # whether to continue getting commands from the queue
-    # whether to use this command: make sure we only have a single type
-    use=False
-    execID=matcher.getExecID(command)
-    log.log(cpc.util.log.TRACE,'exec id is %s'%execID)
-    if execID is not None:
-        use=(matcher.checkType(command.getTask().getFunctionName()) and
-             matcher.checkWorkerRequirements(command))
-    if use:
-        if matcher.checkAddResources(command):
-            use=True
-        else:
-            use=False
-            cont=False
-    return (cont, use)
 
 #Child to Parent message
 class SCWorkerReady(ServerCommand):
@@ -169,29 +54,35 @@ class SCWorkerReady(ServerCommand):
         ServerCommand.__init__(self, "worker-ready")
 
     def run(self, serverState, request, response):
-        # now sleep for 2 seconds to give the dataflow time to react to any 
-        # new state. This also serves as a rate limiter for incoming requests
-        # if many new workers start simultaneously.
-        time.sleep(2)
         # first read platform capabilities and executables
         rdr=cpc.server.command.platform_exec_reader.PlatformExecutableReader()
         workerData=request.getParam('worker')
         log.debug("Worker platform + executables: %s"%workerData)
         rdr.readString(workerData,"Worker-reported platform + executables")
         # match queued commands to executables.
-        cwm=CommandWorkerMatcher(rdr.getPlatforms(), rdr.getExecutableList(),
+        cwm=CommandWorkerMatcher(rdr.getPlatforms(), 
+                                 rdr.getExecutableList(),
                                  rdr.getWorkerRequirements())
-        cmds=serverState.getCmdQueue().getUntil(matchCommandWorker, cwm)
+        cmds=cwm.getWork(serverState.getCmdQueue())
+        if not cwm.isDepleted():
+            # now sleep for 5 seconds to give the dataflow time to react to any 
+            # new state. 
+            time.sleep(5)
+            cmds.extend(cwm.getWork(serverState.getCmdQueue()))
+        #cmds=serverState.getCmdQueue().getUntil(matchCommandWorker, cwm)
         if request.headers.has_key('originating-server'):
             originating = request.headers['originating-server']
         else:
-            originating = ServerConf().getHostName() #FIXME this cannot be correct ever
+            # If the originating server property has not been set,  the 
+            # request hasn't been forwarded, therefore we are the originating 
+            # server
+            originating = ServerConf().getHostName() 
         log.debug("worker identified %s"%request.headers['originating-client'] )
         serverState.setWorkerState("idle",workerData,
                                    request.headers['originating-client'])    
         
         if len(cmds) > 0:
-            # construct the tar file.
+            # construct the tar file with the workloads. 
             tff=tempfile.TemporaryFile()
             tf=tarfile.open(fileobj=tff, mode="w:gz")
             rcmd=serverState.getRunningCmdList()
@@ -230,7 +121,10 @@ class SCWorkerReady(ServerCommand):
                 topology = json.loads(request.getParam('topology')
                                       ,object_hook = json_serializer.fromJson)
             
-            thisNode = Node(conf.getHostName(),conf.getServerHTTPPort(),conf.getServerHTTPSPort(),conf.getHostName())                                
+            thisNode = Node(conf.getHostName(),
+                            conf.getServerHTTPPort(),
+                            conf.getServerHTTPSPort(),
+                            conf.getHostName())                                
             thisNode.nodes = conf.getNodes()      
             topology.addNode(thisNode)
       
@@ -238,13 +132,17 @@ class SCWorkerReady(ServerCommand):
             for node in nodes:
                 if topology.exists(node.getId()) == False:
                     log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
-                    clnt = WorkerMessage(node.host,node.https_port,conf=ServerConf()) 
+                    clnt = WorkerMessage(node.host,
+                                         node.https_port,
+                                         conf=ServerConf()) 
                     
                     clientResponse = clnt.workerRequest(workerData,topology)
                     
                     if clientResponse.getType() == 'application/x-tar':
 
-                        log.log(cpc.util.log.TRACE,'got work from %s'%(clientResponse.headers['originating-server']))
+                        log.log(cpc.util.log.TRACE,
+                                'got work from %s'%
+                                (clientResponse.headers['originating-server']))
                         hasJob=True
                         # we need to rewrap the message 
                         
@@ -394,26 +292,6 @@ class SCCommandFailed(ServerCommand):
         msg=ServerToServerMessage(projServer)
         ret = msg.commandFinishForwardRequest(cmdID, workerServer, returncode, 
                                               cputime, (runfile is not None))
-        #found=False
-        #try:
-        #    cmd=serverState.getRunningCmdList().get(cmdID)
-        #    if cmd is not None:
-        #        found=True
-        #    # remove the command from the running list
-        #    serverState.getRunningCmdList().handleFinished(cmd)
-        #    #getRunningCmdList().remove(cmd)
-        #    # handle its new state
-        #    #project=cmd.getTask().getProject()
-        #    #project.handleFinishedCommand(cmd, runfile)
-        #    #project.writeTasks()
-        #except cpc.server.state.cmdlist.RunningCmdListError:
-        #    # it wasn't found. 
-        #    found=False
-        #if found:
-        #    response.add("Run failure reported succesfully.")
-        #else:
-        #    response.add("Command ID %s not found."%cmdID, status="ERROR")
-       
 
 class SCWorkerHeartbeat(ServerCommand):
     """Handle a worker's heartbeat signal."""

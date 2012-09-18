@@ -408,25 +408,6 @@ class Worker(object):
                     joinableWorkloads.remove(j)
                     workloadlist.remove(j)
 
-    def _notifyWorkerFinished(self, cmd, origServer, rundir):
-        """Package the files resulting from a run and notify the upstream
-            server about the run that has just finished."""
-        # tar and zip the result
-        #tarfilename="%s.tar.gz"%rundir
-        #tff=open(tarfilename, "w+")
-        tff=tempfile.TemporaryFile()
-        tf=tarfile.open(fileobj=tff, mode="w:gz")
-        tf.add(rundir, arcname=".", recursive=True)
-        tf.close()
-        tff.seek(0)
-        shutil.rmtree(rundir, ignore_errors=True)
-        # and send it back TODO: find out where the original request came from.
-        runreq_clnt=WorkerMessage()
-        # the cmd dir, taskID and projectID together define a unique command.
-        runreq_clnt.workerFinishRequest(cmd.id, origServer, tff)
-        tff.close()
-
-
     def _haveRemainingResources(self):
         """Check whether any of the resources has been depleted.
            returns: True if none of the resources have been depleted, False
