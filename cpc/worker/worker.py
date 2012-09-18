@@ -93,6 +93,7 @@ class Worker(object):
         self.args=args
         self.quit=False
         self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
+        log.info("Worker ID: %s."%self.id)
         # Process (untar) the run request into a directory name
         # that is unique for this process+hostname, and worker job iteration
         if workdir is None:
