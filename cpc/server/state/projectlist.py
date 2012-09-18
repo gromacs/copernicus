@@ -147,6 +147,7 @@ class ProjectList(object):
         with self.lock:
             if project.getName() == self.defaultProjectName:
                 self.defaultProjectName = ""
+            project.cancel()
             del self.projects[project.getName()]
             dirname = project.getBasedir()
         if delDir and (dirname is not None):

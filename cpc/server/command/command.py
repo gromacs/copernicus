@@ -32,6 +32,7 @@ except ImportError:
 import cpc.util
 import version
 import resource
+import cpc.server.queue.cmdqueue
 
 
 log=logging.getLogger('cpc.project')
@@ -59,7 +60,7 @@ class CommandInputFile(object):
     def getPackagedName(self):
         return self.packagedName
 
-class Command(object):
+class Command(cpc.server.queue.cmdqueue.QueueableItem):
     """A command is what is executed on runners. Each task that is emitted
        by the controller is broken up in commands (using the task plugins).
        """
@@ -110,6 +111,7 @@ class Command(object):
         self.maxAllowed = { }
         self.task=None
         self.env=env
+        cpc.server.queue.cmdqueue.QueueableItem.__init__(self)
 
     #def setTaskID(self, id):
     #    self.taskID=id
@@ -290,6 +292,7 @@ class Command(object):
         #self.taskID=task.getID()
     def getTask(self):
         return self.task
+
     def getFullPriority(self):
         return self.task.priority + self.addPriority
     def increasePriority(self):

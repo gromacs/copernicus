@@ -76,7 +76,7 @@ class SCProjectDelete(ServerCommand):
         msg = ""
         if delDir:
             msg = " and its directory %s"%prj.getBasedir()
-        q.deleteByProject(prj)
+        #q.deleteByProject(prj, False)
         serverState.getProjectList().delete(prj, delDir)
         response.add("Project %s%s deleted."%(name, msg))
 

@@ -464,6 +464,10 @@ class Project(object):
         self.active.getAllTasks(taskList)
         return taskList
 
+    def cancel(self):
+        """Delete all queued commands."""
+        self.cmdQueue.deleteByProject(self)
+
     def activate(self, pathname):
         """Activate all active instances."""
         pathname=keywords.fixID(pathname)

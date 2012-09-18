@@ -309,7 +309,7 @@ class ActiveInstance(object):
 
     # functions for readxml:
     def setState(self, state):
-        """Set the state without updating values"""
+        """Set the state without side effects"""
         with self.lock:
             self.state=state
 
@@ -718,8 +718,7 @@ class ActiveInstance(object):
     def activate(self):
         """Set the state of this active instance to active, if held."""
         log.debug("Activating active instance %s of fn %s"%
-                  (self.instance.getName(),
-                   self.function.getName()))
+                  (self.instance.getName(), self.function.getName()))
         changed=False
         with self.inputLock:
             with self.lock:
@@ -729,20 +728,28 @@ class ActiveInstance(object):
                     self.state=ActiveInstance.active
                     changed=True
             if changed:
+                for task in self.tasks:
+                    task.activateCommands()
                 if self._canRun():
                     self._genTask()
+        return changed
+
 
     def deactivate(self):
         """Set the state of this active instance to held, if active."""
-        log.debug("Activating active instance %s of fn %s"%
-                  (self.instance.getName(),
-                   self.function.getName()))
+        log.debug("Deactivating active instance %s of fn %s"%
+                  (self.instance.getName(), self.function.getName()))
+        changed=False
         with self.inputLock:
             with self.lock:
                 if self.state == ActiveInstance.active:
+                    changed=True
                     if self.subnet is not None:
                         self.subnet.deactivateAll()            
                     self.state=ActiveInstance.held
+                    for task in self.tasks:
+                        task.deactivateCommands()
+        return changed
 
     def unblock(self):
         """Unblock a task, forcing it to run"""
@@ -752,6 +759,8 @@ class ActiveInstance(object):
                  if self.state == ActiveInstance.blocked:
                     # in this case, always run
                     self.state=ActiveInstance.active
+                    for task in self.tasks:
+                        task.activateCommands()
                     changed=True
             if changed:
                 if self._canRun():
@@ -842,10 +851,13 @@ class ActiveInstance(object):
             else:
                 self.errmsg=unicode(msg, encoding="utf-8", errors='ignore')
             self.state=ActiveInstance.error
+            for task in self.tasks:
+                task.deactivateCommands()
             #print msg
             log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
                                                   self.function.getName(), 
                                                   self.errmsg))
+
     def rerun(self, recursive, clearError, outf=None):
         """Force the rerun of this instance, or clear the error if in error
            state and clearError is True. If recursive is set, 

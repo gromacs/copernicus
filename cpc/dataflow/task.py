@@ -39,6 +39,7 @@ import cpc.util
 import run
 import connection
 import value
+import active_inst
 
 
 log=logging.getLogger('cpc.dataflow.task')
@@ -106,10 +107,12 @@ class Task(object):
     def setFnInput(self, fnInput):
         """Replace the fnInput object. Only for readxml"""
         self.fnInput=fnInput
-    def addCommands(self, cmds):
+    def addCommands(self, cmds, deactivate):
         """Add commands. Only for readxml"""
         for cmd in cmds:
             cmd.setTask(self)
+            if deactivate:
+                cmd.deactivate()
         self.cmds.extend(cmds)
 
     def getFnInput(self):
@@ -119,10 +122,22 @@ class Task(object):
     def getCommands(self):
         return self.cmds
 
+    def activateCommands(self):
+        """Activate all the commands in this task."""
+        for cmd in self.cmds:
+            cmd.activate()
+    def deactivateCommands(self):
+        """Deactivate all the commands in this task."""
+        for cmd in self.cmds:
+            cmd.deactivate()
 
     def cancel(self):
         with self.lock:
             self.canceled=True
+
+    def isActive(self):
+        """Return whether the underlying active instance is active."""
+        return self.activeInstance.state == active_inst.active
 
     def _handleFnOutput(self, out):
         # handle addInstances

@@ -21,14 +21,34 @@ from collections import deque
 from threading import Lock
 import logging
 
-'''
-Created on Oct 26, 2010
-
-@author: iman
-'''
 log=logging.getLogger('cpc.server.queue.cmdqueue')
 
-class CmdQueue():
+import cpc.util
+
+class QueueError(cpc.util.CpcError):
+    pass
+
+class QueueableItem(object):
+    """A single queueable item; can be activated/deactivated."""
+    def __init__(self):
+        self.active=True
+        self.queue=None
+
+    def deactivate(self):
+        self.active=False
+            
+    def activate(self):
+        self.active=True
+        if self.cmdQueue is not None:
+            self.cmdQueue._activateCommand(self)
+
+    def setQueue(self, cmdQueue, queue):
+        """Set the item to be part of a specific queue."""
+        self.cmdQueue=cmdQueue
+        self.queue=queue
+
+
+class CmdQueue(object):
     PRIO_LOW_BOUND = -12 #Constant
     PRIO_HIGH_BOUND = 12 #Constant
 
@@ -39,6 +59,8 @@ class CmdQueue():
                                               CmdQueue.PRIO_HIGH_BOUND)]
         # TODO: finer grained locks. For now we have a single global lock.
         self.lock=Lock()
+        # The set of items popped from the queue that were inactive.
+        self.inactiveItems = deque()
 
     def getSize(self):
         """Count the number of elements in the queue."""
@@ -72,11 +94,17 @@ class CmdQueue():
         # an ID lives for as long as a command is queued/running
         command.tryGenID() 
         with self.lock:
-            prio=command.getFullPriority()
-            dq=self._getDeque(prio)
-            dq.append(command)
-            ret=True
-        return ret
+            if command.active:
+                prio=command.getFullPriority()
+                dq=self._getDeque(prio)
+                dq.append(command)
+                command.setQueue(self, dq)
+                ret=True
+            else:
+                self.inactiveItems.append(command)
+                command.setQueue(self, self.inactiveItems)
+                ret=False
+        return True
 
 
     def remove(self, cmd):
@@ -84,16 +112,20 @@ class CmdQueue():
            NOTE: this is an O(N) operation for N=number of items in the queue"""
         nremoved=0
         with self.lock:
-            for dq in self.queue:
-                n=len(dq)
-                for i in range(n):
-                    if dq[0] == cmd:
-                        nremoved+=1
-                        dq.popleft()
-                    else:
-                        dq.rotate(-1)
-                if nremoved > 0:
-                    return
+            dq=cmd.queue
+            if not dq in self.queue:
+                raise QueueError("Tried to remove item from wrong queue.")
+            #for dq in self.queue:
+            n=len(dq)
+            for i in range(n):
+                if dq[0] == cmd:
+                    nremoved+=1
+                    dq[0].setQueue(None, None)
+                    dq.popleft()
+                else:
+                    dq.rotate(-1)
+            #if nremoved > 0:
+            #    return
        
     def get(self):
         """ description: gets a single element with the highest priority from 
@@ -105,8 +137,13 @@ class CmdQueue():
         #find element with the highest priority
         with self.lock:
             for dq in self.queue:
-                if len(dq)>0:
-                    return dq.popleft()
+                while len(dq)>0:
+                    item=dq.popleft()
+                    if item.active:
+                        return item
+                    else:
+                        item.setQueue(self, self.inactiveItems)
+                        self.inactiveItems.append(item)
             return None
 
     def getUntil(self, fn, parm):
@@ -127,14 +164,20 @@ class CmdQueue():
                 n=len(dq)
                 nback=0
                 for i in range(n):
-                    cont, doPop=fn(parm, dq[0])
-                    if doPop:
-                        ret.append(dq.popleft())
+                    if dq[0].active:
+                        cont, doPop=fn(parm, dq[0])
+                        if doPop:
+                            dq[0].setQueue(None, None)
+                            ret.append(dq.popleft())
+                        else:
+                            dq.rotate(-1)
+                            nback+=1
+                        if not cont:
+                            break
                     else:
-                        dq.rotate(-1)
-                        nback+=1
-                    if not cont:
-                        break
+                        # append the inactive item to the inactiveItems queue
+                        dq[0].setQueue(self, self.inactiveItems)
+                        self.inactiveItems.append(dq.popleft())
                 dq.rotate(nback)
                 if not cont:
                     break
@@ -147,6 +190,10 @@ class CmdQueue():
             for it in value:
                 if(it.id == commandID): 
                     return True
+        # check the inactive items
+        for it in self.inactiveItems:
+            if(it.id == commandID): 
+                return True
         return False    
         
     def exists(self,commandID):
@@ -156,30 +203,47 @@ class CmdQueue():
             return self._exists(commandID)
   
     def list(self):
-        """Return a list with all queued items."""
+        """Return a list with all active queued items."""
         ret=[]
         with self.lock:
             for dq in self.queue:
-                ret.extend(dq)
+                for item in dq:
+                    if item.active:
+                        ret.append(item)
         return ret
+
+
+    def _purgeQueueProject(self, queue, project):
+        """Purge a single queue from a project."""
+        n=len(queue)
+        nremoved=0
+        for i in range(n):
+            if queue[0].task.project == project: 
+                nremoved+=1
+                queue[0].setQueue(None, None)
+                queue.popleft()
+            else:
+                queue.rotate(-1)
+        return nremoved
 
     def deleteByProject(self, project):
         """Delete all commands related to a project. Returns number of commands
            deleted.
+            
            NOTE: this is an O(N) operation for N=number of items in the queue"""
         nremoved=0
         with self.lock:
             for dq in self.queue:
-                n=len(dq)
-                for i in range(n):
-                    if dq[0].task.project == project:
-                        nremoved+=1
-                        dq.popleft()
-                    else:
-                        dq.rotate(-1)     
+                nremoved+=self._purgeQueueProject(dq, project)
+            nremoved+=self._purgeQueueProject(self.inactiveItems, project)
         return nremoved
 
-
+    def _activateCommand(self, command):
+        """Activate the command."""
+        if command.queue == self.inactiveItems:
+            with self.lock:
+                self.inactiveItems.remove(command)
+            self.add(command)        
 
     #Helper function for unit tests
     def indexOfCommand(self,command):

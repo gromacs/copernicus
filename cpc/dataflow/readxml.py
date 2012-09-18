@@ -724,7 +724,9 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         if self.cmdReader is not None:
             self.cmdReader.endElement(name)
             if name == "command-list":
-                self.curTask.addCommands(self.cmdReader.getCommands())
+                self.curTask.addCommands(self.cmdReader.getCommands(),
+                                         (self.activeInst.state != 
+                                          active_inst.ActiveInstance.active))
                 self.cmdReader=None
         elif self.valueReader is not None:
             self.valueReader.endElement(name)
