@@ -72,7 +72,7 @@ class RunningCmdList(object):
                 raise RunningCmdListError(cmd.id)
             del self.cmds[cmd.id]
             #FIXME persistance part
-#            project.writeTasks()
+            #project.writeTasks()
 
     def list(self):
         """Return a list with all running items."""

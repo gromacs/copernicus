@@ -85,7 +85,7 @@ class SCWorkerReady(ServerCommand):
             # construct the tar file with the workloads. 
             tff=tempfile.TemporaryFile()
             tf=tarfile.open(fileobj=tff, mode="w:gz")
-            rcmd=serverState.getRunningCmdList()
+            runningCmdList=serverState.getRunningCmdList()
             # make the commands ready
             for cmd in cmds:
                 log.debug("Adding command id %s to tar file."%cmd.id)
@@ -101,9 +101,7 @@ class SCWorkerReady(ServerCommand):
                 outf.close()
                 tf.add(cmddir, arcname=arcdir, recursive=True)
                 # set the state of the command.
-                #cmd.setRunning(True, originating)
-                rcmd.add(cmd, originating)
-                #cmd.getTask().setState(Task.running)
+                runningCmdList.add(cmd, originating)
                 #FIXME commands should have a set state
                 
             tf.close()
@@ -174,7 +172,8 @@ class SCCommandFinishedForward(ServerCommand):
         self.lock = threading.Lock()
         cmdID=request.getParam('cmd_id')
         workerServer=request.getParam('worker_server')
-        cmd=serverState.getRunningCmdList().get(cmdID)
+        runningCmdList=serverState.getRunningCmdList()
+        cmd=runningCmdList.get(cmdID)
         returncode=None
         if request.hasParam('return_code'):
             returncode=int(request.getParam('return_code'))
@@ -197,7 +196,7 @@ class SCCommandFinishedForward(ServerCommand):
             runfile = rundata.getRawData()
         log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
 
-        serverState.getRunningCmdList().handleFinished(cmd)
+        runningCmdList.handleFinished(cmd)
         
         #TODO should be located elsewhere
         with self.lock:
