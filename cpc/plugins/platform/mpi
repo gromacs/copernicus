@@ -75,6 +75,7 @@ try:
     ncores_max=None # the number of cores available
     ncores_min=1    # the minimum number of cores available
     ncores_pref=None # the preferred size of an individual run. 
+    cores_per_host=1 # the number of cores per host in the host file
     # parse the arguments
     prevarg=None
     err=False
@@ -84,6 +85,8 @@ try:
             if arg == "-":
                 break
             elif arg == "-n":
+                prevarg=arg
+            elif arg == "-cph":
                 prevarg=arg
             elif arg == "-hf":
                 prevarg=arg
@@ -96,6 +99,8 @@ try:
         else:
             if prevarg == "-n":
                 ncores_max=int(arg)
+            if prevarg == "-cph":
+                cores_per_host=int(arg)
             if prevarg == "-hf":
                 hostfile=arg
             elif prevarg == "-s":
@@ -108,7 +113,7 @@ try:
 
     if (err or (prevarg is not None) or 
         ( (ncores_max is None) and (hostfile is None))):
-        print "Usage: cpc worker mpi [--join] [-n <ncores>| -hf hostfile] [-s <run-size>]"
+        print "Usage: cpc worker mpi [--join] [-n <ncores>| -hf hostfile] [-s <run-size>] [-cph cores_per_host]"
         sys.exit(1)
 
     # now read in the platform reservation
@@ -131,7 +136,8 @@ try:
             for line in inhosts:
                 host=line.strip()
                 if host != "":
-                    hostlist.append(host)
+                    for i in range(cores_per_host):
+                        hostlist.append(host)
             inhosts.close()
             ncores_max=len(hostlist)
             persistence={ "ntot" : ncores_max, 
