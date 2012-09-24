@@ -213,6 +213,23 @@ class SCProjectList(ProjectServerCommand):
         response.add(lst)
         log.info("Project list on %s: %s"%(prj.getName(), item))
 
+class SCProjectDebug(ServerCommand):
+    """Debug named items in a project - implementation dependent."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-debug")
+    def run(self, serverState, request, response):
+        if request.hasParam('project'):
+            prj=serverState.getProjectList().get(request.getParam('project'))
+        else:
+            prj=serverState.getProjectList().getDefault()
+        if request.hasParam('item'):
+            item=request.getParam('item')
+        else:
+            item=""
+        resp=prj.getDebugInfo(item)
+        log.debug("response is '%s'"%resp)
+        response.add(resp)
+
 
 class SCProjectInfo(ProjectServerCommand):
     """Get project item descriptions."""
