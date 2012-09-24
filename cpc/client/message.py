@@ -330,6 +330,17 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
+    def projectDebugRequest(self, project, item):
+        """Get debug info for project items"""
+        cmdstring="project-debug"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        if project is not None:
+            fields.append(Input('project', project))
+        fields.append(Input('item', item))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+
     def projectLogRequest(self, project, item):
         """List all items in a project"""
         cmdstring="project-log"

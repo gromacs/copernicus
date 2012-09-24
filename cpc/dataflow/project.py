@@ -22,6 +22,11 @@ import logging
 import threading
 import os
 import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 
 
 import cpc.util
@@ -385,6 +390,11 @@ class Project(object):
         return ret
 
 
+    def getDebugInfo(self, item):
+        """Give debug info about a particular item."""
+        outf=StringIO()
+        outf.write("This is a test; the item was %s"%item)
+        return outf.getvalue()
  
 
     def getGraph(self, pathname):
