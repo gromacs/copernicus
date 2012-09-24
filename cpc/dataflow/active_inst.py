@@ -253,6 +253,9 @@ class ActiveInstance(object):
         self.lastUpdateAI=None
         self.lastUpdateSeqNr=-1
 
+    def writeDebug(self, outf):
+        outf.write("Active instance %s\n"%self.getCanonicalName())
+
     def getStateStr(self):
         """Get the current state as a string."""
         with self.lock:
