@@ -222,21 +222,38 @@ class Project(object):
             raise ProjectError("%s is not an active instance"%instname)
         return item
 
-    def getNamedItemList(self, pathname):
-        """Get an list based on a path name according to the rule
-           [instance]:[instance]"""
-        pathname=keywords.fixID(pathname)
-        with self.networkLock:
-            ret=dict()
-            ret['project']=self.name
-            if ( (keywords.SubTypeSep in pathname) or 
+#<<<<<<< HEAD
+#    def getNamedItemList(self, pathname):
+#        """Get an list based on a path name according to the rule
+#           [instance]:[instance]"""
+#        pathname=keywords.fixID(pathname)
+#        with self.networkLock:
+#            ret=dict()
+#            ret['project']=self.name
+#            if ( (keywords.SubTypeSep in pathname) or 
+#=======
+
+    def _isIOItem(self, pathname):
+        """Return true if the pathname is an IO item, rather than an instance
+           item."""
+        return ( (keywords.SubTypeSep in pathname) or 
                  (keywords.ArraySepStart in pathname) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.In)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.Out)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.SubIn)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.SubOut)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtIn)) or
-                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtOut))):
+                 pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtOut)))
+
+
+
+    def getNamedItemList(self, pathname):
+        """Get an list based on a path name according to the rule
+           [instance]:[instance]"""
+        pathname=keywords.fixID(pathname)
+        with self.networkLock:
+            ret=dict()
+            if self._isIOItem(pathname):
                 # it is an active I/O item
                 instName,direction,itemlist=connection.splitIOName(pathname, 
                                                                    None)
@@ -390,12 +407,23 @@ class Project(object):
         return ret
 
 
-    def getDebugInfo(self, item):
+    def getDebugInfo(self, itemname):
         """Give debug info about a particular item."""
         outf=StringIO()
-        outf.write("This is a test; the item was %s"%item)
+        if itemname == "":
+            outf.write("the item was empty")
+            return outf.getvalue()
+        itemname=keywords.fixID(itemname)
+        if self._isIOItem(itemname):
+            instName,direction,ioItemList=connection.splitIOName(itemname, None)
+            instance=self.active.getNamedActiveInstance(instName)
+            instance.getNamedValue(direction, ioItemList).writeDebug(outf)
+        else:
+            #outf.write("No debug info for active instance %s\n"%itemname)
+            instance=self.active.getNamedActiveInstance(itemname)
+            instance.writeDebug(outf)
         return outf.getvalue()
- 
+
 
     def getGraph(self, pathname):
         """Get an graph description based on a path name according to the rule

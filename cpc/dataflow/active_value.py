@@ -83,6 +83,9 @@ class ActiveValue(value.Value):
         """Get the associated listener."""
         return self.listener
 
+    def writeDebug(self, outf):
+        outf.write("Active value %s\n"%self.getFullName())
+
     def update(self, srcVal, newSeqNr, sourceTag=None, resetSourceTag=False):
         """Set a new value from a Value, and call update() on all subitems. 
            This keeps all the metadata intact.
