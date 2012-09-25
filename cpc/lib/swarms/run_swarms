@@ -54,8 +54,10 @@ def run(inp, out):
         # now we set our own mdp settings
         steps=inp.getInput('swarm_steps')
         settings=[] 
+        settings.append(RecordValue( { 'name' : StringValue('dihre'),
+                                       'value' : StringValue('no') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
-                                       'value' : StringValue('md') } ) )
+                                       'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
                                        'value' : StringValue("%s"%steps) } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstxout'),
@@ -86,6 +88,11 @@ def run(inp, out):
         else: 
             finished=False
                
+        # we ALWAYS run swarms on one core
+        maxcores=1
+        out.setSubOut('resources.max.cores', IntValue(maxcores))
+        
+        
         # keep track of the mdruns
         if finished==True:
             #out.addInstance('grama', 'g_rama_multi')
@@ -94,9 +101,10 @@ def run(inp, out):
                     # connect the swarm mdp and resources
                     out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
                     out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
+                    out.addConnection('self:ext_in.include', 'runs%d:in.include[0]'%i)
                     out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                                       'runs%d:in.cmdline_options[0]'%i)
-                    out.addConnection('self:ext_in.resources', 'runs%d:in.resources[0]'%i)
+                    out.addConnection('self:sub_out.resources', 'runs%d:in.resources[0]'%i)
                     out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
                     out.addConnection('self:sub_out.swarm_settings', 
                                       'runs%d:in.settings[0]'%i)

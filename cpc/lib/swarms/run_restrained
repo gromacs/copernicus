@@ -51,13 +51,16 @@ def run(inp, out):
         out.addInstance('merge', 'gromacs::merge_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
         out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
-        # now we set our own mdp settings
+        # setting are standardized for the swarms method
+        # dihedral restraints are required, stochastic or langevin dynamics recommended 
         steps=inp.getInput('restrained_steps')
         Nswarms=inp.getInput('Nswarms')
         output_timing=steps/(Nswarms-1)
         settings=[] 
+        settings.append(RecordValue( { 'name' : StringValue('dihre'),
+                                       'value' : StringValue('yes') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
-                                       'value' : StringValue('md') } ) )
+                                       'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
                                        'value' : StringValue("%d"%steps) } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstxout'),
@@ -94,11 +97,17 @@ def run(inp, out):
         # we fill the trr_array with the input confs
         in_confs=inp.getInput('minimized_conf_path')
         for i in range(len(in_confs)):
+            outconf=inp.getOutput
             #itp=inp.getInput('minimized_conf_path[%d].itp'%i)
             #out.setSubOut('includes[%d][0]'%i, FileValue(itp))
             out.addConnection('self:ext_in.minimized_conf_path[%d].conf'%i,'runs:in.conf[%d]'%i)
             out.addConnection('self:ext_in.minimized_conf_path[%d].top'%i,'runs:in.top[%d]'%i)
-            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.path[%d].conf'%i)
+            out.addConnection('self:ext_in.minimized_conf_path[%d].include'%i,'runs:in.include[%d]'%i)
+            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.confs[%d]'%i)
+            out.addConnection('self:ext_in.minimized_conf_path[%d].top'%i,'self:ext_out.path[%d].top'%i)
+
+            out.addConnection('self:ext_in.minimized_conf_path[%d].include'%i,'self:ext_out.path[%d].include'%i)
+
             out.addConnection('runs:out.trr[%d]'%i, 'self:ext_out.restrained_trrs[%d]'%i)
 
         mdruns=1

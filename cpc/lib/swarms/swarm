@@ -23,7 +23,6 @@ import sys
 import os
 import math
 import time
-import interpolate
 import dihedral_restraints
 import os.path
 try:
@@ -48,71 +47,89 @@ class FEError(cpc.dataflow.ApplicationError):
 def swarm(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
-    # the function...
+    
+    # TODO allow additional iterations to be set by having each iteration within pers object
+    
     iterations=pers.get('iterations')
     if iterations is None or iterations<1:
         Niterations=inp.getInput('Niterations')
         # Niterations is an optional input, path converge may also be used to monitor iterations
-        if Niterations is not None:
+    #if Niterations is not None:
 
-            start=inp.getInput('start_conf')
-            end=inp.getInput('end_conf')
-            n=inp.getInput('Ninterpolants')
-            top=inp.getInput('restraint_top')
-            ndx=inp.getInput('res_index')
-            tpr=inp.getInput('tpr')
-            interpolate.make_path(start, end, n)
-            for i in range(n):
-                conf_i=os.path.join(inp.getOutputDir(),'%d.gro'%i)
-                out.setSubOut('path[%d].conf'%i, FileValue(conf_i))
-                Popen(['g_rama','-f','%s'%conf_i,'-o','%d.xvg'%i,'-s','%s'%tpr])
-                #xvg_i=os.path.join(inp.getOutputDir(),'%d.xvg'%i)
-                #out.setSubOut('xvg[%d]'%i, FileValue(xvg_i))
-            last_xvg=os.path.join(inp.getOutputDir(),'%d.gro'%(n-1))
-            time.sleep(5)
-            dihedral_restraints.write_restraints(start, top, n, ndx)
-            for i in range(n):
-                top_i=os.path.join(inp.getOutputDir(),'%d.top'%i)
-                out.setSubOut('path[%d].top'%i, FileValue(top_i))
+        start=inp.getInput('start_conf')
+        start_xvg=inp.getInput('start_xvg')
+        end=inp.getInput('end_conf')
+        end_xvg=inp.getInput('end_xvg')
+        n=inp.getInput('Ninterpolants')
+        ndx=inp.getInput('res_index')
+        tpr=inp.getInput('tpr')
+        Nchains=inp.getInput('Nchains')
 
-            for i in range(Niterations):
-                out.addInstance('iter%d'%i, 'dihedral_swarm_iteration')
-                # initial inputs
-                out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf'%i)
-                out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg'%i)
-                out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf'%i)
-                out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg'%i)
-                out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants'%i)
-                out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
-                out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
-                out.addConnection('self:ext_in.top', 'iter%d:in.top'%i)
-                out.addConnection('self:ext_in.restraint_top', 'iter%d:in.restraint_top'%i)
-                
-                # call the external python scripts to produce the input conf_path
-                # subnet inputs connected...
-
-             
-                # set the various run settings
-                out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
-                out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
-                out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
-                out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
-                out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
-                out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms'%i)
-                out.addConnection('iter%d:out.path'%i, 'self:sub_in.paths[%d]'%i)
+        out.addInstance('mdrun_tune','gromacs::mdrun_tune')
+        out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
+        out.addConnection('self:ext_in.equi_grompp.mdp', 'mdrun_tune:in.mdp')
+        out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
+        out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
+        
+        includes=[]
+        inc_array=inp.getInput('include')
+        if inc_array is not None:
+            for i in range(len(inc_array)):
+                includes.append(inp.getInput('include[%d]'%i))
+        # if the include array is none, the single chain is in topol.top
+        top=inp.getInput('top')
+        
+        for i in range(n-2):
+            out.setSubOut('path[%d].conf'%i, FileValue(start))
+        
+        dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Nchains)
+        for i in range(1,n-1):
+            #if len(includes)==0:
+            top_i=os.path.join(inp.getOutputDir(),'topol_%d.top'%i)
+            out.setSubOut('path[%d].top'%(i-1), FileValue(top_i))
+            #else:
+            #    out.setSubOut('path[%d].top'%(i-1), FileValue(top))
+            # connect includes output by write_restraints
+            for chain in range(Nchains):
+                include_i=os.path.join(inp.getOutputDir(),'dihre_%d_chain_%d.itp'%(i,chain))
+                out.setSubOut('path[%d].include[%d]'%(i-1,chain), FileValue(include_i))
+            # connect any other includes
+            if len(includes)>Nchains:
+                for j in range(Nchains,len(includes)):
+                    include=inp.getInput('include[%d]'%j)
+                    out.setSubOut('path[%d].include[%d]'%(i-1,j),FileValue(include))
+        
+        # Create the dihedral swarm iteration instances
+        for i in range(Niterations):
+            out.addInstance('iter%d'%i, 'dihedral_swarm_iteration')
+            # initial inputs
+            out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf'%i)
+            out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg'%i)
+            out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf'%i)
+            out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg'%i)
+            out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants'%i)
+            out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
+            out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
+            out.addConnection('self:ext_in.top', 'iter%d:in.top'%i)
+            out.addConnection('self:ext_in.include', 'iter%d:in.include'%i)
             
-            # connect the iterations
-            out.addConnection('self:sub_out.path', 'iter0:in.path')
-            iterations=1
+            # set the various run settings
+            out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
+            out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
+            out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
+            out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
+            out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
+            out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms'%i)
+            out.addConnection('self:ext_in.Nchains', 'iter%d:in.Nchains'%i)
+            out.addConnection('mdrun_tune:out.resources', 'iter%d:in.resources'%i)
+            out.addConnection('iter%d:out.path'%i, 'self:ext_out.paths[%d]'%i)
+            if i>0:
+                out.addConnection('iter%d:out.path'%(i-1), 'iter%d:in.path'%i)
+            else:  
+                out.addConnection('self:sub_out.path', 'iter0:in.path')
+        iterations=1
     # use pers.get to pass the function args to the various subfunctions
     pers.set('iterations', iterations)
-
-    
-    for i in range(Niterations-1):
-        next_iter=inp.getSubnetInput('paths[%d]'%i)
-        if next_iter is not None:
-            out.setSubOut('paths[%d]'%i, ArrayValue(next_iter))
-            out.addConnection('self:sub_out.paths[%d]'%i, 'iter%d:in.path'%(i+1))
 
     pers.write()
 # read the input data

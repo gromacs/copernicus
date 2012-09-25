@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # Grant Rotskoff, 18 July 2012
+# TODO edit for a topology type file
 # inputs: 
 #	index.ndx
 #	conf.gro

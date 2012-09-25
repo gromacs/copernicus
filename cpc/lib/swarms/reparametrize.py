@@ -14,7 +14,7 @@ import sys
 import re
 import os
 import res_selection
-
+from molecule import molecule
 
 # helper functions
 def add(x,y): return x+y
@@ -77,32 +77,28 @@ def rep_pts(newpts):
     #    print dist(adjusted[i],adjusted[i+1])
     return adjusted
 
-def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, top): 
+def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, top, includes): 
     Nswarms = len(diheds[0])
     rsel = res_selection.res_select('%s'%start_conf,'%s'%selection)
     
     # calculate average drift in collective variables space
-    sys.stderr.write('Residue selection: %s' %rsel)
-    newpts = []
-    for interp in range(len(diheds)):
-            avg = []
+    #sys.stderr.write('Residue selection: %s' %rsel)
+    newpts=[]
+    for pathpt in range(len(diheds)):
+        swarmpts=[]
+        for i in range(len(diheds[pathpt])):
+            zpt=[]
             for r in rsel:
-                    driftList = []
-                    for i in range(len(diheds[interp])):
-                            vec=[]
-                            xvg = open(diheds[interp][i],'r')
-                            for line in xvg:
-                                    if re.search(r'\-%d\n'%r,line):
-                                            phi_val = float(line.split()[0])
-                                            psi_val = float(line.split()[1])
-                                            vec+=[phi_val,psi_val]
-                            driftList.append(vec)
-                    # driftList has phi,psi values for residue in every swarm
-                    driftdat=open('dihedrals%d.dat'%interp,'w')
-                    for pt in driftList:
-                        driftdat.write('%f %f\n'%(pt[0],pt[1]))
-                    avg+=[scale((1/float(Nswarms)),reduce(mapadd,driftList))]
-            newpts+=avg
+                xvg=open(diheds[pathpt][i],'r')
+                for line in xvg:
+                     if re.search(r'\-%d\n'%r,line):
+                         phi_val = float(line.split()[0])
+                         psi_val = float(line.split()[1])
+                         zpt+=[phi_val,psi_val]
+            swarmpts.append(zpt)
+        zptsum=reduce(mapadd,swarmpts)
+        avgdrift=scale((1/float(Nswarms)),zptsum)
+        newpts.append(avgdrift)
 
     # extract initial and target dihedral values
     initpt = []
@@ -127,9 +123,6 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     newpts.insert(0,initpt)
     newpts.append(targetpt)
     newpts.append(paddingpt)
-    sys.stderr.write('The new list of points is: %s\n' %newpts)
-    for pt in newpts:
-        sys.stderr.write('%s %s\n'%(pt[0],pt[1]))
     adjusted=rep_pts(newpts)
     # TODO implement a dist_treshold=1.0
     iters=[adjusted]
@@ -139,59 +132,54 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     adjusted=iters[-1]
     # delete the padding point
     adjusted=adjusted[:-1]
-    sys.stderr.write('The adjusted points are:\n')
-    for pt in adjusted:
-        sys.stderr.write('%s %s\n'%(pt[0],pt[1]))
-
+    #sys.stderr.write('The adjusted pts:\n %s'%adjusted)
     # calculate reparam distance
 
-    # TODO measure the distance between the reparametrized points and the input points
-
+    sys.stderr.write('Length of the adjusted vector: %d'%len(adjusted))
+    # TODO Nchains should depend on the specific residue
+    Nchains=len(initpt)/(2*len(rsel))
+    # TODO measure distant
     # write the topology for the next iteration
-    # treat the reparam values as a stack
-    
-    # temporary additional restraints for alanine dipeptide
-    theta_val=[1.6, 1.48, 1.36, 1.24, 1.12, 1.0, 0.8799999999999999, 0.7599999999999999, 0.6399999999999999, 0.5199999999999998, 0.3999999999999999, 0.2799999999999998, 0.1599999999999997, 0.039999999999999813, -0.0800000000000003, -0.20000000000000018, -0.3200000000000003, -0.4400000000000004, -0.5600000000000005, -0.8]
-    zeta_val=[-4.3, -3.8, -3.3, -2.8, -2.3, -1.7999999999999998, -1.2999999999999998, -0.7999999999999998, -0.2999999999999998, 0.20000000000000018, 0.7000000000000002, 1.2000000000000002, 1.7000000000000002, 2.2, 2.7, 3.2, 3.7, 4.2, 4.7, 5.7]
-
-    top=open(top,'r').read().split('#include dihedral_restraints')
     for k in range(1,len(adjusted)-1):
-            newtop=open('%d.top'%k,'w')
-            newtop.write('%s'%top[0])
-            sys.stderr.write("Writing restraints for interpolant index %i\n" %k)
-            newtop.write("[ dihedral_restraints ]\n")
-            newtop.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
-            stack=adjusted[k]
-            protein = res_selection.protein('%s'%start_conf)
+        for chain in range(Nchains):
+            restraint_itp=open('dihre_%d_chain_%d.itp'%(k,chain),'w')
+
+            in_itp=open(includes[k-1][chain], 'r').read()
+            moltop=in_itp.split('[ dihedral_restraints ]')[0]
+            restraint_itp.write('%s'%moltop)
+            sys.stderr.write("Writing restraints for interpolant point %d chain %d\n"%(k,chain))
+            restraint_itp.write("[ dihedral_restraints ]\n")
+            restraint_itp.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
+            pathpoint=adjusted[k] # just a list of phi/psi angles
+            if Nchains==1:
+                protein=molecule(top)
+            else:
+                protein=molecule('%s'%includes[k-1][chain])
+            # keep track of the position in the path point
+            pos=0
             for r in rsel:
                     # there may be multiple residues matching the resnr, e.g., dimers
-                    phi = [a for a in protein if (a.resnr == int(r) and
+                    phi = [a.atomnr for a in protein if (a.resnr == int(r) and
                           (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C')) or
                           (a.resnr == int(r)-1 and a.atomname == 'C')]
 
-                    psi = [a for a in protein if (a.resnr == int(r) and
+                    psi = [a.atomnr for a in protein if (a.resnr == int(r) and
                           (a.atomname == 'N' or a.atomname == 'CA' or a.atomname == 'C')) or
                           (a.resnr == int(r)+1 and a.atomname == 'N')]
 
                     # get phi and psi values from the reparametrization vector
-                    numres = len(phi)/4
-                    for i in range(numres):
-                            phi_val=stack[i]
-                            psi_val=stack[i+1]
-                            # write phi, psi angles
-                            # TODO EXPLICIT DIHEDRALS FOR ALANINE DIPEPTIDE
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(5,7,9,15,1,1,phi_val,0,1,2))
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(7,9,15,17,1,1,psi_val,0,1,2))
+                    phi_val=pathpoint[pos+chain]
+                    psi_val=pathpoint[pos+chain+1]
+                    
+                    
+                    # write phi, psi angles
+                    restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
+                                        %(phi[0],phi[1],phi[2],phi[3],1,1,phi_val,0,1,2))
+                    restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
+                                        %(psi[0],psi[1],psi[2],psi[3],1,1,psi_val,0,1,2))
 
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(1,5,7,9,1,1,theta_val[k],0,1,2))
-                            newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(9,15,17,19,1,1,zeta_val[k],0,1,2))
-
-                            #newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(phi[i*4].atomnr,phi[i*4+1].atomnr,
-                            #                  phi[i*4+2].atomnr,phi[i*4+3].atomnr,1,1,phi_val,0,1,2))
-                            #newtop.write("%5d%5d%5d%5d%5d%5d%8.4f%5d%5d%5d\n"%(psi[i*4].atomnr,psi[i*4+1].atomnr,
-                            #                  psi[i*4+2].atomnr,psi[i*4+3].atomnr,1,1,psi_val,0,1,2))
 
                     # delete the already added values from the stack
-                    stack = stack[numres*2-1:]
-            newtop.write('%s'%top[1])
+                    pos+=2*Nchains
+            restraint_itp.close()
 

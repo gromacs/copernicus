@@ -1,7 +1,11 @@
 1. Prevent multiple calls to prep_swarms --> Done, 30/7/12
 2. Prevent multiple calls to run_swarms --> Done, 30/7/12
 3. Prevent multiple calls to get_dihedrals --> Done, 30/7/12
-4. Why does the server need to stop for reparametrization to be initiated? --> Mystery.
-5. Implement distances 
-6. Implement the iteration loop
+5. Implement distances
+6. Implement the iteration loop --> Done, 15/8/12
 7. Ensure that all math in the reparamitrization script is valid modulo 180! --> Done, 30/7/12
+8. Implement multiple chain support with restraints in .itp files --> include arrays for mdruns
+9. Improve the organization of reparametrize.py
+10. Allow all types of restraints to be used in swarms: angles, etc.
+11. Eliminate the need for endstate structure. Only a point in colvars space is necessary. 
+12. Compute collective variables drift within python.

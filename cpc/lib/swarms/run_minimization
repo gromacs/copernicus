@@ -45,15 +45,19 @@ def run(inp, out):
                                                "persistent.dat"))
 
     # first create the right mdp file
+    # dihedral restraints are on
     merge=pers.get('merge')
     if merge is None or merge==0:
         merge=1
         out.addInstance('merge', 'gromacs::merge_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
         out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
-        # now we set our own mdp settings
+        # the following settings are standardized for the swarms method calculation
+        # dihedral restraints are necessary, but the other settings are flexible 
         tol=inp.getInput('em_tolerance')
-        settings=[] 
+        settings=[]
+        settings.append(RecordValue( { 'name' : StringValue('dihre'),
+                                       'value' : StringValue('yes') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('steep') } ) )
         settings.append(RecordValue( { 'name' : StringValue('emtol'),
@@ -73,37 +77,41 @@ def run(inp, out):
         out.setSubOut('minimization_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
-    ## the multiple minimizations
-    ## the function from fe/binding
     mdruns=pers.get('mdruns')
     if mdruns is None and mdruns<1:
         out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
-        # connect the minimization mdp and resources
-        #out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
-        #out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
+        # connect the resources from the tuning run
         out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+        # connect the mdp setting specified above
         out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
         out.addConnection('self:sub_out.minimization_settings', 
                           'runs:in.settings[0]')
+        # connection from the sub-network of input configurations to the runs 
         out.addConnection('self:sub_out.confs', 'runs:in.conf')
         out.addConnection('self:sub_out.tops', 'runs:in.top')
-        #out.addConnection('self:sub_out.includes', 'runs:in.include')
+        out.addConnection('self:sub_out.includes', 'runs:in.include')
         out.addConnection('runs:out.conf', 'self:sub_in.confs')
 
-        # create the configurations array, and populate the output conf_path
+        # create the input objects for the minimization runs
         in_confs=inp.getInput('conf_path')
         for i in range(len(in_confs)):
             conf=inp.getInput('conf_path[%d].conf'%i)
             top=inp.getInput('conf_path[%d].top'%i)
-            out.setOut('minimized_conf_path[%d].top'%i, FileValue(top))
-            out.setSubOut('tops[%d]'%i, FileValue(top))
+            include=inp.getInput('conf_path[%d].include'%i)
             out.setSubOut('confs[%d]'%i, FileValue(conf))
+            out.setSubOut('tops[%d]'%i, FileValue(top))
+            out.setSubOut('includes[%d]'%i, ArrayValue(include))
+            # The topologies do not change
+            out.setOut('minimized_conf_path[%d].top'%i, FileValue(top))
+            out.setOut('minimized_conf_path[%d].include'%i, ArrayValue(include))
         mdruns=1
     pers.set('mdruns', mdruns)
 
+    # ensure that the minimization has completed
+    # TODO instead use a complete type
     confs=inp.getSubnetInput('confs')
     if confs is not None and len(confs) > 0:
         for i in range(len(confs)):
