@@ -93,7 +93,7 @@ def rep(inp, out):
             out.setOut('path[%d].include[%d]'%(i,j),FileValue(include))
         # connect any additional include files
         if len(includes[0])>Nchains:
-            for j in range(Nchains,len(includes)):
+            for j in range(Nchains,len(includes[0])):
                 include=inp.getInput('restrained_out[%d].include[%d]'%(i,j))
                 out.setOut('path[%d].include[%d]'%(i,j),FileValue(include))
 

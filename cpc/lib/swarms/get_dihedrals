@@ -47,26 +47,7 @@ def run(inp, out):
     # ensure that the mdruns are finished and call g_rama multi
     ramas=pers.get('ramas')
     if ramas is None or ramas<1:
-        #confs=inp.getInput('confs')
-        # ensure swarms have finished running
-        #finished=True
-        #if confs is not None and len(confs)>0:
-        #    for i in range(len(confs)):
-        #        subconfs=inp.getInput('confs[%d]'%i)
-        #        if subconfs is not None or len(subconfs)>0:
-        #            for j in range(len(subconfs)):
-        #                conf=inp.getInput('confs[%d][%d]'%(i,j))
-        #                if FileValue(conf) is None:
-        #                    finished=False
-        #        else:
-        #            finished=False
-        #else: 
-        #    finished=False
-                     
-        #out.addInstance('grama','g_rama_multi')
-        #out.addConnection('self:ext_in.tpr', 'grama:in.tpr')
-        #out.addConnection('self:ext_in.confs', 'grama:in.confs')
-        #out.addConnection('grama:out.xvgs', 'self:ext_out.xvgs')
+
         confs=inp.getInput('confs')
         tpr=inp.getInput('tpr')
         for i in range(len(confs)):
