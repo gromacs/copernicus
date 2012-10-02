@@ -218,7 +218,7 @@
                       restrained trajectory will output this number of
                       frames. </desc>
             </field>
-            <field type="conf_path" id="minimized_conf_path" complete="true">
+            <field type="conf_path" id="minimized_conf_path">
                 <desc>Output structures of the minimization and their
                       restraint parameters.</desc>
             </field>
@@ -277,7 +277,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_array_array" id="conf_array_array" complete="true">
+            <field type="conf_array_array" id="conf_array_array" >
                     <desc>Initial swarm confs.</desc>
             </field>
             <field type="int" id="swarm_steps">

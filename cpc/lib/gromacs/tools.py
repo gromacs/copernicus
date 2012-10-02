@@ -196,7 +196,7 @@ def _trjconv(inp, fo, split):
         # iterate as long as there are files with anme 'out%d.gro' for
         # increasing i
         while True:
-            filename=os.path.join(outDir, 'out%3d.gro'%i)
+            filename=os.path.join(outDir, 'out%d.gro'%i)
             if not os.path.exists(filename):
                 break
             fo.setOut('confs[%d]'%i, FileValue(filename))
