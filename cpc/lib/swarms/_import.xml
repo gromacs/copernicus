@@ -85,6 +85,11 @@
             <field type="file" id="tpr">
                 <desc>A tpr file for g_rama runs</desc>
             </field>
+            <field type="grompp_input" id="therm_grompp">
+                <desc>A full set of input values for grompp (except 
+                      configuration).
+                </desc>
+            </field>
             <field type="grompp_input" id="equi_grompp">
                 <desc>A full set of input values for grompp (except 
                       configuration).
@@ -198,7 +203,38 @@
         <controller log="true" executable="run_minimization" 
                     persistent_dir="true" />
     </function>
-            
+
+    <function id="thermalization" type="external">
+        <desc>Simulations generating conformations for swarm trajectories.
+        </desc>
+        <inputs>
+            <field type="grompp_input" id="grompp">
+                <desc>Restrained run mdp file</desc>
+            </field>
+            <field type="resource::run_desc" id="resources" opt="true">
+                <desc>The run resources for a typical run</desc>
+            </field>
+            <field type="conf_path" id="path">
+                <desc>Output structures of the minimization and their
+                      restraint parameters.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="conf_array" id="confs" />
+            <field type="conf_path" id="path"/>
+        </outputs>
+        <subnet-inputs>
+            <field type="gromacs::conf_array" id="confs" />
+        </subnet-inputs>
+        <subnet-outputs>
+            <field type="gromacs::conf_array" id="confs" />
+            <field type="gromacs::top_array" id="tops" />
+            <field type="gromacs::mdp_array" id="restrained_settings" />
+        </subnet-outputs>  
+        <controller log="true" executable="thermalization" 
+                    persistent_dir="true" />
+    </function>
+
     <function id="run_restrained" type="external">
         <desc>Simulations generating conformations for swarm trajectories.
         </desc>
@@ -218,9 +254,11 @@
                       restrained trajectory will output this number of
                       frames. </desc>
             </field>
-            <field type="conf_path" id="minimized_conf_path">
+            <field type="conf_path" id="path">
                 <desc>Output structures of the minimization and their
                       restraint parameters.</desc>
+            </field>
+            <field type="conf_array" id="confs">
             </field>
         </inputs>
         <outputs>
@@ -355,8 +393,8 @@
             <field type="int" id="Ninterpolants">
                 <desc>To check for a fully populated array</desc>
             </field>
-            <field type="conf_path" id="restrained_out">
-                <desc>The output confs of restrained simulation"</desc>
+            <field type="conf_path" id="path">
+                <desc>The topologies, etc"</desc>
             </field>
             <field type="conf_array" id="restrained_confs">
                 <desc>The output confs of restrained simulation"</desc>
@@ -385,7 +423,6 @@
                     .itp files containing the new set of dihedral restraint
                     values for the next iteration. </desc>
             </field>
-            <!-- Temporarily, have all swarm iteration inputs as reparam output -->
         </outputs>
         <controller log="true" executable="reparametrize" 
                     persistent_dir="true" />
@@ -411,14 +448,13 @@
                 <desc>A restraint free topology for the system</desc>
             </field>
             <field type="grompp_input" id="minim_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration) for the minimization runs.
-                </desc>
+                <desc>Minimization mdp settings</desc>
+            </field>
+            <field type="grompp_input" id="therm_grompp">
+                <desc>Thermalization mdp settings</desc>
             </field>
             <field type="grompp_input" id="equi_grompp">
-                <desc>A full set of input values for grompp (except 
-                    configuration) for the restrained and swarm
-                    equilibrations.</desc>
+                <desc>Restrained equilibration mdp settings</desc>
             </field>
             <field type="file" id="resindex">
                 <desc>Dihedral selection.</desc>
@@ -468,6 +504,7 @@
         </outputs>
         <network>
             <instance id="minimization" function="run_minimization"/>
+            <instance id="thermalization" function="thermalization"/>
             <instance id="equilibration" function="run_restrained"/>
             <instance id="prep_swarms" function="prep_swarms"/>
             <instance id="swarms" function="run_swarms"/>
@@ -483,18 +520,24 @@
                         dest="minimization:in.conf_path"/>
             <connection src="self:ext_in.resources"
                         dest="minimization:in.resources"/>
-            <!-- connect minimization to restrained_runs -->
+            <!-- connections to thermalization -->
             <connection src="minimization:out.minimized_conf_path"
-                        dest="equilibration:in.minimized_conf_path"/>
+                        dest="thermalization:in.path"/>
+            <connection src="self:ext_in.therm_grompp"
+                        dest="thermalization:in.grompp"/>
+            <connection src="self:ext_in.resources"
+                        dest="thermalization:in.resources"/>
             <!-- connections to equilibration -->
             <connection src="self:ext_in.restrained_steps"
                         dest="equilibration:in.restrained_steps"/>
+            <connection src="thermalization:out.path"
+                        dest="equilibration:in.path"/>
+            <connection src="thermalization:out.confs"
+                        dest="equilibration:in.confs"/>
             <connection src="self:ext_in.equi_grompp"
                         dest="equilibration:in.grompp"/>
             <connection src="self:ext_in.Nswarms"
                         dest="equilibration:in.Nswarms"/>
-            <connection src="minimization:out.minimized_conf_path"
-                        dest="reparametrize:in.restrained_out"/>
             <connection src="equilibration:out.confs"
                         dest="reparametrize:in.restrained_confs"/>
             <connection src="self:ext_in.resources"
@@ -553,6 +596,8 @@
                         dest="reparametrize:in.Nchains"/>
             <connection src="self:ext_in.Ninterpolants"
                         dest="reparametrize:in.Ninterpolants"/>
+            <connection src="thermalization:out.path"
+                        dest="reparametrize:in.path"/>
 
             <!--connect reparam output.top-->
             <connection src="reparametrize:out.path"

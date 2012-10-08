@@ -67,23 +67,23 @@ def rep(inp, out):
                 sys.stderr.write('The xvg is: %s %s\n'%(xvg,FileValue(xvg)))
         dihedrals.append(dih_i)
     # call the external python script
-    top=inp.getInput('restrained_out[0].top')
+    top=inp.getInput('path[0].top')
     includes=[]
-    path=inp.getInput('restrained_out')
+    path=inp.getInput('path')
     for i in range(len(path)):
-        inc_array=inp.getInput('restrained_out[%d].include'%i)
+        inc_array=inp.getInput('path[%d].include'%i)
         if inc_array is not None:
             subincludes=[]
             for j in range(len(inc_array)):
-                inc_ij=inp.getInput('restrained_out[%d].include[%d]'%(i,j))
+                inc_ij=inp.getInput('path[%d].include[%d]'%(i,j))
                 subincludes.append(inc_ij)
             includes+=[subincludes]
     # TODO get previous path points and measure distance of displacment 
     reparametrize.reparametrize(dihedrals, ndx_file, start_conf, start_xvg, end_conf, end_xvg, top, includes)
-    conf_path=inp.getInput('restrained_out')
+    conf_path=inp.getInput('path')
     confs=inp.getInput('restrained_confs')
     for i in range(len(conf_path)):
-        top=FileValue(inp.getInput('restrained_out[%d].top'%i))
+        top=FileValue(inp.getInput('path[%d].top'%i))
         out.setOut('path[%d].top'%i,top)
         conf=FileValue(inp.getInput('restrained_confs[%d]'%i))
         out.setOut('path[%d].conf'%i,conf)
@@ -94,7 +94,7 @@ def rep(inp, out):
         # connect any additional include files
         if len(includes[0])>Nchains:
             for j in range(Nchains,len(includes[0])):
-                include=inp.getInput('restrained_out[%d].include[%d]'%(i,j))
+                include=inp.getInput('path[%d].include[%d]'%(i,j))
                 out.setOut('path[%d].include[%d]'%(i,j),FileValue(include))
 
 

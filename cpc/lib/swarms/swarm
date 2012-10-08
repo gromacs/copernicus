@@ -116,6 +116,7 @@ def swarm(inp, out):
             # set the various run settings
             out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
             out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
+            out.addConnection('self:ext_in.therm_grompp', 'iter%d:in.therm_grompp'%i)
             out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
             out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
             out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)

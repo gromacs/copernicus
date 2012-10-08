@@ -54,8 +54,8 @@ def run(inp, out):
             subconfs=inp.getInput('confs[%d]'%i)
             for j in range(len(subconfs)):
                 conf=inp.getInput('confs[%d][%d]'%(i,j))
-                Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '%4d_%4d.xvg'%(i,j)])
-                xvg_i_j=os.path.join(inp.getOutputDir(), '%4d_%4d.xvg'%(i,j))
+                Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '0%3d_0%3d.xvg'%(i,j)])
+                xvg_i_j=os.path.join(inp.getOutputDir(), '0%3d_0%3d.xvg'%(i,j))
                 out.setOut('xvgs[%d][%d]'%(i,j),FileValue(xvg_i_j))
 
         ramas=1
