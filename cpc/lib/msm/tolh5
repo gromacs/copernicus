@@ -156,6 +156,7 @@ def tolh5(inp, out):
                                   sys.exc_info()[2], file=fos)
         errmsg="Run error generating trajectory: %s\n"%(fos.getvalue())
         sys.stderr.write(errmsg)
+        sys.exit(1)
 
 # read the input data
 inp=cpc.dataflow.readInput()
