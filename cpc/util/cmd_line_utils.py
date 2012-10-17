@@ -26,7 +26,7 @@ import socket
 from cpc.util.conf.conf_base import Conf
 import cpc.util.conf.server_conf
 from cpc.network.com.client_base import ClientError
-
+import sys
 import shutil
 def printSortedConfigListDescriptions(configs):
     for key in sorted(configs.keys()):
@@ -55,9 +55,9 @@ def initiateConnectionBundle(conffile=None):
     @returns ConnectionBundle
     '''
     cf = None
+    defaultPath = os.path.join(ConnectionBundle().getGlobaDir(),"client.cnx")
     if(conffile == None): # no conffile is provided we try to see if a file exists in our basic directory
-        cf = ConnectionBundle()
-        conffile =os.path.join(cf.getGlobaDir(),"client.cnx")
+        conffile =defaultPath
 
         if(os.path.isfile(conffile)):
             cf = ConnectionBundle(conffile = conffile,reload=True)
@@ -68,16 +68,21 @@ def initiateConnectionBundle(conffile=None):
                SHGFP_TYPE_CURRENT= 0   # Want current, not default value
                buf= ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
                ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0, SHGFP_TYPE_CURRENT, buf)
-               path = "%s\copernicus\client.cnx"%buf.value
-               if(os.path.isfile(path)):
-                   cf = ConnectionBundle(conffile = path,reload=True)
+               defaultPath = "%s\copernicus\client.cnx"%buf.value
+               conffile=defaultPath
+               if(os.path.isfile(conffile)):
+                   cf = ConnectionBundle(conffile = conffile,reload=True)
 
            except:  #we are probably not on a win machine
                pass
 
-    else:
+    elif(os.path.isfile(conffile)):
         cf=ConnectionBundle(conffile=conffile)
 
+    if cf==None:
+        print "Could not find a connection bundle tried to locate it at %s \nPlease " \
+              "specify a connection bundle."%conffile
+        sys.exit(0)
     return cf
 
 
