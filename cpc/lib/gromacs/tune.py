@@ -72,7 +72,7 @@ def tryRun(tprFile, runDir, Ncores):
         return (False, stdo)
     return (True, stdo)
 
-def tune(rsrc, confFile, tprFile, testRunDir):
+def tune(rsrc, confFile, tprFile, testRunDir, Nmax=None):
     """Set max. run based on configuration file."""
     # TODO: fix this. For now, only count the number of particles and
     # the system size.
@@ -92,8 +92,9 @@ def tune(rsrc, confFile, tprFile, testRunDir):
     Nsize = int(sx/mincellsize)*int(sy/mincellsize)*int(sz/mincellsize)
     # and the max. number of processors should be N/250
     NN = int(N/250)
-    # the max number of processors to use should be the minimum of these
-    Nmax = min(Nsize, NN)
+    if Nmax is None:
+        # the max number of processors to use should be the minimum of these
+        Nmax = min(Nsize, NN)
     Nmax = max(1, Nmax)
 
     while True:

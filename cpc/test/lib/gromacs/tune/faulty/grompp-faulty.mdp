@@ -1,7 +1,7 @@
 ; RUN CONTROL PARAMETERS
 integrator               = md
 ; Start time and timestep in ps
-dt                       = 0.002
+dt                       = 0.012
 nsteps                   = 5000
 
 ; OUTPUT CONTROL OPTIONS
