@@ -21,6 +21,7 @@
 __all__=["mdrun.py"]
 
 from mdrun import *
+from grompp import *
 from tools import *
 from bar import *
 #from tune import *
