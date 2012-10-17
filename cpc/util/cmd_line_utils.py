@@ -54,11 +54,26 @@ def initiateConnectionBundle(conffile=None):
     @input String conffile : the path to a conffile
     @returns ConnectionBundle
     '''
+    cf = None
     if(conffile == None): # no conffile is provided we try to see if a file exists in our basic directory
         cf = ConnectionBundle()
         conffile =os.path.join(cf.getGlobaDir(),"client.cnx")
+
         if(os.path.isfile(conffile)):
             cf = ConnectionBundle(conffile = conffile,reload=True)
+        else:  #could be windows machine, there we store the connectionbundle in /HOME/Documents/cores/client.cnx
+           try:
+               import ctypes.wintypes
+               CSIDL_PERSONAL= 5       # My Documents
+               SHGFP_TYPE_CURRENT= 0   # Want current, not default value
+               buf= ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+               ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0, SHGFP_TYPE_CURRENT, buf)
+               path = "%s\copernicus\client.cnx"%buf.value
+               if(os.path.isfile(path)):
+                   cf = ConnectionBundle(conffile = path,reload=True)
+
+           except:  #we are probably not on a win machine
+               pass
 
     else:
         cf=ConnectionBundle(conffile=conffile)
