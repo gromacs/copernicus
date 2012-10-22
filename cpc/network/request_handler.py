@@ -23,8 +23,7 @@ import socket
 import mmap
 import logging
 import os
-
-
+import uuid
 from server_to_server_message import ServerToServerMessage
 from server_response import ServerResponse
 from cpc.util.conf.server_conf import ServerConf
@@ -33,7 +32,7 @@ import re
 from cpc.network.http.http_method_parser import HttpMethodParser
 import cpc.server.message
 import cpc.util.log
-
+import hashlib
 log=logging.getLogger('cpc.server.request_handler')
 
 
@@ -47,6 +46,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.application_root = "/copernicus"
         self.connection = self.request  
         self.responseCode = 200
+        self.set_cookie = None
         self.regexp = '^%s[/?]?'%self.application_root  #checks if a request is referring to application root   
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
@@ -86,7 +86,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             file = open(resourcePath,'rb')            
             response.setFile(file, mimetypes.guess_type(resourcePath))                
                     
-            self.sendResponse(response)
+            self._sendResponse(response)
     
         
     #with POST we only serve commands, post messages can also handle multipart messages
@@ -97,7 +97,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         #process the message
         if(self.isApplicationRoot()):
             request = HttpMethodParser.parsePOST(self.headers.dict,self.rfile)
-            self.processMessage(request)        
+            self.processMessage(request)
         
         else:
             self.processMessage() #this is not a valid command i.e we did not find the resource
@@ -159,15 +159,57 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
                 log.info("shutting down")
                 self.server.shutdown()
 
+    def _generateSession(self):
+        #TODO Evaluate randomness of algorithm
+        cookie = str(uuid.uuid4())
+        self.set_cookie = "cpc-session=%s;"%cookie
+        return cookie
+
+    def _handleSession(self, request):
+        cookie = None
+        if 'user-agent' not in self.headers:
+            #for now we don't require the UA
+            user_agent = "noUA"
+        else:
+            user_agent = self.headers['user-agent']
+
+        ip =  self.client_address[0]
+
+        #has the client supplied a cookie?
+        if 'Cookie' in self.headers and 'cpc-session' in self.headers['Cookie']:
+            try:
+                cookie = re.search('cpc-session=([\w-]+)',
+                                   self.headers['Cookie']).group(1)
+            except AttributeError as e:
+                log.warning("Received malformed cookie: %s"
+                            %self.headers['Cookie'])
+
+        if cookie is None:
+            #Generate a new session and ship it
+            cookie = self._generateSession()
+
+        sid = hashlib.sha224(user_agent + ip + cookie).hexdigest()
+        session_handler = self.server.getState().getSessionHandler()
+
+        #We don't allow the user to define the cookie, i.e reusage
+        try:
+            session = session_handler.getSession(sid, auto_create=False)
+        except KeyError:
+            cookie = self._generateSession()
+            sid = hashlib.sha224(user_agent + ip + cookie).hexdigest()
+            session = session_handler.createSession(sid)
+        request.session = session
+
     def processMessage(self,request = None):
  
         if request:
+            self._handleSession(request)
             scList=self.server.getSCList()
-            retmsg = retmsg=cpc.server.message.parse(scList,
-                                                     request,
-                                                     self.server.getState())
+            retmsg=cpc.server.message.parse(scList,
+                                            request,
+                                            self.server.getState())
 
-            self.sendResponse(retmsg)
+            self._sendResponse(retmsg)
 
         else:
             self.send_response(405)
@@ -179,7 +221,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         return False
     
     
-    def sendResponse(self,retmsg):
+    def _sendResponse(self,retmsg):
         conf = ServerConf()
         rets = retmsg.render()
         log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
@@ -189,7 +231,8 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         if 'originating-server' not in retmsg.headers:
             self.send_header("originating-server", conf.getHostName())
 
-
+        if self.set_cookie is not None:
+            self.send_header('Set-Cookie', self.set_cookie)
         for key,value in retmsg.headers.iteritems():
             self.send_header(key, value)
 

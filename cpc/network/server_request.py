@@ -30,14 +30,15 @@ class ServerRequest(object):
    
     CRLF = '\r\n'
 
-    def __init__(self,headers,msg=None,params=dict(),files=dict(),bigFile=None):
+    def __init__(self,headers,msg=None,params=None,files=None,bigFile=None):
         # NOTE only adapted for sending messages at the moment
         #msg is a file descriptor
         self.msg = msg
         self.headers = headers
-        self.params = params
-        self.files = files
-    
+        self.params = params or dict()
+        self.files =  files or dict()
+        self.session = None
+
     def __del__(self):
         del self.files # remove the reference; files should be deleted.
  
@@ -82,8 +83,7 @@ class ServerRequest(object):
 
     def haveFile(self, fileName):
         return self.files.has_key(fileName)
-        
-            
+
     @staticmethod
     def parseHeaders(headerString):
         headers = dict()
@@ -121,7 +121,9 @@ class ServerRequest(object):
         return '\r\n' 
    
     @staticmethod
-    def prepareRequest(fields=[], files=[],headers = dict()):        
+    def prepareRequest(fields=[], files=[],headers = None):
+        if headers is None:
+            headers = {}
         
         if(len(files)==0):   #single part message         
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
@@ -137,8 +139,9 @@ class ServerRequest(object):
             headers['Content-Type'] = 'multipart/form-data; boundary=%s' % Messaging.BOUNDARY
             msg = Messaging.encode_multipart_formdata(fields,files)              
             
-         
-        headers['Content-Length'] = len(msg)        
+
+        headers['Content-Length'] = len(msg)
+        headers['User-agent'] = 'copernicus-cmd-client'
         content = msg
         req = ServerRequest(headers,content)    
         return req

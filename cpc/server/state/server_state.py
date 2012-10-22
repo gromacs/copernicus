@@ -33,7 +33,7 @@ import cpc.util.plugin
 import localassets
 import remoteassets
 import cpc.util.worker_state
-
+from cpc.server.state.session import SessionHandler
 import os
 log=logging.getLogger('cpc.server.command')
 
@@ -52,6 +52,7 @@ class ServerState:
         self.heartbeatList=cpc.server.heartbeat.HeartbeatList()
         self.localAssets=localassets.LocalAssets()
         self.remoteAssets=remoteassets.RemoteAssets()
+        self.sessionHandler=SessionHandler()
         self.workerStates = dict()
         log.debug("Starting state save thread.")
         self.stateSaveThread=threading.Thread(target=stateSaveLoop,
@@ -86,6 +87,10 @@ class ServerState:
     def getRemoteAssets(self):
         """Get the remoteassets object"""
         return self.remoteAssets
+
+    def getSessionHandler(self):
+        """Get the session handler"""
+        return self.sessionHandler
 
     def getProjectList(self):
         """Get the list of projects as an object."""        

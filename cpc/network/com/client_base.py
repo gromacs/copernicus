@@ -74,8 +74,8 @@ class ClientBase(object):
     #FIXME private method
     def connect(self,https=True):
         try:
-            self.conn=client_connection.ClientConnection()             
-            self.conn.connect(self.host,self.port,self.conf,https)
+            self.conn=client_connection.ClientConnection(self.conf)
+            self.conn.connect(self.host,self.port,https)
         except httplib.HTTPException as e:
             raise ClientError(e)
         except socket.error as e:
