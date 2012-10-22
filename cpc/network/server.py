@@ -125,6 +125,9 @@ def serveHTTPS(serverState):
         log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))
         httpd.serve_forever();
 
+    except KeyboardInterrupt:
+        print "Interrupted"
+        serverState.doQuit()
     except Exception:
         print "HTTPS port %s already taken"%ServerConf().getServerHTTPSPort()
         serverState.doQuit()

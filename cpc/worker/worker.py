@@ -26,6 +26,7 @@ import tempfile
 import logging
 import threading
 import signal
+import time
 
 
 import cpc.util.file
@@ -81,7 +82,7 @@ def signalHandlerAddWorker(worker):
 class Worker(object):
     """The worker class creates a worker client that contacts a server
        and asks for tasks."""
-    def __init__(self, cf, opts, type, args, workdir):
+    def __init__(self, cf, opts, type, args, workdir, quitMinutes):
         """Initialize the object as a client, given a configuration.
            cf =  the configuration class
 		   opts = dictionary with options
@@ -93,6 +94,10 @@ class Worker(object):
         self.args=args
         self.quit=False
         self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
+        # the number of seconds after which to quit if there is no work:
+        self.quitSeconds=None 
+        if quitMinutes is not None:
+            self.quitSeconds=60*quitMinutes
         log.info("Worker ID: %s."%self.id)
         # Process (untar) the run request into a directory name
         # that is unique for this process+hostname, and worker job iteration
@@ -170,8 +175,10 @@ class Worker(object):
 
     def run(self):
         """Ask for tasks until told to quit."""
+        noWorkSeconds=0
         while not self.quit:
             # send a request for a command to run
+            startWaitingTime=time.time()
             with self.runCondVar:
                 acceptCommands=self.acceptCommands
             if acceptCommands:
@@ -237,6 +244,19 @@ class Worker(object):
                 #log.debug("End of waiting loop")
             #log.debug("Out of waiting loop")
             self.runCondVar.release()
+            stopWaitingTime=time.time()
+            # check whether there was work to do. If not, start counting
+            # the amount of time we waited.
+            if len(self.workloads) == 0:
+                noWorkSeconds += stopWaitingTime-startWaitingTime
+                if ( ( self.quitSeconds is not None ) and 
+                     ( noWorkSeconds > self.quitSeconds ) ):
+                    with self.runCondVar:
+                        # signal quit.
+                        self.acceptCommands=False
+            else:
+                noWorkSeconds = 0
+            # now deal with finished workloads.
             for workload in finishedWorkloads:
                 workload.finish(self.plugin, self.args)
                 workload.returnResults()

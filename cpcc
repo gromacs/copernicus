@@ -41,9 +41,9 @@ def print_usage():
     print 
     print "Project start & stop commands:"
     print "       cpcc projects|p"
-    print "       cpcc start       projectname"
-    print "       cpcc remove|rm   projectname"
-    print "       cpcc set-default projectname"
+    print "       cpcc start          projectname"
+    print "       cpcc remove|rm      projectname"
+    print "       cpcc set-default|d  projectname"
     print 
     print "Project query commands."
     print "       cpcc list|ls     [-p projectname] [instance_name]"
@@ -92,7 +92,7 @@ def print_usage():
     print "       cpcc save      projectname [project-tar]"
     print "       cpcc load      project-tar projectname"
     print ""
-    print "Common options:"
+    print "Common global options:"
     print "       cpcc [-c conffile]"
     sys.exit(1)
 
@@ -221,7 +221,7 @@ try:
         clnt=ClientMessage()
         renderMethod = CmdLine.listProjects
         ProcessedResponse(clnt.projectsRequest()).pprint(renderMethod)
-    elif cmd == "set-default":
+    elif cmd == "set-default" or cmd == "d":
         project=getArg(args, 1, "project name")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetDefaultRequest(project)).pprint()
