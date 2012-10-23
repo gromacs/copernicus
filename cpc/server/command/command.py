@@ -363,6 +363,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         commandDict = dict()        
         #commandDict['projectID'] = self.projectID
         commandDict['taskID'] = self.task.getID()
+        commandDict['project'] = self.task.getProject().getName()
         commandDict['id'] = self.id
         commandDict['executable'] = self.executable
         commandDict['priority'] = self.getFullPriority()

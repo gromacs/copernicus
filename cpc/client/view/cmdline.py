@@ -57,9 +57,13 @@ class CmdLine(object):
         queueList = messageStr['message']     
         co=StringIO()
         co.write("Queue:\n")
-        for cmd in queueList:                
-            co.write("%3d %s: %s\n"%(cmd['priority'], cmd['taskID'], 
-                                     cmd['executable']))
+        for cmd in queueList:
+            if 'project' in cmd:
+                co.write("%3d %s %s: %s\n"%(cmd['priority'], cmd['project'], 
+                                            cmd['taskID'], cmd['executable']))
+            else:
+                co.write("%3d %s: %s\n"%(cmd['priority'], 
+                                         cmd['taskID'], cmd['executable']))
         return co.getvalue()
 
     @staticmethod
@@ -68,8 +72,13 @@ class CmdLine(object):
         co=StringIO()
         co.write("Running:\n")
         for cmd in queueList:                
-            co.write("task %s\n\tcmd id %s\n\t%s\n"%\
-                     (cmd['taskID'], cmd['id'], cmd['executable'] ))
+            if 'project' in cmd:
+                co.write("task %s %s\n\tcmd id %s\n\t%s\n"%\
+                         (cmd['project'], cmd['taskID'], cmd['id'], 
+                          cmd['executable'] ))
+            else:
+                co.write("task %s\n\tcmd id %s\n\t%s\n"%\
+                         (cmd['taskID'], cmd['id'], cmd['executable'] ))
         return co.getvalue()
 
     @staticmethod
