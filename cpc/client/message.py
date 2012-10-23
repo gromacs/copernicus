@@ -281,8 +281,16 @@ class ClientMessage(ClientBase):
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
+    def projectGetDefaultRequest(self):
+        """Get the default project project name"""
+        cmdstring="project-get-default"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+
     def projectSetDefaultRequest(self, name):
-        """Start a new empty project """
+        """Set the default project project name"""
         cmdstring="project-set-default"
         fields = []
         fields.append(Input('cmd', cmdstring))

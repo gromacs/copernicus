@@ -126,7 +126,7 @@ class ProjectList(object):
         return self.cmdQueue
 
     def setDefault(self, name):
-        """Get the default project."""
+        """Set the default project."""
         with self.lock:
             if name in self.projects:
                 self.defaultProjectName = name

@@ -44,6 +44,7 @@ def print_usage():
     print "       cpcc start          projectname"
     print "       cpcc remove|rm      projectname"
     print "       cpcc set-default|d  projectname"
+    print "       cpcc get-default    projectname"
     print 
     print "Project query commands."
     print "       cpcc list|ls     [-p projectname] [instance_name]"
@@ -161,7 +162,11 @@ def getProjectArgs(args):
 # now parse command and execute it.
 #clnt=cpc.client(cf, args)
 
-cmd=args[0]
+if len(args)>0:
+    cmd=args[0]
+else:
+    print "ERROR: no command" 
+    sys.exit(1)
 
 
 # read in common configuration
@@ -225,6 +230,9 @@ try:
         project=getArg(args, 1, "project name")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetDefaultRequest(project)).pprint()
+    elif cmd == "get-default":
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.projectGetDefaultRequest()).pprint()
     elif cmd == "list" or cmd == "ls":
         project, pargs = getProjectArgs(args)
         if len(pargs) > 1:
