@@ -222,6 +222,7 @@ class Project(object):
         pathname=keywords.fixID(pathname)
         with self.networkLock:
             ret=dict()
+            ret['project']=self.name
             if ( (keywords.SubTypeSep in pathname) or 
                  (keywords.ArraySepStart in pathname) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.In)) or

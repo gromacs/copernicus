@@ -185,7 +185,12 @@ class CmdLine(object):
         list=messageStr['message']
         co=StringIO()
         #co.write("List items:\n")
-        co.write("%s '%s':\n"%(list['type'].title(), list['name']))
+        if 'project' in list:
+            co.write("Project %s\n%s %s:\n"%(list['project'],
+                                               list['type'].title(), 
+                                               list['name']))
+        else:
+             co.write("%s %s:\n"%(list['type'].title(), list['name']))
         if 'fn_name' in list:
             co.write("Instance of: %s\n"%list['fn_name'])
         if 'typename' in list:
@@ -218,9 +223,9 @@ class CmdLine(object):
                 co.write('    %s\n'%item)
         if 'instances' in list:
             if 'state' in list:
-                co.write('Subnet function instances:\n')
+                co.write('Function instances:\n')
             else:
-                co.write('Network function instances:\n')
+                co.write('Function instances:\n')
             for name, item in list['instances'].iteritems():
                 co.write('    %s (%s)\n'%(name, item["state"]))
         if 'cputime' in list:
