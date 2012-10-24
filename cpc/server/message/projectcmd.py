@@ -39,6 +39,19 @@ import cpc.util
 
 log=logging.getLogger('cpc.server.projectcmd')
 
+
+
+class ProjectServerCommand(ServerCommand):
+    """Base class for commands acting on projects."""
+    def getProject(self, request, serverState):
+        """Get a named or default project"""
+        if request.hasParam('project'):
+            prjName=request.getParam('project')
+        else:
+            prjName=request.session.get("default_project_name")
+        return serverState.getProjectList().get(prjName)
+        
+
 class SCProjects(ServerCommand):
     """List all projects."""
     def __init__(self):
@@ -56,18 +69,16 @@ class SCProjectStart(ServerCommand):
     def run(self, serverState, request, response):
         name=request.getParam('name')
         serverState.getProjectList().add(name)
+        request.session.set("default_project_name", name)
         response.add("Project %s created"%name)
 
-class SCProjectDelete(ServerCommand):
+class SCProjectDelete(ProjectServerCommand):
     """Delete a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-delete")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         q=serverState.getCmdQueue()
         delDir=False
         if request.hasParam('delete-dir'):
@@ -107,16 +118,13 @@ class SCProjectGetDefault(ServerCommand):
         else:
             response.add("Default project: %s"%name)
 
-class SCProjectActivate(ServerCommand):
+class SCProjectActivate(ProjectServerCommand):
     """Activate all elements in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-activate")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -127,16 +135,13 @@ class SCProjectActivate(ServerCommand):
         else:
             response.add("%s in project %s activated."%(item, prj.getName()))
 
-class SCProjectDeactivate(ServerCommand):
+class SCProjectDeactivate(ProjectServerCommand):
     """De-activate all elements in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-deactivate")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -147,15 +152,12 @@ class SCProjectDeactivate(ServerCommand):
         else:
             response.add("%s in project %s de-activated."%(item, prj.getName()))
 
-class SCProjectRerun(ServerCommand):
+class SCProjectRerun(ProjectServerCommand):
     """Force a rerun and optionally clear an error in an active instance."""
     def __init__(self):
         ServerCommand.__init__(self, "project-rerun")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -174,15 +176,12 @@ class SCProjectRerun(ServerCommand):
         lst=prj.rerun(item, recursive, clearError, outf)
         response.add(outf.getvalue())
 
-class SCProjectList(ServerCommand):
+class SCProjectList(ProjectServerCommand):
     """List named items in a project: instances or networks."""
     def __init__(self):
         ServerCommand.__init__(self, "project-list")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -191,15 +190,12 @@ class SCProjectList(ServerCommand):
         response.add(lst)
 
 
-class SCProjectInfo(ServerCommand):
+class SCProjectInfo(ProjectServerCommand):
     """Get project item descriptions."""
     def __init__(self):
         ServerCommand.__init__(self, "project-info")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -207,15 +203,12 @@ class SCProjectInfo(ServerCommand):
         desc=prj.getNamedDescription(item)
         response.add(desc)
 
-class SCProjectLog(ServerCommand):
+class SCProjectLog(ProjectServerCommand):
     """Get an active instance log."""
     def __init__(self):
         ServerCommand.__init__(self, "project-log")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -235,16 +228,13 @@ class SCProjectLog(ServerCommand):
         response.setFile(fob, 'application/text')
        
 
-class SCProjectGraph(ServerCommand):
+class SCProjectGraph(ProjectServerCommand):
     """Get network graph."""
     def __init__(self):
         ServerCommand.__init__(self, "project-graph")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         if request.hasParam('item'):
             item=request.getParam('item')
         else:
@@ -253,72 +243,57 @@ class SCProjectGraph(ServerCommand):
         response.add(lst)
 
 
-class SCProjectUpload(ServerCommand):
+class SCProjectUpload(ProjectServerCommand):
     """Upload a project file."""
     def __init__(self):
         ServerCommand.__init__(self, "project-upload")
     def run(self, serverState, request, response):
         upfile=request.getFile('upload')
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         prj.importTopLevelFile(upfile, "uploaded file")
         response.add("Read file")
 
 
-class SCProjectAddInstance(ServerCommand):
+class SCProjectAddInstance(ProjectServerCommand):
     """Add an instance to the top-level active network."""
     def __init__(self):
         ServerCommand.__init__(self, "project-add-instance")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         name=request.getParam('name')
         functionName=request.getParam('function')
         prj.addInstance(name, functionName)
         response.add("Added instance '%s' of function %s"%(name, functionName))
 
-class SCProjectConnect(ServerCommand):
+class SCProjectConnect(ProjectServerCommand):
     """Add a connection to the top-level active network."""
     def __init__(self):
         ServerCommand.__init__(self, "project-connect")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         src=request.getParam('source')
         dst=request.getParam('destination')
         outf=StringIO()
         prj.scheduleConnect(src, dst, outf)
         response.add(outf.getvalue())
 
-class SCProjectImport(ServerCommand):
+class SCProjectImport(ProjectServerCommand):
     """Import a module (file/lib) to the project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-import")
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         module=request.getParam('module')
         prj.importName(module)
         response.add("Imported module %s"%(module))
 
-class SCProjectGet(ServerCommand):
+class SCProjectGet(ProjectServerCommand):
     """Get an i/o item in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-get")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         itemname=request.getParam('item')
         if not request.hasParam("getFile"):
             ret=dict()
@@ -353,12 +328,11 @@ class SCProjectGet(ServerCommand):
                 response.add('Item %s not found'%itemname, status="ERROR")
 
 
-class SCProjectSave(ServerCommand):
+class SCProjectSave(ProjectServerCommand):
     def __init__(self):
         ServerCommand.__init__(self, "project-save")
 
     def run(self, serverState, request, response):
-
         if request.hasParam('project'):
             project=request.getParam('project')
             try:
@@ -370,7 +344,7 @@ class SCProjectSave(ServerCommand):
             response.add("No project specified for save",status="ERROR")
 
 
-class SCProjectLoad(ServerCommand):
+class SCProjectLoad(ProjectServerCommand):
     def __init__(self):
         ServerCommand.__init__(self, "project-load")
 
@@ -398,7 +372,7 @@ class SCProjectLoad(ServerCommand):
 
 
 
-class SCProjectSet(ServerCommand):
+class SCProjectSet(ProjectServerCommand):
     """Set an i/o item in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-set")
@@ -410,10 +384,7 @@ class SCProjectSet(ServerCommand):
             upfile=request.getFile('upload')
             filename=os.path.basename(request.getParam('filename'))
         setval=request.getParam('value')
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         itemname=request.getParam('item')
         try:
             outf=StringIO()
@@ -437,45 +408,36 @@ class SCProjectSet(ServerCommand):
         except cpc.dataflow.ApplicationError as e:
             response.add("Item not found: %s"%(str(e)))
 
-class SCProjectTransact(ServerCommand):
+class SCProjectTransact(ProjectServerCommand):
     """Start a transaction to be able to commit several project-set commands 
        in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-transact")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         outf=StringIO()
         prj.beginTransaction(outf)
         response.add(outf.getvalue())
 
-class SCProjectCommit(ServerCommand):
+class SCProjectCommit(ProjectServerCommand):
     """Commit several project-set commands in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-commit")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         outf=StringIO()
         prj.commit(outf)
         response.add(outf.getvalue())
 
-class SCProjectRollback(ServerCommand):
+class SCProjectRollback(ProjectServerCommand):
     """Cancel several project-set commands in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-rollback")
 
     def run(self, serverState, request, response):
-        if request.hasParam('project'):
-            prj=serverState.getProjectList().get(request.getParam('project'))
-        else:
-            prj=serverState.getProjectList().getDefault()
+        prj=self.getProject(request, serverState)
         outf=StringIO()
         prj.rollback(outf)
         response.add(outf.getvalue())
