@@ -39,6 +39,8 @@ from cpc.network.com.client_base import ClientError
 #from cpc.client import ClientMessage
 #from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.server_conf import initiateServerSetup
+from cpc.util.conf.server_conf import SetupError
 from cpc.util import cmd_line_utils
 #import os
 
@@ -48,7 +50,7 @@ def print_usage():
     print "       cpc-server config-list"
     print "       cpc-server config-values"   
     print "       cpc-server config param value"   
-    print "       cpc-server setup default-project-directory"
+    print "       cpc-server setup [-force] [-host] default-project-directory"
     print "       cpc-server create-connection-bundle|bundle"
     print ""
     print "Common options:"
@@ -99,13 +101,11 @@ def getArg(argnr, name):
 
 cmd=args[0]
 
-if(cmd !='setup'):
-    # read in common configuration
-    cf=ServerConf(confdir=confdir)
 try:
     if cmd == "help":
         print_usage()
     elif cmd == "start":
+        cf=ServerConf(confdir=confdir)
         serverMode=cpc.util.log.MODE_PRODUCTION
         if len(args)>1:
             if args[1] == "-d":
@@ -119,51 +119,63 @@ try:
         cpc.network.server.forkAndRun(cf, serverMode )
         sys.exit(0)
     elif cmd == "setup":    
-        
         # the -c option will be ignored here.
-        # by default we do a setup with the hostname as base config dir or a 
-        # name defined by user input
-        rundir = getArg(1, 
-                        "Run directory: the base directory for project output")
-        cn=None
-        confdir =None
+        rundir=None
+        altHostName=None
+        forceReset=False
+        hostConfDir=False
+        args.pop(0)
+        for arg in args:
+            if arg == '-force':
+                forceReset = True
+            elif arg == '-host':
+                hostConfDir = True            
+            else:
+                if rundir is None:
+                    rundir=arg
+                else:
+                    if altHostName is None:
+                        altHostName=arg
+                    else:
+                        raise ClientError("Unknown option: %s"%arg)
+        if rundir is None:
+            raise ClientError("Missing run directory: the base directory for project output")
 
-        print args
-        forceReset = False
-        if('-force' in args):
-            forceReset = True
-            args.remove('-force')
+        #if(len(args)>2):
+        #    cn = getArg(2,"hostname for the server")
 
-        if(len(args)>2):
-            cn = getArg(2,"distinguished name for the server")
-
-        cmd_line_utils.initiateServerSetup(rundir, cn,forceReset=forceReset)
+        initiateServerSetup(rundir, forceReset, hostConfDir, altHostName)
 
         sys.exit(0)
-    
-    # initialize the client log
-    cpc.util.log.initClientLog(debug)
-    # initialize the tracker
-    cpc.server.tracking.tracker.initTracker()     
-    if cmd == "config-list":
-        #print '\n'
-        conf = ServerConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListDescriptions(configs)           
-    
-    elif cmd == "config-values":
-        #print '\n'
-        conf = ServerConf()
-        configs = conf.getUserSettableConfigs()
-        cmd_line_utils.printSortedConfigListValues(configs)
+   
+    if (cmd == "config-list" or 
+        cmd == "config-values" or 
+        cmd == "config"):
+        cf=ServerConf(confdir=confdir)
+        # initialize the client log
+        cpc.util.log.initClientLog(debug)
+        # initialize the tracker
+        cpc.server.tracking.tracker.initTracker()     
+        if cmd == "config-list":
+            #print '\n'
+            conf = ServerConf()
+            configs = conf.getUserSettableConfigs()
+            cmd_line_utils.printSortedConfigListDescriptions(configs)
+        
+        elif cmd == "config-values":
+            #print '\n'
+            conf = ServerConf()
+            configs = conf.getUserSettableConfigs()
+            cmd_line_utils.printSortedConfigListValues(configs)
 
-    elif cmd == "config":
-        param = getArg(1, "parameter name") 
-        value = getArg(2, "parameter value")
-        conf = ServerConf()
-        conf.set(param,value)
+        elif cmd == "config":
+            param = getArg(1, "parameter name") 
+            value = getArg(2, "parameter value")
+            conf = ServerConf()
+            conf.set(param,value)
 
     elif cmd == "bundle" or cmd == "create-connection-bundle":
+        cf=ServerConf(confdir=confdir)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
         print connectionBundle.toJson()
     else: 
@@ -172,7 +184,7 @@ except ClientError as e:
     print("ERROR: %s"%str(e))
 except cpc.util.CpcError as e:
     print("ERROR: %s"%str(e))
-#except IOError as e:
-#    raise e
+except IOError as e:
+    raise e
 
 

@@ -40,14 +40,34 @@ class ConfError(cpc.util.exception.CpcError):
 class InputError(CpcError):
     def __init__(self,exc):
         self.str=exc.__str__()
-        
-        
+
+
+def getGlobalDir():
+    """Get the global configuration directory base path for all configuration
+        files. This depends on the OS"""
+    if "HOME" in os.environ:
+        return os.path.join(os.environ["HOME"], Conf.base_path)
+    else:
+        # we're probably running on Windows.
+        # there we store the connection bundlein 
+        # /HOME/Documents/copernicus/client.cnx
+        import ctypes.wintypes
+        CSIDL_PERSONAL= 5       # My Documents
+        SHGFP_TYPE_CURRENT= 0   # Want current, not default value
+        buf= ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
+        ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0,
+                                               SHGFP_TYPE_CURRENT, buf)
+        self.homedir=buf.value
+        return os.path.join(self.homedir, Conf.base_path_normal)
+    raise ConfError("Could not determine global base directory")
+ 
 class ConfValue:
     """Configuration value. Each configuration value has a name, and a
        default value. If the value is user settable, there can be a 
        set value."""
     def __init__(self, name, defaultValue, description, userSettable=False, 
-                 setValue=None, relTo=None,validation=None,allowedValues=None,writable=True):
+                 setValue=None, relTo=None,validation=None,allowedValues=None,
+                 writable=True):
         self.name=name
         self.defaultValue=defaultValue
         self.description=description
@@ -99,66 +119,28 @@ class ConfValue:
 
 class Conf:
     """Common configuration class. Reads from copernicus base directory"""
-    __shared_state = {}   
+    __shared_state = {}
+
+    # global defaults
+    base_path_normal = 'copernicus'
+    base_path = '.%s'%base_path_normal
+    default_dir = '_default'
 
 
-    def __init__(self,conffile='cpc.conf', confdir = None,reInit =False):
-        """Read basic configuration stuff"""
-        # all objects created will share the same state
-        #self.__dict__ = self.__shared_state   
-        # check whether we initialized it already and bail out if we did
-        
-        #if len(self.__shared_state) > 0 and reInit == False and conffile=='cpc.conf':   #FIXME proper Singleton implementation   and threadsafety
-        #   return
-        
+    def __init__(self, name=None, confSubdirName=None, userSpecifiedPath=None):
+        """Get an existing singleton, or read basic configuration stuff"""
+        if self.exists():
+            return
+       
         # initialize for the first time:
         self.conf = dict()
-        self.hostname=socket.getfqdn()        
-        
+        self.hostname=socket.getfqdn()
+
         self._add('hostname',self.hostname,'hostname',userSettable=True)
+
+        # find the location of the configuration file and associated paths
+        self.findLocation(name, confSubdirName, userSpecifiedPath)
         
-        # We first need to find out where our configuration files are.
-
-
-#        parser = SafeConfigParser()
-#        base = os.path.dirname(os.path.abspath(sys.argv[0]))
-#        parser.read(os.path.join(base,'properties'))
-#
-#        base_path = ".%s"%parser.get('default','app-name')
-#
-#        self._add('global_dir', os.path.join(os.environ["HOME"],
-#                    base_path),
-#                  'The global configuration directory',
-#                  userSettable=True)
-
-        base_path = '.copernicus'
-        self._add('global_dir', os.path.join(os.environ["HOME"],
-                    base_path),
-                  'The global configuration directory',
-                  userSettable=True)
-
-
-
-        self._add('conf_dir', os.path.join(os.environ["HOME"],
-                                           base_path,
-                                           self.hostname),
-                  'The configuration directory',
-                  userSettable=True)
-        
-        
-        #NOTE the conf dir is actullay the confdir for the separata applications
-        # the classes that inherit from Conf usually overwrite this param                
-        if confdir is not None:
-            self.conf['conf_dir'].set(confdir)
-        # once we have the directory, we use the default filename:
-        
-        self._add('base_dir',self.get("conf_dir"),
-                                             "the base directory for current configuration set")
-        
-        
-        self._add('conf_file',conffile, 'The configuration file name',
-                  relTo='conf_dir')
-
 
 
         #FIXME generalize layered solution 
@@ -173,15 +155,90 @@ class Conf:
                         
         # and read in the actual values from the configuration file.        
         #self.have_conf_file = self.tryRead() 
-              
+
+    def exists(self):
+        """Check for and initialize pre-existing singleton object."""
+         # all objects created will share the same state
+        self.__dict__ = self.__shared_state   
+        # check whether we initialized it already and bail out if we did
+        if len(self.__shared_state) > 0:
+            return True
+        return False
+        
+        
+    def findLocation(self, name, confSubdirName, userSpecifiedPath=None):
+        """Find the location (full path name) of an existing configuration 
+            file with name 'name'. Will use 'userSpecifiedPath' if set.
+
+            The function will set four configuration variables: 
+            conf_file = the full path of the configuration file
+            conf_dir = the directory name of the directory containing the 
+                       configuration file
+            base_dir = the directory name of the directory containing the
+                       sub directory of the configuration file. This 
+                       is different from conf_dir if confSubdirName is set
+            global_dir = the globl configuration directory containing all
+                         configurations for all hosts, etc.
+
+            If userSpecifiedPath is not set, it will try a host-specific
+            directory first, then '_default'.
+
+            userSpecifiedPath is either a file name (if confSubdirName is not
+            set), or a directory name (if confSubdirName is set). 
+             
+            If confSubdirName is set, the search for conf. files will happen
+            with that subdir name set first"""
+        # a list of directories (base_dirs) to try: 
+        dirsToTry=[ ]
+
+        globalDir=getGlobalDir()
+        # first with the hostname appended
+        dirsToTry.append(os.path.join(globalDir, self.hostname))
+        # then in the '_default' directory
+        dirsToTry.append(os.path.join(globalDir, self.default_dir))
+        # then in the .copernicus directory
+        dirsToTry.append(os.path.join(globalDir) )
+        # and we should set this explicitly
+        self._add('global_dir', globalDir, 'The global configuration directory',
+                  userSettable=False)
+
+        if userSpecifiedPath is not None: 
+            if confSubdirName is None:
+                # in this case, userSpecifiedPath must be a file
+                if not os.path.isfile(userSpecifiedPath):
+                    raise ConfError("File %s does not exist"%userSpecifiedPath)
+                dirsToTry=[ os.path.dirname(userSpecifiedPath) ]
+            else:
+                # it must be a directory name
+                if not os.path.isdir(userSpecifiedPath):
+                    raise ConfError("Directory %s does not exist"%
+                                    userSpecifiedPath)
+                dirsToTry= [ userSpecifiedPath ]
+            
+        for dirname in dirsToTry:
+            if confSubdirName is None:
+                confdirname=dirname
+            else:
+                confdirname=os.path.join(dirname, confSubdirName)
+            filename=os.path.join(confdirname, name)
+            if os.path.exists(filename):
+                self._add('conf_file', filename, 'The configuration file name')
+                self._add('base_dir', dirname, 
+                        'The base directory containing all client+server confs',
+                        userSettable=False)
+                self._add('conf_dir', confdirname, 
+                          'The configuration directory', userSettable=False)
+                return
+        raise ConfError("Configuration file not found")
+
 
     def initDefaults(self):
-        
         #config params for the Certificate authority
         self._add('ca_dir', "ca", 
                   "Base SSL CA directory (relative to conf_dir)",
                   relTo='base_dir')    
-        self._add('ca_key_dir',"keys",'CA key directory',relTo="ca_dir")                        
+        self._add('ca_key_dir',"keys",'CA key directory',
+                  relTo="ca_dir")                        
         self._add('ca_cert_dir', "certs", 
                   "Server certificate directory (relative to ca_dir)",
                   relTo="ca_dir")
@@ -223,11 +280,9 @@ class Conf:
                   "certificate file (relative to conf_dir)",
                   relTo="conf_dir")
         self._add('cert_request_file', "req.csr", 
-                  "Server certificate signing request file (relative to base_dir)",
-                  relTo="base_dir")
+               "Server certificate signing request file (relative to base_dir)",
+               relTo="base_dir")
   
-    
-
         self._add('plugin_path', "", 
                   "Colon-separated list of directories to search for plugins",
                   True)
@@ -251,27 +306,25 @@ class Conf:
         self.conf[name] = ConfValue(name, defaultValue, desc, 
                                     userSettable=userSettable,
                                     relTo=relTo,validation=validation,
-                                    allowedValues=allowedValues,writable=writable)
+                                    allowedValues=allowedValues,
+                                    writable=writable)
        
-    def tryRead(self,confname=None):
-        
+    def tryRead(self):
         try:
-            if confname ==None:
-                confname = self.getFile('conf_file')
-            #self.conf = pickle.loads(f.read())
+            confname = self.getFile('conf_file')
             f = open(confname,'r')  
             str = f.read()
             try:
                 #print str
-                nconf = json.loads(str,object_hook = cpc.util.json_serializer.fromJson)
+                nconf = json.loads(str,
+                                object_hook = cpc.util.json_serializer.fromJson)
                 # merge items
                 for (key, val) in nconf.iteritems():
                     if self.conf.has_key(key):
                         self.conf[key].set(val)
                     # if it doesn't exist as a key, we ignore it.
             except Exception as e:
-                print("ERROR: %s"%e)
-                    
+                raise ConfError("Couldn't load %s: %s"%(confname, str(e)))
             return True
         except:
             # there was no configuration file. 
@@ -293,7 +346,7 @@ class Conf:
                 os.makedirs(dirname)
                 os.chmod(dirname, stat.S_IRWXU)
         except OSError, e:
-            print('ERROR: %s %s %s'%(e.errno,e.strerror,e.filename))
+            log.error('%s %s %s'%(e.errno,e.strerror,e.filename))
            
         f = open(confname,"w")
         # construct a dict with only the values that have changed from 
@@ -305,7 +358,8 @@ class Conf:
             if cf.hasSetValue():
                 conf[cf.name] = cf.get()
         # and write out that dict.       
-        f.write(json.dumps(conf,default = cpc.util.json_serializer.toJson,indent=4))               
+        f.write(json.dumps(conf,
+                           default = cpc.util.json_serializer.toJson,indent=4))
         f.close()
 
 
@@ -467,6 +521,6 @@ class Conf:
     def getCADir(self):
         return self.getFile("ca_dir")
 
-    def getGlobaDir(self):
+    def getGlobalDir(self):
         return self.get("global_dir")
     

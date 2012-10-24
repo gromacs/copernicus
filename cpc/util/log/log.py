@@ -62,7 +62,7 @@ def initClientLog(debug=False):
         colorFormatter = ColoredFormatter(COLOR_FORMAT)
         handler.setFormatter(colorFormatter)
         logger.addHandler(handler)
-    initErrorLog()
+    #initErrorLog()
 
 
 def initServerLog(log_mode=None):

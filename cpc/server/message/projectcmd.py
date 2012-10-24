@@ -87,7 +87,10 @@ class SCProjectSetDefault(ServerCommand):
 
     def run(self, serverState, request, response):
         name=request.getParam('name')
-        serverState.getProjectList().setDefault(name)
+        #serverState.getProjectList().setDefault(name)
+        # get the project to check whether it exists
+        project=serverState.getProjectList().get(name)
+        request.session.set("default_project_name", name)
         response.add("Project %s set to default project"%name)
 
 class SCProjectGetDefault(ServerCommand):
@@ -97,8 +100,12 @@ class SCProjectGetDefault(ServerCommand):
 
     def run(self, serverState, request, response):
         #name=request.getParam('name')
-        name=serverState.getProjectList().getDefault().getName()
-        response.add("Default project: %s"%name)
+        #name=serverState.getProjectList().getDefault().getName()
+        name=request.session.get("default_project_name")
+        if name is None:
+            response.add("No default project")
+        else:
+            response.add("Default project: %s"%name)
 
 class SCProjectActivate(ServerCommand):
     """Activate all elements in a project."""

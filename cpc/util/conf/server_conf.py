@@ -25,34 +25,85 @@ Created on Apr 11, 2011
 import socket
 
 from cpc.network.node import Nodes
-import cpc.util.conf.conf_base
+import conf_base
 import os
 import sys
+import shutil
 import logging
+
+import cpc.util.exception
 
 log=logging.getLogger('cpc.util.conf.server_conf')
 
-class ServerConf(cpc.util.conf.conf_base.Conf):
+class SetupError(cpc.util.exception.CpcError):
+    pass
+
+
+def initiateServerSetup(rundir, forceReset, hostConfDir, altHostName):
+                        #configName =None,confDir=None,forceReset=False):
+    ''' 
+       @input configName String  
+    '''
+    if altHostName is None:
+        hostName = socket.getfqdn()
+    else:
+        hostName = altHostName
+
+    confDir=cpc.util.conf.conf_base.getGlobalDir()
+
+    # now if a host-specific directory already exists, we use that
+    if os.path.exists(os.path.join(confDir, hostName)):
+       hostConfDir=True 
+
+    if hostConfDir:
+        confDir = os.path.join(confDir, hostName)
+    else:
+        confDir = os.path.join(confDir, conf_base.Conf.default_dir)
+
+    checkDir = os.path.join(confDir,"server")
+    confFile = os.path.join(checkDir,"server.conf")
+    if forceReset and os.path.exists(checkDir):
+        shutil.rmtree(checkDir)
+    elif os.path.exists(checkDir) or os.path.exists(confFile):
+        raise SetupError("A configuration already exists in %s\nTo overwrite it, use the -force option"%
+                        (confDir))
+
+    os.makedirs(checkDir)
+    print("Making server configuration in %s"%checkDir)
+    outf=open(os.path.join(confFile), 'w')
+    outf.close()
+    cf=ServerConf(confdir=confDir)
+    openssl = cpc.util.openssl.OpenSSL(hostName)
+    setupCA(openssl,cf,forceReset)
+    openssl.setupServer()
+    cf.setRunDir(rundir)
+
+def setupCA(openssl, conf, forceReset=False):
+    checkDir = conf.getCADir()
+    if forceReset and os.path.exists(checkDir):
+        shutil.rmtree(checkDir)
+    elif os.path.exists(checkDir)== True:
+        raise SetupError("A CA already exists in %s\nTo overwrite it, use 'cpc-server setup -force %s"%
+                        (checkDir, rundir))
+    openssl.setupCA()
+
+
+class ServerConf(conf_base.Conf):
     '''
     classdocs
     '''
     __shared_state = {}
     CN_ID = "server"
-    def __init__(self,conffile = "server.conf",confdir = None,
-                 reload=False):
-        #initiate with specific name for conf file
-        #be able to specifiy conf file of your own
-        #set all server params
+    def __init__(self, confdir=None):
+        """Initialize with an optional configuration directory. """
+        # check whether the object is already initialized
+        if self.exists():
+            return
+        # call parent constructor with right dir name
+        conf_base.Conf.__init__(self, name='server.conf', 
+                                confSubdirName="server",
+                                userSpecifiedPath=confdir)
 
-        self.__dict__ = self.__shared_state
-                  
-        if len(self.__shared_state)>0 and reload == False: 
-            return;
-            
-        cpc.util.conf.conf_base.Conf.__init__(self, conffile, confdir)
-        
-        self._add("conf_dir",os.path.join(self.get("conf_dir"),"server"), 'The configuration directory',
-                  userSettable=True)
         self.initDefaults()     
         self.have_conf_file = self.tryRead()
         
@@ -61,23 +112,25 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         '''
     def initDefaults(self):
         
-        cpc.util.conf.conf_base.Conf.initDefaults(self)
+        conf_base.Conf.initDefaults(self)
         server_host = ''
         self.defaultHTTPSPort = 13807
         self.defaultHTTPPort = 14807
         
         self._add('server_host', server_host, 
-          "Address the server listens on", True)
+                  "Address the server listens on", True)
 
         self._add('server_fqdn', socket.getfqdn(),
-            "Manually specified fqdn", True)
+                  "Manually specified fqdn", True)
 
 
         self._add('server_https_port', self.defaultHTTPSPort,
-                  "Port number the server listens on for https connections", True,None,'\d+')
+                  "Port number the server listens on for https connections", 
+                  True,None,'\d+')
 
         self._add('server_http_port', self.defaultHTTPPort,
-                  "Port number the server listens on for http connections", True,None,'\d+')
+                  "Port number the server listens on for http connections", 
+                  True,None,'\d+')
 
         
         self._add( 'nodes', Nodes(), 
@@ -92,9 +145,6 @@ class ServerConf(cpc.util.conf.conf_base.Conf):
         self._add('project_file', "projects.xml", 
                   "Projects file name (relative to conf_dir)",
                   relTo='conf_dir')
-        #self._add('task_file', "tasks.xml", 
-        #          "Task queue (relative to conf_dir)",
-        #          relTo='conf_dir')
         self._add('state_save_interval', 240,
                   "Time in seconds between state saves",
                   True, validation='\d+')

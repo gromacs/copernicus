@@ -70,7 +70,7 @@ class OpenSSL(object):
         Creates a connection bundle for the Client and worker
         @returns ConnectionBundle
         '''
-        connectionBundle = ConnectionBundle()  #FIXME //change name to ConnectionBundle
+        connectionBundle = ConnectionBundle(create=True)  #FIXME //change name to ConnectionBundle
         tempDir = "tmp"
         privKeyFile = "%s/priv.pem"%tempDir
         pubKeyFile = "%s/pub.pem"%tempDir

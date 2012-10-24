@@ -94,7 +94,7 @@ def print_usage():
     print "       cpcc load      project-tar projectname"
     print ""
     print "Common global options:"
-    print "       cpcc [-c conffile]"
+    print "       cpcc [-c bundleFile]"
     sys.exit(1)
 
 # make a copy for later
@@ -105,7 +105,7 @@ if len(args)<2:
 
 # remove the 0th argument
 args.pop(0)
-conffile=None
+bundleFile=None
 
 debug=False
 # first parse common options
@@ -118,7 +118,7 @@ while len(args)>0:
             sys.stdout.write("ERROR: no value specified for global option '%s'\n"%
                              option)
             print_usage()
-        conffile=args.pop(0)
+        bundleFile=args.pop(0)
     elif args[0]=='-d':
         args.pop(0)
         debug=True
@@ -170,7 +170,8 @@ else:
 
 
 # read in common configuration
-cf= cmd_line_utils.initiateConnectionBundle(conffile)
+cf= ConnectionBundle(bundleFile)
+#cmd_line_utils.initiateConnectionBundle(bundleFile)
 
 
 try:
