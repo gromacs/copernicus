@@ -34,12 +34,17 @@ from server_command import ServerCommand
 
 import cpc.dataflow
 import cpc.util
+import cpc.server.state.projectlist
+
+import cpc.util.exception
 
 
 
 log=logging.getLogger('cpc.server.projectcmd')
 
 
+class ProjectServerCommandException(cpc.util.exception.CpcError):
+    pass
 
 class ProjectServerCommand(ServerCommand):
     """Base class for commands acting on projects."""
@@ -48,10 +53,17 @@ class ProjectServerCommand(ServerCommand):
         if request.hasParam('project'):
             prjName=request.getParam('project')
         else:
-            prjName=request.session.get("default_project_name")
+            try:
+                prjName=request.session['default_project_name']
+            except KeyError:
+                # trust the 'global' default project
+                prj=serverState.getProjectList().getDefault()
+                if prj is not None:
+                    return prj
+                raise cpc.server.state.projectlist.\
+                            ProjectListNoDefaultError()
         return serverState.getProjectList().get(prjName)
         
-
 class SCProjects(ServerCommand):
     """List all projects."""
     def __init__(self):
@@ -89,6 +101,8 @@ class SCProjectDelete(ProjectServerCommand):
             msg = " and its directory %s"%prj.getBasedir()
         #q.deleteByProject(prj, False)
         serverState.getProjectList().delete(prj, delDir)
+        if name == request.session['default_project_name']:
+            del request.session['default_project_name']
         response.add("Project %s%s deleted."%(name, msg))
 
 class SCProjectSetDefault(ServerCommand):
