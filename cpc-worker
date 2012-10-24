@@ -62,7 +62,7 @@ if len(args)<2:
 
 # remove the 0th argument
 args.pop(0)
-conffile=None
+bundleFile=None
 
 #opts to be passed to the worker
 opts = {}
@@ -86,7 +86,7 @@ while len(args)>0:
             sys.stderr.write(
                 "ERROR: no value specified for global option '%s'\n"%option)
             print_usage()
-        conffile=args.pop(0)
+        bundleFile=args.pop(0)
     elif args[0]=='-p':
         option = args.pop(0)
         if len(args) < 1:
@@ -136,7 +136,8 @@ def getArg(argnr, name):
 
 cmd=args[0]
 
-cf= cmd_line_utils.initiateConnectionBundle(conffile)
+#cf= cmd_line_utils.initiateConnectionBundle(bundleFile)
+cf= ConnectionBundle(bundleFile)
 
 cpc.util.log.initClientLog(debug)
 

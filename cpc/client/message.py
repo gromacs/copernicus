@@ -49,11 +49,11 @@ class ClientMessage(ClientBase):
         self.host = host
         self.port = port
         self.conf = conf
-        if self.conf==None: #fixme specify connectionBundle externally
+        if self.conf is None: 
             self.conf = ConnectionBundle()
-        if self.host == None:
+        if self.host is None:
             self.host = self.conf.getClientHost()
-        if self.port == None:
+        if self.port is None:
             self.port = self.conf.getClientHTTPSPort()
             
         self.privateKey = self.conf.getPrivateKey()

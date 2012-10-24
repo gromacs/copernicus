@@ -23,11 +23,19 @@ import cpc.util.openssl
 import os
 #from socket import gethostname
 import socket
-from cpc.util.conf.conf_base import Conf
-import cpc.util.conf.server_conf
-from cpc.network.com.client_base import ClientError
 import sys
 import shutil
+
+from cpc.util.conf.conf_base import Conf
+import cpc.util.conf.conf_base 
+import cpc.util.conf.server_conf
+from cpc.network.com.client_base import ClientError
+
+class ConfError(cpc.util.exception.CpcError):
+    pass
+
+
+
 def printSortedConfigListDescriptions(configs):
     for key in sorted(configs.keys()):
             value = configs[key] 
@@ -48,45 +56,6 @@ def printSortedConfigListValues(configs):
 
 
 
-def initiateConnectionBundle(conffile=None):
-    '''
-    Tries to fetch a connectionbundle other via the provided file or via the default conf dir
-    @input String conffile : the path to a conffile
-    @returns ConnectionBundle
-    '''
-    cf = None
-    defaultPath = os.path.join(ConnectionBundle().getGlobaDir(),"client.cnx")
-    if(conffile == None): # no conffile is provided we try to see if a file exists in our basic directory
-        conffile =defaultPath
-
-        if(os.path.isfile(conffile)):
-            cf = ConnectionBundle(conffile = conffile,reload=True)
-        else:  #could be windows machine, there we store the connectionbundle in /HOME/Documents/cores/client.cnx
-           try:
-               import ctypes.wintypes
-               CSIDL_PERSONAL= 5       # My Documents
-               SHGFP_TYPE_CURRENT= 0   # Want current, not default value
-               buf= ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
-               ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0, SHGFP_TYPE_CURRENT, buf)
-               defaultPath = "%s\copernicus\client.cnx"%buf.value
-               conffile=defaultPath
-               if(os.path.isfile(conffile)):
-                   cf = ConnectionBundle(conffile = conffile,reload=True)
-
-           except:  #we are probably not on a win machine
-               pass
-
-    elif(os.path.isfile(conffile)):
-        cf=ConnectionBundle(conffile=conffile)
-
-    if cf==None:
-        print "Could not find a connection bundle tried to locate it at %s \nPlease " \
-              "specify a connection bundle."%conffile
-        sys.exit(0)
-    return cf
-
-
-
 def initiateWorkerSetup():
     '''
        Creates a connection bundle
@@ -100,51 +69,6 @@ def initiateWorkerSetup():
     return connectionBundle
 
 
-def initiateServerSetup(rundir,configName =None,confDir=None,forceReset=False):
-    ''' 
-       @input configName String  
-    '''
-    if configName ==None:
-        configName = socket.getfqdn()
-
-    if(confDir==None):
-        confDir = os.path.join(Conf().getGlobaDir(),configName)
-    
-    checkDir = os.path.join(confDir,"server")
-    if forceReset:
-        shutil.rmtree(checkDir)
-    elif os.path.exists(checkDir)==True:
-        decision = raw_input("there already is a server configuration in %s; do you want to overwrite it(y/n)?"%checkDir)
-        
-        if decision != 'y':
-            print "No new server setup generated"
-            return None
-        else:
-            shutil.rmtree(checkDir)
-            
-    cf=cpc.util.conf.server_conf.ServerConf(confdir=confDir,reload=True)
-    openssl = cpc.util.openssl.OpenSSL(configName)
-    setupCA(openssl,cf,forceReset)
-    openssl.setupServer()
-    cf.setRunDir(rundir) 
-
-
-def setupCA(openssl,conf,forceReset=False):
-    
-    checkDir = conf.getCADir()
-    if forceReset:
-        shutil.rmtree(checkDir)
-    elif os.path.exists(checkDir)== True:
-        decision = raw_input("there already is a CA in %s; do you want to overwrite it (y/n)?"%checkDir)
-        
-        if decision != 'y':
-            print "No new ca generated"
-            return None
-        else:
-            shutil.rmtree(checkDir)
-        
-    openssl.setupCA() 
-    
 def getArg(arglist, argnr, name):
     """Get argument, or print out argument description."""
     try: 

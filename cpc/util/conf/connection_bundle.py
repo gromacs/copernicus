@@ -28,20 +28,30 @@ import tempfile
 import sys
 from cpc.util.conf.conf_base import Conf  
 import os
+import traceback
+
+
+
 class ConnectionBundle(Conf):
     '''
     this worker conf will be transformed to a connection bundle
     '''
-    __shared_state = {}
+    #__shared_state = {}
     CN_ID = "worker"  #used to distinguish common names in certs
-    def __init__(self,reload=False,conffile=None):
 
 
-        self.__dict__ = self.__shared_state                  
-        if len(self.__shared_state)>0 and reload == False:             
-            return;
 
-        self.conf = dict()
+    def __init__(self, userSpecifiedPath=None, create=False):
+        # check whether the object is already initialized
+        if not create: 
+            if self.exists():
+                return
+            # call parent constructor with right file name.
+            Conf.__init__(self, name='client.cnx', 
+                          userSpecifiedPath=userSpecifiedPath)
+        if create:
+            # create an empty conf without any values.
+            self.conf=dict()
 
         self.client_host = socket.getfqdn()
         self.client_https_port = '13807'
@@ -64,30 +74,30 @@ class ConnectionBundle(Conf):
 
 
         self.tempfiles = dict()
-        if conffile:
-            self.tryRead(conffile)
-            '''
-            the private key, cert and
-            ca cert need to be provided as filepaths to the ssl connection object
-            So we create tempfiles for them here
-            '''
-            privKeyTempFile = tempfile.NamedTemporaryFile(delete=False)
-            privKeyTempFile.write(self.get('private_key'))
-            privKeyTempFile.seek(0)
-            self.tempfiles['private_key'] = privKeyTempFile
-            privKeyTempFile.close()
+        #if conffile:
+        self.tryRead()
+        '''
+        the private key, cert and
+        ca cert need to be provided as filepaths to the ssl connection object
+        So we create tempfiles for them here
+        '''
+        privKeyTempFile = tempfile.NamedTemporaryFile(delete=False)
+        privKeyTempFile.write(self.get('private_key'))
+        privKeyTempFile.seek(0)
+        self.tempfiles['private_key'] = privKeyTempFile
+        privKeyTempFile.close()
 
-            certTempFile =  tempfile.NamedTemporaryFile(delete=False)
-            certTempFile.write(self.get('cert'))
-            certTempFile.seek(0)
-            self.tempfiles['cert'] = certTempFile
-            certTempFile.close()
+        certTempFile =  tempfile.NamedTemporaryFile(delete=False)
+        certTempFile.write(self.get('cert'))
+        certTempFile.seek(0)
+        self.tempfiles['cert'] = certTempFile
+        certTempFile.close()
 
-            caCertTempFile =  tempfile.NamedTemporaryFile(delete=False)
-            caCertTempFile.write(self.get('ca_cert'))
-            caCertTempFile.seek(0)
-            self.tempfiles['ca_cert'] = caCertTempFile
-            caCertTempFile.close()
+        caCertTempFile =  tempfile.NamedTemporaryFile(delete=False)
+        caCertTempFile.write(self.get('ca_cert'))
+        caCertTempFile.seek(0)
+        self.tempfiles['ca_cert'] = caCertTempFile
+        caCertTempFile.close()
 
 
     #overrrides method in ConfBase
@@ -95,57 +105,37 @@ class ConnectionBundle(Conf):
         self._add('client_host', self.client_host,
                   "Hostname for the client to connect to", True)
         self._add('client_http_port', self.client_http_port,
-                  "Port number for the client to connect to http", True,None,'\d+')
+                  "Port number for the client to connect to http", 
+                  True,None,'\d+')
         self._add('client_https_port', self.client_https_port,
-                  "Port number for the client to connect to https", True,None,'\d+')
+                  "Port number for the client to connect to https", 
+                  True,None,'\d+')
 
         self._add('private_key', '',
-            "Port number for the client to connect to https", True,None)
+                  "Port number for the client to connect to https", True,None)
         self._add('public_key', '',
-            "Port number for the client to connect to https", True,None)
+                  "Port number for the client to connect to https", True,None)
         self._add('cert', '',
-            "Port number for the client to connect to https", True,None)
+                  "Port number for the client to connect to https", True,None)
 
         self._add('ca_cert', '',
-            "Port number for the client to connect to https", True,None)
-
-
-        #Worker specific configs
-#        parser = SafeConfigParser()
-#        base = os.path.dirname(os.path.abspath(sys.argv[0]))
-#        parser.read(os.path.join(base,'properties'))
-#
-#        base_path = ".%s"%parser.get('default','app-name')
-
-        base_path = '.copernicus'
-
-        self._add('global_dir', os.path.join(os.environ["HOME"],
-            base_path),
-            'The global configuration directory',
-            userSettable=True)
-
-        #FIXME after handling executables all this can be handled
-        self._add('conf_dir', os.path.join(os.environ["HOME"],
-            base_path,
-            self.getHostName()),
-            'The configuration directory',
-            userSettable=True,writable=False)
+                  "Port number for the client to connect to https", True,None)
 
         self._add('plugin_path', "",
-            "Colon-separated list of directories to search for plugins",
-            True,writable=False)
+                  "Colon-separated list of directories to search for plugins",
+                  True,writable=False)
 
         self._add('local_executables_dir', "executables",
-            "Directory containing executables for the run client. Part of executables_path",
-            False,
-            relTo='conf_dir',writable=False)
+                  "Directory containing executables for the run client. Part of executables_path",
+                  False,
+                  relTo='conf_dir',writable=False)
         self._add('global_executables_dir', "executables",
-            "The directory containing executables for the run client. Part of executables_path",
-            False,
-            relTo='global_dir',writable=False)
+                  "The directory containing executables for the run client. Part of executables_path",
+                  False,
+                  relTo='global_dir',writable=False)
         self._add('executables_path', "",
-            "Colon-separated directory list to search for executables",
-            True,writable=False)
+                  "Colon-separated directory list to search for executables",
+                  True,writable=False)
 
         # the worker's run directory should NEVER be fixed relative to
         # anything else; instead, it should just run in the current directory
@@ -153,8 +143,6 @@ class ConnectionBundle(Conf):
                   "cpc-worker-workload",
                   "The run directory for the run client",
                   True,writable=False)
-
-        self.conf['global_dir'].writable=False
 
 
     def getClientHost(self):
