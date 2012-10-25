@@ -23,7 +23,7 @@ Created on sept 1, 2011
 @author: iman
 '''
 from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.client_conf import ClientConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
 import unittest
 import time
 import subprocess
@@ -120,7 +120,7 @@ class TestNetworkSetup(unittest.TestCase):
             server_conf.set('server_https_port',str(https_port))
             server_conf.set('server_http_port',str(http_port))
             server_conf.set('mode',"debug")
-            client_conf  = ClientConf(confdir=self.serverConfs[i],reload=True)
+            client_conf  = ConnectionBundle(confdir=self.serverConfs[i],reload=True)
             client_conf.set('client_http_port',str(http_port))
             client_conf.set('client_https_port',str(https_port))
             http_port +=1

@@ -27,7 +27,7 @@ import copy
 import cpc.util.log
 
 from cpc.client.message import ClientMessage
-from cpc.network.com.client_connection import ClientConnection
+from cpc.network.com.client_connection import VerifiedClientConnection
 from cpc.util.exception import CpcError
 from cpc.network.com.input import Input
 from cpc.network.server_request import ServerRequest
@@ -63,10 +63,7 @@ class ServerToServerMessage(ClientBase):
         topology=self.getNetworkTopology()       
         # this is myself:
         startNode = getSelfNode(self.conf)
-        #Node(self.conf.getHostName(),
-        #     self.conf.getServerHTTPPort(),
-        #     self.conf.getServerHTTPSPort(),
-        #     self.conf.getHostName())
+
          
         key = endNodeHostName
         self.endNode = topology.nodes.get(key);
@@ -111,10 +108,10 @@ class ServerToServerMessage(ClientBase):
      
     @staticmethod
     def connectToSelf(headers):
-        conf = ServerConf();
+        conf = ServerConf()
         if headers['end-node']==conf.getHostName():
             if headers.has_key('end-node-port'):
-                if headers['end-node-port'] == str(conf.getServerHTTPSPort()) \
+                if headers['end-node-port'] == str(conf.getServerVerifiedHTTPSPort()) \
                      or headers['end-node-port'] == str(conf.getServerHTTPPort()):
                     return True 
                 else:

@@ -173,7 +173,7 @@ def getSelfNode(conf):
         if selfNode is None:
             selfNode=Node(conf.getHostName(),
                           conf.getServerHTTPPort(),
-                          conf.getServerHTTPSPort(),
+                          conf.getServerVerifiedHTTPSPort(),
                           conf.getHostName())
     return selfNode
 

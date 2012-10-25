@@ -37,6 +37,7 @@ from cpc.util.openssl import OpenSSL
 from cpc.network.cache import Cache
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
+from cpc.server.state.database import DBHandler
 import cpc.server.message
 from cpc.server.message.server_message import RawServerMessage
 from cpc.util.version import __version__
@@ -70,7 +71,21 @@ class ServerCommand(object):
         """Get the request command string associated with the command."""
         return self.name
 
-    
+class SCLogin(ServerCommand):
+    """Logs in a user"""
+    def __init__(self):
+        ServerCommand.__init__(self, "login")
+
+    def run(self, serverState, request, response):
+        user=request.getParam('user')
+        password=request.getParam('password')
+        dbhandler = DBHandler()
+        if not dbhandler.validateUser(user,password):
+            raise cpc.util.CpcError("Invalid user/pass")
+        request.session['user'] = user
+        response.add('Logged in as %s'%user)
+
+
 class SCStop(ServerCommand):
     """Stop server command"""
     def __init__(self):
@@ -150,7 +165,7 @@ class SCNetworkTopology(ServerCommand):
         
                     
         thisNode = Node(conf.getHostName(),conf.getServerHTTPPort(),
-                        conf.getServerHTTPSPort(),
+                        conf.getServerVerifiedHTTPSPort(),
                         conf.getHostName())
         thisNode.nodes = conf.getNodes() 
         thisNode.workerStates = serverState.getWorkerStates()             
@@ -217,9 +232,7 @@ class ScAddClientRequest(ServerCommand):
         #openssl.addCa(clientConnectRequest.key)   
         
         inf=open(conf.getCACertFile(), "r")
-#        nodeConnect = NodeConnectRequest(conf.getHostName(),
-#                                         conf.getServerHTTPPort(),
-#                                         conf.getServerHTTPSPort(),inf.read())
+
         response.add("",inf.read())
         log.info("Add client request done")
 
@@ -275,7 +288,7 @@ class ScAddNodeRequest(ServerCommand):
         inf=open(conf.getCACertFile(), "r")
         nodeConnect = NodeConnectRequest(unqalifiedDomainName,
                                          conf.getServerHTTPPort(),
-                                         conf.getServerHTTPSPort()
+                                         conf.getServerVerifiedHTTPSPort()
                                          ,inf.read()
                                          ,conf.getHostName())
         

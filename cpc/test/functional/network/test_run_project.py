@@ -24,7 +24,7 @@ Created on Feb 1, 2011
 @author: iman
 '''
 from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.client_conf import ClientConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
 from cpc.client.message import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.broadcast_message import BroadcastMessage
@@ -114,7 +114,7 @@ class TestRunProject(unittest.TestCase):
             server_conf.set('mode',"debug")
             server_conf.set('run_dir',self.testProjectPath)
             
-            client_conf  = ClientConf(confdir=self.serverConfs[i],reload=True)
+            client_conf  = ConnectionBundle(confdir=self.serverConfs[i],reload=True)
             client_conf.set('client_http_port',str(http_port))
             client_conf.set('client_https_port',str(https_port))
             http_port +=1

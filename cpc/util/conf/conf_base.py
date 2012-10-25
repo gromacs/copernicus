@@ -40,6 +40,8 @@ class ConfError(cpc.util.exception.CpcError):
 class InputError(CpcError):
     def __init__(self, exc):
         self.str = exc.__str__()
+    def __unicode__(self):
+        return self.str
 
 
 def findAndCreateGlobalDir():
@@ -107,7 +109,6 @@ class ConfValue:
                 allowedValuesStr = ','.join(self.allowedValues)
                 raise InputError("The value %s does not match any of %s" % (
                 newValue, allowedValuesStr))  #Throw an exception with a message
-
         self.setValue = newValue
 
     def reset(self):
@@ -349,7 +350,7 @@ class Conf:
                 raise ConfError("Couldn't load %s: %s" % (confname, str(e)))
             return True
         except:
-            # there was no configuration file. 
+            # there was no configuration file.
             # at least try to make the directory
             try:
                 dirname = os.path.dirname(confname)
@@ -569,10 +570,14 @@ class Conf:
         return self.get("global_dir")
 
     @staticmethod
-    def getDefaultHttpsPort():
-        return 13807
+    def getDefaultVerifiedHttpsPort():
+        return '13807'
+
+    @staticmethod
+    def getDefaultUnverifiedHttpsPort():
+        return '13808'
 
     @staticmethod
     def getDefaultHttpPort():
-        return 14807
+        return '14807'
     

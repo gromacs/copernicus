@@ -31,9 +31,13 @@ PROJ_DIR = "/tmp/cpc-proj"
 def setup_server(heartbeat='20'):
     ensure_no_running_servers_or_workers()
     clear_dirs()
+    p = subprocess.Popen(["./cpc-server", "setup", "-stdin", PROJ_DIR],
+                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, close_fds=True)
+    (stdout, stderr) = p.communicate(input='root\n')
+    assert p.returncode == 0
     with open(os.devnull, "w") as null:
-        p = subprocess.check_call(["./cpc-server", "setup", PROJ_DIR],
-                                  stdout=null, stderr=null)
+
         p = subprocess.check_call(["./cpc-server", "config", "server_fqdn",
                                    "127.0.0.1"], stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
@@ -52,6 +56,7 @@ def generate_bundle():
                 p = subprocess.Popen(args, stdout=f,
                                      stderr=null)
                 p.wait()
+                assert p.returncode == 0
     except Exception as e:
         sys.stderr.write("Failed to write bundle: %s\n"%str(e))
         assert False #NOT OK
@@ -113,13 +118,6 @@ def teardown_server():
     stop_server()
 
 
-def with_server(f):
-    setup_server()
-    start_server()
-    f()
-    teardown_server()
-
-
 def run_client_command(command, returnZero=True, expectstdout=None):
     cmd_line = './cpcc %s'%command
     args = shlex.split(cmd_line)
@@ -152,6 +150,15 @@ def retry_client_command(command, expectstdout, iterations=5, sleep=3):
     assert False,\
     "Attempted to read '%s' from server, but gave up after %d attempts"%(
         expectstdout, iterations)
+
+def login_client(username='root', password='root'):
+    cmd_line = './cpcc login -stdin %s'%username
+    args = shlex.split(cmd_line)
+    p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                     stderr=subprocess.PIPE)
+    (stdout, stderr) = p.communicate(input='%s\n'%password)
+    assert p.returncode == 0,\
+    "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 
 class Worker(object):
     def __init__(self):

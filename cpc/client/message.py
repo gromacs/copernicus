@@ -49,15 +49,14 @@ class ClientMessage(ClientBase):
         self.host = host
         self.port = port
         self.conf = conf
+        self.use_verified_https = False #the client runs on unverified https
         if self.conf is None: 
             self.conf = ConnectionBundle()
         if self.host is None:
             self.host = self.conf.getClientHost()
         if self.port is None:
-            self.port = self.conf.getClientHTTPSPort()
-            
-        self.privateKey = self.conf.getPrivateKey()
-        self.keychain = self.conf.getCaChainFile() 
+            self.port = self.conf.getClientUnverifiedHTTPSPort()
+
 
     #NOTE should not be able to perform with a post or put request 
     def stopRequest(self): 
@@ -67,6 +66,18 @@ class ClientMessage(ClientBase):
         fields.append(input)
         fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+
+    def loginRequest(self, user, password):
+        cmdstring="login"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+
+        fields.append(Input('user', user))
+        fields.append(Input('password', password))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
         return response
 
     # @param endNode is the endNode we want to reach
@@ -514,7 +525,7 @@ class ClientMessage(ClientBase):
         
         nodeConnectRequest = NodeConnectRequest(self.conf.getHostName()
                                                 ,self.conf.getClientHTTPPort()
-                                                ,self.conf.getClientHTTPSPort()
+                                                ,self.conf.getClientVerifiedHTTPSPort()
                                                 ,key
                                                 ,self.conf.getHostName())
         input2=Input('clientConnectRequest',

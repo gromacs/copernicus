@@ -56,7 +56,7 @@ class BroadcastMessage(ServerToServerMessage):
         #we dont want to broadcast to ourself
         node = Node(ServerConf().getHostName(),
                ServerConf().getServerHTTPPort(),
-               ServerConf().getServerHTTPSPort(),
+               ServerConf().getServerVerifiedHTTPSPort(),
                ServerConf.getHostName())
         
         topology.removeNode(node.getId())     

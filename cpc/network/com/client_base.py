@@ -38,7 +38,7 @@ class ClientBase(object):
     '''
 
 
-    def __init__(self,host,port,conf):
+    def __init__(self,host,port,conf, use_verified_https=True):
         """Connect to a server opening a connection
            a privatekey and an keychain is needed if a https connection
            is established
@@ -46,6 +46,7 @@ class ClientBase(object):
         self.host = host
         self.port = port
         self.conf = conf
+        self.use_verified_https = use_verified_https
                 
 
     def putRequest(self, req,https=True):
@@ -74,7 +75,15 @@ class ClientBase(object):
     #FIXME private method
     def connect(self,https=True):
         try:
-            self.conn=client_connection.ClientConnection(self.conf)
+            self.use_verified_https
+        except AttributeError:
+            self.use_verified_https = True
+        try:
+            if self.use_verified_https:
+                self.conn=client_connection.VerifiedClientConnection(self.conf)
+            else:
+                self.conn=client_connection.UnverifiedClientConnection(
+                            self.conf)
             self.conn.connect(self.host,self.port,https)
         except httplib.HTTPException as e:
             raise ClientError(e)

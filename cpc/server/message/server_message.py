@@ -49,7 +49,7 @@ class RawServerMessage(ClientBase):
         if self.host == None:
             self.host = self.conf.getServerHost()
         if self.port == None:
-            self.port = self.conf.getServerHTTPSPort()
+            self.port = self.conf.getServerVerifiedHTTPSPort()
             
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()
@@ -64,7 +64,7 @@ class RawServerMessage(ClientBase):
         
         nodeConnectRequest = NodeConnectRequest(conf.getHostName()
                                                 ,conf.getServerHTTPPort()
-                                                ,conf.getServerHTTPSPort()
+                                                ,conf.getServerVerifiedHTTPSPort()
                                                 ,key
                                                 ,conf.getHostName())
 
@@ -86,7 +86,7 @@ class RawServerMessage(ClientBase):
         conf = ServerConf()
         node = Node(conf.getHostName(),
                     conf.getServerHTTPPort(),
-                    conf.getServerHTTPSPort(),
+                    conf.getServerVerifiedHTTPSPort(),
                     conf.getHostName())
         cmdstring ='node-connection-accepted'
         fields = []

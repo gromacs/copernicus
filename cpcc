@@ -29,13 +29,14 @@ import cpc.util
 from cpc.util import cmd_line_utils
 from cpc.util.conf.connection_bundle import ConnectionBundle
 from cpc.network.com.client_response import ResponseError
+from cpc.util.conf.server_conf import ServerConf
 from cpc.client.view.cmdline import CmdLine
 from cpc.network.com.client_base import ClientError
 from cpc.client import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.version import __version__
 import subprocess
-
+from getpass import getpass
 
 def print_usage():
     print "Usage: cpcc [global-options] <command> [command-options]"
@@ -178,6 +179,17 @@ cf = cmd_line_utils.initiateConnectionBundle(bundleFile)
 try:
     if cmd == "help":
         print_usage()
+    elif cmd == "login":
+        user=getArg(args, 1, "username")
+        if user == '-stdin':
+            user = getArg(args, 2, "username")
+            password = raw_input()
+        else:
+            password = getpass()
+        #password=getArg(args, 2, "password")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.loginRequest(user, password)).pprint()
+
     elif cmd == "version":
         print("Client version:  %s"%__version__)
         clnt=ClientMessage()

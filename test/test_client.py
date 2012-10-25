@@ -27,16 +27,19 @@ class TestClientTest():
     def tearDown(self):
         teardown_server()
 
-    def test_ServerSetup(self):
+    def test_ServerSetup_and_login(self):
         """
-        Sets up and tears down a server
+        Sets up and tears down a server and login
         """
-        pass
+        run_client_command("q", returnZero=False)
+        login_client()
+        run_client_command("q")
 
     def test_project_start(self):
         """
         Creates, changes into, and removes projects
         """
+        login_client()
         run_client_command("cd noexist", returnZero=False)
         run_client_command("start test")
         run_client_command("cd test", expectstdout='Changed to project: test')
@@ -48,6 +51,7 @@ class TestClientTest():
         """
         Tests that project save / load works
         """
+        login_client()
         run_client_command("start test")
         run_client_command("save test")
         run_client_command("load test.tar.gz test2")

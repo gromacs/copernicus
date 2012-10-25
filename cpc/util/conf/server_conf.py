@@ -30,8 +30,9 @@ import os
 import sys
 import shutil
 import logging
-
+import cpc.server.state.database as database
 import cpc.util.exception
+from cpc.util.conf.conf_base import Conf
 
 log=logging.getLogger('cpc.util.conf.server_conf')
 
@@ -39,7 +40,8 @@ class SetupError(cpc.util.exception.CpcError):
     pass
 
 
-def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName=None):
+def initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
+                        altDirName=None):
                         #configName =None,confDir=None,forceReset=False):
     '''
        @input configName String  
@@ -75,6 +77,12 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName=None):
     setupCA(openssl,cf,forceReset)
     openssl.setupServer()
     cf.setRunDir(rundir)
+
+    #setup database
+    try:
+        database.setupDatabase(rootpass)
+    except Exception as e:
+        raise SetupError("Failed to initialize database: %s"%e)
 
 def setupCA(openssl, conf, forceReset=False):
     checkDir = conf.getCADir()
@@ -112,8 +120,9 @@ class ServerConf(conf_base.Conf):
         
         conf_base.Conf.initDefaults(self)
         server_host = ''
-        self.defaultHTTPSPort = 13807
-        self.defaultHTTPPort = 14807
+        self.defaultVerifiedHTTPSPort = Conf.getDefaultVerifiedHttpsPort()
+        self.defaultUnverifiedHTTPSPort = Conf.getDefaultUnverifiedHttpsPort()
+        self.defaultHTTPPort = Conf.getDefaultHttpPort()
         
         self._add('server_host', server_host, 
                   "Address the server listens on", True)
@@ -122,14 +131,21 @@ class ServerConf(conf_base.Conf):
                   "Manually specified fqdn", True)
 
 
-        self._add('server_https_port', self.defaultHTTPSPort,
-                  "Port number the server listens on for https connections", 
+        self._add('server_verified_https_port', self.defaultVerifiedHTTPSPort,
+                  "Port number the server listens on for verified https connections",
+                  True,None,'\d+')
+
+        self._add('server_unverified_https_port', self.defaultUnverifiedHTTPSPort,
+                  "Port number the server listens on for unverified https connections",
                   True,None,'\d+')
 
         self._add('server_http_port', self.defaultHTTPPort,
                   "Port number the server listens on for http connections", 
                   True,None,'\d+')
 
+        self._add('client_unverified_https_port', Conf.getDefaultUnverifiedHttpsPort(),
+                  "Port number the server listens on for http connections",
+                  True,None,'\d+')
         
         self._add( 'nodes', Nodes(), 
                   "List of nodes connected to this server", False)
@@ -288,7 +304,10 @@ class ServerConf(conf_base.Conf):
     def getServerCores(self):
         with self.lock:
             return int(self.conf['server_cores'].get())
- 
+
+    def getClientUnverifiedHTTPSPort(self):
+        return int(self.get('client_unverified_https_port'))
+
     def setMode(self,mode):
         with self.lock:
             self.conf['mode'].set(mode)
@@ -324,23 +343,25 @@ class ServerConf(conf_base.Conf):
             return parentNodes[0] 
     
     def getServerHost(self):
+        return self.conf['server_host'].get()
+
+    def getServerVerifiedHTTPSPort(self):
         with self.lock:
-            return self.conf['server_host'].get()
-    def getServerHTTPSPort(self):
+            return int(self.conf['server_verified_https_port'].get())
+
+    def getServerUnverifiedHTTPSPort(self):
         with self.lock:
-            return int(self.conf['server_https_port'].get())
-    def getServerHTTPPort(self):        
+            return int(self.conf['server_unverified_https_port'].get())
+
+    def getServerHTTPPort(self):
         with self.lock:
             return int(self.conf['server_http_port'].get())
+
     def getHostName(self):
         #return self.hostname
         with self.lock:
             return self.conf['server_fqdn'].get()
 
-    #just a wrapper method to conform with clientConnection
-    def getClientHTTPSPort(self):
-        with self.lock:
-            return int(self.get('server_https_port'))
 
     #just a wrapper method to conform with clientConnection
     def getClientHTTPPort(self):

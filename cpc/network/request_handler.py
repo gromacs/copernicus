@@ -43,16 +43,21 @@ from cpc.util.conf.server_conf import ServerConf
 from cpc.network.http.http_method_parser import HttpMethodParser
 import cpc.server.message
 import cpc.util.log
-log=logging.getLogger('cpc.server.request_handler')
 
 
-class handler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
+    """
+    Base class for the request handler which handles incoming http/https
+    request.
+    """
     server_version="Copernicus 1.0"
     protocol_version="HTTP/1.1"
     sys_version="cpc 1.0"
 
 
     def setup(self):
+        self.log=logging.getLogger('crs.server.request_handler_base')
         self.application_root = "/copernicus"
         self.connection = self.request
         self.responseCode = 200
@@ -72,8 +77,8 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
     # With GET we can serve files and simple commands
     def do_GET(self):
 
-        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
-
+        self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
+    
         # if the path starts with application root + / or ?  we have a message to process
         #otherwise we should just strip any request params and keep the resource reference
 
@@ -101,7 +106,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     #with POST we only serve commands, post messages can also handle multipart messages
     def do_POST(self):
-        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
+        self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
         #can handle single part and multipart messages
         #take the input and put it into a request object
         #process the message
@@ -117,9 +122,9 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
     #PUT messages reserved for server to server messages, put supports message delegation
     def do_PUT(self):
         conf = ServerConf()
-        log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
-        log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
-
+        self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
+        self.log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
+        
         if self.headers.has_key('end-node') and \
             ServerToServerMessage.connectToSelf(self.headers)==False:
 
@@ -134,14 +139,14 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             #if self.headers.has_key('end-node-port'):
             #    endNodePort=self.headers['end-node-port']
 
-            log.log(cpc.util.log.TRACE,"Trying to reach end node %s"%(endNode))
+            self.log.log(cpc.util.log.TRACE,"Trying to reach end node %s"%(endNode))
 
             server_msg = ServerToServerMessage(endNode)
             server_msg.connect()
             retresp = server_msg.delegateMessage(self.headers.dict,
                                                  self.rfile)
             #TODO send back the response with the headers received
-            log.log(cpc.util.log.TRACE,"Done. Delegating back reply message of length %d."%
+            self.log.log(cpc.util.log.TRACE,"Done. Delegating back reply message of length %d."%
                       len(retresp.message))
             self.send_response(200)
             # the content-length is in the message.
@@ -149,7 +154,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             for (key, val) in retresp.headers.iteritems():
                 kl=key.lower()
                 if kl!="content-length" and kl!="server" and kl!="date":
-                    log.log(cpc.util.log.TRACE,"Sending header '%s'='%s'"%(kl,val))
+                    self.log.log(cpc.util.log.TRACE,"Sending header '%s'='%s'"%(kl,val))
                     self.send_header(key,val)
             self.end_headers()
             retresp.message.seek(0)
@@ -166,7 +171,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
             if self.server.getState().getQuit():
-                log.info("shutting down")
+                self.log.info("shutting down")
                 self.server.shutdown()
 
     def _generateCookie(self):
@@ -191,7 +196,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
                 cookie = re.search('cpc-session=([\w-]+)',
                                    self.headers['Cookie']).group(1)
             except AttributeError as e:
-                log.warning("Received malformed cookie: %s"
+                self.log.warning("Received malformed cookie: %s"
                             %self.headers['Cookie'])
 
         if cookie is None:
@@ -223,18 +228,18 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
                 serverCmd=None
                 doFinish=False
                 serverState=self.server.getState()
+                response = cpc.network.server_response.ServerResponse()
                 try:
                     self._handleSession(request)
                     scList=self.server.getSCList()
-                    response = cpc.network.server_response.ServerResponse()
-
                     serverCmd=scList.getServerCommand(request)
-
-                    serverCmd.run(serverState, request, response)
+                    serverCmd[0].run(serverState, request, response)
                     doFinish=True
+
                 except cpc.util.CpcError as e:
                     response.add(("%s"%e.__str__()), status="ERROR")
-                    log.error(e.__str__())
+                    self.log.error(e.__str__())
+
                 except:
                     fo=StringIO()
                     traceback.print_exception(sys.exc_info()[0],
@@ -242,33 +247,32 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
                                               sys.exc_info()[2], file=fo)
                     errmsg="Server exception: %s"%(fo.getvalue())
                     response.add(errmsg, status="ERROR")
-                    log.error(errmsg)
+                    self.log.error(errmsg)
 
                 # now send the response and call the finish() function on the 
                 # command
                 self._sendResponse(response)
                 if doFinish and serverCmd is not None:
-                    serverCmd.finish(serverState, request)
+                    serverCmd[0].finish(serverState, request)
             else:
                 self.send_response(405)
                 self.send_header("content-length", 0)
                 self.send_header("connection",  "close")
                 self.end_headers()
         except cpc.util.CpcError as e:
-            log.error(e.__str__())
+            self.log.error(e.__str__())
         except:
             fo=StringIO()
             traceback.print_exception(sys.exc_info()[0],
                                       sys.exc_info()[1],
                                       sys.exc_info()[2], file=fo)
             errmsg="Server exception: %s"%(fo.getvalue())
-            log.error(errmsg)
-
+            self.log.error(errmsg)
 
     def _sendResponse(self,retmsg):
         conf = ServerConf()
         rets = retmsg.render()
-        log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
+        self.log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
 
         self.send_response(self.responseCode)
         self.send_header("content-length", len(rets))
@@ -293,3 +297,25 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         retmsg.close()
 
         return True
+
+
+class unverified_handler(handler_base):
+    """
+    Handles request that comes from an HTTPS connection where no verification
+    has been done
+    """
+    def setup(self):
+        handler_base.setup(self)
+        self.log=logging.getLogger('crs.server.request_handler_unverified')
+
+class verified_handler(handler_base):
+    """
+    Handles request that comes from an HTTPS connection where the client is
+    verified by the server and thus can be trusted.
+    """
+    def setup(self):
+        handler_base.setup(self)
+        self.log=logging.getLogger('crs.server.request_handler_verified')
+    def _handleSession(self, request):
+        handler_base._handleSession(self,request)
+        request.session['user'] = 'root'

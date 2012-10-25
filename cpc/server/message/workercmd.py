@@ -152,7 +152,7 @@ class WorkerReadyBase(ServerCommand):
             
             thisNode = Node(conf.getHostName(),
                             conf.getServerHTTPPort(),
-                            conf.getServerHTTPSPort(),
+                            conf.getServerVerifiedHTTPSPort(),
                             conf.getHostName())                                
             thisNode.nodes = conf.getNodes()      
             topology.addNode(thisNode)

@@ -64,7 +64,7 @@ def initiateConnectionBundle(conffile):
         print "Could not find a connection bundle \nPlease specify one with " \
               "with the -c flag or supply the file with the name\nclient.cnx" \
               " in your configuration folder "
-        sys.exit(0)
+        sys.exit(1)
 
 
 def initiateWorkerSetup():
@@ -74,8 +74,7 @@ def initiateWorkerSetup():
        @return ConnectionBundle
     '''
 
-    configName = socket.getfqdn()
-    openssl = cpc.util.openssl.OpenSSL(cn=configName)
+    openssl = cpc.util.openssl.OpenSSL()
     connectionBundle = openssl.setupClient()
     return connectionBundle
 

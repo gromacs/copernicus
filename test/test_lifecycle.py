@@ -36,7 +36,7 @@ class TestLifeCycle():
         setup_server(heartbeat='120')
         start_server()
         time.sleep(1) #let's cut it some slack
-
+        login_client()
         #load mdrun example project
         run_mdrun_example()
         #time.sleep(3)
@@ -56,7 +56,7 @@ class TestLifeCycle():
         w.shutdownGracefully()
         w.waitForOutput(expectedOutput='Received shutdown signal')
         #ensure that the command is back into the queue
-        retry_client_command(command='q', expectstdout='Queued', iterations=5)
+        retry_client_command(command='q', expectstdout='Queued', iterations=10)
 
         #check that nothing went wrong
         w.checkForExceptions()

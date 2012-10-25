@@ -20,13 +20,15 @@
 import subprocess
 import os
 #from socket import gethostname
+import socket
 import re
 import shutil
 from string import Template
 import time
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.connection_bundle import ConnectionBundle
-
+import random
+import string
 '''
 Created on Oct 29, 2010
 
@@ -38,15 +40,10 @@ class OpenSSL(object):
     A class used by the server to generate CA and perform certificate signing
     '''
  
-    def __init__(self,cn=None):
+    def __init__(self, cn = None):
         self.conf = ServerConf()
-        if cn == None:
-            self.cn = self.conf.getHostName()
-        else:            
-            self.cn=cn  #always used for the CA
-        self.fqdn = self.conf.getHostName()
+        self.cn = cn or self.conf.getHostName() or socket.getfqdn()
 
-        
     def setupCA(self):
         '''creates keypair and certificate for the CA'''
         #create certificate env                        
@@ -63,25 +60,24 @@ class OpenSSL(object):
         self._generateRootCert()
         
         self._generateCaChainFile()
-    
-    
+
+
     def setupClient(self):
         '''
         Creates a connection bundle for the Client and worker
         @returns ConnectionBundle
         '''
+        connectionBundle = ConnectionBundle(create=True, fqdn=self.cn)
         serverConf = ServerConf()
-        connectionBundle = ConnectionBundle(create=True, fqdn=self.fqdn)
-        tempDir = "tmp"
+        #generate random ascii string
+        randstring = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
+        tempDir = "%s/tmp/%s"%(self.conf.getConfDir(),randstring)
         privKeyFile = "%s/priv.pem"%tempDir
         pubKeyFile = "%s/pub.pem"%tempDir
         certReqConfigFile = "%s/cert_req.txt"%tempDir
         certFile = "%s/cert.pem"%tempDir
 
-        # we remove any tempdir that might have been created and not removed perhaps due to an error during the setup
-        if os.path.isdir(tempDir):
-            shutil.rmtree(tempDir)
-        os.makedirs("tmp")  #we create a temp dir for intermediate files
+        os.makedirs(tempDir)  #we create a temp dir for intermediate files
 
         self._generateKeyPair(privKeyFile=privKeyFile,pubKeyFile=pubKeyFile)
 
@@ -98,8 +94,10 @@ class OpenSSL(object):
 
         shutil.rmtree(tempDir)
         connectionBundle.setClientHTTPPort(serverConf.getServerHTTPPort())
-        connectionBundle.setClientHTTPSPort(serverConf.getServerHTTPSPort())
-
+        connectionBundle.setClientUnverifiedHTTPSPort(
+            serverConf.getServerUnverifiedHTTPSPort())
+        connectionBundle.setClientVerifiedHTTPSPort(
+            serverConf.getServerVerifiedHTTPSPort())
         return connectionBundle
 
     def setupServer(self):
