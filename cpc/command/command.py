@@ -369,6 +369,10 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         commandDict['priority'] = self.getFullPriority()
         #commandDict['dir'] = os.path.join(self.task.dir, self.dir)
         commandDict['dir'] = self.dir
+        if self.running:
+            commandDict['running']=1
+        else:
+            commandDict['running']=0
         if self.cputime > 0:
             commandDict['used-cpu-time'] = self.cputime
         return commandDict

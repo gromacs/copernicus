@@ -53,18 +53,49 @@ class CmdLine(object):
         return co.getvalue()
 
     @staticmethod
-    def listQueue(messageStr):
-        queueList = messageStr['message']     
-        co=StringIO()
-        co.write("Queue:\n")
+    def _listQueue(queueList, co, showFmt):
+        fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
+        if showFmt: 
+            co.write(fmtstring%('Pty', 'Project', 'Task ID', 'Executable'))
         for cmd in queueList:
             if 'project' in cmd:
-                co.write("%3d %s %s: %s\n"%(cmd['priority'], cmd['project'], 
-                                            cmd['taskID'], cmd['executable']))
+                co.write(fmtstring%("%3d"%cmd['priority'], 
+                                    cmd['project'], 
+                                    cmd['taskID'], 
+                                    cmd['executable']))
             else:
-                co.write("%3d %s: %s\n"%(cmd['priority'], 
-                                         cmd['taskID'], cmd['executable']))
+                co.write(fmtstring%(("%3d"%cmd['priority'],  "",
+                                     cmd['taskID'], 
+                                     cmd['executable'])))
+
+    @staticmethod
+    def listQueue(messageStr):
+        queueList = messageStr['message']
+        co=StringIO()
+        if isinstance(queueList, list):
+            co.write("Queued\n")
+            CmdLine._listQueue(queueList, co, len(queueList)>0)
+        else:
+            nqueued=len(queueList['queue'])
+            nrun=len(queueList['running'])
+            if nqueued>0:
+                co.write("Queued\n")
+                showFmt=len(queueList['queue'])>0
+                CmdLine._listQueue(queueList['queue'], co, showFmt)
+            if nrun>0:
+                if nqueued>0:
+                    co.write('\n')
+                co.write("Running\n")
+                showFmt = (nqueued<1) and (nrun>0)
+                CmdLine._listQueue(queueList['running'], co, showFmt)
         return co.getvalue()
+
+    #@staticmethod
+    #def listRunningQueue(messageStr):
+    #    co=StringIO()
+    #    co.write("Running\n")
+    #    CmdLine._listQueue(messageStr, co, False)
+    #    return co.getvalue()
 
     @staticmethod
     def listRunning(messageStr):

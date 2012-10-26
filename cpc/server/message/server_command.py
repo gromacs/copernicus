@@ -108,7 +108,11 @@ class SCListServerItems(ServerCommand):
             queue = []            
             for cmd in list:
                 queue.append(cmd.toJSON())
-            retstr = queue
+            running=[]
+            cmds=serverState.getRunningCmdList().getCmdList()
+            for cmd in cmds:
+                running.append(cmd.toJSON())
+            retstr = { "queue": queue, "running" : running }
         elif toList == "running":
             running = []
             cmds=serverState.getRunningCmdList().getCmdList()
