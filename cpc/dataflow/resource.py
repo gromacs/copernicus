@@ -29,7 +29,7 @@ log=logging.getLogger('cpc.dataflow.resource')
 import cpc.util
 import apperror
 import run
-import cpc.server.command
+import cpc.command
 
 
 
@@ -94,9 +94,9 @@ class Resources:
     def updateCmd(self, cmd):
         """Set the command's resources from an input value."""
         for name, item in self.min.iteritems():
-           cmd.addMinRequired(cpc.server.command.Resource(name, item))
+           cmd.addMinRequired(cpc.command.Resource(name, item))
         for name, item in self.max.iteritems():
-           cmd.addMaxAllowed(cpc.server.command.Resource(name, item))
+           cmd.addMaxAllowed(cpc.command.Resource(name, item))
 
     def save(self,filename):
         svf=dict()

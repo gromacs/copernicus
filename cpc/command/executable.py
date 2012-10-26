@@ -33,7 +33,7 @@ import platform
 from version import Version
 import logging
 
-log = logging.getLogger('cpc.server.command.executable')
+log = logging.getLogger('cpc.command.executable')
 
 
 class Executable(object):

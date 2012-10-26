@@ -52,7 +52,7 @@ import active_network
 import active_inst
 import task
 import run
-import cpc.server.command
+import cpc.command
 
 class ProjectError(apperror.ApplicationError):
     pass
@@ -675,7 +675,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         elif name == "command-list":
             if self.curTask is None:
                 raise ProjectXMLError("commands without task", self)
-            self.cmdReader=cpc.server.command.CommandReader()
+            self.cmdReader=cpc.command.CommandReader()
             #self.cmdReader.setReportFilename(self.filename)
         elif name == "desc":
             # A description. First find out what it describes.

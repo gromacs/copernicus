@@ -101,7 +101,8 @@ class SCProjectDelete(ProjectServerCommand):
             msg = " and its directory %s"%prj.getBasedir()
         #q.deleteByProject(prj, False)
         serverState.getProjectList().delete(prj, delDir)
-        if name == request.session['default_project_name']:
+        if ( ( 'default_project_name' in request.session ) and 
+             ( name == request.session['default_project_name'] ) ):
             del request.session['default_project_name']
         response.add("Project %s%s deleted."%(name, msg))
 

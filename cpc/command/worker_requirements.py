@@ -28,12 +28,11 @@ except ImportError:
 
 
 import cpc.util.plugin
-from cpc.util.conf.server_conf import ServerConf
 import platform
 from version import Version
 import logging
 
-log = logging.getLogger('cpc.server.command.extras_handler')
+log = logging.getLogger('cpc.command.extras_handler')
 
 
 

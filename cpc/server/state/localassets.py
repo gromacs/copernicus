@@ -19,12 +19,16 @@
 
 import logging
 import os.path
-from cpc.util.conf.server_conf import ServerConf
-from cpc.server.state.asset import Asset
 import mmap
 
+from cpc.util.conf.server_conf import ServerConf
+from cpc.server.state.asset import Asset
+import cpc.util
 
 log=logging.getLogger('cpc.server.state.localassets')
+
+class LocalAssetError(cpc.util.CpcError):
+    pass
 
 class LocalAsset(Asset):
     def __init__(self, cmdID, projectServer, data, assetType, storeData=True):
@@ -43,14 +47,17 @@ class LocalAsset(Asset):
         
         
     def __storeData(self, data):
-        """Stores a copy of the file reference and returns a reference to the new file"""
-        assert(os.path.isfile(self.__getOutputFilename()) is False)
-        #what should we do if file exists already?
+        """Stores a copy of the file reference and returns a reference to the 
+           new file"""
+        filename=self.__getOutputFilename()
+        # we checked for the existence of the asset before, so any lingering
+        # file names are OK
 
-        if(not os.path.isdir(self.__getOutputFilePath())):
-            os.makedirs(self.__getOutputFilePath()) 
+        outputFilePath=self.__getOutputFilePath()
+        if(not os.path.isdir(outputFilePath)):
+            os.makedirs(outputFilePath) 
 
-        self.__data = open(self.__getOutputFilename(), "w+")
+        self.__data = open(filename, "w+")
         self.__data.write(data.read())
         self.__data.flush()
         self.__data.seek(0)
@@ -100,7 +107,11 @@ class LocalAssets(object):
         self.assets = dict()
         
     def addCmdOutputAsset(self, cmdID, projectServer, fileData):
-        self.__addAsset(cmdID, projectServer, fileData, LocalAsset.cmdOutput())
+        if cmdID not in self.assets:
+            self.__addAsset(cmdID, projectServer, fileData, 
+                            LocalAsset.cmdOutput())
+        else:
+            raise LocalAssetError("Local assset %s already exists"%cmdID)
         
     def __addAsset(self, cmdID, projectServer, data, dataType):
         self.assets[cmdID] = LocalAsset(cmdID, projectServer, data, dataType)

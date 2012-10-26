@@ -37,7 +37,6 @@ import apperror
 import value
 import function
 import run
-import cpc.server.command
 import atomic
 
 

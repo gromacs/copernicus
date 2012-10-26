@@ -86,16 +86,33 @@ class CmdLine(object):
         list=messageStr['message']
         co=StringIO()
         co.write("Heartbeat items:\n")
-        for worker in list['workers']:
-            co.write("Worker id=%s\n"%worker['worker_id'])
-            for item in worker['items']:
+        if 'workers' in list:
+            # old version
+            for worker in list['workers']:
+                co.write("Worker id=%s\n"%worker['worker_id'])
+                for item in worker['items']:
+                    if item['data_accessible']:
+                        accessible="accessible"
+                    else:
+                        accessible="not accessible"
+                    co.write("    Command id=%s\n"%(item['cmd_id']))
+                    co.write("\tserver=%s, data %s\n"%(item['server_name'],
+                                                       accessible))
+        if 'heartbeat_items' in list:
+            # new version
+            for item in list['heartbeat_items']:
+                co.write("  Command ID:   %s\n"%(item['cmd_id']))
+                if 'worker_id' in item:
+                    co.write("    Worker ID:  %s\n"%item['worker_id'])
+                if 'heartbeat_expiry_time' in item:
+                    co.write("    Expires in: %s s\n"%
+                             item['heartbeat_expiry_time'])
                 if item['data_accessible']:
                     accessible="accessible"
                 else:
                     accessible="not accessible"
-                co.write("    Command id=%s\n"%(item['cmd_id']))
-                co.write("\tserver=%s, data %s\n"%(item['server_name'], 
-                                                   accessible))
+                co.write("    Server:     %s, data %s\n"%
+                         (item['server_name'], accessible))
         return co.getvalue()
 
     @staticmethod

@@ -25,9 +25,8 @@ from cpc.util.conf.server_conf import ServerConf
 
 import projectlist
 import cpc.server.queue
-import cmdlist
+import heartbeat
 import logging
-import cpc.server.heartbeat
 import cpc.server.queue
 import cpc.util.plugin
 import localassets
@@ -35,7 +34,7 @@ import remoteassets
 import cpc.util.worker_state
 from cpc.server.state.session import SessionHandler
 import os
-log=logging.getLogger('cpc.server.command')
+log=logging.getLogger('cpc.server.state')
 
 class ServerState:
     """Maintains the server state. Must provide synchronized access 
@@ -48,8 +47,7 @@ class ServerState:
         self.cmdQueue=cpc.server.queue.CmdQueue()
         self.projectlist=projectlist.ProjectList(conf, self.cmdQueue)
         self.taskExecThreads=None
-        self.runningCmdList=cmdlist.RunningCmdList()
-        self.heartbeatList=cpc.server.heartbeat.HeartbeatList()
+        self.runningCmdList=heartbeat.RunningCmdList(self.cmdQueue)
         self.localAssets=localassets.LocalAssets()
         self.remoteAssets=remoteassets.RemoteAssets()
         self.sessionHandler=SessionHandler()
@@ -155,11 +153,11 @@ class ServerState:
         self.projectlist.writeFullState(self.conf.getProjectFile())
         #self.taskQueue.writeFullState(self.conf.getTaskFile())
         #self.projectlist.writeState(self.conf.getProjectFile())
-        self.heartbeatList.writeState()
+        self.runningCmdList.writeState()
 
     def read(self):
         self.projectlist.readState(self, self.conf.getProjectFile())
-        self.heartbeatList.readState()
+        self.runningCmdList.readState()
 
     #rereads the project state for one specific project
     def readProjectState(self,projectName):

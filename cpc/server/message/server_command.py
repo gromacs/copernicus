@@ -42,7 +42,7 @@ from cpc.server.message.server_message import ServerMessage
 import json
 
 
-log=logging.getLogger('cpc.server.command')
+log=logging.getLogger('cpc.server.message')
 
 class ServerCommandError(CpcError):
     def __init__(self, msg):
@@ -111,13 +111,12 @@ class SCListServerItems(ServerCommand):
             retstr = queue
         elif toList == "running":
             running = []
-            list=serverState.getRunningCmdList().list()
-            for cmd in list:
+            cmds=serverState.getRunningCmdList().getCmdList()
+            for cmd in cmds:
                 running.append(cmd.toJSON())
             retstr = running
         elif toList == "heartbeats":
-            list=serverState.getHeartbeatList()
-            heartbeats = list.toJSON()
+            heartbeats=serverState.getRunningCmdList().toJSON() #.list()
             retstr = heartbeats
         else:
             raise ServerCommandError("Unknown item to list: '%s'"%toList)

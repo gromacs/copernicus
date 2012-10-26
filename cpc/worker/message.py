@@ -53,13 +53,15 @@ class WorkerMessage(ClientBase):
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()    
 
-    def workerRequest(self, archdata,topology=None):
+    def workerRequest(self, workerID, archdata,topology=None):
         cmdstring='worker-ready'
         fields = []
         input = Input('cmd', cmdstring)
         fields.append(input)
         adata = Input('worker', archdata)
         fields.append(adata)
+        workerIdInput = Input('worker_id', workerID)
+        fields.append(workerIdInput)
         if topology != None:
             topologyInput = Input('topology',
                          json.dumps(topology,default = json_serializer.toJson,indent=4))  # a json structure that needs to be dumped

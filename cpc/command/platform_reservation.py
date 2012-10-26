@@ -25,8 +25,9 @@ except ImportError:
     from StringIO import StringIO
 
 
-import cpc.server.command
+import resource
 import cpc.util
+
 class PlatformReservation(object):
     """A reservation associated with a platform. Used to communicate
        with the platform plugin.
@@ -123,7 +124,7 @@ class PlatformReservationReader(xml.sax.handler.ContentHandler):
                 id=attrs.getValue('id')
             self.reservation=PlatformReservation(workerDir, cmdDir, id)
             self.inResources=True
-            self.resourceReader=cpc.server.command.ResourceReader()
+            self.resourceReader=resource.ResourceReader()
         else:
             raise PlatformReservationReaderError("unknown tag %s"%name, 
                                                  self.loc)

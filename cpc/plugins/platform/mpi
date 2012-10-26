@@ -41,7 +41,7 @@ sys.path.append(sys.argv[1])
 # paths.
 import cpc.util
 import cpc.util.plugin
-import cpc.server.command.platform_reservation
+import cpc.command.platform_reservation
 
 
 platform_name="mpi"
@@ -117,7 +117,7 @@ try:
         sys.exit(1)
 
     # now read in the platform reservation
-    plr=cpc.server.command.platform_reservation.PlatformReservationReader()
+    plr=cpc.command.platform_reservation.PlatformReservationReader()
     plr.read(sys.stdin)
     reservation=plr.getReservation()
 

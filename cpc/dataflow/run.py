@@ -36,6 +36,7 @@ import apperror
 import keywords
 import value
 import vtype
+import cpc.command
 
 
 class FunctionRunError(apperror.ApplicationError):
@@ -716,7 +717,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                 else:
                     raise IOReaderError("Can't cancel commands in input", self)
             if self.cmdReader is not None:
-                self.cmdReader=cpc.server.command.CommandReader()
+                self.cmdReader=cpc.command.CommandReader()
         elif name == "value":
             if not attrs.has_key('id'):
                 raise IOReaderError("no id for value", self)

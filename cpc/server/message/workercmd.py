@@ -27,22 +27,23 @@ import time
 
 
 
-import cpc.server.command.platform_exec_reader
-import cpc.server.state.cmdlist
+import cpc.command.platform_exec_reader
 import cpc.util
 import cpc.util.log
 
-from cpc.server.command.worker_matcher import CommandWorkerMatcher
+from cpc.command.worker_matcher import CommandWorkerMatcher
 
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util import json_serializer
 from cpc.network.node import Nodes,Node
-from cpc.network.server_to_server_message import ServerToServerMessage
+import cpc.server.message.server_message 
 from cpc.server.tracking.tracker import Tracker
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.connection_bundle import ConnectionBundle
 from server_command import ServerCommand
+
+import cpc.command.heartbeat
 
 log=logging.getLogger('cpc.server.workercmd')
 
@@ -55,7 +56,7 @@ class SCWorkerReady(ServerCommand):
 
     def run(self, serverState, request, response):
         # first read platform capabilities and executables
-        rdr=cpc.server.command.platform_exec_reader.PlatformExecutableReader()
+        rdr=cpc.command.platform_exec_reader.PlatformExecutableReader()
         workerData=request.getParam('worker')
         log.debug("Worker platform + executables: %s"%workerData)
         rdr.readString(workerData,"Worker-reported platform + executables")
@@ -70,28 +71,36 @@ class SCWorkerReady(ServerCommand):
             time.sleep(5)
             cmds.extend(cwm.getWork(serverState.getCmdQueue()))
         #cmds=serverState.getCmdQueue().getUntil(matchCommandWorker, cwm)
-        if request.headers.has_key('originating-server'):
+        # check whether there is an originating server. If not, we're it
+        if 'originating-server' in request.headers:
             originating = request.headers['originating-server']
         else:
             # If the originating server property has not been set,  the 
             # request hasn't been forwarded, therefore we are the originating 
             # server
             originating = ServerConf().getHostName() 
+        # check the expected heartbeat time.
+        if 'heartbeat-interval' in request.headers:
+            heartbeatInterval = request.headers['heartbeat-interval']
+        else:
+            heartbeatInterval = ServerConf().getHeartbeatTime() 
         log.debug("worker identified %s"%request.headers['originating-client'] )
         serverState.setWorkerState("idle",workerData,
-                                   request.headers['originating-client'])    
+                                   request.headers['originating-client'])
         
         if len(cmds) > 0:
+            # first add them to the running list so they never get lost
+            runningCmdList=serverState.getRunningCmdList()
+            runningCmdList.add(cmds, originating, heartbeatInterval)
             # construct the tar file with the workloads. 
             tff=tempfile.TemporaryFile()
             tf=tarfile.open(fileobj=tff, mode="w:gz")
-            runningCmdList=serverState.getRunningCmdList()
             # make the commands ready
             for cmd in cmds:
                 log.debug("Adding command id %s to tar file."%cmd.id)
                 # write the command description to the command's directory
                 task=cmd.getTask()
-                log.debug(cmd)
+                #log.debug(cmd)
                 project=task.getProject()
                 taskDir = "task_%s"%task.getID()
                 cmddir=os.path.join(project.basedir,taskDir, cmd.dir)
@@ -101,9 +110,6 @@ class SCWorkerReady(ServerCommand):
                 outf.close()
                 tf.add(cmddir, arcname=arcdir, recursive=True)
                 # set the state of the command.
-                runningCmdList.add(cmd, originating)
-                #FIXME commands should have a set state
-                
             tf.close()
             tff.seek(0)
             # now send it back
@@ -158,22 +164,29 @@ class SCWorkerReady(ServerCommand):
                         response.setFile(tmp,'application/x-tar')
                         response.headers['originating-server']=\
                                   clientResponse.headers['originating-server']
+                        if 'heartbeat-interval' in clientResponse.headers:
+                            response.headers['hearbeat-interval']=\
+                                  clientResponse.headers['heartbeat-interval']
+                        else:
+                            response.headers['hearbeat-interval']=\
+                                heartbeatInterval = \
+                                ServerConf().getHeartbeatTime() 
+                            
                     #OPTIMIZE leads to a lot of folding and unfolding of packages 
             if not hasJob:           
                 response.add("No command")
 
 class SCCommandFinishedForward(ServerCommand):
-    """Get forwarded finished command info. The command output is not sent in 
+    """Handle forwarded finished command. The command output is not sent in 
        this message"""
     def __init__(self):
         ServerCommand.__init__(self, "command-finished-forward")
 
     def run(self, serverState, request, response):
-        self.lock = threading.Lock()
+        #self.lock = threading.Lock()
         cmdID=request.getParam('cmd_id')
         workerServer=request.getParam('worker_server')
-        runningCmdList=serverState.getRunningCmdList()
-        cmd=runningCmdList.get(cmdID)
+        #cmd=runningCmdList.getCmd(cmdID)
         returncode=None
         if request.hasParam('return_code'):
             returncode=int(request.getParam('return_code'))
@@ -196,33 +209,10 @@ class SCCommandFinishedForward(ServerCommand):
             runfile = rundata.getRawData()
         log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
 
-        runningCmdList.handleFinished(cmd)
-        
-        #TODO should be located elsewhere
-        with self.lock:
-            cmd.running = False
-            cmd.setReturncode(returncode)
-            cmd.addCputime(cputime)
-            if runfile is not None:
-                log.debug("extracting file for %s to dir %s"%(cmdID,cmd.dir))
-                cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
-        
-        task = cmd.getTask()
-        if task is not None:
-            (newcmds, cancelcmds) = task.run(cmd)
-            
-        cmdQueue = serverState.getProjectList().getCmdQueue()
-        if cancelcmds is not None:
-            for cmd in cancelcmds:
-                cmdQueue.remove(cmd)
-        if newcmds is not None:
-            for cmd in newcmds:
-                cmdQueue.add(cmd)
-        
-        #TODO handle persistence
-        
-                
-        
+        runningCmdList=serverState.getRunningCmdList()
+        runningCmdList.handleFinished(cmdID, returncode, cputime, runfile)
+
+
 class SCCommandFinished(ServerCommand):
     """Get finished command data."""
     def __init__(self):
@@ -238,7 +228,7 @@ class SCCommandFinished(ServerCommand):
         cputime=0
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
-        
+       
         #the command's workerserver is by definition this server
         workerServer = serverState.conf.getHostName()
         
@@ -249,11 +239,10 @@ class SCCommandFinished(ServerCommand):
         
         #forward CommandFinished-signal to project server
         log.debug("finished command %s"%cmdID)
-        #msg=ServerToServerMessage(projServer)
-        #ret = msg.commandFinishForwardRequest(cmdID, workerServer, cputime)
-        msg=ServerToServerMessage(projServer)  #FIXME if this is current server do not make a connection to self??
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, 
-                                              returncode, cputime, True)
+        #FIXME if this is current server do not make a connection to self??
+        msg=cpc.server.message.server_message.ServerMessage(projServer)  
+        ret = msg.commandFinishedForwardRequest(cmdID, workerServer, 
+                                                returncode, cputime, True)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -288,9 +277,10 @@ class SCCommandFailed(ServerCommand):
                                                            projServer, runfile)
         #forward CommandFinished-signal to project server
         log.debug("Run failure reported")
-        msg=ServerToServerMessage(projServer)
-        ret = msg.commandFinishForwardRequest(cmdID, workerServer, returncode, 
-                                              cputime, (runfile is not None))
+        msg=cpc.server.message.server_message.ServerMessage(projServer)
+        ret = msg.commandFinishedForwardRequest(cmdID, workerServer, 
+                                                returncode, cputime, 
+                                                (runfile is not None))
 
 class SCWorkerHeartbeat(ServerCommand):
     """Handle a worker's heartbeat signal."""
@@ -302,10 +292,20 @@ class SCWorkerHeartbeat(ServerCommand):
         workerDir=request.getParam('worker_dir')
         iteration=request.getParam('iteration')
         itemsXML=request.getParam('heartbeat_items')
+        hwr=cpc.command.heartbeat.HeartbeatItemReader()
+        hwr.readString(itemsXML, "worker heartbeat items")
+        # TODO: relay!!
+        if serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
+                                                hwr.getItems()):
+            response.add('', data=ServerConf().getHeartbeatTime())
+        else:
+            response.add('Heatbeat NOT OK', status="ERROR")
+
+        
         # handle this from within the (locked) list that we have of all 
         # monitored runs
-        serverState.getHeartbeatList().ping(workerID, workerDir,
-                                            iteration, itemsXML, response)
+        #serverState.getHeartbeatList().ping(workerID, workerDir,
+        #                                    iteration, itemsXML, response)
 
 class SCWorkerFailed(ServerCommand):
     """Get notified about a failed worker."""

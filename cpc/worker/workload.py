@@ -38,11 +38,11 @@ except ImportError:
 
 
 import cpc.util
-from  cpc.server.command import Resource
-from  cpc.server.command import RunVars
-from  cpc.server.command import RunVarReader
+from  cpc.command import Resource
+from  cpc.command import RunVars
+from  cpc.command import RunVarReader
 import cpc.client
-from cpc.server.command.platform_reservation import PlatformReservation
+from cpc.command.platform_reservation import PlatformReservation
 import cpc.worker
 from cpc.worker.message import *
 

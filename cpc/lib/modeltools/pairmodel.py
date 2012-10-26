@@ -39,7 +39,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
 from sets import Set
 from cpc.dataflow import Resources
-import cpc.server.command
+import cpc.command
 import cpc.util
 
 import tune
@@ -125,7 +125,7 @@ def pairmodel(inp):
            "--seqname", os.path.basename(testseq)[:-4], "--samples1", pdb1,
            "--samples2", pdb2, "--suffix", suffixname ]
     args.extend(cmdlineOpts)
-    cmd=cpc.server.command.Command(newdirname, "modeltools/pairmodel", args)
+    cmd=cpc.command.Command(newdirname, "modeltools/pairmodel", args)
     if inp.hasInput("resources") and inp.getInput("resources") is not None:
         log.debug("resources is %s"%(inp.getInput("resources")))
         #rsrc=Resources(inp.getInputValue("resources"))

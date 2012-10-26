@@ -32,7 +32,7 @@ except ImportError:
 
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
-import item
+import cpc.command.heartbeat
 
 log=logging.getLogger('cpc.heartbeat.client')
 
@@ -58,14 +58,14 @@ class HeartbeatSender(object):
                 self.run=True
             self.cmdsChanged=True
             for workload in workloads:
-                hbi=item.HeartbeatItem(workload.cmd.id, 
-                                       workload.originatingServer,
-                                       workload.rundir)
+                hbi=cpc.command.heartbeat.HeartbeatItem(workload.cmd.id, 
+                                                workload.originatingServer,
+                                                workload.rundir)
                 self.cmds[workload.cmd.id]=hbi
                 for subwl in workload.joinedTo:
-                    hbi=item.HeartbeatItem(subwl.cmd.id, 
-                                           subwl.originatingServer,
-                                           subwl.rundir)
+                    hbi=cpc.command.heartbeat.HeartbeatItem(subwl.cmd.id, 
+                                                    subwl.originatingServer,
+                                                    subwl.rundir)
                     self.cmds[subwl.cmd.id] = hbi
             self._startThread()
                 
@@ -127,7 +127,7 @@ class HeartbeatSender(object):
         self.cmdsChanged=False
         # first write the items to xml
         co=StringIO()
-        co.write("<heartbeat>")
+        co.write('<heartbeat worker_id="%s">'%self.workerID)
         for items in self.cmds.itervalues():
             items.writeXML(co)
         co.write("</heartbeat>")
@@ -152,7 +152,7 @@ class HeartbeatSender(object):
             log.error("Got error from heartbeat request. Stopping worker.")
             sys.exit(1)
         rettime=int(presp.getData())
-        log.debug("Need to wait %s seconds"%(rettime))
+        log.debug("Waiting %s seconds for next ping"%(rettime))
         return rettime
 
 

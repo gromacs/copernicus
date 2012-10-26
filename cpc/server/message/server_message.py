@@ -87,8 +87,8 @@ class ServerMessage(ClientBase):
         input2=Input('nodeConnectRequest',json.dumps(nodeConnectRequest,default=json_serializer.toJson,indent=4))                
         input3=Input('unqalifiedDomainName',host)
         fields.append(input)
-        fields.append(input2)  
-        fields.append(input3)  
+        fields.append(input2)
+        fields.append(input3)
         response= self.putRequest(ServerRequest.prepareRequest(fields), https=False)        
         return response 
 
@@ -107,4 +107,34 @@ class ServerMessage(ClientBase):
         
         response= self.putRequest(ServerRequest.prepareRequest(fields), https=False)
         return response 
+
+    def commandFinishedForwardRequest(self, cmdID, workerServer, returncode,
+                                      cputime, haveData):
+        """A server-to-sever request doing command-finished. Used in
+            forwarding non-local command-finished requests."""
+        cmdstring='command-finished-forward'
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('cmd_id', cmdID))
+        fields.append(Input('worker_server', workerServer))
+        if returncode is not None:
+            fields.append(Input('return_code', returncode))
+        fields.append(Input('used_cpu_time', cputime))
+        if haveData:
+            fields.append(Input('run_data', 1))
+        
+        #the files are not sent in this message, instead they are pulled 
+        # from the project server upon receiving this message (for now)
+        files = []
+        headers = dict()
+        headers['end-node'] = self.host
+        headers['end-node-port'] = self.port
+        self.connect()
+        #log.debug("forwarding command finished to %s"%self.endNode)
+        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
+                                                              headers))
+
+        return response
+
 

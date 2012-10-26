@@ -154,31 +154,7 @@ class ServerToServerMessage(ClientBase):
         self.connect()
         response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
         return response
-    
-    
-    def commandFinishForwardRequest(self, cmdID, workerServer, returncode, 
-                                    cputime, haveData):
-        cmdstring='command-finished-forward'
-        fields = []
-        input = Input('cmd', cmdstring)
-        fields.append(input)
-        fields.append(Input('cmd_id', cmdID))
-        fields.append(Input('worker_server', workerServer))
-        if returncode is not None:
-            fields.append(Input('return_code', returncode))
-        fields.append(Input('used_cpu_time', cputime))
-        if haveData:
-            fields.append(Input('run_data', 1))
-        
-        #the files are not sent in this message, instead they are pulled 
-        # from the project server upon receiving this message (for now)
-        files = []
-        headers = dict()
-        headers['end-node'] = self.host
-        headers['end-node-port'] = self.port
-        self.connect()
-        log.debug("forwarding command finished to %s"%self.endNode)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files, headers))
 
-        return response
 #END -- THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE      
+    
+

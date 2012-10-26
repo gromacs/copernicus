@@ -39,7 +39,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import StringValue
 from cpc.dataflow import Resources
-import cpc.server.command
+import cpc.command
 import cpc.util
 
 import tune
@@ -511,10 +511,10 @@ def mdrun(inp):
                       "pullf.part%04d.xvg"%newFileNr, 
                       "state.cpt", "state_prev.cpt" ]
         log.debug("Expected output files: %s"%outputFiles)
-        cmd=cpc.server.command.Command(newdirname, "gromacs/mdrun",args,
-                                 minVersion=cpc.server.command.Version("4.5"),
-                                 addPriority=prio, env=cenv, 
-                                 outputFiles=outputFiles)
+        cmd=cpc.command.Command(newdirname, "gromacs/mdrun",args,
+                                minVersion=cpc.command.Version("4.5"),
+                                addPriority=prio, env=cenv, 
+                                outputFiles=outputFiles)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
             #log.debug("resources is %s"%(inp.getInput("resources")))
             #rsrc=Resources(inp.getInputValue("resources"))

@@ -38,7 +38,7 @@ from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import ArrayValue
 from cpc.dataflow import RecordValue
-import cpc.server.command
+import cpc.command
 import cpc.util
 
 

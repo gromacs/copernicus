@@ -39,7 +39,6 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import StringValue
 from cpc.dataflow import Resources
-import cpc.server.command
 import cpc.util
 
 import tune

@@ -30,11 +30,11 @@ import time
 
 
 import cpc.util.file
-import cpc.server.command
-from cpc.server.command.platform_reservation import PlatformReservation
+import cpc.command
+from cpc.command.platform_reservation import PlatformReservation
 from cpc.util.plugin import PlatformPlugin
 import workload
-import cpc.server.heartbeat
+import heartbeat
 from cpc.worker.message import WorkerMessage
 
 log=logging.getLogger('cpc.worker')
@@ -144,8 +144,7 @@ class Worker(object):
                    "Run cpc-worker from a user-writeable directory (e.g. /tmp)")
             raise WorkerError("Can't create directory '%s' %s."%
                               (self.mainDir, absn))
-        self.heartbeat=cpc.server.heartbeat.HeartbeatSender(self.id,
-                                                            self.mainDir)
+        self.heartbeat=heartbeat.HeartbeatSender(self.id, self.mainDir)
         # First get our architecture(s) (hw + sw) from the plugin
         self.plugin=PlatformPlugin(self.type, self.mainDir, self.conf)
         canRun=self.plugin.canRun()
@@ -299,7 +298,7 @@ class Worker(object):
             log.error("Platform plugin failed: %s"%plugin_retmsg[1])
             raise WorkerError("Platform plugin failed: %s"%plugin_retmsg[1])
         log.debug("From platform plugin, platform cmd: '%s'"%plugin_retmsg[1])
-        pfr=cpc.server.command.PlatformReader()
+        pfr=cpc.command.PlatformReader()
         # we also parse it for later.
         pfr.readString(plugin_retmsg[1],
                        ("Platform description from platform plugin %s"%
@@ -310,7 +309,7 @@ class Worker(object):
     def _getExecutables(self):
         """Get a list of executables as an ExecutableList object."""
         execdirs=self.conf.getExecutablesPath()
-        self.exelist=cpc.server.command.ExecutableList()
+        self.exelist=cpc.command.ExecutableList()
         for execdir in execdirs:
             self.exelist.readDir(execdir, self.platforms)
         self.exelist.genIDs()
@@ -337,7 +336,7 @@ class Worker(object):
         req+=u'</worker-request>\n'
         log.debug('request string is: %s'%req)
         runreq_clnt=WorkerMessage()
-        resp=runreq_clnt.workerRequest(req)
+        resp=runreq_clnt.workerRequest(self.id,req)
         #print "Got %s"%(resp.read(len(resp)))
         return resp
 
@@ -366,7 +365,7 @@ class Worker(object):
                 if os.path.exists(os.path.join(cmddir, "command.xml")):
                     log.debug("trying command directory: %s"%cmddir)
                     # there is a command here. Get the command.
-                    cr=cpc.server.command.CommandReader()
+                    cr=cpc.command.CommandReader()
                     commandFilename=os.path.join(cmddir, "command.xml")
                     cr.read(commandFilename)
                     # write log

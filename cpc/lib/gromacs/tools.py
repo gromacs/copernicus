@@ -42,7 +42,6 @@ from cpc.dataflow import FileValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
-import cpc.server.command
 import cpc.util
 
 class GromacsError(cpc.util.CpcError):

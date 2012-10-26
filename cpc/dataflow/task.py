@@ -34,7 +34,6 @@ from cpc.util.conf.server_conf import ServerConf
 import apperror
 import function
 import instance
-import cpc.server.command
 import cpc.util
 import run
 import connection

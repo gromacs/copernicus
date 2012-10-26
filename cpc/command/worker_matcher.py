@@ -27,10 +27,10 @@ import time
 
 
 
-import cpc.server.command.platform_exec_reader
+import platform_exec_reader
 import cpc.util
 import cpc.util.log
-import cpc.server.command
+import resource
 
 
 log=logging.getLogger('cpc.command.worker_matcher')
@@ -56,7 +56,7 @@ class CommandWorkerMatcher(object):
         # platform we use.
         self.used=dict()
         for rsrc in self.usePlatform.getMaxResources().itervalues():
-            self.used[rsrc.name]=cpc.server.command.Resource(rsrc.name, 0)
+            self.used[rsrc.name]=resource.Resource(rsrc.name, 0)
         self.type=None
         self.depleted=False
 
