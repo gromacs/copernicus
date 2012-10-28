@@ -44,37 +44,54 @@ def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
                                                "persistent.dat"))
     # the multiple restrained trjconvs
-    trjconvs=pers.get('trjconvs')
-    if trjconvs is None or trjconvs==0:
-        trrs=inp.getInput('trrs')
-        finished=True
-        if None in trrs:
-            finished=False
-        if finished==True:
-            for i in range(len(trrs)):
-                out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
-                out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
-                out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
-                # we don't want the 0 time point
-                out.addConnection('conv%d:out.confs'%i, 'self:sub_in.in_swarms[%d]'%i)
-            trjconvs=1
+    #trjconvs=pers.get('trjconvs')
+    #if trjconvs is None or trjconvs==0:
+    #    trrs=inp.getInput('trrs')
+    #    finished=True
+    #    if trrs is not None and len(trrs)>0:
+    #        for i in range(len(trrs)):
+    #            trr=inp.getInput('trrs[%d]'%i)
+    #            if FileValue(trr) is None:
+    #                finished=False
+    #    else:
+    #        finished=False
+    #    if finished==True:
+    #        for i in range(len(trrs)):
+    #            out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+    #            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+    #            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+    #            # we don't want the 0 time point
+    #            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.in_swarms[%d]'%i)
+    #        trjconvs=1
 
+    trjconvs=pers.get('trjconvs')
+    trrs=inp.getInput('trrs')
+    if trjconvs is None or trjconvs==0:
+        for i in range(len(trrs)):
+            out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+            out.addConnection('conv%d:out.confs'%i, 
+                              'self:ext_out.in_swarms[%d]'%i)
+            trjconvs=1
+   
     pers.set('trjconvs', trjconvs)
     pers.write()
 
-    if trjconvs==1:
-        trrs=inp.getInput('trrs')
-        #if confs is not None and len(confs)>0:
-        finished=True
-        for i in range(len(trrs)):
-            confs_i=inp.getSubnetInput('in_swarms[%d]'%i)
-            if confs_i is None or len(confs_i)==0:
-                finished=False
+    #if trjconvs==1:
+    #    trrs=inp.getInput('trrs')
+    #    #if confs is not None and len(confs)>0:
+    #    finished=True
+    #    for i in range(len(trrs)):
+    #        confs_i=inp.getSubnetInput('in_swarms[%d]'%i)
+    #        if confs_i is None or len(confs_i)==0:
+    #            finished=False
                 
-        if finished==True:
-            for i in range(len(trrs)):
-                for j in range(len(confs_i)):
-                        conf=inp.getSubnetInputValue('in_swarms[%d][%d]'%(i,j))
+    #    if finished==True:
+    #        out.setOut('in_swarms', inp.getSubnetInputValue('in_swarms'))
+            #for i in range(len(trrs)):
+            #    for j in range(len(confs_i)):
+            #            conf=inp.getSubnetInputValue('in_swarms[%d][%d]'%(i,j))
                                 #if conf.value is not None and conf.isUpdated():
                         out.setOut('in_swarms[%d][%d]'%(i,j), conf)
 # read the input data
