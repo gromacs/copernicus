@@ -36,6 +36,7 @@ from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.com.client_base import ClientBase
 from cpc.network.node import Node
 from cpc.network.node import Nodes
+from cpc.network.node import getSelfNode
 from cpc.network.cache import Cache
 log=logging.getLogger('cpc.server.server_to_server')
 
@@ -48,23 +49,24 @@ class ServerToServerMessage(ClientBase):
     #checks the network topology and finds out what node to connect to 
     #To reach the endnode. from then on it works like ClientBase
     #    
-    def __init__(self, endNode, endNodePort=13807):
+    def __init__(self, endNode):
         self.conf = ServerConf()    
-        self.initialize(endNode, endNodePort)
+        self.initialize(endNode)
         """Connect to a server opening a connection"""
         
     #@param String endNodeHostName
-    #@param String endNodePort
     #figures out what node to connect to in order to reach the end node
-    def initialize(self,endNodeHostName,endNodePort):                         
+    def initialize(self,endNodeHostName):                         
         
         topology=self.getNetworkTopology()       
-        startNode = Node(self.conf.getHostName(),self.conf.getServerHTTPPort(),
-                         self.conf.getServerHTTPSPort(),
-                         self.conf.getHostName())
+        # this is myself:
+        startNode = getSelfNode(self.conf)
+        #Node(self.conf.getHostName(),
+        #     self.conf.getServerHTTPPort(),
+        #     self.conf.getServerHTTPSPort(),
+        #     self.conf.getHostName())
          
         key = endNodeHostName
-        #key= endNodeHostName+":"+str(endNodePort)
         self.endNode = topology.nodes.get(key);
 
         route = Nodes.findRoute(startNode, self.endNode,topology)
@@ -79,7 +81,9 @@ class ServerToServerMessage(ClientBase):
           
         self.host = self.hostNode.host
         self.port = self.hostNode.https_port
-        log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%(self.host,self.port))
+        log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%
+                (self.host,self.port))
+
 
 
     #NOTE might make sense to move this to requestHandler

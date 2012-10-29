@@ -62,8 +62,7 @@ class ClientConnection:
         self.conf = conf
         self.cookieHandler = CookieHandler(conf)
 
-    def connect(self,host,port,conf,https=True):
-        
+    def connect(self,host,port,https=True):
         self.host = host
         self.port = port
         privateKey = self.conf.getPrivateKey()

@@ -120,13 +120,13 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             if self.headers.has_key('end-node'):
                 endNode=self.headers['end-node']
 
-            endNodePort = None
-            if self.headers.has_key('end-node-port'):
-                endNodePort=self.headers['end-node-port']
+            #endNodePort = None
+            #if self.headers.has_key('end-node-port'):
+            #    endNodePort=self.headers['end-node-port']
 
-            log.log(cpc.util.log.TRACE,"Trying to reach end node %s:%s"%(endNode,endNodePort))
+            log.log(cpc.util.log.TRACE,"Trying to reach end node %s"%(endNode))
 
-            server_msg = ServerToServerMessage(endNode,endNodePort)
+            server_msg = ServerToServerMessage(endNode)
             server_msg.connect()
             retresp = server_msg.delegateMessage(self.headers.dict,
                                                  self.rfile)

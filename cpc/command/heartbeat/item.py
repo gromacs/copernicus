@@ -196,14 +196,7 @@ class HeartbeatItemReader(xml.sax.handler.ContentHandler):
         """Initialize the reader.
            worker = the worker to read heartbeat signal into. If it is none,
                     a heartbeat list containing multiple workers will be read"""
-        #if worker is None:
-        #    self.curWorker=None
-        #    self.workers=[]
-        #else:
-        #    self.curWorker=worker
-        #    self.workers=None
         self.items=[]
-        #self.readList=(worker is None)
 
     def getItems(self):
         """Get the worker list with items."""
@@ -251,20 +244,6 @@ class HeartbeatItemReader(xml.sax.handler.ContentHandler):
             runDir=attrs.getValue("run_dir")
             hbi=HeartbeatItem(cmdID, serverName, runDir)
             self.items.append(hbi)
-        #elif name == "worker":
-        #    if not self.readList:
-        #        raise HeartbeatReaderError("More than one worker in heartbeat signal")
-        #    if not attrs.has_key("id"):
-        #        raise HeartbeatReaderError("worker has no id", self.loc)
-        #    if not attrs.has_key("dir"):
-        #        raise HeartbeatReaderError("worker has no dir", self.loc)
-        #    id=attrs.getValue('id')
-        #    workerDir=attrs.getValue('dir')
-        #    self.curWorker=HeartbeatWorker(id, workerDir)
-        #    self.workers.append(self.curWorker)
-        #elif name == "heartbeat-list":
-        #    if not self.readList:
-        #        raise HeartbeatReaderError("Unsupported tag %s"%name, self.loc)
         elif name == "heartbeat":
             pass
         else:

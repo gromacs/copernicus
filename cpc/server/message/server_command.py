@@ -38,7 +38,7 @@ from cpc.network.cache import Cache
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
 import cpc.server.message
-from cpc.server.message.server_message import ServerMessage
+from cpc.server.message.server_message import RawServerMessage
 import json
 
 
@@ -224,7 +224,7 @@ class ScAddNode(ServerCommand):
         key = inf.read()     
        
                 
-        serv = ServerMessage(host,http_port)
+        serv = RawServerMessage(host,http_port)
         resp = ProcessedResponse(serv.addNodeRequest(key,host))
         
         nodeConnectRequest = resp.getData()
@@ -295,7 +295,7 @@ class ScGrantNodeConnection(ServerCommand):
         if nodes.exists(key):
             nodeToAdd = nodes.get(key) #this returns a nodeConnectRequest object
 
-            serv = cpc.server.message.server_message.ServerMessage(nodeToAdd.host,nodeToAdd.http_port) #trying to connect to https port here
+            serv = RawServerMessage(nodeToAdd.host,nodeToAdd.http_port) #trying to connect to https port here
             resp = serv.addNodeAccepted()   #sending a message saying what node accepted the request 
             #TODO analyze the response, if it is an error of some sort do not continue
             conf.addNode(Node(nodeToAdd.host,

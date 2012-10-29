@@ -23,11 +23,14 @@ Created on Feb 2, 2011
 @author: iman
 '''
 from operator import itemgetter
+import threading
 import logging
 
-
-
 log=logging.getLogger('cpc.network.node')
+
+selfNode=None
+selfNodeLock=threading.Lock()
+
 class Nodes(object):
     def __init__(self):
         self.nodes = dict()
@@ -161,3 +164,16 @@ class Node(object):
     def getId(self):
         #return '%s:%s'%(self.qualified_name,self.https_port)
         return '%s'%(self.qualified_name)
+
+
+def getSelfNode(conf):
+    """Return the 'self' node."""
+    global selfNode, selfNodeLock
+    with selfNodeLock:
+        if selfNode is None:
+            selfNode=Node(conf.getHostName(),
+                          conf.getServerHTTPPort(),
+                          conf.getServerHTTPSPort(),
+                          conf.getHostName())
+    return selfNode
+

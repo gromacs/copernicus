@@ -53,21 +53,15 @@ class WorkerMessage(ClientBase):
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()    
 
-    def workerRequest(self, workerID, archdata,topology=None):
+    def workerRequest(self, workerID, archdata):
         cmdstring='worker-ready'
         fields = []
-        input = Input('cmd', cmdstring)
-        fields.append(input)
-        adata = Input('worker', archdata)
-        fields.append(adata)
-        workerIdInput = Input('worker_id', workerID)
-        fields.append(workerIdInput)
-        if topology != None:
-            topologyInput = Input('topology',
-                         json.dumps(topology,default = json_serializer.toJson,indent=4))  # a json structure that needs to be dumped
-            fields.append(topologyInput)
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('worker', archdata))
+        fields.append(Input('worker-id', workerID))
         headers = dict()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
+        response=self.putRequest(ServerRequest.prepareRequest(fields, [], 
+                                                              headers))
         return response
     
     def commandFinishedRequest(self, cmdID, origServer, returncode, cputime, 
@@ -91,27 +85,6 @@ class WorkerMessage(ClientBase):
                                                               files, headers))
         return response
     
-    #def commandFailedRequest(self, cmdID, origServer, jobTarFileobj=None):
-    #    cmdstring='command-failed'
-    #    fields = []
-    #    input = Input('cmd', cmdstring)
-    #    cmdIdInput = Input('cmd_id', cmdID)
-    #    fields.append(input)
-    #    fields.append(cmdIdInput)
-    #    fields.append(Input('project_server', origServer))
-    #    if jobTarFileobj is not None:
-    #        jobTarFileobj.seek(0)
-    #        files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
-    #    else:
-    #        files=[]
-    #    headers = dict()
-    #    if origServer is not None:
-    #        headers['end-node'] = origServer
-    #        #headers['direction'] = 'up'
-    #    response=self.putRequest(ServerRequest.prepareRequest(fields, files, 
-    #                                                          headers))
-    #    return response
-
     def workerHeartbeatRequest(self, workerID, workerDir, first, last, changed,
                                heartbeatItemsXML):
         cmdstring='worker-heartbeat'                   
@@ -124,41 +97,39 @@ class WorkerMessage(ClientBase):
         else:
             iteration="none"
         fields = []
-        input = Input('cmd', cmdstring)
-        workerIdInput = Input('worker_id', workerID)
-        workerDirInput = Input('worker_dir', workerDir)
-        iterationsInput = Input('iteration', iteration)
-        workloadsData = Input('heartbeat_items', heartbeatItemsXML)
-        fields.append(input)
-        fields.append(workerIdInput)
-        fields.append(workerDirInput)
-        fields.append(iterationsInput)
-        fields.append(workloadsData)
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('worker_id', workerID))
+        fields.append(Input('worker_dir', workerDir))
+        fields.append(Input('iteration', iteration))
+        fields.append(Input('heartbeat_items', heartbeatItemsXML))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
     
-    #FIXME duplicate in client/message.py
-    def addClientRequest(self,host,port):                
-        cmdstring = "add-client-request"
-        fields = []
-        files = []
-        fields.append(Input('cmd', cmdstring))
-        
-        
-        inf=open(self.conf.getCACertFile(), "r")
-        key = inf.read()   
-        
-        nodeConnectRequest = NodeConnectRequest(self.conf.getHostName()
-                                                ,self.conf.getClientHTTPPort()
-                                                ,self.conf.getClientHTTPSPort()
-                                                ,key,self.conf.getHostName())
-
-        input2=Input('clientConnectRequest',json.dumps(nodeConnectRequest,default=json_serializer.toJson,indent=4))
-
-        fields.append(input2)
-        
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files),https=False)
-                  
-        return response          
-
-    
+#    #FIXME duplicate in client/message.py
+#    def addClientRequest(self,host,port):                
+#        cmdstring = "add-client-request"
+#        fields = []
+#        files = []
+#        fields.append(Input('cmd', cmdstring))
+#        
+#        
+#        inf=open(self.conf.getCACertFile(), "r")
+#        key = inf.read()   
+#        
+#        nodeConnectRequest = NodeConnectRequest(self.conf.getHostName()
+#                                                ,self.conf.getClientHTTPPort()
+#                                                ,self.conf.getClientHTTPSPort()
+#                                                ,key,self.conf.getHostName())
+#
+#        input2=Input('clientConnectRequest',
+#                     json.dumps(nodeConnectRequest,
+#                                default=json_serializer.toJson,
+#                                indent=4))
+#
+#        fields.append(input2)
+#        
+#        response=self.putRequest(ServerRequest.prepareRequest(fields,files),
+#                                 https=False)
+#                  
+#        return response          
+#    

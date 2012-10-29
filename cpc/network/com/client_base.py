@@ -17,11 +17,11 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-from cpc.util import CpcError
 import httplib
 import socket
-import client_connection
 
+import client_connection
+from cpc.util import CpcError
 '''
 Created on Mar 10, 2011
 

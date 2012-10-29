@@ -23,21 +23,25 @@ Created on Mar 10, 2011
 @author: iman
 '''
 import logging
+import json
+
+
 from cpc.network.com.client_base import ClientBase
+from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.server_conf import ServerConf
 from cpc.network.node import Node
 from cpc.network.node_connect_request import NodeConnectRequest
-import json
 from cpc.util import json_serializer
 
 log=logging.getLogger('cpc.server_to_server')
 
 #FIXME wrong naming having conflictin classes here
-class ServerMessage(ClientBase):
-    """ Server-to-server messages."""
+class RawServerMessage(ClientBase):
+    """Raw named server-to-server messages for messages to servers that are not
+        yet in the topology."""
     def __init__(self,host=None,port=None):
         self.conf = ServerConf()      
         self.host = host
@@ -49,27 +53,7 @@ class ServerMessage(ClientBase):
             
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()
-            
-    def commandFailedRequest(self, cmdID, origServer, jobTarFileobj=None):
-        cmdstring='command-failed'
-        fields = []
-        input = Input('cmd', cmdstring)
-        cmdIdInput = Input('cmd_id', cmdID)
-        fields.append(cmdIdInput)
-        fields.append(input)
-        fields.append(Input('project_server', origServer))
-        if jobTarFileobj is not None:
-            jobTarFileobj.seek(0)
-            files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
-        else:
-            files=[]
-        headers = dict()
-        # TODO: can this ever be not None?
-        if origServer is not None:
-            headers['end-node'] = origServer            
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files, 
-                                                              headers))
-        return response
+ 
 
     #This is a HTTP message
     def addNodeRequest(self,key,host):
@@ -84,32 +68,85 @@ class ServerMessage(ClientBase):
                                                 ,key
                                                 ,conf.getHostName())
 
-        input2=Input('nodeConnectRequest',json.dumps(nodeConnectRequest,default=json_serializer.toJson,indent=4))                
+        input2=Input('nodeConnectRequest',
+                     json.dumps(nodeConnectRequest,
+                                default=json_serializer.toJson,
+                                indent=4))                
         input3=Input('unqalifiedDomainName',host)
         fields.append(input)
         fields.append(input2)
         fields.append(input3)
-        response= self.putRequest(ServerRequest.prepareRequest(fields), https=False)        
+        response= self.putRequest(ServerRequest.prepareRequest(fields), 
+                                  https=False)        
         return response 
 
     #This is a HTTP message
     def addNodeAccepted(self):
         conf = ServerConf()
-        node = Node(conf.getHostName(),conf.getServerHTTPPort(),conf.getServerHTTPSPort(),conf.getHostName())
+        node = Node(conf.getHostName(),
+                    conf.getServerHTTPPort(),
+                    conf.getServerHTTPSPort(),
+                    conf.getHostName())
         cmdstring ='node-connection-accepted'
         fields = []
         input=Input('cmd',cmdstring)
-        input2=Input('acceptedNode',json.dumps(node,default=json_serializer.toJson,indent=4))
+        input2=Input('acceptedNode',
+                     json.dumps(node,default=json_serializer.toJson,indent=4))
         
         
         fields.append(input)
         fields.append(input2)
         
-        response= self.putRequest(ServerRequest.prepareRequest(fields), https=False)
+        response= self.putRequest(ServerRequest.prepareRequest(fields), 
+                                  https=False)
         return response 
 
-    def commandFinishedForwardRequest(self, cmdID, workerServer, returncode,
-                                      cputime, haveData):
+class ServerMessage(ServerToServerMessage):
+    """ Server-to-server messages."""
+           
+    #def commandFailedRequest(self, cmdID, origServer, jobTarFileobj=None):
+    #    cmdstring='command-failed'
+    #    fields = []
+    #    input = Input('cmd', cmdstring)
+    #    cmdIdInput = Input('cmd_id', cmdID)
+    #    fields.append(cmdIdInput)
+    #    fields.append(input)
+    #    fields.append(Input('project_server', origServer))
+    #    if jobTarFileobj is not None:
+    #        jobTarFileobj.seek(0)
+    #        files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
+    #    else:
+    #        files=[]
+    #    headers = dict()
+    #    # TODO: can this ever be not None?
+    #    if origServer is not None:
+    #        headers['end-node'] = origServer            
+    #    response=self.putRequest(ServerRequest.prepareRequest(fields, files, 
+    #                                                          headers))
+    #    return response
+    def workerReadyForwardedRequest(self, workerID, archdata, topology,
+                                    originatingServer, heartbeatInterval):
+        cmdstring='worker-ready-forward'
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('worker', archdata))
+        fields.append(Input('worker-id', workerID))
+        fields.append(Input('originating-server', originatingServer))
+        fields.append(Input('heartbeat-interval', str(heartbeatInterval)))
+        topologyInput = Input('topology',
+                              # a json structure that needs to be dumped
+                              json.dumps(topology,
+                                         default = json_serializer.toJson,  
+                                         indent=4))
+        fields.append(topologyInput)
+        headers = dict()
+        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
+                                                              headers))
+        return response
+
+
+    def commandFinishedForwardedRequest(self, cmdID, workerServer, returncode,
+                                        cputime, haveData):
         """A server-to-sever request doing command-finished. Used in
             forwarding non-local command-finished requests."""
         cmdstring='command-finished-forward'
@@ -128,13 +165,35 @@ class ServerMessage(ClientBase):
         # from the project server upon receiving this message (for now)
         files = []
         headers = dict()
-        headers['end-node'] = self.host
-        headers['end-node-port'] = self.port
+        #headers['end-node'] = self.host
+        #headers['end-node-port'] = self.port
         self.connect()
         #log.debug("forwarding command finished to %s"%self.endNode)
         response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
                                                               headers))
+        return response
 
+
+    def heartbeatForwardedRequest(self, workerID, workerDir, workerServer, 
+                                  iteration, heartbeatItemsXML):
+        """A server-to-sever request doing heartbeat signal. Used in
+           forwarding non-local heartbeat requests."""
+        cmdstring='heartbeat-forward'
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('worker_id', workerID))
+        fields.append(Input('worker_dir', workerDir))
+        fields.append(Input('iteration', iteration))
+        fields.append(Input('worker_server', workerServer))
+        fields.append(Input('heartbeat_items', heartbeatItemsXML))
+        files = []
+        headers = dict()
+        #headers['end-node'] = self.host
+        #headers['end-node-port'] = self.port
+        self.connect()
+        #log.debug("forwarding command finished to %s"%self.endNode)
+        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
+                                                              headers))
         return response
 
 

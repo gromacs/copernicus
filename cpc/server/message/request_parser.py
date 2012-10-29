@@ -57,6 +57,7 @@ class ServerCommandList(object):
            run() on it."""
         cmd=request.getCmd()
         if cmd in self.cmds:
+            log.info('Request: %s'%cmd)
             self.cmds[cmd].run(serverState, request, response)
         else:
             raise ServerCommandError("Unknown command %s"%cmd)
@@ -66,14 +67,17 @@ scSecureList=ServerCommandList()
 scSecureList.add(server_command.SCStop())
 scSecureList.add(server_command.SCSaveState())
 scSecureList.add(server_command.SCTestServer())
-scSecureList.add(server_command.SCNetworkTopology())
-scSecureList.add(server_command.SCNetworkTopologyUpdate())
+# worker workload requests
 scSecureList.add(workercmd.SCWorkerReady())  
+scSecureList.add(workercmd.SCWorkerReadyForwarded())  
 scSecureList.add(workercmd.SCCommandFinished())
 scSecureList.add(workercmd.SCCommandFinishedForward())  
 scSecureList.add(workercmd.SCCommandFailed())  
+# heartbeat requests
 scSecureList.add(workercmd.SCWorkerHeartbeat())
+scSecureList.add(workercmd.SCHeartbeatForwarded())
 scSecureList.add(workercmd.SCWorkerFailed())  
+# overlay network topology
 scSecureList.add(server_command.SCListServerItems())
 scSecureList.add(server_command.SCReadConf())
 scSecureList.add(server_command.ScAddNode())
@@ -84,6 +88,9 @@ scSecureList.add(server_command.ScListSentNodeConnectionRequests())
 scSecureList.add(server_command.ScGrantNodeConnection()) 
 scSecureList.add(server_command.ScGrantAllNodeConnections())    
 scSecureList.add(server_command.ScChangeNodePriority()) 
+scSecureList.add(server_command.SCNetworkTopology())
+scSecureList.add(server_command.SCNetworkTopologyUpdate())
+# asset tracking
 scSecureList.add(trackingcmd.SCPullAsset())
 scSecureList.add(trackingcmd.SCClearAsset())
 # requests for dataflow
@@ -142,7 +149,7 @@ def parse(scList, request, serverState, response=None):
             
     if response is None:
         response = cpc.network.server_response.ServerResponse()
-    try:                        
+    try:
         scList.run(request, response, serverState)
     except cpc.util.CpcError as e:
         response.add(("%s"%e.__str__()), status="ERROR")

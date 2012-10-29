@@ -25,6 +25,12 @@ import tempfile
 import threading
 import time
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
 
 
 import cpc.command.platform_exec_reader
@@ -37,27 +43,38 @@ from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util import json_serializer
 from cpc.network.node import Nodes,Node
-import cpc.server.message.server_message 
+from cpc.server.message.server_message import ServerMessage
 from cpc.server.tracking.tracker import Tracker
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.connection_bundle import ConnectionBundle
 from server_command import ServerCommand
+from cpc.network.node import getSelfNode
 
 import cpc.command.heartbeat
+
+
 
 log=logging.getLogger('cpc.server.workercmd')
 
 
 #Child to Parent message
-class SCWorkerReady(ServerCommand):
-    """Respond to the availability of a worker with a command to execute"""
-    def __init__(self):
-        ServerCommand.__init__(self, "worker-ready")
+class WorkerReadyBase(ServerCommand):
+    """Respond to the availability of a worker with a command to execute.
+       This is the base class for SCWorkerReady and SCWorkerReadyForwarded,
+       which implement the same functions. This way we kan enforce the
+       setting of worker_server and heartbeat-interval properties only on
+       the server, not the client."""
+    #def __init__(self):
+        #ServerCommand.__init__(self, "worker-ready")
 
     def run(self, serverState, request, response):
         # first read platform capabilities and executables
         rdr=cpc.command.platform_exec_reader.PlatformExecutableReader()
         workerData=request.getParam('worker')
+        if request.hasParam('worker-id'):
+            workerID=request.getParam('worker-id')
+        else:
+            workerID='(none)'
         log.debug("Worker platform + executables: %s"%workerData)
         rdr.readString(workerData,"Worker-reported platform + executables")
         # match queued commands to executables.
@@ -70,20 +87,28 @@ class SCWorkerReady(ServerCommand):
             # new state. 
             time.sleep(5)
             cmds.extend(cwm.getWork(serverState.getCmdQueue()))
-        #cmds=serverState.getCmdQueue().getUntil(matchCommandWorker, cwm)
+        # now check the forwarded variables
+        conf=ServerConf()
+        originating=None
+        heartbeatInterval=None
         # check whether there is an originating server. If not, we're it
-        if 'originating-server' in request.headers:
-            originating = request.headers['originating-server']
-        else:
+        if self.forwarded:
+            if request.hasParam('originating-server'):
+                originating = request.getParam('originating-server')
+            # check the expected heartbeat time.
+            log.debug("Forwarded message")
+            if request.hasParam('heartbeat-interval'): 
+                heartbeatInterval = int(request.getParam('heartbeat-interval'))
+                log.debug("Forwarded heartbeat interval is %d"%
+                          heartbeatInterval)
+        if originating is None:
             # If the originating server property has not been set,  the 
             # request hasn't been forwarded, therefore we are the originating 
             # server
-            originating = ServerConf().getHostName() 
-        # check the expected heartbeat time.
-        if 'heartbeat-interval' in request.headers:
-            heartbeatInterval = request.headers['heartbeat-interval']
-        else:
-            heartbeatInterval = ServerConf().getHeartbeatTime() 
+            selfNode=getSelfNode(conf)
+            originating = selfNode.getId() #ServerConf().getHostName() 
+        if heartbeatInterval is None:
+            heartbeatInterval = conf.getHeartbeatTime() 
         log.debug("worker identified %s"%request.headers['originating-client'] )
         serverState.setWorkerState("idle",workerData,
                                    request.headers['originating-client'])
@@ -117,7 +142,6 @@ class SCWorkerReady(ServerCommand):
             #project.writeTasks()
             # the file is closed after the response is sent.            
         else:
-            conf = ServerConf()
             nodes = conf.getNodes().getNodesByPriority()
             
             topology = Nodes()
@@ -135,12 +159,18 @@ class SCWorkerReady(ServerCommand):
             hasJob =False # temporary flag that should be removed
             for node in nodes:
                 if topology.exists(node.getId()) == False:
-                    log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
-                    clnt = WorkerMessage(node.host,
-                                         node.https_port,
-                                         conf=ServerConf()) 
+                    #log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
+                    #clnt = ServerMessage(node.host, node.https_port)
+                    clnt=ServerMessage(node.getId())
+                            #WorkerMessage(node.host,
+                           #              node.https_port,
+                           #              conf=ServerConf()) 
                     
-                    clientResponse = clnt.workerRequest(workerData,topology)
+                    clientResponse=clnt.workerReadyForwardedRequest(workerID,
+                                                            workerData,
+                                                            topology,
+                                                            originating,
+                                                            heartbeatInterval)
                     
                     if clientResponse.getType() == 'application/x-tar':
 
@@ -150,7 +180,8 @@ class SCWorkerReady(ServerCommand):
                         hasJob=True
                         # we need to rewrap the message 
                         
-                        #FIXME stupid intermediary step because the mmap form clientresponse is prematurely closed                        
+                        #FIXME stupid intermediary step because the mmap form 
+                        # clientresponse is prematurely closed
                         tmp = tempfile.TemporaryFile('w+b')
                         
                         message = clientResponse.getRawData()
@@ -164,17 +195,30 @@ class SCWorkerReady(ServerCommand):
                         response.setFile(tmp,'application/x-tar')
                         response.headers['originating-server']=\
                                   clientResponse.headers['originating-server']
-                        if 'heartbeat-interval' in clientResponse.headers:
-                            response.headers['hearbeat-interval']=\
-                                  clientResponse.headers['heartbeat-interval']
-                        else:
-                            response.headers['hearbeat-interval']=\
-                                heartbeatInterval = \
-                                ServerConf().getHeartbeatTime() 
+                        #if 'heartbeat-interval' in clientResponse.headers:
+                        #    response.headers['hearbeat-interval']=\
+                        #          clientResponse.headers['heartbeat-interval']
+                        #else:
+                        #    response.headers['hearbeat-interval']=\
+                        #        heartbeatInterval = \
+                        #        conf.getHeartbeatTime() 
                             
-                    #OPTIMIZE leads to a lot of folding and unfolding of packages 
+                    #OPTIMIZE leads to a lot of folding and unfolding of 
+                    #packages 
             if not hasJob:           
                 response.add("No command")
+
+
+class SCWorkerReady(WorkerReadyBase):
+    def __init__(self):
+        self.forwarded=False
+        ServerCommand.__init__(self, "worker-ready")
+
+class SCWorkerReadyForwarded(WorkerReadyBase):
+    def __init__(self):
+        self.forwarded=True
+        ServerCommand.__init__(self, "worker-ready-forward")
+
 
 class SCCommandFinishedForward(ServerCommand):
     """Handle forwarded finished command. The command output is not sent in 
@@ -240,9 +284,9 @@ class SCCommandFinished(ServerCommand):
         #forward CommandFinished-signal to project server
         log.debug("finished command %s"%cmdID)
         #FIXME if this is current server do not make a connection to self??
-        msg=cpc.server.message.server_message.ServerMessage(projServer)  
-        ret = msg.commandFinishedForwardRequest(cmdID, workerServer, 
-                                                returncode, cputime, True)
+        msg=ServerMessage(projServer)  
+        ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
+                                                  returncode, cputime, True)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -277,10 +321,10 @@ class SCCommandFailed(ServerCommand):
                                                            projServer, runfile)
         #forward CommandFinished-signal to project server
         log.debug("Run failure reported")
-        msg=cpc.server.message.server_message.ServerMessage(projServer)
-        ret = msg.commandFinishedForwardRequest(cmdID, workerServer, 
-                                                returncode, cputime, 
-                                                (runfile is not None))
+        msg=ServerMessage(projServer)
+        ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
+                                                  returncode, cputime, 
+                                                  (runfile is not None))
 
 class SCWorkerHeartbeat(ServerCommand):
     """Handle a worker's heartbeat signal."""
@@ -294,18 +338,68 @@ class SCWorkerHeartbeat(ServerCommand):
         itemsXML=request.getParam('heartbeat_items')
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
-        # TODO: relay!!
+        heartbeatItems=hwr.getItems()
+        # Order the heartbeat items by destination server
+        destList={}
+        for item in heartbeatItems:
+            dest=item.getServerName()
+            if dest in destList:
+                destList[dest].append(item)
+            else:
+                destList[dest]=[item]
+        # get my own name to compare
+        selfName = serverState.conf.getHostName()
+        # now iterate over the destinations
+        OK=True
+        for dest, items in destList.iteritems():
+            if dest == selfName:
+                ret=serverState.getRunningCmdList().ping(workerID, workerDir,
+                                                         iteration, items)
+                if not ret:
+                    # TODO: per-workload error reporting
+                    OK=False
+            else:
+                msg=ServerMessage(dest)
+                co=StringIO()
+                co.write('<heartbeat worker_id="%s" worker_server_id="%s">'%
+                         (workerID, selfName))
+                for item in items:
+                    item.writeXML(co)
+                co.write('</heartbeat>')
+                resp = msg.heartbeatForwardedRequest(workerID, workerDir,
+                                                     selfName, iteration,
+                                                     co.getvalue())
+                presp=ProcessedResponse(resp)
+                if presp.getStatus() != "OK":
+                    OK=False
+                    log.info("Heartbeat response from %s not OK"%dest)
+        if OK:
+            response.add('', data=ServerConf().getHeartbeatTime())
+        else:
+            # TODO: per-workload error reporting
+            response.add('Heatbeat NOT OK', status="ERROR")
+            
+
+class SCHeartbeatForwarded(ServerCommand):
+    """Handle a worker's heartbeat signal."""
+    def __init__(self):
+        ServerCommand.__init__(self, "heartbeat-forward")
+
+    def run(self, serverState, request, response):
+        workerID=request.getParam('worker_id')
+        workerDir=request.getParam('worker_dir')
+        iteration=request.getParam('iteration')
+        itemsXML=request.getParam('heartbeat_items')
+        log.log(cpc.util.log.TRACE, 'items: %s'%itemsXML)
+        hwr=cpc.command.heartbeat.HeartbeatItemReader()
+        hwr.readString(itemsXML, "worker heartbeat items")
         if serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
                                                 hwr.getItems()):
             response.add('', data=ServerConf().getHeartbeatTime())
         else:
             response.add('Heatbeat NOT OK', status="ERROR")
 
-        
-        # handle this from within the (locked) list that we have of all 
-        # monitored runs
-        #serverState.getHeartbeatList().ping(workerID, workerDir,
-        #                                    iteration, itemsXML, response)
+
 
 class SCWorkerFailed(ServerCommand):
     """Get notified about a failed worker."""
