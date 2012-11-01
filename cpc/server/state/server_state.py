@@ -48,6 +48,7 @@ class ServerState:
         self.projectlist=projectlist.ProjectList(conf, self.cmdQueue)
         self.taskExecThreads=None
         self.runningCmdList=heartbeat.RunningCmdList(self.cmdQueue)
+        self.workerDataList=heartbeat.WorkerDataList()
         self.localAssets=localassets.LocalAssets()
         self.remoteAssets=remoteassets.RemoteAssets()
         self.sessionHandler=SessionHandler()
@@ -101,6 +102,10 @@ class ServerState:
     def getRunningCmdList(self):
         """Get the running command list."""
         return self.runningCmdList
+
+    def getWorkerDataList(self):
+        """Get the worker directory list."""
+        return self.workerDataList
     
     def getCmdLocation(self, cmdID):
         """Get the argument command location."""

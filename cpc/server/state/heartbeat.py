@@ -36,6 +36,8 @@ class RunningCmdListNotFoundError(cpc.util.CpcError):
 
 class RunningCmdListError(cpc.util.CpcError):
     pass
+class WorkerDataListError(cpc.util.CpcError):
+    pass
 
 class RunningCommand(object):
     """The data associated with a running command. Mostly heartbeat monitoring
@@ -103,6 +105,44 @@ class RunningCommand(object):
                                            time.time())
         ret['data_accessible']=self.haveData
         return ret
+
+class WorkerDataList(object):
+    """Maintains a list of directories used by workers connected to this
+       server. Only these directories are fetchable with dead-worker-fetch."""
+    def __init__(self):
+        # the directories are held in a set
+        self.workerDirs=set()
+
+    def add(self, workerDir):
+        wd=os.path.normpath(workerDir)
+        self.workerDirs.add(wd)
+
+    def remove(self, workerdir):
+        wd=os.path.normpath(workerDir)
+        if we in self.workerDirs:
+            self.workerDirs.remove(wd)
+
+    def checkDirectory(self, dir, runDirs):
+        """check whether a requested directory is a worker directory.
+           Raise a WorkerDataListError this is not the case."""
+        dir=os.path.normpath(dir)
+        for runDir in runDirs:
+            cp=[dir, os.path.normpath(runDir)]
+            # the worker directory must be a parent directoryS
+            try:
+                sameFile=os.path.samefile(os.path.commonprefix(cp), dir)
+            except:
+                raise WorkerDataListError("%s is not a subdirectory of %s"%
+                                          (runDir, dir))
+            if not sameFile:
+                raise WorkerDataListError("%s is not a subdirectory of %s"%
+                                          (runDir, dir))
+
+        if not dir in self.workerDirs:
+            raise WorkerDataListError(
+                        "%s is not in the list of known worker directories"%
+                        (dir))
+        return True
 
 
 class RunningCmdList(object):

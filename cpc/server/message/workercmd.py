@@ -328,15 +328,25 @@ class SCWorkerHeartbeat(ServerCommand):
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
         heartbeatItems=hwr.getItems()
+        # The worker data list
+        workerDataList=serverState.getWorkerDataList()
+        haveADir=False
         # Order the heartbeat items by destination server
         destList={}
         for item in heartbeatItems:
             dest=item.getServerName()
             item.checkRunDir()
+            if item.getHaveRunDir():
+                haveADir=True
             if dest in destList:
                 destList[dest].append(item)
             else:
                 destList[dest]=[item]
+        if haveADir:
+            if iteration!="final":
+                workerDataList.add(workerDir)
+        if iteration=="final":
+            workerDataList.remove(workerDir)
         # get my own name to compare
         selfNode=getSelfNode(serverState.conf)
         selfName = selfNode.getId() #ServerConf().getHostName() 
@@ -348,7 +358,6 @@ class SCWorkerHeartbeat(ServerCommand):
         OK=True
         for dest, items in destList.iteritems():
             if dest == selfName:
-                    
                 ret=serverState.getRunningCmdList().ping(workerID, workerDir,
                                                          iteration, items, True)
                 if not ret:
@@ -407,6 +416,9 @@ class SCDeadWorkerFetch(ServerCommand):
         # owns the file
         workerDir=request.getParam('worker_dir')
         runDir=request.getParam('run_dir')
+        workerDataList=serverState.getWorkerDataList()
+        # check the directory and throw an exception if not allowed
+        workerDataList.checkDirectory(workerDir, [runDir])
         # first check whether we have any of these files
         if os.path.isdir(runDir):
             tff=tempfile.TemporaryFile()
@@ -418,7 +430,9 @@ class SCDeadWorkerFetch(ServerCommand):
         response.add('Returning data')
 
     def finish(self, serverState, request):
-        """Now delete the directories associated with that run."""
+        """Now delete the directories associated with that run.
+            
+           This will only be run if the run() method threw no exception"""
         runDir=request.getParam('run_dir')
         if os.path.isdir(runDir):
             shutil.rmtree(runDir)
