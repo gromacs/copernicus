@@ -111,20 +111,30 @@ class WorkerDataList(object):
        server. Only these directories are fetchable with dead-worker-fetch."""
     def __init__(self):
         # the directories are held in a set
-        self.workerDirs=set()
+        self.workerDirs=dict()
 
     def add(self, workerDir):
         wd=os.path.normpath(workerDir)
-        self.workerDirs.add(wd)
+        if not wd in self.workerDirs:
+            self.workerDirs[wd] = cpc.util.rng.getRandomHash()
 
     def remove(self, workerdir):
         wd=os.path.normpath(workerDir)
-        if we in self.workerDirs:
-            self.workerDirs.remove(wd)
+        if wd in self.workerDirs:
+            #self.workerDirs.remove(wd)
+            del self.workerDirs[wd]
+
+    def getRnd(self, workerDir):
+        wd=os.path.normpath(workerDir)
+        if wd in self.workerDirs:
+            return self.workerDirs[wd]
+        return None
 
     def checkDirectory(self, dir, runDirs):
         """check whether a requested directory is a worker directory.
-           Raise a WorkerDataListError this is not the case."""
+
+           return True if the directory 'dir' exists, False if it doesn't exist,
+           and raise an exception if the access is denied."""
         dir=os.path.normpath(dir)
         for runDir in runDirs:
             cp=[dir, os.path.normpath(runDir)]
@@ -132,17 +142,17 @@ class WorkerDataList(object):
             try:
                 sameFile=os.path.samefile(os.path.commonprefix(cp), dir)
             except:
-                raise WorkerDataListError("%s is not a subdirectory of %s"%
-                                          (runDir, dir))
+                return False
             if not sameFile:
-                raise WorkerDataListError("%s is not a subdirectory of %s"%
-                                          (runDir, dir))
+                raise WorkerDataListError(
+                            "Access denied: %s is not a subdirectory of %s"%
+                            (runDir, dir))
 
         if not dir in self.workerDirs:
             raise WorkerDataListError(
-                        "%s is not in the list of known worker directories"%
-                        (dir))
-        return True
+                    "Access denied: %s not in list of known worker directories"%
+                    (dir))
+        return os.path.isdir(dir)
 
 
 class RunningCmdList(object):
@@ -154,7 +164,7 @@ class RunningCmdList(object):
     # they can be bundled. 
     rateLimitTime = 5 
 
-    def __init__(self, cmdQueue):
+    def __init__(self, cmdQueue, workerData):
         """Initialize the object with an empty list."""
         # a list of heartbeat items in a dict indexed by command ID, of
         # RunningCommand objects. Because this is just a flat list, we can
@@ -171,6 +181,7 @@ class RunningCmdList(object):
         # up once other threads stop
         self.thread.daemon=True
         self.thread.start()
+        self.workerData=workerData
 
     def add(self, cmds, workerServer, heartbeatInterval):
         """Add a set of commands sent to a specific worker."""
@@ -320,6 +331,7 @@ class RunningCmdList(object):
         if len(todelete)>0:
             # first try to get the data
             finishedReported=False
+            haveDir=False
             for rc in todelete:
                 # TODO: consolidate all requests for each worker server into
                 # one request
@@ -336,22 +348,28 @@ class RunningCmdList(object):
                                           (rc.cmd.id,rc.cmd.dir))
                                 cpc.util.file.extractSafely(rc.cmd.dir, 
                                                             fileobj=runfile)
+                                haveDir=True
                         else: 
                             log.debug("Moving results directory %s to %s"%
                                       (rc.runDir, rc.cmd.dir))
-                            files=os.listdir(rc.runDir)
-                            for filename in files:
-                                dstFile=os.path.join(rc.cmd.dir, filename)
-                                if os.path.exists(dstFile):
-                                    if os.path.isdir(dstFile):
-                                        shutil.rmtree(os.path.join(dstFile))
-                                    else:
-                                        os.remove(os.path.join(dstFile))
-                                shutil.move(os.path.join(rc.runDir,filename), 
-                                            dstFile)
-                            shutil.rmtree(rc.runDir)
-                        self._handleFinishedCmd(rc.cmd, None, 0)
-                        finishedReported=True
+                            if self.workerData.checkDirectory(rc.workerDir,
+                                                              [rc.runDir] ):
+                                files=os.listdir(rc.runDir)
+                                for filename in files:
+                                    dstFile=os.path.join(rc.cmd.dir, filename)
+                                    if os.path.exists(dstFile):
+                                        if os.path.isdir(dstFile):
+                                            shutil.rmtree(os.path.join(dstFile))
+                                        else:
+                                            os.remove(os.path.join(dstFile))
+                                    shutil.move(os.path.join(rc.runDir,
+                                                             filename), 
+                                                dstFile)
+                                shutil.rmtree(rc.runDir)
+                                haveDir=True
+                        if haveDir:
+                            self._handleFinishedCmd(rc.cmd, None, 0)
+                            finishedReported=True
                 finally:
                     log.info("Running command %s died."%rc.cmd.id)
                     if not finishedReported:

@@ -57,6 +57,7 @@ class WorkerMessage(ClientBase):
         cmdstring='worker-ready'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
         headers = dict()
@@ -68,10 +69,9 @@ class WorkerMessage(ClientBase):
                                jobTarFileobj):
         cmdstring='command-finished'
         fields = []
-        input = Input('cmd', cmdstring)
-        cmdIdInput = Input('cmd_id', cmdID)
-        fields.append(input)
-        fields.append(cmdIdInput)
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
+        fields.append(Input('cmd_id', cmdID))
         fields.append(Input('project_server', origServer))
         if returncode is not None:
             fields.append(Input('return_code', str(returncode)))
@@ -98,6 +98,7 @@ class WorkerMessage(ClientBase):
             iteration="none"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "2"))
         fields.append(Input('worker_id', workerID))
         fields.append(Input('worker_dir', workerDir))
         fields.append(Input('iteration', iteration))

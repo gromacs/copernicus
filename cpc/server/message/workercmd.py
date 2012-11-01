@@ -325,6 +325,9 @@ class SCWorkerHeartbeat(ServerCommand):
         workerDir=request.getParam('worker_dir')
         iteration=request.getParam('iteration')
         itemsXML=request.getParam('heartbeat_items')
+        version=0
+        if request.hasParam('version'):
+            version=int(request.getParam('version'))
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
         heartbeatItems=hwr.getItems()
@@ -379,7 +382,13 @@ class SCWorkerHeartbeat(ServerCommand):
                     OK=False
                     log.info("Heartbeat response from %s not OK"%dest)
         if OK:
-            response.add('', data=serverState.conf.getHeartbeatTime())
+            if version > 1:
+                retData = { 'heartbeat-time' : serverState.conf.
+                                                    getHeartbeatTime(),
+                            'random-file': workerDataList.getRnd(workerDir) }
+            else:
+                retData=serverState.conf.getHeartbeatTime()
+            response.add('', data=retData)
         else:
             # TODO: per-workload error reporting
             response.add('Heatbeat NOT OK', status="ERROR")
@@ -418,23 +427,25 @@ class SCDeadWorkerFetch(ServerCommand):
         runDir=request.getParam('run_dir')
         workerDataList=serverState.getWorkerDataList()
         # check the directory and throw an exception if not allowed
-        workerDataList.checkDirectory(workerDir, [runDir])
-        # first check whether we have any of these files
-        if os.path.isdir(runDir):
-            tff=tempfile.TemporaryFile()
-            tf=tarfile.open(fileobj=tff, mode="w:gz")
-            tf.add(runDir, arcname=".", recursive=True)
-            tf.close()
-            tff.seek(0)
-            response.setFile(tff,'application/x-tar')
-        response.add('Returning data')
+        if workerDataList.checkDirectory(workerDir, [runDir]):
+            # first check whether we have any of these files
+            if os.path.isdir(runDir):
+                tff=tempfile.TemporaryFile()
+                tf=tarfile.open(fileobj=tff, mode="w:gz")
+                tf.add(runDir, arcname=".", recursive=True)
+                tf.close()
+                tff.seek(0)
+                response.setFile(tff,'application/x-tar')
+                request.setFlag('remove', True)
+            response.add('Returning data')
 
     def finish(self, serverState, request):
         """Now delete the directories associated with that run.
             
            This will only be run if the run() method threw no exception"""
-        runDir=request.getParam('run_dir')
-        if os.path.isdir(runDir):
+        doRemove=request.getFlag('remove')
+        if doRemove is not None and doRemove:
+            runDir=request.getParam('run_dir')
             shutil.rmtree(runDir)
 
 

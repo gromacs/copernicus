@@ -22,6 +22,7 @@ import threading
 import logging
 import time
 import sys
+import os
 import traceback
 try:
     from cStringIO import StringIO
@@ -49,6 +50,8 @@ class HeartbeatSender(object):
         self.cmdsChanged=True
         self.thread=None 
         log.debug("Started heartbeat thread")
+        self.randomFileCreated=False
+        self.randomFile=None
 
     def addWorkloads(self, workloads):
         """Add a workload list."""
@@ -151,11 +154,28 @@ class HeartbeatSender(object):
             # should just die now.
             log.error("Got error from heartbeat request. Stopping worker.")
             sys.exit(1)
-        rettime=int(presp.getData())
+        respData=presp.getData()
+        if type(respData) == type(dict()):
+            rettime=int(respData['heartbeat-time'])
+            self.randomFile=respData['random-file']
+            self._createRandomFile()
+        else:
+            rettime=int(respData)
+        #rettime=int(presp.getData())
         log.debug("Waiting %s seconds for next ping"%(rettime))
         return rettime
 
-
+    def _createRandomFile(self):
+        """Create a file wiht a random name chosen by the server. Used to 
+            make sure the worker has write access to the directory it's 
+            claiming is its work directory."""
+        if not self.randomFileCreated:
+            randomFileName=os.path.join(self.workerDir, self.randomFile)
+            log.debug("Creating random file %s"%randomFileName)
+            self.randomFileCreated=True
+            outf=open(randomFileName, 'w')
+            outf.write('\n')
+            outf.close()
 
 def heartbeatSenderThread(hb):
     """The worker's heartbeat thread function. Sends a heartbeat within the 

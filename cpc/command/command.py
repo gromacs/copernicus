@@ -20,8 +20,6 @@
 
 import xml.sax
 import os
-import random
-import hashlib
 import threading
 import logging
 try:
@@ -33,7 +31,7 @@ import cpc.util
 import version
 import resource
 import cpc.server.queue.cmdqueue
-
+import cpc.util.rng
 
 log=logging.getLogger('cpc.project')
 
@@ -120,19 +118,10 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
 
     def tryGenID(self):
         """Generate an ID if it doesn't already have one."""
-        global seeded
-        global seededLock
-        with seededLock:
-            if not seeded:
-                random.seed(os.urandom(8))
-                seeded=True
         # TODO: We should be using a cryptographically secure RNG for this.
         if self.id is None:
-            self.id=hashlib.sha1("%x%x%x%x"%
-                             (random.getrandbits(32),
-                              random.getrandbits(32),
-                              random.getrandbits(32),
-                              random.getrandbits(32))).hexdigest()
+            self.id=cpc.util.rng.getRandomHash()
+
     def getID(self):
         """Return the ID."""
         return self.id

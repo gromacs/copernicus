@@ -38,6 +38,8 @@ class ServerRequest(object):
         self.params = params or dict()
         self.files =  files or dict()
         self.session = None
+        # handler-set flags
+        self.flags = None
 
     def __del__(self):
         del self.files # remove the reference; files should be deleted.
@@ -53,10 +55,21 @@ class ServerRequest(object):
         ''' gets a property based on its fieldname'''
         if self.params.has_key(fieldName):
             return self.params[fieldName]
-        
         else: 
             return None
-        
+
+    def getFlag(self, name):
+        """gets a request-handler-defined property - or None."""
+        if self.flags is None:
+            return None
+        return self.flags[name]
+
+    def setFlag(self, name, value):
+        """Sets a request-handler-defined property - allocating a dict if 
+           it needs to."""
+        if flags is None:
+            flags=dict()
+        flags[name]=value
 
     def getParam(self,paramName):
         ''' gets a property based on its paramname'''
@@ -132,22 +145,20 @@ class ServerRequest(object):
 
             for input in fields:                
                 inputs[input.name] = input.value
-            msg = urllib.urlencode(inputs)   ## NOTE encodes in a non standard % format but this is usually what browsers do
+            ## NOTE encodes in a non standard % format but 
+            # this is usually what browsers do
+            msg = urllib.urlencode(inputs)   
            
 
-        else:  #multipart message                                                    
-            headers['Content-Type'] = 'multipart/form-data; boundary=%s' % Messaging.BOUNDARY
-            msg = Messaging.encode_multipart_formdata(fields,files)              
-            
-
+        else:  #multipart message 
+            headers['Content-Type'] = ( 'multipart/form-data; boundary=%s' % 
+                                        Messaging.BOUNDARY )
+            msg = Messaging.encode_multipart_formdata(fields,files) 
         headers['Content-Length'] = len(msg)
         headers['User-agent'] = 'copernicus-cmd-client'
         content = msg
         req = ServerRequest(headers,content)    
         return req
-   
- 
-    
    
     @staticmethod
     def isMultiPart(contentType):

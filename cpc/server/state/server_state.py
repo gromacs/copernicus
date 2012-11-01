@@ -47,8 +47,9 @@ class ServerState:
         self.cmdQueue=cpc.server.queue.CmdQueue()
         self.projectlist=projectlist.ProjectList(conf, self.cmdQueue)
         self.taskExecThreads=None
-        self.runningCmdList=heartbeat.RunningCmdList(self.cmdQueue)
         self.workerDataList=heartbeat.WorkerDataList()
+        self.runningCmdList=heartbeat.RunningCmdList(self.cmdQueue, 
+                                                     self.workerDataList)
         self.localAssets=localassets.LocalAssets()
         self.remoteAssets=remoteassets.RemoteAssets()
         self.sessionHandler=SessionHandler()

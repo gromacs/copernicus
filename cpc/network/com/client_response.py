@@ -31,8 +31,8 @@ class ProcessedResponse(object):
         '''@input response:ClientResponse'''       
         if response.content_type == "text/json":
             try:                 
-                str = response.message.read(len(response.message))                            
-                self.resp=json.loads(str,object_hook=json_serializer.fromJson)                                 
+                str = response.message.read(len(response.message))
+                self.resp=json.loads(str,object_hook=json_serializer.fromJson)
             except:                
                 retd=dict()
                 retd['status']="ERROR"
@@ -40,7 +40,8 @@ class ProcessedResponse(object):
                 print "error %s"%retd
                 self.resp=[retd]
         else:
-            raise ResponseError("Wrong message type %s for JSON response"%response.content_type)
+            raise ResponseError("Wrong message type %s for JSON response"%
+                                response.content_type)
                         
     def pprint(self,renderMethod = None):
         for item in self.resp:                                     
