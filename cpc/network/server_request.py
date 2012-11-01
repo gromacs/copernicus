@@ -67,9 +67,9 @@ class ServerRequest(object):
     def setFlag(self, name, value):
         """Sets a request-handler-defined property - allocating a dict if 
            it needs to."""
-        if flags is None:
-            flags=dict()
-        flags[name]=value
+        if self.flags is None:
+            self.flags=dict()
+        self.flags[name]=value
 
     def getParam(self,paramName):
         ''' gets a property based on its paramname'''

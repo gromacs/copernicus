@@ -21,6 +21,12 @@ import time
 import logging
 import shutil
 import os
+import traceback
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 
 
 import cpc.util
@@ -108,9 +114,16 @@ class RunningCommand(object):
 
 class WorkerDataList(object):
     """Maintains a list of directories used by workers connected to this
-       server. Only these directories are fetchable with dead-worker-fetch."""
+       server. Only these directories are fetchable with dead-worker-fetch.
+       
+       Each directory indexes a random has that is the name of a file that
+       the worker should generate. This way a worker can prove that it 
+       can write to the directory it claims is the worker directory. This
+       closes a potential security issue where the worker could make the 
+       server read any file."""
     def __init__(self):
-        # the directories are held in a set
+        # the directories are held in a dict that indexes the random file
+        # the worker should create. That is sent with every heartbeat reply
         self.workerDirs=dict()
 
     def add(self, workerDir):
@@ -121,7 +134,6 @@ class WorkerDataList(object):
     def remove(self, workerdir):
         wd=os.path.normpath(workerDir)
         if wd in self.workerDirs:
-            #self.workerDirs.remove(wd)
             del self.workerDirs[wd]
 
     def getRnd(self, workerDir):
@@ -134,7 +146,8 @@ class WorkerDataList(object):
         """check whether a requested directory is a worker directory.
 
            return True if the directory 'dir' exists, False if it doesn't exist,
-           and raise an exception if the access is denied."""
+           and raise an exception if the access is denied (for example, when
+           the random file wasn't created)."""
         dir=os.path.normpath(dir)
         for runDir in runDirs:
             cp=[dir, os.path.normpath(runDir)]
@@ -147,10 +160,13 @@ class WorkerDataList(object):
                 raise WorkerDataListError(
                             "Access denied: %s is not a subdirectory of %s"%
                             (runDir, dir))
-
         if not dir in self.workerDirs:
             raise WorkerDataListError(
                     "Access denied: %s not in list of known worker directories"%
+                    (dir))
+        if not os.path.exists(os.path.join(dir, self.workerDirs[dir])):
+            raise WorkerDataListError(
+                    "Access denied: %s doesn't have required random file"%
                     (dir))
         return os.path.isdir(dir)
 
@@ -338,6 +354,8 @@ class RunningCmdList(object):
                 try:
                     if rc.haveData:
                         if not rc.isLocal:
+                            # the data is remote: we must fetch data through a 
+                            # server-to-server command.
                             msg=ServerMessage(rc.workerServer)
                             resp=msg.deadWorkerFetchRequest(rc.workerDir, 
                                                             rc.runDir)
@@ -350,6 +368,7 @@ class RunningCmdList(object):
                                                             fileobj=runfile)
                                 haveDir=True
                         else: 
+                            # the data is local. Copy the directory
                             log.debug("Moving results directory %s to %s"%
                                       (rc.runDir, rc.cmd.dir))
                             if self.workerData.checkDirectory(rc.workerDir,
@@ -370,12 +389,25 @@ class RunningCmdList(object):
                         if haveDir:
                             self._handleFinishedCmd(rc.cmd, None, 0)
                             finishedReported=True
-                finally:
-                    log.info("Running command %s died."%rc.cmd.id)
-                    if not finishedReported:
-                        # just add it back into the queue
-                        self.cmdQueue.add(rc.cmd)
-            # self.writeState()
+                except cpc.util.CpcError as e:
+                    log.error(e.__str__())
+                except:
+                    # TODO: we shouldn't ignore these, but we also need
+                    # to put the commands back into the queue.
+                    fo=StringIO()
+                    traceback.print_exception(sys.exc_info()[0],
+                                              sys.exc_info()[1],
+                                              sys.exc_info()[2], file=fo)
+                    log.error("Heartbeat exception: %s"%(fo.getvalue()))
+                if not finishedReported:
+                    log.info(
+                            "Running command %s died: didn't get its data."%
+                            rc.cmd.id)
+                    # just add it back into the queue
+                    self.cmdQueue.add(rc.cmd)
+                else:
+                    log.info("Running command %s died: got its data."%
+                             rc.cmd.id)
         return firstExpiry
 
 def heartbeatServerThread(runningCommandList):
