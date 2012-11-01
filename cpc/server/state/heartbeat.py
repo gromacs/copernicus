@@ -19,11 +19,14 @@
 import threading
 import time
 import logging
+import shutil
+import os
 
 
 import cpc.util
 import cpc.command.heartbeat
 from cpc.util.conf.server_conf import ServerConf
+from cpc.server.message.server_message import ServerMessage
 
 log=logging.getLogger('cpc.server.heartbeat')
 
@@ -47,6 +50,9 @@ class RunningCommand(object):
         self.workerServer=server
         # the relevant heartbeat interval
         self.heartbeatInterval=int(heartbeatInterval) 
+        # before the first ping we have to assume this
+        self.isLocal=False
+        self.haveData=False
 
     def getCmd(self):
         return self.cmd
@@ -70,6 +76,16 @@ class RunningCommand(object):
     def setRunDir(self, runDir):
         self.runDir=runDir
 
+    def setIsLocal(self, isLocal):
+        self.isLocal=isLocal
+    def getIsLocal(self):
+        return self.isLocal
+
+    def setHaveData(self, haveData):
+        self.haveData=haveData
+    def getHaveData(self):
+        return self.haveData
+
     def ping(self):
         """Update the timer to reflect a new heartbeat signal"""
         self.lastHeard=time.time()
@@ -81,10 +97,11 @@ class RunningCommand(object):
         ret['worker_id']=self.workerID
         ret['worker_dir']=self.workerDir
         ret['run_dir']=self.runDir
+        ret['task_id']=self.cmd.task.getID()
         ret['heartbeat_expiry_time']= int( (self.lastHeard + 
                                             2*self.heartbeatInterval) - 
                                            time.time())
-        ret['data_accessible']=False
+        ret['data_accessible']=self.haveData
         return ret
 
 
@@ -152,9 +169,13 @@ class RunningCmdList(object):
                 raise RunningCmdListNotFoundError(cmdID)
             cmd=self.runningCommands[cmdID].cmd
             del self.runningCommands[cmdID]
-        self._handleFinishedCmd(cmd, returncode, cputime, runfile)
+        # the command is now removed from the list so we can stop locking.
+        if runfile is not None:
+            log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.dir))
+            cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
+        self._handleFinishedCmd(cmd, returncode, cputime)
 
-    def _handleFinishedCmd(self, cmd, returncode, cputime, runfile):
+    def _handleFinishedCmd(self, cmd, returncode, cputime):
         """Handle the command finishing itself. The command must be removed
            from the list first using self.lock, so no two threads own this
            command first."""
@@ -163,9 +184,9 @@ class RunningCmdList(object):
         cmd.running=False
         cmd.setReturncode(returncode)
         cmd.addCputime(cputime)
-        if runfile is not None:
-            log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.dir))
-            cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
+        #if runfile is not None:
+        #    log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.dir))
+        #    cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
         # run the task
         if task is not None:
             (newcmds, cancelcmds) = task.run(cmd)
@@ -184,13 +205,15 @@ class RunningCmdList(object):
                 ret.append(value.cmd)
         return ret
 
-    def ping(self, workerID, workerDir, iteration, heartbeatItems):
+    def ping(self, workerID, workerDir, iteration, heartbeatItems, isLocal):
         """Handle a heartbeat signal from a worker (possibly relayed)
           
            workerID = the sending worker's ID
            workerDir = the sending worker's run directory 
            iteration = the sending workers' claimed iteration
            heartbeatItems = the hearbeat items describing commands.
+           isLocal = a boolean that is true when the worker server is this 
+                     server
            """
         response=[]
         OK=True
@@ -213,6 +236,11 @@ class RunningCmdList(object):
                             rc.setWorkerID(workerID)
                         rc.setWorkerDir(workerDir)
                         rc.setRunDir(item.getRunDir())
+                        rc.setIsLocal(isLocal)
+                        haveData=item.getHaveRunDir() 
+                        if haveData is None:
+                            haveData=False
+                        rc.setHaveData(haveData)
                         rc.ping()
         return OK
 
@@ -250,12 +278,45 @@ class RunningCmdList(object):
                 del self.runningCommands[rc.cmd.id]
         # then handle their failure
         if len(todelete)>0:
+            # first try to get the data
+            finishedReported=False
             for rc in todelete:
-                #rc.notifyServer()
-                log.info("Running command %s died."%rc.cmd.id)
-                # for now, we just add it back into the queue
-                self.cmdQueue.add(rc.cmd)
-                #self._handleFinishedCmd(rc.cmd, None, 0, None)
+                # TODO: consolidate all requests for each worker server into
+                # one request
+                try:
+                    if rc.haveData:
+                        if not rc.isLocal:
+                            msg=ServerMessage(rc.workerServer)
+                            resp=msg.deadWorkerFetchRequest(rc.workerDir, 
+                                                            rc.runDir)
+                            if resp.getType() == "application/x-tar":
+                                # untar the return data and  use it.
+                                runfile=resp.getRawData()
+                                log.debug("extracting file for %s to dir %s"%
+                                          (rc.cmd.id,rc.cmd.dir))
+                                cpc.util.file.extractSafely(rc.cmd.dir, 
+                                                            fileobj=runfile)
+                        else: 
+                            log.debug("Moving results directory %s to %s"%
+                                      (rc.runDir, rc.cmd.dir))
+                            files=os.listdir(rc.runDir)
+                            for filename in files:
+                                dstFile=os.path.join(rc.cmd.dir, filename)
+                                if os.path.exists(dstFile):
+                                    if os.path.isdir(dstFile):
+                                        shutil.rmtree(os.path.join(dstFile))
+                                    else:
+                                        os.remove(os.path.join(dstFile))
+                                shutil.move(os.path.join(rc.runDir,filename), 
+                                            dstFile)
+                            shutil.rmtree(rc.runDir)
+                        self._handleFinishedCmd(rc.cmd, None, 0)
+                        finishedReported=True
+                finally:
+                    log.info("Running command %s died."%rc.cmd.id)
+                    if not finishedReported:
+                        # just add it back into the queue
+                        self.cmdQueue.add(rc.cmd)
             # self.writeState()
         return firstExpiry
 

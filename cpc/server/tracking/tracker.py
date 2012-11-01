@@ -19,7 +19,7 @@
 
 import os
 import logging
-from cpc.network.server_to_server_message import ServerToServerMessage
+from cpc.server.message.server_message import ServerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.server.state.asset import Asset
 from cpc.util.conf.server_conf import ServerConf
@@ -44,24 +44,28 @@ class Tracker(object):
     
     @staticmethod
     def getCommandOutputData(cmdID, workerServer):
-        log.log(cpc.util.log.TRACE,"Trying to pull command output from %s"%workerServer)
-        #FIXME need to specify port here also
-        s2smsg=ServerToServerMessage(workerServer)  
+        log.log(cpc.util.log.TRACE,"Trying to pull command output from %s"%
+                workerServer)
+        s2smsg=ServerMessage(workerServer)  
         rundata_response = s2smsg.pullAssetRequest(cmdID, Asset.cmdOutput())
         
         if rundata_response.getType() != "application/x-tar":
-            log.error("Incorrect response type: %s should be application/x-tar"%rundata_response.getType())
+            log.error("Incorrect response type: %s, should be %"%
+                      rundata_response.getType(), 'application/x-tar')
             if rundata_response.getType() == "text/json":
-                errormsg=rundata_response.message.read(len(rundata_response.message))
+                errormsg=rundata_response.message.read(len(rundata_response.
+                                                           message))
                 presp=ProcessedResponse(rundata_response)
                 if not presp.isOK():
-                    log.error('Response from worker server not OK. Message was:\n%s'%errormsg)
+                    log.error('Response from worker server not OK: %s'%
+                              errormsg)
         else:
             s2smsg.clearAssetRequest(cmdID)
-            log.log(cpc.util.log.TRACE,"Successfully pulled command output data from %s."%workerServer)
+            log.log(cpc.util.log.TRACE,
+                    "Successfully pulled command output data from %s."%
+                    workerServer)
             return rundata_response
             #runfile = rundata_response.getRawData()
             #this doesnt work because the mmap closes as it is returned
-            
         return None
     

@@ -130,7 +130,8 @@ class ServerState:
             self._write()
             projectFolder = "%s/%s"%(conf.getRunDir(),project)
             if(os.path.isdir(projectFolder)):
-                #tar the project folder but keep the old files also, this is only a backup!!!
+                #tar the project folder but keep the old files also, this is 
+                # only a backup!!!
                 #copy _state.xml to _state.bak.xml
                 stateBackupFile = "%s/_state.bak.xml"%projectFolder
                 shutil.copyfile("%s/_state.xml"%projectFolder,stateBackupFile)

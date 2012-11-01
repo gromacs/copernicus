@@ -60,9 +60,15 @@ class ServerCommand(object):
         raise ServerCommandError(
                 "Don't know what to do with command '%s'"%(self.name))
 
+    def finish(self, serverState, request):
+        """Finish and cleanup the command. No response allowed. 
+           Only called if run() threw no exception."""
+        pass
+
     def getRequestString(self):
         """Get the request command string associated with the command."""
         return self.name
+
     
 class SCStop(ServerCommand):
     """Stop server command"""

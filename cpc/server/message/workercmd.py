@@ -24,6 +24,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import shutil
 
 try:
     from cStringIO import StringIO
@@ -45,7 +46,6 @@ from cpc.util import json_serializer
 from cpc.network.node import Nodes,Node
 from cpc.server.message.server_message import ServerMessage
 from cpc.server.tracking.tracker import Tracker
-from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.connection_bundle import ConnectionBundle
 from server_command import ServerCommand
 from cpc.network.node import getSelfNode
@@ -64,8 +64,6 @@ class WorkerReadyBase(ServerCommand):
        which implement the same functions. This way we kan enforce the
        setting of worker_server and heartbeat-interval properties only on
        the server, not the client."""
-    #def __init__(self):
-        #ServerCommand.__init__(self, "worker-ready")
 
     def run(self, serverState, request, response):
         # first read platform capabilities and executables
@@ -88,7 +86,7 @@ class WorkerReadyBase(ServerCommand):
             time.sleep(5)
             cmds.extend(cwm.getWork(serverState.getCmdQueue()))
         # now check the forwarded variables
-        conf=ServerConf()
+        conf=serverState.conf
         originating=None
         heartbeatInterval=None
         # check whether there is an originating server. If not, we're it
@@ -106,7 +104,7 @@ class WorkerReadyBase(ServerCommand):
             # request hasn't been forwarded, therefore we are the originating 
             # server
             selfNode=getSelfNode(conf)
-            originating = selfNode.getId() #ServerConf().getHostName() 
+            originating = selfNode.getId() 
         if heartbeatInterval is None:
             heartbeatInterval = conf.getHeartbeatTime() 
         log.debug("worker identified %s"%request.headers['originating-client'] )
@@ -159,12 +157,7 @@ class WorkerReadyBase(ServerCommand):
             hasJob =False # temporary flag that should be removed
             for node in nodes:
                 if topology.exists(node.getId()) == False:
-                    #log.log(cpc.util.log.TRACE,'IMAN from %s'%node.host)
-                    #clnt = ServerMessage(node.host, node.https_port)
                     clnt=ServerMessage(node.getId())
-                            #WorkerMessage(node.host,
-                           #              node.https_port,
-                           #              conf=ServerConf()) 
                     
                     clientResponse=clnt.workerReadyForwardedRequest(workerID,
                                                             workerData,
@@ -195,14 +188,6 @@ class WorkerReadyBase(ServerCommand):
                         response.setFile(tmp,'application/x-tar')
                         response.headers['originating-server']=\
                                   clientResponse.headers['originating-server']
-                        #if 'heartbeat-interval' in clientResponse.headers:
-                        #    response.headers['hearbeat-interval']=\
-                        #          clientResponse.headers['heartbeat-interval']
-                        #else:
-                        #    response.headers['hearbeat-interval']=\
-                        #        heartbeatInterval = \
-                        #        conf.getHeartbeatTime() 
-                            
                     #OPTIMIZE leads to a lot of folding and unfolding of 
                     #packages 
             if not hasJob:           
@@ -274,7 +259,9 @@ class SCCommandFinished(ServerCommand):
             cputime=float(request.getParam('used_cpu_time'))
        
         #the command's workerserver is by definition this server
-        workerServer = serverState.conf.getHostName()
+        selfNode=getSelfNode(serverState.conf)
+        workerServer = selfNode.getId() #ServerConf().getHostName() 
+        #workerServer = serverState.conf.getHostName()
         
         # TODO: some sort of verification  to check whether this was in fact
         #       the client that we sent the command to
@@ -311,7 +298,9 @@ class SCCommandFailed(ServerCommand):
         projServer=request.getParam('project_server')
         
         #the command's workerserver is by definition this server
-        workerServer = serverState.conf.getHostName()
+        selfNode=getSelfNode(serverState.conf)
+        workerServer = selfNode.getId() #ServerConf().getHostName() 
+        #workerServer = serverState.conf.getHostName()
    
         log.debug("runfile= %s, projServer=%s"%(str(runfile), str(projServer)) )
         if runfile is not None:    
@@ -343,18 +332,25 @@ class SCWorkerHeartbeat(ServerCommand):
         destList={}
         for item in heartbeatItems:
             dest=item.getServerName()
+            item.checkRunDir()
             if dest in destList:
                 destList[dest].append(item)
             else:
                 destList[dest]=[item]
         # get my own name to compare
-        selfName = serverState.conf.getHostName()
-        # now iterate over the destinations
+        selfNode=getSelfNode(serverState.conf)
+        selfName = selfNode.getId() #ServerConf().getHostName() 
+        #selfName = serverState.conf.getHostName()
+        # now iterate over the destinations, and send them their heartbeat
+        # items.
+        # Once we have many workers, this would be a place to pool heartbeat
+        # items and send them as one big request.
         OK=True
         for dest, items in destList.iteritems():
             if dest == selfName:
+                    
                 ret=serverState.getRunningCmdList().ping(workerID, workerDir,
-                                                         iteration, items)
+                                                         iteration, items, True)
                 if not ret:
                     # TODO: per-workload error reporting
                     OK=False
@@ -374,7 +370,7 @@ class SCWorkerHeartbeat(ServerCommand):
                     OK=False
                     log.info("Heartbeat response from %s not OK"%dest)
         if OK:
-            response.add('', data=ServerConf().getHeartbeatTime())
+            response.add('', data=serverState.conf.getHeartbeatTime())
         else:
             # TODO: per-workload error reporting
             response.add('Heatbeat NOT OK', status="ERROR")
@@ -394,25 +390,37 @@ class SCHeartbeatForwarded(ServerCommand):
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
         if serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
-                                                hwr.getItems()):
-            response.add('', data=ServerConf().getHeartbeatTime())
+                                                hwr.getItems(), False):
+            response.add('', data=serverState.conf.getHeartbeatTime())
         else:
             response.add('Heatbeat NOT OK', status="ERROR")
 
 
 
-class SCWorkerFailed(ServerCommand):
-    """Get notified about a failed worker."""
+class SCDeadWorkerFetch(ServerCommand):
+    """Attempt to fetch the data from a dead worker."""
     def __init__(self):
-        ServerCommand.__init__(self, "worker-failed")
+        ServerCommand.__init__(self, "dead-worker-fetch")
 
     def run(self, serverState, request, response):
-        workerID=request.getParam('worker_id')
-        retOK=serverState.getHeartbeatList().workerFailed(workerID)
-        if retOK:
-            response.add("Worker failure reported succesfully.")
-        else:
-            response.add("Worker ID %s not found."%workerID, status="ERROR")
+        # TODO: some verification that the request comes from the server that
+        # owns the file
+        workerDir=request.getParam('worker_dir')
+        runDir=request.getParam('run_dir')
+        # first check whether we have any of these files
+        if os.path.isdir(runDir):
+            tff=tempfile.TemporaryFile()
+            tf=tarfile.open(fileobj=tff, mode="w:gz")
+            tf.add(runDir, arcname=".", recursive=True)
+            tf.close()
+            tff.seek(0)
+            response.setFile(tff,'application/x-tar')
+        response.add('Returning data')
+
+    def finish(self, serverState, request):
+        """Now delete the directories associated with that run."""
+        runDir=request.getParam('run_dir')
+        if os.path.isdir(runDir):
+            shutil.rmtree(runDir)
 
 
- 

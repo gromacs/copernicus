@@ -356,8 +356,7 @@ class Worker(object):
             rundir=os.path.join(self.mainDir, "%d"%self.iteration)
             log.debug("run directory: %s"%rundir)
             #os.mkdir(rundir)
-            cpc.util.file.extractSafely(rundir,
-                                                  fileobj=resp.getRawData())
+            cpc.util.file.extractSafely(rundir, fileobj=resp.getRawData())
             # get the commands.
             i=0
             for subdir in os.listdir(rundir):

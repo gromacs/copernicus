@@ -104,26 +104,6 @@ class RawServerMessage(ClientBase):
 class ServerMessage(ServerToServerMessage):
     """ Server-to-server messages."""
            
-    #def commandFailedRequest(self, cmdID, origServer, jobTarFileobj=None):
-    #    cmdstring='command-failed'
-    #    fields = []
-    #    input = Input('cmd', cmdstring)
-    #    cmdIdInput = Input('cmd_id', cmdID)
-    #    fields.append(cmdIdInput)
-    #    fields.append(input)
-    #    fields.append(Input('project_server', origServer))
-    #    if jobTarFileobj is not None:
-    #        jobTarFileobj.seek(0)
-    #        files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
-    #    else:
-    #        files=[]
-    #    headers = dict()
-    #    # TODO: can this ever be not None?
-    #    if origServer is not None:
-    #        headers['end-node'] = origServer            
-    #    response=self.putRequest(ServerRequest.prepareRequest(fields, files, 
-    #                                                          headers))
-    #    return response
     def workerReadyForwardedRequest(self, workerID, archdata, topology,
                                     originatingServer, heartbeatInterval):
         cmdstring='worker-ready-forward'
@@ -196,4 +176,46 @@ class ServerMessage(ServerToServerMessage):
                                                               headers))
         return response
 
+    def deadWorkerFetchRequest(self, workerDir, runDir):
+        """A server-to-sever request for fetching a set of run directories
+           from a dead worker's output."""
+        cmdstring='dead-worker-fetch'
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('worker_dir', workerDir))
+        fields.append(Input('run_dir', runDir))
+        files = []
+        headers = dict()
+        self.connect()
+        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
+                                                              headers))
+        return response
+
+    def pullAssetRequest(self, cmdID, assetType):
+        cmdstring='pull-asset'
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('cmd_id', cmdID))
+        fields.append(Input('asset_type', assetType))
+        headers = dict()
+        headers['end-node'] = self.host
+        headers['end-node-port'] = self.port
+
+        self.connect()
+        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
+                                                              headers))
+        return response
+
+    def clearAssetRequest(self, cmdID):
+        cmdstring='clear-asset'
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        fields.append(Input('cmd_id', cmdID))
+        headers = dict()
+        headers['end-node'] = self.host
+        headers['end-node-port'] = self.port
+        self.connect()
+        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
+                                                              headers))
+        return response
 

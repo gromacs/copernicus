@@ -17,14 +17,14 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
-
-import sys
-import traceback
+#try:
+#    from cStringIO import StringIO
+#except ImportError:
+#    from StringIO import StringIO
+#
+#
+#import sys
+#import traceback
 import logging
 
 
@@ -49,18 +49,18 @@ class ServerCommandList(object):
         self.cmds=dict()
 
     def add(self, cmd):
+        """Add a single server command to the list."""
         name=cmd.getRequestString()
         self.cmds[name]=cmd
 
-    def run(self, request, response, serverState):
-        """Run a request by instantiating the right object and calling
-           run() on it."""
+    def getServerCommand(self, request):
+        """Get the server command based on a request's command."""
         cmd=request.getCmd()
-        if cmd in self.cmds:
-            log.info('Request: %s'%cmd)
-            self.cmds[cmd].run(serverState, request, response)
-        else:
+        if cmd not in self.cmds:
             raise ServerCommandError("Unknown command %s"%cmd)
+
+        log.info('Request: %s'%cmd)
+        return self.cmds[cmd]
 
 # these are the server commands that the secure server may run:
 scSecureList=ServerCommandList()
@@ -76,7 +76,7 @@ scSecureList.add(workercmd.SCCommandFailed())
 # heartbeat requests
 scSecureList.add(workercmd.SCWorkerHeartbeat())
 scSecureList.add(workercmd.SCHeartbeatForwarded())
-scSecureList.add(workercmd.SCWorkerFailed())  
+scSecureList.add(workercmd.SCDeadWorkerFetch())
 # overlay network topology
 scSecureList.add(server_command.SCListServerItems())
 scSecureList.add(server_command.SCReadConf())
@@ -125,43 +125,19 @@ scInsecureList.add(server_command.ScAddNodeRequest())
 scInsecureList.add(server_command.ScAddNodeAccepted())
 scInsecureList.add(server_command.ScAddClientRequest())
 
-class RequestParser(object):
-    '''
-        input : cpc.util.Request
-    '''
-    def __init__(self, serverState, request, response):
-        self.cmd=None
-        self.cmdList=[]
-        self.request = request
-        self.serverState=serverState
-        self.response=response
+#class RequestParser(object):
+#    '''
+#        input : cpc.util.Request
+#    '''
+#    def __init__(self, serverState, request, response):
+#        self.cmd=None
+#        self.cmdList=[]
+#        self.request = request
+#        self.serverState=serverState
+#        self.response=response
+#
+#    
+#    def getCmdList(self):
+#        return self.cmdList
 
-    
-    def getCmdList(self):
-        return self.cmdList
-
-'''
-    input : cpc.util.Request
-'''
-def parse(scList, request, serverState, response=None):
-    """Parse a request and the server state and return a result string. 
-       May not cause an exception; may alter the server state."""
-            
-    if response is None:
-        response = cpc.network.server_response.ServerResponse()
-    try:
-        scList.run(request, response, serverState)
-    except cpc.util.CpcError as e:
-        response.add(("%s"%e.__str__()), status="ERROR")
-        log.error(e.__str__())
-    except: 
-        fo=StringIO()
-        traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
-                                  sys.exc_info()[2], file=fo)
-        errmsg="Server exception: %s"%(fo.getvalue())
-        response.add(errmsg, status="ERROR")
-        log.error(errmsg)
-    return response
-
-       
 

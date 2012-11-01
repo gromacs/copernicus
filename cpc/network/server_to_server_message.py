@@ -45,7 +45,9 @@ class ServerToServerMessageError(CpcError):
         self.str=exc.__str__()
 
 class ServerToServerMessage(ClientBase):
-    
+    """Network-related server-to-server messages. 
+       Only those messages related to network topology should go here, the
+       rest should be in cpc.server.message.server_message."""
     #checks the network topology and finds out what node to connect to 
     #To reach the endnode. from then on it works like ClientBase
     #    
@@ -133,31 +135,31 @@ class ServerToServerMessage(ClientBase):
       
 #THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE
 #FIXME messages should not be located here
-    def pullAssetRequest(self, cmdID, assetType):
-        cmdstring='pull-asset' 
-        fields = []
-        fields.append(Input('cmd', cmdstring))
-        fields.append(Input('cmd_id', cmdID))
-        fields.append(Input('asset_type', assetType))
-        headers = dict()
-        headers['end-node'] = self.host
-        headers['end-node-port'] = self.port
-        
-        self.connect()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-        return response
-    
-    def clearAssetRequest(self, cmdID):
-        cmdstring='clear-asset' 
-        fields = []
-        fields.append(Input('cmd', cmdstring))
-        fields.append(Input('cmd_id', cmdID))
-        headers = dict()
-        headers['end-node'] = self.host
-        headers['end-node-port'] = self.port
-        self.connect()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-        return response
+#    def pullAssetRequest(self, cmdID, assetType):
+#        cmdstring='pull-asset' 
+#        fields = []
+#        fields.append(Input('cmd', cmdstring))
+#        fields.append(Input('cmd_id', cmdID))
+#        fields.append(Input('asset_type', assetType))
+#        headers = dict()
+#        headers['end-node'] = self.host
+#        headers['end-node-port'] = self.port
+#        
+#        self.connect()
+#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
+#        return response
+#    
+#    def clearAssetRequest(self, cmdID):
+#        cmdstring='clear-asset' 
+#        fields = []
+#        fields.append(Input('cmd', cmdstring))
+#        fields.append(Input('cmd_id', cmdID))
+#        headers = dict()
+#        headers['end-node'] = self.host
+#        headers['end-node-port'] = self.port
+#        self.connect()
+#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
+#        return response
 
 #END -- THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE      
     

@@ -132,18 +132,21 @@ class CmdLine(object):
         if 'heartbeat_items' in list:
             # new version
             for item in list['heartbeat_items']:
-                co.write("  Command ID:   %s\n"%(item['cmd_id']))
+                co.write("  Command ID: %s\n"%(item['cmd_id']))
                 if 'worker_id' in item:
-                    co.write("    Worker ID:  %s\n"%item['worker_id'])
+                    co.write("   Worker ID: %s\n"%item['worker_id'])
+                if 'task_id' in item:
+                    co.write("     Task ID: %s\n"%item['task_id'])
                 if 'heartbeat_expiry_time' in item:
-                    co.write("    Expires in: %s s\n"%
+                    co.write("  Expires in: %s s\n"%
                              item['heartbeat_expiry_time'])
                 if item['data_accessible']:
                     accessible="accessible"
                 else:
                     accessible="not accessible"
-                co.write("    Server:     %s, data %s\n"%
+                co.write("    Server: %s, data %s\n"%
                          (item['server_name'], accessible))
+                co.write("\n")
         return co.getvalue()
 
     @staticmethod

@@ -72,7 +72,6 @@ def print_usage():
     print "       cpcc queue|q"
     print "       cpcc running|r "
     print "       cpcc heartbeats|h "
-    print "       cpcc worker-failed workerID"
     print "       cpcc command-failed commandID"
     print ""
     print "Server control commands"    
@@ -196,10 +195,6 @@ try:
         resp = clnt.listRequest("heartbeats")
         renderMethod = CmdLine.listHeartbeats
         ProcessedResponse(resp).pprint(renderMethod)
-    elif cmd == "worker-failed":
-        id=getArg(args, 1, "worker ID")
-        clnt=ClientMessage()
-        ProcessedResponse(clnt.workerFailedRequest(id)).pprint()
     elif cmd == "command-failed":
         id=getArg(args, 1, "command ID", 0)
         #server=None

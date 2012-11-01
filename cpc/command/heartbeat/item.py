@@ -38,102 +38,6 @@ class HeartbeatReaderError(cpc.util.CpcXMLError):
     pass
 
 
-#class HeartbeatWorker(object):
-#    """A collection of heartbeat items belonging to a worker."""
-#    def __init__(self, workerID, workerDir):
-#        self.workerID=workerID
-#        self.workerDir=workerDir
-#        self.items=[]
-#        self.lastHeard=time.time()
-#        self.lock=threading.Lock()
-#
-#    def getWorkerDir(self):
-#        return self.workerDir
-#    def haveWorkerDir(self):
-#        """Return whether the worker's run directory is accessible."""
-#        return os.path.exists(self.workerDir)
-#
-#    def ping(self):
-#        """Update the time associated with the last heard ping to now."""
-#        with self.lock:
-#            self.lastHeard=time.time()
-#    def addItem(self, item):
-#        """Add a single heartbeat item to the worker."""
-#        with self.lock:
-#            self.items.append(item)
-#
-#    def setItems(self, items):
-#        """Set the heartbeat item list."""
-#        with self.lock:
-#            self.items=items
-#
-#    #def getItems(self):
-#    #    """Get the full heartbeat item list."""
-#    #    with self.lock:
-#    #        return self.items
-#    def clearItems(self):
-#        """clear the full heartbeat item list."""
-#        with self.lock:
-#            self.items=[]
-#
-#
-#    def notifyServer(self):
-#        """Notify the server that a worker has died.
-#           Returns the client response."""
-#        log.info("Worker %s has died."%(self.workerID))
-#        with self.lock:
-#            # now notify all the appropriate servers.
-#            #sendSucceeded=False
-#            for item in self.items:
-#                log.info("Notifying %s that worker of cmd %s has died."%
-#                         (item.serverName, item.cmdID))
-#                tff=None
-#                try:
-#                    if item.haveRunDir():
-#                        # if it exists, we create a tar file and send it.
-#                        tff=tempfile.TemporaryFile()
-#                        tf=tarfile.open(fileobj=tff, mode="w:gz")
-#                        tf.add(item.getRunDir(), arcname=".", recursive=True)
-#                        tf.close()
-#                        tff.seek(0)
-#                        #sendSucceeded=True
-#                except:
-#                    # we make sure we don't upload in case of doubt
-#                    pass
-#                clnt=cpc.server.message.server_message.ServerMessage()
-#                clnt.commandFailedRequest(item.cmdID, item.serverName, tff)
-#            if self.haveWorkerDir():
-#                try:
-#                    # remove the worker directory
-#                    shutil.rmtree(self.workerDir, ignore_errors=True)
-#                except:
-#                    # and duly ignore the response.
-#                    pass
-#
-#
-#    def writeXML(self, outf, serverName=None):
-#        """Write the XML for a worker's heartbeat items to outf. If serverName
-#           is not None, only list heartbeat items for that server."""
-#        with self.lock:
-#            outf.write('<worker id="%s" dir="%s">\n'%(self.workerID, 
-#                                                      self.workerDir))
-#            for item in self.items:
-#                if serverName is None or serverName == item.serverName:
-#                    item.writeXML(outf)
-#            outf.write('</worker>\n')
-#
-#    def toJSON(self):
-#        """Returns a dict with the object contents so it can be 
-#           JSON-serialized."""
-#        ret=dict()
-#        with self.lock:
-#            ret['worker_id'] = self.workerID
-#            ret['worker_dir'] = self.workerDir
-#            ret['items'] = []
-#            for item in self.items:
-#                ret['items'].append(item.toJSON())
-#        return ret
-
 
 class HeartbeatItem(object):
     stateOK=0               # Item is OK
@@ -145,16 +49,23 @@ class HeartbeatItem(object):
         """Initialize the heartbeat item
            cmdID      = the command ID of the command to watch
            serverName = the command's originating server
-           runDir     = the run directory of the worker."""
+           runDir     = the run directory of the worker.  """
         self.cmdID=cmdID
         self.serverName=serverName
         self.runDir=runDir
         self.state=self.stateOK
+        self.haveRunDir=None
 
     def writeXML(self, outf):
         """Write state as xml."""
-        outf.write('    <heartbeat-item cmd_id="%s" server_name="%s" run_dir="%s"/>\n'
-                   %(self.cmdID, self.serverName, self.runDir))
+        if self.haveRunDir is None:
+            outf.write('    <heartbeat-item cmd_id="%s" server_name="%s" run_dir="%s"/>\n'
+                       %(self.cmdID, self.serverName, self.runDir))
+        else:
+            outf.write('    <heartbeat-item cmd_id="%s" server_name="%s" run_dir="%s" have_run_dir="%s"/>\n'
+                       %(self.cmdID, self.serverName, self.runDir, 
+                         str(self.haveRunDir)))
+
 
     def getCmdID(self):
         """Return the command ID."""
@@ -165,10 +76,20 @@ class HeartbeatItem(object):
     def getRunDir(self):
         """Return the item's run directory."""
         return self.runDir
-    def haveRunDir(self):
-        """Return whether the item's run directory is accessible."""
+
+    def setHaveRunDir(self, val):
+        """Set whether the item's run directory is present."""
+        self.haveRunDir=val
+
+    def getHaveRunDir(self):
+        """Return whether the item's run directory is accessible. 
+           Returns None if it hasn't been checked."""
+        return self.haveRunDir
+
+    def checkRunDir(self):
+        """Check whether the item's run directory is accessible."""
         #log.debug("Checking whether %s exists."%(self.runDir))
-        return os.path.exists(self.runDir)
+        self.haveRunDir=os.path.exists(self.runDir)
 
     def getState(self):
         """get the state of the item."""
@@ -242,7 +163,12 @@ class HeartbeatItemReader(xml.sax.handler.ContentHandler):
             cmdID=attrs.getValue("cmd_id")
             serverName=attrs.getValue("server_name")
             runDir=attrs.getValue("run_dir")
+            if attrs.has_key('have_run_dir'):
+                haveRunDir=cpc.util.getBooleanAttribute(attrs,'have_run_dir')
+            else:
+                haveRunDir=None
             hbi=HeartbeatItem(cmdID, serverName, runDir)
+            hbi.setHaveRunDir(haveRunDir)
             self.items.append(hbi)
         elif name == "heartbeat":
             pass

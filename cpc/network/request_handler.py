@@ -24,15 +24,24 @@ import mmap
 import logging
 import os
 import uuid
+import hashlib
+import mimetypes
+import re
+import traceback
+import sys
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+
+
 from server_to_server_message import ServerToServerMessage
 from server_response import ServerResponse
 from cpc.util.conf.server_conf import ServerConf
-import mimetypes
-import re
 from cpc.network.http.http_method_parser import HttpMethodParser
 import cpc.server.message
 import cpc.util.log
-import hashlib
 log=logging.getLogger('cpc.server.request_handler')
 
 
@@ -201,24 +210,51 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         request.session = session
 
     def processMessage(self,request = None):
- 
-        if request:
-            self._handleSession(request)
-            scList=self.server.getSCList()
-            retmsg=cpc.server.message.parse(scList,
-                                            request,
-                                            self.server.getState())
+        try:
+            if request:
+                serverCmd=None
+                doFinish=False
+                serverState=self.server.getState()
+                try:
+                    self._handleSession(request)
+                    scList=self.server.getSCList()
+                    response = cpc.network.server_response.ServerResponse()
 
-            self._sendResponse(retmsg)
+                    serverCmd=scList.getServerCommand(request)
 
-        else:
-            self.send_response(405)
-            self.send_header("content-length", 0)
-            self.send_header("connection",  "close")
-            self.end_headers()
+                    serverCmd.run(serverState, request, response)
+                    doFinish=True
+                except cpc.util.CpcError as e:
+                    response.add(("%s"%e.__str__()), status="ERROR")
+                    log.error(e.__str__())
+                except:
+                    fo=StringIO()
+                    traceback.print_exception(sys.exc_info()[0], 
+                                              sys.exc_info()[1],
+                                              sys.exc_info()[2], file=fo)
+                    errmsg="Server exception: %s"%(fo.getvalue())
+                    response.add(errmsg, status="ERROR")
+                    log.error(errmsg)
 
-
-        return False
+                # now send the response and call the finish() function on the 
+                # command
+                self._sendResponse(response)
+                if doFinish and serverCmd is not None:
+                    serverCmd.finish(serverState, request)
+            else:
+                self.send_response(405)
+                self.send_header("content-length", 0)
+                self.send_header("connection",  "close")
+                self.end_headers()
+        except cpc.util.CpcError as e:
+            log.error(e.__str__())
+        except:
+            fo=StringIO()
+            traceback.print_exception(sys.exc_info()[0], 
+                                      sys.exc_info()[1],
+                                      sys.exc_info()[2], file=fo)
+            errmsg="Server exception: %s"%(fo.getvalue())
+            log.error(errmsg)
     
     
     def _sendResponse(self,retmsg):

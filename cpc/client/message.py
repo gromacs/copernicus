@@ -199,16 +199,6 @@ class ClientMessage(ClientBase):
         response=self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
-    def workerFailedRequest(self, workerID):
-        cmdstring='worker-failed'
-        fields = []
-        input = Input('cmd', cmdstring)
-        workerIdInput = Input('worker_id', workerID)
-        fields.append(input)
-        fields.append(workerIdInput)
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[]))
-        return response
-
     def readConfRequest(self):
         """Tell the server to re-read its configuration."""
         cmdstring="readconf"
