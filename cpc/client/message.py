@@ -65,6 +65,7 @@ class ClientMessage(ClientBase):
         fields = []
         input = Input('cmd', cmdstring)   
         fields.append(input)
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
@@ -75,7 +76,7 @@ class ClientMessage(ClientBase):
         fields = []
         input = Input('cmd', cmdstring)
         fields.append(input)
-        
+        fields.append(Input('version', "1"))
         headers = dict()
         if endNode != None:
             headers['end-node'] = endNode
@@ -90,6 +91,7 @@ class ClientMessage(ClientBase):
         fields = []
         input = Input('cmd', cmdstring)
         fields.append(input)
+        fields.append(Input('version', "1"))
         
         if topology != None:
             input2 = Input('topology',
@@ -108,6 +110,7 @@ class ClientMessage(ClientBase):
                 
         input = Input('cmd', cmdstring)
         fields.append(input)
+        fields.append(Input('version', "1"))
         
         input2 = Input('host',host)
         input3 = Input('http_port',http_port)
@@ -128,6 +131,7 @@ class ClientMessage(ClientBase):
         fields  = []
         input = Input('cmd',cmdString)
         fields.append(input)
+        fields.append(Input('version', "1"))
         msg = ServerRequest.prepareRequest(fields,[])
         return self.postRequest(msg)
     
@@ -137,6 +141,7 @@ class ClientMessage(ClientBase):
         fields  = []
         input = Input('cmd',cmdString)
         fields.append(input)
+        fields.append(Input('version', "1"))
         msg = ServerRequest.prepareRequest(fields,[])
         return self.postRequest(msg)
     # lists all connect requests
@@ -145,6 +150,7 @@ class ClientMessage(ClientBase):
         fields  = []
         input = Input('cmd',cmdString)
         fields.append(input)
+        fields.append(Input('version', "1"))
         msg = ServerRequest.prepareRequest(fields,[])
         return self.postRequest(msg)
     
@@ -154,6 +160,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd',cmdString)
         fields = []
         fields.append(input)    
+        fields.append(Input('version', "1"))
         fields.append(Input('host',host))
         fields.append(Input('port',port))             
         
@@ -166,6 +173,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd',cmdString)
         fields = []
         fields.append(input)    
+        fields.append(Input('version', "1"))
           
         msg = ServerRequest.prepareRequest(fields,[])
         
@@ -181,6 +189,7 @@ class ClientMessage(ClientBase):
         fields.append(input)
         fields.append(input2)
         fields.append(input3)
+        fields.append(Input('version', "1"))
         
         msg = ServerRequest.prepareRequest(fields,[])
         
@@ -195,6 +204,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd', cmdstring)
         typeInput = Input('type',name)
         fields.append(input)     
+        fields.append(Input('version', "1"))
         fields.append(typeInput)     
         response=self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
@@ -205,6 +215,7 @@ class ClientMessage(ClientBase):
         fields = []
         input = Input('cmd', cmdstring)   
         fields.append(input)
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
@@ -214,6 +225,7 @@ class ClientMessage(ClientBase):
         fields = []
         input = Input('cmd', cmdstring)   
         fields.append(input)
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
@@ -224,6 +236,7 @@ class ClientMessage(ClientBase):
         cmdIdInput = Input('cmd_id', cmdID)
         fields.append(cmdIdInput)
         fields.append(input)
+        fields.append(Input('version', "1"))
         fields.append(Input('project_server', ''))
         fields.append(Input('used_cpu_time', cputime))
         #if jobTarFileobj is not None:
@@ -248,6 +261,7 @@ class ClientMessage(ClientBase):
         cmdstring="projects"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
@@ -256,6 +270,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-start"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('name',name))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
@@ -265,6 +280,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-delete"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('project',project))
         if deleteDir:
             fields.append(Input('delete-dir',1))
@@ -276,6 +292,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-get-default"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
 
@@ -284,6 +301,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-set-default"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('name',name))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
@@ -293,6 +311,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-list"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -304,6 +323,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-info"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -315,6 +335,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-log"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -326,6 +347,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-graph"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -337,6 +359,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-add-instance"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('name', name))
@@ -349,6 +372,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-connect"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('source', src))
@@ -361,6 +385,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-activate"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -372,6 +397,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-deactivate"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -383,6 +409,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-rerun"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('item', item))
         if clearError:
             fields.append(Input('clear-error', 1))
@@ -398,6 +425,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         files = [FileInput('upload','project.xml',open(file,'r'))]  
         response=self.putRequest(ServerRequest.prepareRequest(fields,files)) 
         return response
@@ -407,6 +435,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-import"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('module', module))
@@ -419,6 +448,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-get"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -432,6 +462,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-set"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
@@ -450,14 +481,17 @@ class ClientMessage(ClientBase):
         cmdstring="project-transact"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
+
     def projectCommitRequest(self, project):
         """Commit a series of previously scheduled set&connect requests, 
            atomically."""
         cmdstring="project-commit"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
     def projectRollbackRequest(self, project):
@@ -465,17 +499,16 @@ class ClientMessage(ClientBase):
         cmdstring="project-rollback"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
         return response
- 
     
     def addClientRequest(self,host,port):
         cmdstring = "add-client-request"
         fields = []
         files = []
         fields.append(Input('cmd', cmdstring))
-        
-        
+        fields.append(Input('version', "1"))
         inf=open(self.conf.getCACertFile(), "r")
         key = inf.read()   
         
@@ -484,12 +517,15 @@ class ClientMessage(ClientBase):
                                                 ,self.conf.getClientHTTPSPort()
                                                 ,key
                                                 ,self.conf.getHostName())
-
-        input2=Input('clientConnectRequest',json.dumps(nodeConnectRequest,default=json_serializer.toJson,indent=4))
+        input2=Input('clientConnectRequest',
+                     json.dumps(nodeConnectRequest,
+                                default=json_serializer.toJson,
+                                indent=4))
 
         fields.append(input2)
         
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files),https=False)
+        response=self.putRequest(ServerRequest.prepareRequest(fields,files),
+                                 https=False)
                   
         return response
 
@@ -498,6 +534,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-save"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         #if project is not None:
         fields.append(Input('project', project))
         response=self.putRequest(ServerRequest.prepareRequest(fields,[]))
@@ -508,6 +545,7 @@ class ClientMessage(ClientBase):
         cmdstring="project-load"
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         #if project is not None:
 
         filename = os.path.basename(projectBundle)

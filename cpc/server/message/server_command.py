@@ -39,6 +39,7 @@ from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
 import cpc.server.message
 from cpc.server.message.server_message import RawServerMessage
+from cpc.util.version import __version__
 import json
 
 
@@ -98,7 +99,8 @@ class SCTestServer(ServerCommand):
 
     def run(self, serverState, request, response):
         conf = ServerConf()
-        response.add('Server %s:%s is fine.'%(conf.getHostName(),conf.getServerHTTPSPort()))
+        response.add('Server: %s, version:   %s'%(conf.getHostName(), 
+                                                  __version__))
 
 
 class SCListServerItems(ServerCommand):

@@ -76,6 +76,7 @@ class RawServerMessage(ClientBase):
         fields.append(input)
         fields.append(input2)
         fields.append(input3)
+        fields.append(Input('version', "1"))
         response= self.putRequest(ServerRequest.prepareRequest(fields), 
                                   https=False)        
         return response 
@@ -96,6 +97,7 @@ class RawServerMessage(ClientBase):
         
         fields.append(input)
         fields.append(input2)
+        fields.append(Input('version', "1"))
         
         response= self.putRequest(ServerRequest.prepareRequest(fields), 
                                   https=False)
@@ -109,6 +111,7 @@ class ServerMessage(ServerToServerMessage):
         cmdstring='worker-ready-forward'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
         fields.append(Input('originating-server', originatingServer))
@@ -134,6 +137,7 @@ class ServerMessage(ServerToServerMessage):
         input = Input('cmd', cmdstring)
         fields.append(input)
         fields.append(Input('cmd_id', cmdID))
+        fields.append(Input('version', "1"))
         fields.append(Input('worker_server', workerServer))
         if returncode is not None:
             fields.append(Input('return_code', returncode))
@@ -161,6 +165,7 @@ class ServerMessage(ServerToServerMessage):
         cmdstring='heartbeat-forward'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('worker_id', workerID))
         fields.append(Input('worker_dir', workerDir))
         fields.append(Input('iteration', iteration))
@@ -182,6 +187,7 @@ class ServerMessage(ServerToServerMessage):
         cmdstring='dead-worker-fetch'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('worker_dir', workerDir))
         fields.append(Input('run_dir', runDir))
         files = []
@@ -195,6 +201,7 @@ class ServerMessage(ServerToServerMessage):
         cmdstring='pull-asset'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('cmd_id', cmdID))
         fields.append(Input('asset_type', assetType))
         headers = dict()
@@ -210,6 +217,7 @@ class ServerMessage(ServerToServerMessage):
         cmdstring='clear-asset'
         fields = []
         fields.append(Input('cmd', cmdstring))
+        fields.append(Input('version', "1"))
         fields.append(Input('cmd_id', cmdID))
         headers = dict()
         headers['end-node'] = self.host

@@ -36,6 +36,10 @@ import cpc.util
 import cpc.util.log
 from cpc.network.com.client_base import ClientError
 
+from cpc.network.com.client_response import ProcessedResponse
+from cpc.client import ClientMessage
+from cpc.util.version import __version__
+
 def print_usage():
 
     print "Usage: cpc-worker [global-opts] cpc-worker worker-type"
@@ -144,6 +148,11 @@ cpc.util.log.initClientLog(debug)
 try:
     if cmd == "help":
         print_usage()
+    elif cmd == "version":
+         print("Worker version:  %s"%__version__)
+         clnt=ClientMessage()
+         resp = clnt.testServerRequest()
+         ProcessedResponse(resp).pprint()
     else:
         type=getArg(0, "Worker type")
         restargs=[]

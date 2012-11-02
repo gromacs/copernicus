@@ -33,6 +33,7 @@ from cpc.client.view.cmdline import CmdLine
 from cpc.network.com.client_base import ClientError
 from cpc.client import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
+from cpc.util.version import __version__
 import subprocess
 
 
@@ -47,26 +48,26 @@ def print_usage():
     print "       cpcc get-default    projectname"
     print 
     print "Project query commands."
-    print "       cpcc list|ls     [-p projectname] [instance_name]"
-    print "       cpcc get         [-p projectname] inst:in|out.ioname"
-    print "       cpcc getf        [-p projectname] [-f filename] inst:in|out.ioname "
-    print "       cpcc info        [-p projectname] function_name|module_name"
-    print "       cpcc log         [-p projectname] instance_name"
+    print "       cpcc list|ls     [instance_name]"
+    print "       cpcc get         inst:in|out.ioname"
+    print "       cpcc getf        [-f filename] inst:in|out.ioname "
+    print "       cpcc info        function_name|module_name"
+    print "       cpcc log         instance_name"
     print 
     print "Project manipulation commands."
-    print "       cpcc import      [-p projectname] modulename"
-    print "       cpcc instance    [-p projectname] function_name instance_name"
-    print "       cpcc activate    [-p projectname] [item]"
-    print "       cpcc deactivate  [-p projectname] [item]"
-    print "       cpcc connect     [-p projectname] inst:out.item inst:in.item"
-    print "       cpcc set         [-p projectname] inst:in.ioname value"
-    print "       cpcc setf        [-p projectname] inst:in.ioname filename"
-    print "       cpcc transact    [-p projectname]"
-    print "       cpcc commit      [-p projectname]"
-    print "       cpcc rollback    [-p projectname]"
-    print "       cpcc upload      [-p projectname] upload.xml"
-    print "       cpcc clear-error [-p projectname] [item]"
-    print "       cpcc force-rerun [-p projectname] item"
+    print "       cpcc import      modulename"
+    print "       cpcc instance    function_name instance_name"
+    print "       cpcc activate    [item]"
+    print "       cpcc deactivate  [item]"
+    print "       cpcc connect     inst:out.item inst:in.item"
+    print "       cpcc set         inst:in.ioname value"
+    print "       cpcc setf        inst:in.ioname filename"
+    print "       cpcc transact    "
+    print "       cpcc commit      "
+    print "       cpcc rollback    "
+    print "       cpcc upload      upload.xml"
+    print "       cpcc clear-error [item]"
+    print "       cpcc force-rerun item"
     print ""
     print "Worker and heartbeat monitoring commands."
     print "       cpcc queue|q"
@@ -87,6 +88,7 @@ def print_usage():
     print "       cpcc change-node-priority priority host [port]"
     print "       cpcc network-topology"
     print "       cpcc readconf"
+    print "       cpcc version"
     print ""
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
@@ -176,15 +178,16 @@ cf= ConnectionBundle(bundleFile)
 try:
     if cmd == "help":
         print_usage()
+    elif cmd == "version":
+        print("Client version:  %s"%__version__)
+        clnt=ClientMessage()
+        resp = clnt.testServerRequest()
+        ProcessedResponse(resp).pprint()
     elif cmd == "queue" or cmd=="q":
         clnt=ClientMessage()
         resp = clnt.listRequest("queue")
         renderMethod = CmdLine.listQueue
         ProcessedResponse(resp).pprint(renderMethod)
-        #clnt=ClientMessage()
-        #resp = clnt.listRequest("running")
-        #renderMethod = CmdLine.listRunningQueue
-        #ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "running" or cmd == "r":
         clnt=ClientMessage()
         resp = clnt.listRequest("running")
@@ -404,7 +407,8 @@ try:
     
     elif cmd == "trust-all":  
         clnt= ClientMessage()
-        ProcessedResponse(clnt.grantAllNodeConnections()).pprint(CmdLine.grantAllNodeConnectRequests)
+        ProcessedResponse(clnt.grantAllNodeConnections()).\
+                  pprint(CmdLine.grantAllNodeConnectRequests)
     
     elif cmd == "add-node":
         host = getArg(args,1,"hostname")
@@ -419,7 +423,8 @@ try:
             http_port = "14807"
                   
         clnt = ClientMessage()
-        ProcessedResponse(clnt.addNode(host, http_port,https_port)).pprint(CmdLine.addNodeRequest)
+        ProcessedResponse(clnt.addNode(host, http_port,https_port)).\
+                  pprint(CmdLine.addNodeRequest)
 
     elif cmd == 'list-nodes':
         clnt = ClientMessage()
@@ -427,11 +432,13 @@ try:
     
     elif cmd == 'list-sent-node-requests':
         clnt = ClientMessage()
-        ProcessedResponse(clnt.listSentNodeConnectionRequests()).pprint(CmdLine.listSentNodeConnectRequests)    
+        ProcessedResponse(clnt.listSentNodeConnectionRequests()).\
+                  pprint(CmdLine.listSentNodeConnectRequests)    
     
     elif cmd == 'list-node-requests':
         clnt = ClientMessage()
-        ProcessedResponse(clnt.listNodeConnectionRequests()).pprint(CmdLine.listNodeConnectRequests)
+        ProcessedResponse(clnt.listNodeConnectionRequests()).\
+                  pprint(CmdLine.listNodeConnectRequests)
         
     elif cmd == "remove-node":        
         if(cf.removeNode(getArg(1, "hostname"),getArg(2,'port'))):
@@ -457,11 +464,13 @@ try:
             port = getArg(3,"port")
         
         clnt = ClientMessage()
-        ProcessedResponse(clnt.changeNodePriority(host,priority,port)).pprint(CmdLine.listNodes)
+        ProcessedResponse(clnt.changeNodePriority(host,priority,port)).\
+                  pprint(CmdLine.listNodes)
             
     elif cmd == "network-topology":
         clnt = ClientMessage()        
-        ProcessedResponse(clnt.networkTopology()).pprint(CmdLine.networkTopology)
+        ProcessedResponse(clnt.networkTopology()).\
+                  pprint(CmdLine.networkTopology)
         
     elif cmd == "network-graph":  #calls graphviz
         
