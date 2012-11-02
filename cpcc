@@ -42,50 +42,51 @@ def print_usage():
     print 
     print "Project start & stop commands:"
     print "       cpcc projects|p"
-    print "       cpcc start          projectname"
-    print "       cpcc remove|rm      projectname"
-    print "       cpcc set-default|d  projectname"
-    print "       cpcc get-default    projectname"
+    print "       cpcc start             projectname"
+    print "       cpcc remove|rm         projectname"
+    print
+    print "Working project setting and inspection command."
+    print "       cpcc cd | set-default  projectname"
+    print "       cpcc pwd | get-default projectname"
     print 
     print "Project query commands."
-    print "       cpcc list|ls     [instance_name]"
-    print "       cpcc get         inst:in|out.ioname"
-    print "       cpcc getf        [-f filename] inst:in|out.ioname "
-    print "       cpcc info        function_name|module_name"
-    print "       cpcc log         instance_name"
+    print "       cpcc list | ls         [instance_name]"
+    print "       cpcc get               inst:in|out.ioname"
+    print "       cpcc getf              [-f filename] inst:in|out.ioname "
+    print "       cpcc info              function_name|module_name"
+    print "       cpcc log               instance_name"
     print 
     print "Project manipulation commands."
-    print "       cpcc import      modulename"
-    print "       cpcc instance    function_name instance_name"
-    print "       cpcc activate    [item]"
-    print "       cpcc deactivate  [item]"
-    print "       cpcc connect     inst:out.item inst:in.item"
-    print "       cpcc set         inst:in.ioname value"
-    print "       cpcc setf        inst:in.ioname filename"
-    print "       cpcc transact    "
-    print "       cpcc commit      "
-    print "       cpcc rollback    "
-    print "       cpcc upload      upload.xml"
-    print "       cpcc clear-error [item]"
-    print "       cpcc force-rerun item"
+    print "       cpcc import            modulename"
+    print "       cpcc instance          function_name instance_name"
+    print "       cpcc activate          [item]"
+    print "       cpcc deactivate        [item]"
+    print "       cpcc connect           inst:out.item inst:in.item"
+    print "       cpcc set               inst:in.ioname value"
+    print "       cpcc setf              inst:in.ioname filename"
+    print "       cpcc transact"
+    print "       cpcc commit"
+    print "       cpcc rollback"
+    print "       cpcc upload            upload.xml"
+    print "       cpcc clear-error       [item]"
+    print "       cpcc force-rerun       item"
     print ""
     print "Worker and heartbeat monitoring commands."
-    print "       cpcc queue|q"
-    print "       cpcc running|r "
-    print "       cpcc heartbeats|h "
-    print "       cpcc command-failed commandID"
+    print "       cpcc queue | q"
+    print "       cpcc running | r "
+    print "       cpcc heartbeats | h "
+    print "       cpcc command-failed    commandID"
     print ""
     print "Server control commands"    
-    print "       cpcc init-default-server"
     print "       cpcc stop-server"
-    print "       cpcc trust host port"
+    print "       cpcc trust host        port"
     print "       cpcc trust-all"  
-    print "       cpcc add-node host [http_port] [https_port]"
-    print "       cpcc remove-node host port"
+    print "       cpcc add-node host     [http_port] [https_port]"
+    print "       cpcc remove-node       host port"
     print "       cpcc list-nodes" 
     print "       cpcc list-sent-node-requests"
     print "       cpcc list-node-requests"
-    print "       cpcc change-node-priority priority host [port]"
+    print "       cpcc node-pri          priority host [port]"
     print "       cpcc network-topology"
     print "       cpcc readconf"
     print "       cpcc version"
@@ -225,11 +226,11 @@ try:
         clnt=ClientMessage()
         renderMethod = CmdLine.listProjects
         ProcessedResponse(clnt.projectsRequest()).pprint(renderMethod)
-    elif cmd == "set-default" or cmd == "d":
+    elif cmd == "set-default" or cmd == "cd":
         project=getArg(args, 1, "project name")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectSetDefaultRequest(project)).pprint()
-    elif cmd == "get-default":
+    elif cmd == "get-default" or cmd == "pwd":
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectGetDefaultRequest()).pprint()
     elif cmd == "list" or cmd == "ls":
@@ -394,10 +395,10 @@ try:
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectConnectRequest(project, 
                                                      src, dst)).pprint()
-    elif cmd == "init-default-server":
-        cf.setClientHost(getArg(1, "server name"))
-        print args[1] + " is now set as default server"
-        #save the server address to a config file
+#    elif cmd == "init-default-server":
+#        cf.setClientHost(getArg(1, "server name"))
+#        print args[1] + " is now set as default server"
+#        #save the server address to a config file
     
     elif cmd == "trust":  
         host = getArg(args,1, "hostname")
@@ -453,8 +454,7 @@ try:
         clnt = ClientMessage()
         ProcessedResponse(clnt.readConfRequest()).pprint()
         
-    elif cmd == "change-node-priority":
-        
+    elif cmd == "change-node-priority" or cmd == "set-pri":
         if len(args) >= 3:
             priority = getArg(args,1,"priority")
             host = getArg(args,2,"host")

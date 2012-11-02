@@ -106,7 +106,7 @@ class SCProjectDelete(ProjectServerCommand):
             del request.session['default_project_name']
         response.add("Project %s%s deleted."%(name, msg))
 
-class SCProjectSetDefault(ServerCommand):
+class SCProjectSetDefault(ProjectServerCommand):
     """Set the default project ."""
     def __init__(self):
         ServerCommand.__init__(self, "project-set-default")
@@ -117,9 +117,9 @@ class SCProjectSetDefault(ServerCommand):
         # get the project to check whether it exists
         project=serverState.getProjectList().get(name)
         request.session.set("default_project_name", name)
-        response.add("Project %s set to default project"%name)
+        response.add("Changed to project %s"%name)
 
-class SCProjectGetDefault(ServerCommand):
+class SCProjectGetDefault(ProjectServerCommand):
     """Get the default project ."""
     def __init__(self):
         ServerCommand.__init__(self, "project-get-default")
@@ -127,11 +127,13 @@ class SCProjectGetDefault(ServerCommand):
     def run(self, serverState, request, response):
         #name=request.getParam('name')
         #name=serverState.getProjectList().getDefault().getName()
-        name=request.session.get("default_project_name")
+        #name=request.session.get("default_project_name")
+        prj=self.getProject(request, serverState)
+        name=prj.getName()
         if name is None:
-            response.add("No default project")
+            response.add("No working project")
         else:
-            response.add("Default project: %s"%name)
+            response.add("Working project: %s"%name)
 
 class SCProjectActivate(ProjectServerCommand):
     """Activate all elements in a project."""
