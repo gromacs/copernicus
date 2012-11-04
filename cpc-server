@@ -139,10 +139,8 @@ try:
                     else:
                         raise ClientError("Unknown option: %s"%arg)
         if rundir is None:
-            raise ClientError("Missing run directory: the base directory for project output")
-
-        #if(len(args)>2):
-        #    cn = getArg(2,"hostname for the server")
+            raise ClientError(
+                 "Missing run directory: the base directory for project output")
 
         initiateServerSetup(rundir, forceReset, hostConfDir, altHostName)
 
@@ -179,7 +177,7 @@ try:
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
         print connectionBundle.toJson()
     else: 
-        print "ERROR: unknown command"
+        print "ERROR: unknown command '%s'"%cmd
 except ClientError as e:
     print("ERROR: %s"%str(e))
 except cpc.util.CpcError as e:

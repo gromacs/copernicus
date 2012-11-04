@@ -63,6 +63,7 @@ def _signalHandlerThread():
     global signalHandlerWorkers
     global signalHandlerWorking
     with signalHandlerLock:
+        log.info("Received shutdown signal. Forwarding to work items")
         for worker in signalHandlerWorkers:
             worker.shutdown()
 
@@ -88,6 +89,9 @@ class Worker(object):
 		   opts = dictionary with options
            type = the worker plugin name to start.
            args = arguments for the worker plugin."""
+        # the run lock and condition variable
+        self.runLock=threading.Lock()
+        self.runCondVar=threading.Condition(self.runLock)
         self.conf=cf
         self.opts = opts
         self.type=type
@@ -164,9 +168,6 @@ class Worker(object):
 
         self._printAvailableExes()
         self.workloads=[]
-        # the run lock and condition variable
-        self.runLock=threading.Lock()
-        self.runCondVar=threading.Condition(self.runLock)
         self.iteration=0
         self.acceptCommands = True
         # install the signal handler
@@ -209,8 +210,7 @@ class Worker(object):
                         acceptCommands=self.acceptCommands
                     if acceptCommands:
                         for workload in workloads:
-                            workload.run(self.runCondVar, self.plugin,
-                                         self.args)
+                            workload.run(self.plugin, self.args)
             # now wait until a workload finishes
             finishedWorkloads = []
             self.runCondVar.acquire()
@@ -378,7 +378,8 @@ class Worker(object):
                     id="%d/%d"%(self.iteration, i)
                     workloads.append(workload.WorkLoad(self.mainDir, cmd,
                                                        cmddir, origServer,
-                                                       exe, pf, id))
+                                                       exe, pf, id,
+                                                       self.runCondVar))
                     i+=1
             resp.close()
         self.iteration+=1

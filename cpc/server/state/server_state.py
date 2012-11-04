@@ -62,8 +62,7 @@ class ServerState:
 
     def startExecThreads(self):
         """Start the exec threads."""
-        self.taskExecThreads=cpc.server.queue.TaskExecThreads(self.conf,
-                                                1,
+        self.taskExecThreads=cpc.server.queue.TaskExecThreads(self.conf, 1,
                                                 self.projectlist.getTaskQueue(),
                                                 self.cmdQueue)
 

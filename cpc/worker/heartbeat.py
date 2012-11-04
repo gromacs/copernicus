@@ -61,15 +61,19 @@ class HeartbeatSender(object):
                 self.run=True
             self.cmdsChanged=True
             for workload in workloads:
-                hbi=cpc.command.heartbeat.HeartbeatItem(workload.cmd.id, 
-                                                workload.originatingServer,
-                                                workload.rundir)
-                self.cmds[workload.cmd.id]=hbi
+                self.cmds[workload.cmd.id] = workload
                 for subwl in workload.joinedTo:
-                    hbi=cpc.command.heartbeat.HeartbeatItem(subwl.cmd.id, 
-                                                    subwl.originatingServer,
-                                                    subwl.rundir)
-                    self.cmds[subwl.cmd.id] = hbi
+                    self.cmds[subwl.cmd.id]= subwl
+            #for workload in workloads:
+            #    hbi=cpc.command.heartbeat.HeartbeatItem(workload.cmd.id, 
+            #                                    workload.originatingServer,
+            #                                    workload.rundir)
+            #    self.cmds[workload.cmd.id]=hbi
+            #    for subwl in workload.joinedTo:
+            #        hbi=cpc.command.heartbeat.HeartbeatItem(subwl.cmd.id, 
+            #                                        subwl.originatingServer,
+            #                                        subwl.rundir)
+            #        self.cmds[subwl.cmd.id] = hbi
             self._startThread()
                 
     def delWorkloads(self, workloads):
@@ -132,7 +136,7 @@ class HeartbeatSender(object):
         co=StringIO()
         co.write('<heartbeat worker_id="%s">'%self.workerID)
         for items in self.cmds.itervalues():
-            items.writeXML(co)
+            items.hbi.writeXML(co)
         co.write("</heartbeat>")
         clnt=WorkerMessage()
         resp=clnt.workerHeartbeatRequest(self.workerID, self.workerDir, 
@@ -152,7 +156,9 @@ class HeartbeatSender(object):
             # if the response was not OK, the upstream server thinks we're 
             # dead and has signaled that to the originating server. We 
             # should just die now.
-            log.error("Got error from heartbeat request. Stopping worker.")
+            faulty=presp.getData()
+            log.info("Error from heartbeat request. Stopping %s"%str(faulty))
+            #log.error("Got error from heartbeat request. Stopping worker.")
             sys.exit(1)
         respData=presp.getData()
         if type(respData) == type(dict()):
@@ -169,7 +175,7 @@ class HeartbeatSender(object):
         """Create a file wiht a random name chosen by the server. Used to 
             make sure the worker has write access to the directory it's 
             claiming is its work directory."""
-        if not self.randomFileCreated:
+        if not self.randomFileCreated and self.randomFile is not None:
             randomFileName=os.path.join(self.workerDir, self.randomFile)
             log.debug("Creating random file %s"%randomFileName)
             self.randomFileCreated=True

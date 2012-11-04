@@ -200,11 +200,10 @@ try:
         renderMethod = CmdLine.listHeartbeats
         ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "command-failed":
-        id=getArg(args, 1, "command ID", 0)
+        id=getArg(args, 1, "command ID")
         #server=None
         clnt=ClientMessage()
-        ProcessedResponse(clnt.commandFailedRequest(id)).pprint()
-        
+        ProcessedResponse(clnt.commandFailedRequest(id,0)).pprint()
     # dataflow application specific messages 
     elif cmd == "start": 
         name=getArg(args, 1, "project name")
@@ -537,7 +536,7 @@ try:
         ProcessedResponse(clnt.projectRestoreRequest(projectFile,
                                                      projectName)).pprint()
     else: 
-        print "ERROR: unknown command"
+        print "ERROR: unknown command '%s'"%cmd
 except ClientError as e:
     print("ERROR: %s"%str(e))
 except cpc.util.CpcError as e:

@@ -358,14 +358,12 @@ class SCWorkerHeartbeat(ServerCommand):
         # items.
         # Once we have many workers, this would be a place to pool heartbeat
         # items and send them as one big request.
-        OK=True
+        faultyItems=[]
         for dest, items in destList.iteritems():
             if dest == selfName:
                 ret=serverState.getRunningCmdList().ping(workerID, workerDir,
-                                                         iteration, items, True)
-                if not ret:
-                    # TODO: per-workload error reporting
-                    OK=False
+                                                         iteration, items, True,
+                                                         faultyItems)
             else:
                 msg=ServerMessage(dest)
                 co=StringIO()
@@ -379,19 +377,23 @@ class SCWorkerHeartbeat(ServerCommand):
                                                      co.getvalue())
                 presp=ProcessedResponse(resp)
                 if presp.getStatus() != "OK":
-                    OK=False
                     log.info("Heartbeat response from %s not OK"%dest)
-        if OK:
-            if version > 1:
-                retData = { 'heartbeat-time' : serverState.conf.
-                                                    getHeartbeatTime(),
-                            'random-file': workerDataList.getRnd(workerDir) }
-            else:
-                retData=serverState.conf.getHeartbeatTime()
+                    retitems=presp.getData()
+                    for item in retitems:
+                        faultyItems.append(item)
+        if version > 1:
+            retData = { 'heartbeat-time' : serverState.conf.
+                                                getHeartbeatTime(),
+                        'random-file': workerDataList.getRnd(workerDir) }
+        else:
+            retData=serverState.conf.getHeartbeatTime()
+        if len(faultyItems)==0:
             response.add('', data=retData)
         else:
+            if version > 1:
+                retData['faulty']=faultyItems
             # TODO: per-workload error reporting
-            response.add('Heatbeat NOT OK', status="ERROR")
+            response.add('Heatbeat NOT OK', status="ERROR", data=retData)
             
 
 class SCHeartbeatForwarded(ServerCommand):
@@ -407,13 +409,14 @@ class SCHeartbeatForwarded(ServerCommand):
         log.log(cpc.util.log.TRACE, 'items: %s'%itemsXML)
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
-        if serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
-                                                hwr.getItems(), False):
+        faultyItems=[]
+        ret=serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
+                                                 hwr.getItems(), False, 
+                                                 faultyItems)
+        if len(faultyItems)==0:
             response.add('', data=serverState.conf.getHeartbeatTime())
         else:
-            response.add('Heatbeat NOT OK', status="ERROR")
-
-
+            response.add('Heatbeat NOT OK', status="ERROR", data=faultyItems)
 
 class SCDeadWorkerFetch(ServerCommand):
     """Attempt to fetch the data from a dead worker."""

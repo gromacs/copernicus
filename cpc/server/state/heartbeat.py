@@ -274,7 +274,8 @@ class RunningCmdList(object):
                 ret.append(value.cmd)
         return ret
 
-    def ping(self, workerID, workerDir, iteration, heartbeatItems, isLocal):
+    def ping(self, workerID, workerDir, iteration, heartbeatItems, isLocal,
+             faultyItems):
         """Handle a heartbeat signal from a worker (possibly relayed)
           
            workerID = the sending worker's ID
@@ -283,6 +284,7 @@ class RunningCmdList(object):
            heartbeatItems = the hearbeat items describing commands.
            isLocal = a boolean that is true when the worker server is this 
                      server
+           faultyItems = a list containing faulty heartbeat items
            """
         response=[]
         OK=True
@@ -292,12 +294,16 @@ class RunningCmdList(object):
                 log.debug("Heartbeat signal for command %s"%cmdid)
                 if cmdid not in self.runningCommands:
                     item.setState(item.stateNotFound)
+                    log.info("Heartbeat item %s not found"%cmdid)
+                    faultyItems.append(item.cmdID)
                     OK=False
                 else:
                     cwid=self.runningCommands[cmdid].getWorkerID()
                     if (cwid is not None) and (cwid != workerID):
                         item.setState(item.stateWrongWorker)
+                        log.info("Worker ID for %s not found"%cmdid)
                         OK=False
+                        faultyItems.append(item.cmdID)
                     else:
                         item.setState(item.stateOK)
                         rc=self.runningCommands[cmdid]
@@ -353,6 +359,7 @@ class RunningCmdList(object):
             Return true if successful. May throw exception in case of failure"""
         runDir=rc.runDir
         destDir=rc.cmd.dir
+        done=False
         tmpDirName="__heartbeat_failure_results"
         backupDirName="__heartbeat_failure_backup"
         if self.workerData.checkDirectory(rc.workerDir, [runDir] ):
@@ -395,10 +402,11 @@ class RunningCmdList(object):
                         os.rename(srcFile, dstFile)
                 # and remove the run directory, the tmp dir and the backup dir
                 shutil.rmtree(runDir)
+                done=True
             finally:
                 shutil.rmtree(tmpDestDir)
                 shutil.rmtree(tmpBackupDir)
-            return True
+            return done
           
     def checkHeartbeatTimes(self):
         """Check the heartbeat times and deal with dead jobs. 
