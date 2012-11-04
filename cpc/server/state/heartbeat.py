@@ -21,6 +21,7 @@ import time
 import logging
 import shutil
 import os
+import sys
 import traceback
 try:
     from cStringIO import StringIO
@@ -31,7 +32,7 @@ except ImportError:
 
 import cpc.util
 import cpc.command.heartbeat
-from cpc.util.conf.server_conf import ServerConf
+#from cpc.util.conf.server_conf import ServerConf
 from cpc.server.message.server_message import ServerMessage
 
 log=logging.getLogger('cpc.server.heartbeat')
@@ -180,7 +181,7 @@ class RunningCmdList(object):
     # they can be bundled. 
     rateLimitTime = 5 
 
-    def __init__(self, cmdQueue, workerData):
+    def __init__(self, conf, cmdQueue, workerData):
         """Initialize the object with an empty list."""
         # a list of heartbeat items in a dict indexed by command ID, of
         # RunningCommand objects. Because this is just a flat list, we can
@@ -198,6 +199,7 @@ class RunningCmdList(object):
         self.thread.daemon=True
         self.thread.start()
         self.workerData=workerData
+        self.conf=conf
 
     def add(self, cmds, workerServer, heartbeatInterval):
         """Add a set of commands sent to a specific worker."""
@@ -324,13 +326,87 @@ class RunningCmdList(object):
         pass
     def writeState(self):
         pass
-      
+
+    def _fetchRemoteRunFiles(self, rc):
+        """Get the result files from a remote run directory to a local 
+            command directory. 
+            Return true if successful. May throw exception in case of failure"""
+        if rc.haveData:
+            log.debug("Fetching remote results directory %s to %s"%(rc.runDir, 
+                                                                    rc.cmd.dir))
+            # the data is remote: we must fetch data through a 
+            # server-to-server command.
+            msg=ServerMessage(rc.workerServer)
+            resp=msg.deadWorkerFetchRequest(rc.workerDir, rc.runDir)
+            if resp.getType() == "application/x-tar":
+                # untar the return data and  use it.
+                runfile=resp.getRawData()
+                log.debug("extracting file for %s to dir %s"%
+                          (rc.cmd.id,rc.cmd.dir))
+                cpc.util.file.extractSafely(rc.cmd.dir, fileobj=runfile)
+                return True
+        return False
+
+    def _moveRunFiles(self, rc):
+        """Move the result files from a local run directory to a local 
+            command directory. 
+            Return true if successful. May throw exception in case of failure"""
+        runDir=rc.runDir
+        destDir=rc.cmd.dir
+        tmpDirName="__heartbeat_failure_results"
+        backupDirName="__heartbeat_failure_backup"
+        if self.workerData.checkDirectory(rc.workerDir, [runDir] ):
+            log.debug("Moving data from %s to %s"%(runDir, destDir))
+            # first make a temp dest directory in the command dir
+            tmpDestDir=os.path.join(destDir, tmpDirName)
+            tmpBackupDir=os.path.join(destDir, backupDirName)
+            if os.path.exists(tmpDestDir):
+                # If it already exists, it must first be removed. This means
+                # we cannont name files with double underscores in cmd dirs.
+                shutil.rmtree(tmpDestDir)
+            if os.path.exists(tmpBackupDir):
+                shutil.rmtree(tmpBackupDir)
+            os.mkdir(tmpDestDir)
+            try:
+                os.mkdir(tmpBackupDir)
+                # now move all the files into the temp dest dir 
+                # If there is a problem with permissions, it will happen now, 
+                # before we overwrite any of the original files.
+                files=os.listdir(runDir)
+                # now move the files individually
+                for filename in files:
+                    if filename != tmpDirName and filename != backupDirName:
+                        srcFile=os.path.join(runDir, filename)
+                        dstFile=os.path.join(tmpDestDir, filename)
+                        # we must remove them first because otherwise
+                        # shutil.move will thrown an exception
+                        shutil.move(srcFile, dstFile)
+                # and move all of them in place. We can now do this safely with 
+                # os.rename
+                files=os.listdir(tmpDestDir)
+                for filename in files:
+                    if filename != tmpDirName and filename != backupDirName:
+                        srcFile=os.path.join(tmpDestDir, filename)
+                        dstFile=os.path.join(destDir, filename)
+                        # we move any existing files to dstBackupDir
+                        if os.path.exists(dstFile):
+                            os.rename(dstFile, os.path.join(tmpBackupDir, 
+                                                            filename))
+                        os.rename(srcFile, dstFile)
+                # and remove the run directory, the tmp dir and the backup dir
+                shutil.rmtree(runDir)
+            finally:
+                shutil.rmtree(tmpDestDir)
+                shutil.rmtree(tmpBackupDir)
+            return True
+          
     def checkHeartbeatTimes(self):
         """Check the heartbeat times and deal with dead jobs. 
            Returns the time of the first heartbeat expiry."""
+        interval = self.conf.getHeartbeatTime()
         with self.lock:
             # The maximum first expiry time is the server heartbeat interval
-            firstExpiry=time.time()+ServerConf().getHeartbeatTime()
+            firstExpiry=time.time()+interval
             todelete=[]
             now=time.time()
             for rc in self.runningCommands.itervalues():
@@ -352,63 +428,33 @@ class RunningCmdList(object):
                 # TODO: consolidate all requests for each worker server into
                 # one request
                 try:
-                    if rc.haveData:
-                        if not rc.isLocal:
-                            # the data is remote: we must fetch data through a 
-                            # server-to-server command.
-                            msg=ServerMessage(rc.workerServer)
-                            resp=msg.deadWorkerFetchRequest(rc.workerDir, 
-                                                            rc.runDir)
-                            if resp.getType() == "application/x-tar":
-                                # untar the return data and  use it.
-                                runfile=resp.getRawData()
-                                log.debug("extracting file for %s to dir %s"%
-                                          (rc.cmd.id,rc.cmd.dir))
-                                cpc.util.file.extractSafely(rc.cmd.dir, 
-                                                            fileobj=runfile)
-                                haveDir=True
-                        else: 
-                            # the data is local. Copy the directory
-                            log.debug("Moving results directory %s to %s"%
-                                      (rc.runDir, rc.cmd.dir))
-                            if self.workerData.checkDirectory(rc.workerDir,
-                                                              [rc.runDir] ):
-                                files=os.listdir(rc.runDir)
-                                for filename in files:
-                                    dstFile=os.path.join(rc.cmd.dir, filename)
-                                    if os.path.exists(dstFile):
-                                        if os.path.isdir(dstFile):
-                                            shutil.rmtree(os.path.join(dstFile))
-                                        else:
-                                            os.remove(os.path.join(dstFile))
-                                    shutil.move(os.path.join(rc.runDir,
-                                                             filename), 
-                                                dstFile)
-                                shutil.rmtree(rc.runDir)
-                                haveDir=True
-                        if haveDir:
-                            self._handleFinishedCmd(rc.cmd, None, 0)
-                            finishedReported=True
+                    if not rc.isLocal:
+                        haveDir=self._fetchRemoteRunFiles(rc)
+                    else: 
+                        # the data is local. Copy the directory
+                        haveDir=self._moveRunFiles(rc)
+                    if haveDir:
+                        self._handleFinishedCmd(rc.cmd, None, 0)
+                        finishedReported=True
                 except cpc.util.CpcError as e:
                     log.error(e.__str__())
                 except:
-                    # TODO: we shouldn't ignore these, but we also need
-                    # to put the commands back into the queue.
+                    # we can ignore these, because they are simply associated
+                    # with fetching output data.
                     fo=StringIO()
                     traceback.print_exception(sys.exc_info()[0],
                                               sys.exc_info()[1],
                                               sys.exc_info()[2], file=fo)
                     log.error("Heartbeat exception: %s"%(fo.getvalue()))
                 if not finishedReported:
-                    log.info(
-                            "Running command %s died: didn't get its data."%
-                            rc.cmd.id)
+                    log.info("Running command %s died: didn't get its data."%
+                             rc.cmd.id)
                     # just add it back into the queue
                     self.cmdQueue.add(rc.cmd)
                 else:
                     log.info("Running command %s died: got its data."%
                              rc.cmd.id)
-        return firstExpiry
+        return (interval, firstExpiry)
 
 def heartbeatServerThread(runningCommandList):
     """The hearbeat thread's endless loop.
@@ -416,13 +462,13 @@ def heartbeatServerThread(runningCommandList):
     log.info("Starting heartbeat monitor thread.")
     while True:
         # so we can reread the ocnfiguration
-        firstExpiry=runningCommandList.checkHeartbeatTimes()
+        (interval, firstExpiry)=runningCommandList.checkHeartbeatTimes()
         # calculate how long we can sleep before we need to check again.
         # we simply double the first expiry time, with a minimum of
         # runningCommandList.rateLimitTime seconds
         # (this serves as a rate limiter)
         now=time.time()
-        serverHeartbeatInterval=ServerConf().getHeartbeatTime()
+        #serverHeartbeatInterval=runningCommandList.conf.getHeartbeatTime()
         sleepTime = (firstExpiry - now) 
         if sleepTime < runningCommandList.rateLimitTime:
             sleepTime=runningCommandList.rateLimitTime
