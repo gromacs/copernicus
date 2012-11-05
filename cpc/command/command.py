@@ -67,7 +67,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
                  id=None, task=None, running=False, workerServer=None,
                  env=None, outputFiles=None):
         """Create a command
-            dir = the directory 
+            dir = the directory relative to the task directory
             executable = the name of the executable object
             args = the arguments for the executable
             files = the needed input files (as a list of CommandInputFile     
@@ -83,7 +83,11 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
             outputFiles = the list of any expected output files.
            """
         #self.taskID=taskID
-        self.dir=dir
+        if dir is not None and task is not None:
+            self.dir=os.path.relpath(dir,
+                                     self.task.activeInstance.getFullBasedir())
+        else:
+            self.dir=dir
         self.executable=executable
         self.inputFiles=[]
         self.outputFiles=outputFiles
@@ -115,6 +119,16 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     #    self.taskID=id
     def setTask(self, task):
         self.task=task
+        if self.dir is not None and os.path.isabs(self.dir):
+            self.dir=os.path.relpath(self.dir, 
+                                     task.activeInstance.getFullBasedir())
+
+    def getDir(self):
+        if not os.path.isabs(self.dir):
+            return os.path.join(self.task.activeInstance.getFullBasedir(),
+                                self.dir)
+        else:
+            return self.dir
 
     def tryGenID(self):
         """Generate an ID if it doesn't already have one."""
@@ -276,9 +290,9 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
                 self.reserved[name] = value
 
 
-    def setTask(self, task):
-        self.task=task
-        #self.taskID=task.getID()
+    #def setTask(self, task):
+    #    self.task=task
+    #    #self.taskID=task.getID()
     def getTask(self):
         return self.task
 
@@ -301,7 +315,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
                     outf.write(' worker_server="%s"'%self.workerServer)
             else:
                 outf.write(' running="no"')
-        if self.dir is not None:
+        if writeProject and self.dir is not None:
             outf.write(' dir="%s"'%self.dir)
         if self.addPriority!=0:
             outf.write(' add_priority="%d"'%self.addPriority)

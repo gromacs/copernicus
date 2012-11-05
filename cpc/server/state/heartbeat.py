@@ -249,8 +249,8 @@ class RunningCmdList(object):
             del self.runningCommands[cmdID]
         # the command is now removed from the list so we can stop locking.
         if runfile is not None:
-            log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.dir))
-            cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
+            log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.getDir()))
+            cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
         self._handleFinishedCmd(cmd, returncode, cputime)
 
     def _handleFinishedCmd(self, cmd, returncode, cputime):
@@ -263,8 +263,8 @@ class RunningCmdList(object):
         cmd.setReturncode(returncode)
         cmd.addCputime(cputime)
         #if runfile is not None:
-        #    log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.dir))
-        #    cpc.util.file.extractSafely(cmd.dir, fileobj=runfile)
+        #    log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.getDir()))
+        #    cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
         # run the task
         if task is not None:
             (newcmds, cancelcmds) = task.run(cmd)
@@ -347,8 +347,8 @@ class RunningCmdList(object):
             command directory. 
             Return true if successful. May throw exception in case of failure"""
         if rc.haveData:
-            log.debug("Fetching remote results directory %s to %s"%(rc.runDir, 
-                                                                    rc.cmd.dir))
+            log.debug("Fetching remote results directory %s to %s"%
+                      (rc.runDir, rc.cmd.getDir()))
             # the data is remote: we must fetch data through a 
             # server-to-server command.
             msg=ServerMessage(rc.workerServer)
@@ -357,8 +357,8 @@ class RunningCmdList(object):
                 # untar the return data and  use it.
                 runfile=resp.getRawData()
                 log.debug("extracting file for %s to dir %s"%
-                          (rc.cmd.id,rc.cmd.dir))
-                cpc.util.file.extractSafely(rc.cmd.dir, fileobj=runfile)
+                          (rc.cmd.id,rc.cmd.getDir()))
+                cpc.util.file.extractSafely(rc.cmd.getDir(), fileobj=runfile)
                 return True
         return False
 
@@ -367,7 +367,7 @@ class RunningCmdList(object):
             command directory. 
             Return true if successful. May throw exception in case of failure"""
         runDir=rc.runDir
-        destDir=rc.cmd.dir
+        destDir=rc.cmd.getDir()
         done=False
         tmpDirName="__heartbeat_failure_results"
         backupDirName="__heartbeat_failure_backup"

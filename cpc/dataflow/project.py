@@ -70,6 +70,8 @@ class Project(object):
         self.conf=conf
         self.name=name
         self.basedir=basedir
+        if not os.path.exists(self.basedir):
+            os.mkdir(self.basedir)
         log.debug("Creating project %s"%name)
         if queue is None:
             log.debug("Creating new task queue %s"%name)
@@ -85,7 +87,6 @@ class Project(object):
                                                  "", self.networkLock) 
         if len(affectedInputAIs)!=0:
             raise ProjectError("Top-level active network has initial elements!")
-
         
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", "", self.active)

@@ -352,6 +352,11 @@ class ActiveInstance(object):
             dir."""
         return self.baseDir
 
+    def getFullBasedir(self):
+        """Get the active instance's absolute base directory."""
+        return os.path.join(self.project.basedir, self.baseDir)
+
+
     def getInputs(self):
         """Get the input value object."""
         return self.inputVal
