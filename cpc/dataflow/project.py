@@ -82,7 +82,7 @@ class Project(object):
         # create the active network (the top-level network)
         affectedInputAIs=set()
         self.active=active_network.ActiveNetwork(self, None, self.queue, 
-                                                 basedir, self.networkLock) 
+                                                 "", self.networkLock) 
         if len(affectedInputAIs)!=0:
             raise ProjectError("Top-level active network has initial elements!")
 

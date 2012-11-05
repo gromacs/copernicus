@@ -61,7 +61,7 @@ def g_energy(inp):
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir,
+                          cwd=inp.getOutputDir(),
                           close_fds=True)
     (stdout, stderr)=proc.communicate(item)
     if proc.returncode != 0:
@@ -108,7 +108,7 @@ def _trjconv(inp, fo, split):
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjconv -version")
         return 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     if pers.get('init') is None:
         init=True
@@ -184,7 +184,7 @@ def _trjconv(inp, fo, split):
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir,
+                          cwd=inp.getOutputDir(),
                           close_fds=True)
     (stdout, stderr)=proc.communicate(writeStdin.getvalue())
     if proc.returncode != 0:
@@ -222,7 +222,7 @@ def pdb2gmx(inp):
     if input_choices is None:
         input_choices=''
     pdbfile=inp.getInput('conf')
-    #pdbfile=os.path.join(inp.outputDir,inp.getInput('conf'))
+    #pdbfile=os.path.join(inp.getOutputDir(),inp.getInput('conf'))
     #shutil.copy(inp.getInput('conf'),pdbfile)
     forcefield=inp.getInput('ff')
     watermodel=inp.getInput('water')
@@ -240,16 +240,16 @@ def pdb2gmx(inp):
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir,
+                          cwd=inp.getOutputDir(),
                           close_fds=True)
     (stdout, stderr)=proc.communicate(input_choices)
     if proc.returncode != 0:
         raise GromacsError("ERROR: pdb2gmx returned %s"%(stdout))
     fo=inp.getFunctionOutput()
-    fo.setOut('conf', FileValue(os.path.join(inp.outputDir,'conf.gro')))
-    fo.setOut('top', FileValue(os.path.join(inp.outputDir,'topol.top')))
+    fo.setOut('conf', FileValue(os.path.join(inp.getOutputDir(),'conf.gro')))
+    fo.setOut('top', FileValue(os.path.join(inp.getOutputDir(),'topol.top')))
     #how do we handle itp output files?
-    itpfiles=glob.glob(os.path.join(inp.outputDir,'*.itp'))
+    itpfiles=glob.glob(os.path.join(inp.getOutputDir(),'*.itp'))
     fo.setOut('include',itpfiles)
     for i in range(len(itpfiles)):
         fo.setOut('include[%d]'%(i),itpfiles[i])

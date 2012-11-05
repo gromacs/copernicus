@@ -165,7 +165,7 @@ class MSMProject(object):
     #def listRandomConfs(self):
     #    ''' Makes a list of all gro-files in the RandomConfs dir '''
     #    grolist = []
-    #    files = os.listdir(self.inp.outputDir)
+    #    files = os.listdir(self.inp.getOutputDir())
     #    for f in files:
     #        if f.endswith('.gro'):
     #            grolist.append(f)
@@ -286,7 +286,7 @@ class MSMProject(object):
             plt.xlabel('Lag Time (assignment-steps)')
             plt.ylabel('Implied Timescale (ps)')
             plt.yscale('log')
-            timescalefn=os.path.join(self.inp.outputDir, 'msm_timescales.png')
+            timescalefn=os.path.join(self.inp.getOutputDir(), 'msm_timescales.png')
             sys.stderr.write('Writing timescale plot to %s'%timescalefn)
             try:
                 plt.savefig(timescalefn)
@@ -333,7 +333,7 @@ class MSMProject(object):
         #proc = subprocess.Popen(["grompp","-f","%s"%self.mdpfile,
         #                          "-c","%s"%self.grofile[0],
         #                          "-p", "%s"%self.topfile,"-o",
-        #                          "%s"%os.path.join(self.inp.outputDir,
+        #                          "%s"%os.path.join(self.inp.getOutputDir(),
         #                                            'topol.tpr')],
         #                      stdin=None,stdout=sys.stdout, stderr=sys.stdout)
         #proc.communicate(None)
@@ -356,13 +356,13 @@ class MSMProject(object):
             time        = frame_nr * trajdata.dt #* self.nstxtcout
 
             #if(i<10*self.num_to_start):
-                #proc = subprocess.Popen(["trjconv","-f","%s"%trajname,"-s","%s"%os.path.join(self.inp.outputDir,'topol.tpr'),"-o",os.path.join(self.inp.outputDir,'micro%d.gro'%i),"-pbc","mol","-dump","%d"%time], stdin=subprocess.PIPE, stdout=sys.stdout, stderr=sys.stderr)
+                #proc = subprocess.Popen(["trjconv","-f","%s"%trajname,"-s","%s"%os.path.join(self.inp.getOutputDir(),'topol.tpr'),"-o",os.path.join(self.inp.getOutputDir(),'micro%d.gro'%i),"-pbc","mol","-dump","%d"%time], stdin=subprocess.PIPE, stdout=sys.stdout, stderr=sys.stderr)
                 
                 #proc.communicate("0")
 
             # Write out a pdb of the most populated state
             if(i==MaxState and have_maxstate==0):
-                maxstatefn=os.path.join(self.inp.outputDir, 'maxstate.pdb')
+                maxstatefn=os.path.join(self.inp.getOutputDir(), 'maxstate.pdb')
                 sys.stderr.write("writing out pdb of most populated state.\n")
                 args=["trjconv","-f",trajname,
                       "-s",self.tprfile,
@@ -388,8 +388,8 @@ class MSMProject(object):
             trajdata    = self.trajData[lh5name]
             trajname    = trajdata.xtc
             time        = frame_nr * trajdata.dt 
-            #maxstatefn=os.path.join(self.inp.outputDir, '.conf')
-            outfn=os.path.join(self.inp.outputDir, 'new_run_%d.gro'%(j))
+            #maxstatefn=os.path.join(self.inp.getOutputDir(), '.conf')
+            outfn=os.path.join(self.inp.getOutputDir(), 'new_run_%d.gro'%(j))
             args=["trjconv","-f","%s"%trajname,
                   "-s" ,self.tprfile, 
                   "-o", outfn, "-pbc","mol","-dump","%d"%time]
@@ -426,8 +426,8 @@ class MSMProject(object):
     def createMacroStates(self):
         ''' Build a macro-state MSM '''
         # Again we redirect output
-        #stdoutfn=os.path.join(self.inp.outputDir, 'msm_stdout_macro.txt')
-        #stderrfn=os.path.join(self.inp.outputDir, 'msm_stderr_macro.txt')
+        #stdoutfn=os.path.join(self.inp.getOutputDir(), 'msm_stdout_macro.txt')
+        #stderrfn=os.path.join(self.inp.getOutputDir(), 'msm_stderr_macro.txt')
         
         #old_stdout = sys.stdout
         #sys.stdout=open(stdoutfn,'w')
@@ -464,14 +464,14 @@ class MSMProject(object):
         X0       = X0/sum(X0)
         MaxState = argmax(X0)
 
-        tcoutf=os.path.join(self.inp.outputDir, "tc.dat")
+        tcoutf=os.path.join(self.inp.getOutputDir(), "tc.dat")
         if scipy.sparse.issparse(TC):
             scipy.savetxt(tcoutf, TC.todense())
         else:
             numpy.savetxt(tcoutf, TC, fmt="%12.6g" )
         self.out.setOut('macro_transition_counts', FileValue(tcoutf))
 
-        woutf=os.path.join(self.inp.outputDir, "weights.dat")
+        woutf=os.path.join(self.inp.getOutputDir(), "weights.dat")
         numpy.savetxt(woutf, X0, fmt="%12.6g" )
         self.out.setOut('macro_weights', FileValue(woutf))
 
@@ -510,7 +510,7 @@ class MSMProject(object):
                     # Use trjconv to write new starting confs
                     while(num_started < self.num_to_start):
                         sys.stderr.write("Writing new start confs.\n")
-                        outfn=os.path.join(self.inp.outputDir,
+                        outfn=os.path.join(self.inp.getOutputDir(),
                                            'macro%d-%d.gro'%(i,num_started))
                         args=["trjconv","-f","%s"%trajname,
                               "-s",self.tprfile, 

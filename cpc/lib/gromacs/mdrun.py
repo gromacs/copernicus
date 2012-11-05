@@ -377,7 +377,7 @@ def mdrun(inp):
     rsrc=Resources(inp.getInputValue("resources"))
     rsrcFilename=os.path.join(persDir, 'rsrc.dat')
     # check whether we need to reinit
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     init=False
     lasttpr=pers.get('lasttpr')

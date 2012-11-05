@@ -83,7 +83,8 @@ class ActiveInstance(object):
             instance = the already existing instance
             project = the project this is a part of
             activeNetwork = the active network this active instance is a part of
-            dirName = the directory associated with this a.i.
+            dirName = the directory associated with this a.i. relative to the
+                      project directory
             """
 
         # the source active instance
@@ -155,23 +156,26 @@ class ActiveInstance(object):
         self.subnetInputAcps=[]
         self.subnetOutputAcps=[]
 
+        fullDirName=os.path.join(project.basedir, dirName)
         # make the directory if needed
         if ( (self.function.outputDirNeeded() or 
               self.function.persistentDirNeeded() or
               self.function.hasLog()) and 
-             not os.path.exists(dirName)):
-            os.mkdir(dirName)
+             not os.path.exists(fullDirName)):
+            os.mkdir(fullDirName)
         self.baseDir=dirName
         # make a persistent scratch dir if needed.
         if ( self.function.persistentDirNeeded() ):
             self.persDir=os.path.join(dirName, "_persistence")
-            if not os.path.exists(self.persDir):
-                os.mkdir(self.persDir)
+            fullPersDir=os.path.join(project.basedir, self.persDir)
+            if not os.path.exists(fullPersDir):
+                os.mkdir(fullPersDir)
         else:
             self.persDir=None
 
         if self.function.hasLog():
-            self.log=ActiveRunLog(os.path.join(dirName, "_log"))
+            self.log=ActiveRunLog(os.path.join(project.basedir, dirName, 
+                                               "_log"))
         else:
             self.log=None
         # an ever-increasing number to prevent outputs from overwriting 
@@ -344,7 +348,8 @@ class ActiveInstance(object):
                 self.errmsg=msg
 
     def getBasedir(self):
-        """Get the active instance's base directory."""
+        """Get the active instance's base directory relative to the project 
+            dir."""
         return self.baseDir
 
     def getInputs(self):
@@ -811,11 +816,13 @@ class ActiveInstance(object):
             #log.debug("Creating output dir")
             created=False
             while not created:
-                outputDirName=os.path.join(self.baseDir,
+                outputDirName=os.path.join(self.baseDir, 
                                            "_run_%04d"%(self.outputDirNr))
+                fullOutputDirName=os.path.join(self.project.basedir,
+                                               outputDirName)
                 self.outputDirNr+=1 
-                if not os.path.exists(outputDirName):
-                    os.mkdir(outputDirName)
+                if not os.path.exists(fullOutputDirName):
+                    os.mkdir(fullOutputDirName)
                     created=True
         else:
             #log.debug("Not creating output dir")

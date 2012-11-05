@@ -130,7 +130,7 @@ class path:
 
 
 def calc_path(inp, out):
-    #pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    #pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
     #                                           "persistent.dat"))
 
     spVal=inp.getInput('stddev_spacing') 

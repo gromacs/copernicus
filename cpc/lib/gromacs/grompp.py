@@ -91,7 +91,10 @@ def grompp(inp):
         cpc.util.plugin.testCommand("grompp -version")
         return 
 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    #log.debug("base dir=%s"%inp.getBaseDir())
+    #log.debug("output dir=%s"%inp.getOutputDir())
+    #log.debug("persistent dir=%s"%inp.getPersistentDir())
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     fo=inp.getFunctionOutput()
     if not (inp.getInputValue('conf').isUpdated() or 
@@ -109,9 +112,9 @@ def grompp(inp):
         log.debug("ndx: %s"%(inp.getInputValue('ndx').isUpdated()))
 
     pers.set('init', 1)
-    mdpfile=procSettings(inp, inp.outputDir)
+    mdpfile=procSettings(inp, inp.getOutputDir())
     # copy the topology and include files 
-    topfile=os.path.join(inp.outputDir, 'topol.top')
+    topfile=os.path.join(inp.getOutputDir(), 'topol.top')
     shutil.copy(inp.getInput('top'), topfile)
     incl=inp.getInput('include')
     if incl is not None and len(incl)>0:
@@ -119,7 +122,7 @@ def grompp(inp):
             filename=inp.getInput('include[%d]'%i)
             if filename is not None:
                 # same name, but in one directory.
-                nname=os.path.join(inp.outputDir, os.path.split(filename)[1])
+                nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
     cmdlist=[ "grompp", "-f", mdpfile,
@@ -131,23 +134,23 @@ def grompp(inp):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
     # TODO: symlink all the auxiliary files into the run dir
-    stdoutfn=os.path.join(inp.outputDir, "stdout")
+    stdoutfn=os.path.join(inp.getOutputDir(), "stdout")
     stdoutf=open(stdoutfn,"w")
     stdoutf.write("%s\n"%time.strftime("%a, %d %b %Y %H:%M:%S"))
     stdoutf.write("%f\n"%time.time())
-    #stdoutf=open(os.path.join(inp.outputDir, "stderr"),"w")
+    #stdoutf=open(os.path.join(inp.getOutputDir(), "stderr"),"w")
     proc=subprocess.Popen(cmdlist, 
                           stdin=None,
                           stdout=stdoutf,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir)
+                          cwd=inp.getOutputDir())
     proc.communicate(None)
     stdoutf.close()
     if proc.returncode != 0:
         raise GromacsError("Error running grompp: %s"%
                            (open(stdoutfn,'r').read()))
     fo.setOut('stdout', FileValue(stdoutfn))
-    fo.setOut('tpr', FileValue(os.path.join(inp.outputDir, "topol.tpr")))
+    fo.setOut('tpr', FileValue(os.path.join(inp.getOutputDir(), "topol.tpr")))
     pers.write()
     return fo
 
@@ -158,7 +161,7 @@ def merge_mdp(inp):
         # if there are no inputs, we're testing wheter the command can run
         return
     fo=inp.getFunctionOutput()
-    mdpfile=procSettings(inp, inp.outputDir)
+    mdpfile=procSettings(inp, inp.getOutputDir())
     fo.setOut('mdp', FileValue(mdpfile))
     return fo
 
@@ -204,9 +207,9 @@ def tune_fn(inp):
         return
     fo=inp.getFunctionOutput()
     persDir=inp.getPersistentDir()
-    mdpfile=procSettings(inp, inp.outputDir)
+    mdpfile=procSettings(inp, inp.getOutputDir())
     # copy the topology and include files 
-    topfile=os.path.join(inp.outputDir, 'topol.top')
+    topfile=os.path.join(inp.getOutputDir(), 'topol.top')
     shutil.copy(inp.getInput('top'), topfile)
     incl=inp.getInput('include')
     if incl is not None and len(incl)>0:
@@ -214,7 +217,7 @@ def tune_fn(inp):
             filename=inp.getInput('include[%d]'%i)
             if filename is not None:
                 # same name, but in one directory.
-                nname=os.path.join(inp.outputDir, os.path.split(filename)[1])
+                nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
     cmdlist=[ "grompp", "-f", mdpfile,
@@ -229,14 +232,14 @@ def tune_fn(inp):
                           stdin=None,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
-                          cwd=inp.outputDir)
+                          cwd=inp.getOutputDir())
     (stdo, stde) = proc.communicate(None)
     if proc.returncode != 0:
         raise GromacsError("Error running grompp: %s, %s"%
                            (stdo, stde))
     rsrc=Resources()
     tune.tune(rsrc, inp.getInput('conf'), 
-              os.path.join(inp.outputDir, 'topol.tpr'), persDir)
+              os.path.join(inp.getOutputDir(), 'topol.tpr'), persDir)
     fo.setOut('mdp', FileValue(mdpfile))
     fo.setOut('resources', rsrc.setOutputValue())
     return fo
@@ -247,7 +250,7 @@ def grompp_multi(inp):
         cpc.util.plugin.testCommand("grompp -version")
         return
 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     inputs = ['mdp','top','conf', 'ndx', 'settings', 'include']
@@ -278,7 +281,7 @@ def mdrun_multi(inp):
         cpc.util.plugin.testCommand("gmxdump -version")
         return
 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     inputs = ['tpr','priority','cmdline_options','resources']
@@ -304,7 +307,7 @@ def grompp_mdrun_multi(inp):
         cpc.util.plugin.testCommand("grompp -version")
         return
 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     grompp_inputs = ['mdp','top','conf', 'ndx', 'settings', 'include' ]

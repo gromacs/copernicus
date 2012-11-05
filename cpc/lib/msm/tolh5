@@ -116,11 +116,11 @@ def tolh5(inp, out):
         #    cpc.util.plugin.testCommand("trjconv -version")
         #    cpc.util.plugin.testCommand("grompp -version")
         #    return True
-        outFilename=os.path.join(inp.outputDir, "traj.nopbc.lh5")
-        nopbcXtcFilename=os.path.join(inp.outputDir, "traj.nopbc.xtc")
+        outFilename=os.path.join(inp.getOutputDir(), "traj.nopbc.lh5")
+        nopbcXtcFilename=os.path.join(inp.getOutputDir(), "traj.nopbc.xtc")
         # we do this because it makes things easier in the msm project.
         # TODO: fix this
-        xtcCopyFilename=os.path.join(inp.outputDir, "traj.xtc")
+        xtcCopyFilename=os.path.join(inp.getOutputDir(), "traj.xtc")
         xtcFilename=inp.getInput('xtc')
         sys.stderr.write("Checking input trajectory %s\n"%xtcFilename)
         ns, dt, frames=checkTrajectory(xtcFilename)
@@ -128,10 +128,10 @@ def tolh5(inp, out):
         grpname=inp.getInput('grpname')
         ndxFile=inp.getInput('ndx')
         removeSolAndPBC(xtcFilename, nopbcXtcFilename, tprFilename,
-                                grpname, ndxFile, inp.persistentDir)
+                        grpname, ndxFile, inp.getPersistentDir())
         refFilename=inp.getInput('reference')
         convertXtc2lh5(nopbcXtcFilename, refFilename, outFilename,
-                               inp.persistentDir)
+                       inp.getPersistentDir())
         shutil.copy(xtcFilename, xtcCopyFilename)
         # we make sure we set outputs last for if an exception occurs
         if inp.hasInput('conf'):

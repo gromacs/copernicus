@@ -168,7 +168,7 @@ def addIteration(name, i, inp, out):
                       '%s:in.stddev_spacing'%iname)
 
 def decouple(inp, out, relaxation_time, mult):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     init=pers.get('init')
     if init is None:

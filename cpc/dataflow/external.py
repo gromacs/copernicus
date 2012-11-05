@@ -112,11 +112,12 @@ class ExternalFunction(atomic.AtomicFunction):
 
         # check whether the run dir exists
         if inp.outputDir is not None:
-            st=os.stat(inp.outputDir)
-            if (st.st_mode & stat.S_IFDIR) == 0:
+            if not os.path.isdir(inp.getOutputDir()):
                 raise ExternalFunctionError(
                                     "Output directory %s does not exist"%
-                                    inp.outputDir)
+                                    inp.getOutputDir())
+            #st=os.stat(inp.getOutputDir())
+            #if (st.st_mode & stat.S_IFDIR) == 0:
         # construct full argument list
         nargs=[ self.fullpath ]
 
@@ -126,7 +127,7 @@ class ExternalFunction(atomic.AtomicFunction):
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
-                              cwd=inp.outputDir,
+                              cwd=inp.getOutputDir(),
                               close_fds=True)
 
         retst=proc.communicate(outs.getvalue())

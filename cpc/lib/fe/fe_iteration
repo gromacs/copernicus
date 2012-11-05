@@ -56,7 +56,7 @@ def findClosest(path_lambdas, lam):
     return mini
 
 def fe_iteration(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     fe_path=inp.getInput('path.lambdas')

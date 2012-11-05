@@ -61,7 +61,7 @@ def pairmodel_multi(inp):
         cpc.util.plugin.testCommand("pairmodel --help")
         return
 
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
         "persistent.dat"))
 
     if(pers.get('running')):

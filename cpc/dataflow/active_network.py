@@ -63,8 +63,9 @@ class ActiveNetwork(network.Network):
         self.project=project
         self.taskQueue=taskQueue
         self.baseDir=dirName
-        if not os.path.exists(dirName):
-            os.mkdir(dirName)
+        fullDirName=os.path.join(project.basedir, dirName)
+        if dirName != "" and not os.path.exists(fullDirName):
+            os.mkdir(fullDirName)
         # first make a 'self' instance
         self.inActiveInstance=inActiveInstance
         self.activeInstances=dict()

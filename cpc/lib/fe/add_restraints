@@ -52,7 +52,7 @@ class FEError(cpc.dataflow.ApplicationError):
 #npoints_init=10
 
 def add_restraints(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     merge=pers.get('merge')
     if merge is None or merge < 1:

@@ -51,7 +51,7 @@ class FEError(cpc.dataflow.ApplicationError):
 #npoints_init=10
 
 def fe_init(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     # TODO: relaxation time
@@ -222,7 +222,7 @@ def fe_init(inp, out):
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT,
-                              cwd=inp.outputDir,
+                              cwd=inp.getOutputDir(),
                               close_fds=True)
         (stdout, stderr) = proc.communicate('System')
         if proc.returncode != 0:

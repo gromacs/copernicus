@@ -90,7 +90,7 @@ def spawnNewSim(inp, out, i, confFile, priority, gen_vel, desc):
 def msm(inp, out):
     #cpc.util.log.initServerLogToStdout(debug=True)
     # now  
-    #output=open(os.path.join(inp.persistentDir, "test.out"),"w")
+    #output=open(os.path.join(inp.getPersistentDir(), "test.out"),"w")
     #output.write("%s"%str(inp.inputs))
     #output.write("%s"%str(inp.subnetInputs))
     #output.close()
@@ -114,7 +114,7 @@ def msm(inp, out):
     # numbered runs and could get clashing number otherwise due to 
     # simulations ending simultaneously. The presence of a persistent 
     # directory means that only one controller can be running at a time.
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     if init:
         sys.stderr.write("Initializing msm\n")

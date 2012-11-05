@@ -225,10 +225,23 @@ class FunctionRunInput(object):
 
     def getPersistentDir(self):
         """Get the persistence directory"""
-        return self.persistentDir
+        if self.persistentDir is None:
+            return None
+        if not os.path.isabs(self.persistentDir): 
+            return os.path.join(self.baseDir, self.persistentDir)
+        else:
+            return self.persistentDir
+
+
     def getOutputDir(self):
         """Get the output directory"""
-        return self.outputDir
+        if self.outputDir is None:
+            return None
+        if not os.path.isabs(self.outputDir): 
+            return os.path.join(self.baseDir, self.outputDir)
+        else:
+            return self.outputDir
+
     def getCmd(self):
         """Get the command."""
         return self.cmd

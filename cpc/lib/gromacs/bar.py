@@ -139,7 +139,7 @@ def g_bar(inp):
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE,
-                          cwd=inp.outputDir,
+                          cwd=inp.getOutputDir(),
                           close_fds=True)
     (stdout, stderr)=proc.communicate()
     if proc.returncode != 0:
