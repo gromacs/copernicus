@@ -22,15 +22,15 @@ Created on Apr 11, 2011
 
 @author: iman
 '''
-from ConfigParser import SafeConfigParser
 import socket
 import tempfile
 import sys
-from cpc.util.conf.conf_base import Conf  
 import os
 import traceback
+import threading
 
-
+from cpc.util.conf.conf_base import Conf  
+from ConfigParser import SafeConfigParser
 
 class ConnectionBundle(Conf):
     '''
@@ -61,6 +61,11 @@ class ConnectionBundle(Conf):
         self.cert =  ''
         self.CAcert = ''
         self.initDefaults()
+        
+
+        # TODO: make it a regular Lock() - for now this might reduce the 
+        # chances of a deadlock
+        self.lock=threading.RLock()
 
 
         #worker specific

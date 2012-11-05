@@ -103,9 +103,18 @@ class RunningCommand(object):
         ret=dict()
         ret['cmd_id']=self.cmd.id
         ret['server_name']=self.workerServer
-        ret['worker_id']=self.workerID
-        ret['worker_dir']=self.workerDir
-        ret['run_dir']=self.runDir
+        if self.workerID is not None:
+            ret['worker_id']=self.workerID
+        else:
+            ret['worker_id']="not set"
+        if self.workerDir is not None:
+            ret['worker_dir']=self.workerDir
+        else:
+            ret['worker_dir']="not set"
+        if self.runDir is not None:
+            ret['run_dir']=self.runDir
+        else:
+            ret['run_dir']="not set"
         ret['task_id']=self.cmd.task.getID()
         ret['heartbeat_expiry_time']= int( (self.lastHeard + 
                                             2*self.heartbeatInterval) - 
