@@ -346,7 +346,7 @@ class Task(object):
                     self.priority, 
                     self.activeInstance.getCanonicalName(),
                     self.seqNr))
-        self.fnInput.writeXML(outf, indent+1)
+        self.fnInput.writeStateXML(outf, indent+1)
         if len(self.cmds)>0:
             outf.write('%s<command-list>\n'%iindstr)
             for cmd in self.cmds:

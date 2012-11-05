@@ -251,7 +251,9 @@ class FunctionRunInput(object):
         self.activeInstance=activeInstance
         self.function=self.activeInstance.getFunction()
         self.project=project
-
+        if self.project is not None:
+            self.baseDir=project.getBasedir()
+ 
     def destroy(self):
         """Destroy all file object refs associated with this task."""
         if self.inputs is not None:
@@ -269,7 +271,7 @@ class FunctionRunInput(object):
     def reset(self):
         self.fo=None
 
-    def writeXML(self, outf, indent=0):
+    def _writeXML(self, outf, writeState, indent=0):
         """Write the contents of this object in XML form to a file."""
         indstr=cpc.util.indStr*indent
         iindstr=cpc.util.indStr*(indent+1)
@@ -280,8 +282,9 @@ class FunctionRunInput(object):
             outf.write(' output_dir="%s"'%self.outputDir)
         if self.persistentDir is not None:
             outf.write(' persistent_dir="%s"'%self.persistentDir)
-        if self.baseDir is not None:
-            outf.write(' base_dir="%s"'%self.baseDir)
+        if not writeState:
+            if self.baseDir is not None:
+                outf.write(' base_dir="%s"'%self.baseDir)
         outf.write('/>\n')
         if self.inputs is not None:
             outf.write('%s<inputs>\n'%iindstr)
@@ -304,6 +307,12 @@ class FunctionRunInput(object):
             self.cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
         outf.write('%s</function-input>\n'%indstr)
+
+    def writeRunXML(self, outf, indent=0):
+        self._writeXML(outf, False, indent)
+
+    def writeStateXML(self, outf, indent=0):
+        self._writeXML(outf, True, indent)
 
 class FunctionRunOutput(object):
     """A class holding the output of a function's run method.

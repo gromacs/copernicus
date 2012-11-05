@@ -108,7 +108,7 @@ class ExternalFunction(atomic.AtomicFunction):
         """run this function"""
         # construct the XML input
         outs=StringIO()
-        inp.writeXML(outs,0)
+        inp.writeRunXML(outs,0)
 
         # check whether the run dir exists
         if inp.outputDir is not None:
