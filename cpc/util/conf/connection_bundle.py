@@ -75,7 +75,7 @@ class ConnectionBundle(Conf):
 
         self.tempfiles = dict()
         #if conffile:
-        self.tryRead()
+        self._tryRead()
         '''
         the private key, cert and
         ca cert need to be provided as filepaths to the ssl connection object

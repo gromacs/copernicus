@@ -104,8 +104,8 @@ class ServerConf(conf_base.Conf):
                                 confSubdirName="server",
                                 userSpecifiedPath=confdir)
 
-        self.initDefaults()     
-        self.have_conf_file = self.tryRead()
+        self.initDefaults()
+        self.have_conf_file = self._tryRead()
         
         '''
         Constructor
@@ -242,28 +242,26 @@ class ServerConf(conf_base.Conf):
     def addNode(self,node):        
         """adds a server to the list of servers that this server can connect 
            to."""    
-                    
-        nodes=self.conf['nodes'].get()                                                      
-        nodes.addNode(node)        
-        self.conf['nodes'].set(nodes)
-        self.write()
-             
+        with self.lock:            
+            nodes=self.conf['nodes'].get()
+            nodes.addNode(node)
+            self.conf['nodes'].set(nodes)
+            self._writeLocked()
         return True 
 
     
     def removeNode(self,id):
-               
-        nodes=self.conf['nodes'].get()
-        node = nodes.get(id)        
-        nodes.removeNode(node.get(id))        
-        self.conf['nodes'].set(nodes)
-        
-        self.write()
-        
+        with self.lock:
+            nodes=self.conf['nodes'].get()
+            node = nodes.get(id)        
+            nodes.removeNode(node.get(id))        
+            self.conf['nodes'].set(nodes)
+            self._writeLocked()
         return True
 
     def getNodes(self):
-        return self.conf.get('nodes').get()
+        with self.lock:
+            return self.conf.get('nodes').get()
 
     def getNodeConnectRequests(self):
         return self.get('node_connect_requests')
@@ -280,73 +278,90 @@ class ServerConf(conf_base.Conf):
         return self.getFile('error_log_file')
 
     def getStateSaveInterval(self):
-        return int(self.conf['state_save_interval'].get())
+        with self.lock:
+            return int(self.conf['state_save_interval'].get())
 
     def getHeartbeatTime(self):
-        return int(self.conf['heartbeat_time'].get())
+        with self.lock:
+            return int(self.conf['heartbeat_time'].get())
     def getHeartbeatFile(self):
         return self.getFile('heartbeat_file')
 
     def getServerCores(self):
-        return int(self.conf['server_cores'].get())
+        with self.lock:
+            return int(self.conf['server_cores'].get())
  
     def setMode(self,mode):
-        self.conf['mode'].set(mode)
+        with self.lock:
+            self.conf['mode'].set(mode)
     
     def hasParent(self):
-        return (len(self.conf['parent_nodes'].get()) > 0)
+        with self.lock:
+            return (len(self.conf['parent_nodes'].get()) > 0)
     
     def isDebug(self):
-        if self.conf['mode'].get() == 'debug':
-            return True
-        else:
-            return False
+        with self.lock:
+            if self.conf['mode'].get() == 'debug':
+                return True
+            else:
+                return False
                    
     # get functions
     
     def getUserSettableConfigs(self):
         configs = dict()
-        for key,value in self.conf.iteritems():
-            if value.userSettable == True:
-                configs[key] = value
-        
+        with self.lock:
+            for key,value in self.conf.iteritems():
+                if value.userSettable == True:
+                    configs[key] = value
         return configs
              
     
     def getParent(self):
-        #NOTE this should be extended so that it choses the parent 
-        # with the highest prioirity
-        parentNodes = self.conf['parent_nodes'].get()
-        return parentNodes[0] #At the moment a child can only have one parent
+        with self.lock:
+            #NOTE this should be extended so that it choses the parent 
+            # with the highest prioirity
+            parentNodes = self.conf['parent_nodes'].get()
+            #At the moment a child can only have one parent <- still?? SP
+            return parentNodes[0] 
     
     def getServerHost(self):
-        return self.conf['server_host'].get()
+        with self.lock:
+            return self.conf['server_host'].get()
     def getServerHTTPSPort(self):
-        return int(self.conf['server_https_port'].get())
+        with self.lock:
+            return int(self.conf['server_https_port'].get())
     def getServerHTTPPort(self):        
-        return int(self.conf['server_http_port'].get())
+        with self.lock:
+            return int(self.conf['server_http_port'].get())
     def getHostName(self):
         #return self.hostname
-        return self.conf['server_fqdn'].get()
+        with self.lock:
+            return self.conf['server_fqdn'].get()
 
     #just a wrapper method to conform with clientConnection
     def getClientHTTPSPort(self):
-        return int(self.get('server_https_port'))
+        with self.lock:
+            return int(self.get('server_https_port'))
 
     #just a wrapper method to conform with clientConnection
     def getClientHTTPPort(self):
-        return int(self.get('server_http_port'))
+        with self.lock:
+            return int(self.get('server_http_port'))
 
     #just a wrapper method to conform with clientConnection
     def getClientHost(self):
-        return self.conf['client_host'].get()
+        with self.lock:
+            return self.conf['client_host'].get()
 
 
     def getDefaultServer(self):
-        return self.conf['client_host'].get()
+        with self.lock:
+            return self.conf['client_host'].get()
     
     def getMode(self):
-        return self.conf['mode'].get()
+        with self.lock:
+            return self.conf['mode'].get()
 
     def getProjectFile(self):
         return self.getFile('project_file')
@@ -362,27 +377,28 @@ class ServerConf(conf_base.Conf):
         self.set('run_dir', rundir)
 
     def getTaskQueueSize(self):
-        return self.conf['task_queue_size'].get()
+        with self.lock:
+            return self.conf['task_queue_size'].get()
     
     def getWebRootPath(self):        
         return os.path.join(self.execBasedir,self.get('web_root'))
     
     
-   
     #def getImportPath(self):
     #    return self.conf['import_path'].get()
 
     def getImportPaths(self):
-        lst=self.conf['import_path'].get().split(':')
         retlist=[]
-        for ls in lst:
-            str=ls.strip()
-            if str != "":
-                retlist.append(str)
-        # there are two default items in the path, .copernicus/lib, and
-        retlist.append(os.path.join(self.conf['global_dir'].get(), 'lib'))
-        retlist.append(os.path.join(self.conf['conf_dir'].get(), 'lib'))
-        retlist.append(os.path.join(self.execBasedir, 'cpc', 'lib'))
+        with self.lock:
+            lst=self.conf['import_path'].get().split(':')
+            for ls in lst:
+                str=ls.strip()
+                if str != "":
+                    retlist.append(str)
+            # there are two default items in the path, .copernicus/lib, and
+            retlist.append(os.path.join(self.conf['global_dir'].get(), 'lib'))
+            retlist.append(os.path.join(self.conf['conf_dir'].get(), 'lib'))
+            retlist.append(os.path.join(self.execBasedir, 'cpc', 'lib'))
         return retlist
  
     

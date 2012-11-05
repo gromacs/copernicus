@@ -23,12 +23,15 @@ import os.path
 import socket
 import stat
 import json
-from cpc.util import CpcError
 import re
+import threading
+
+from cpc.util import CpcError
 import cpc.util.json_serializer
 import cpc.util.exception
 import cpc.util.cert_req_conf_template
 import cpc.util.ca_conf_template
+
 
 from ConfigParser import SafeConfigParser
 
@@ -151,8 +154,12 @@ class Conf:
             self.execBasedir=os.path.abspath(dn)
             self._add('exec_base_dir', self.execBasedir, 
                       'executable base directory')
-           
-                        
+        
+        # Initialization always happens when there's only one thread, so 
+        # this should be safe:
+        # TODO: make it a regular Lock() - for now this might reduce the 
+        # chances of a deadlock
+        self.lock=threading.RLock()
         # and read in the actual values from the configuration file.        
         #self.have_conf_file = self.tryRead() 
 
@@ -309,7 +316,7 @@ class Conf:
                                     allowedValues=allowedValues,
                                     writable=writable)
        
-    def tryRead(self):
+    def _tryRead(self):
         try:
             confname = self.getFile('conf_file')
             f = open(confname,'r')  
@@ -338,7 +345,11 @@ class Conf:
             return False
 
     def write(self):
-        # write all conf settings that have non-default values to file.
+        """ write all conf settings that have non-default values to file."""
+        with self.lock:
+            self._writeLocked()
+
+    def _writeLocked(self):
         confname = self.getFile('conf_file')        
         try:
             dirname=os.path.dirname(confname)
@@ -359,7 +370,8 @@ class Conf:
                 conf[cf.name] = cf.get()
         # and write out that dict.       
         f.write(json.dumps(conf,
-                           default = cpc.util.json_serializer.toJson,indent=4))
+                           default = cpc.util.json_serializer.toJson,
+                           indent=4))
         f.close()
 
 
@@ -369,69 +381,79 @@ class Conf:
         @return json String
         '''
 
-        conf = dict()
-        for cf in self.conf.itervalues():
-            if cf.writable:
-                conf[cf.name] = cf.get()
+        with self.lock:
+            conf = dict()
+            for cf in self.conf.itervalues():
+                if cf.writable:
+                    conf[cf.name] = cf.get()
 
-        return json.dumps(conf,default = cpc.util.json_serializer.toJson,indent=4)
+            return json.dumps(conf,
+                              default = cpc.util.json_serializer.toJson,
+                              indent=4)
 
     def reread(self):
         """Update from configuration file. First reset all values, then 
            read them from disk."""
-        for val in self.conf.itervalues():
-            val.reset()
-        self.tryRead()
+        with self.lock:
+            for val in self.conf.itervalues():
+                val.reset()
+            self._tryRead()
 
     def get(self, name):
         """Get the current value associated with this configuration."""
-        return self.conf[name].get()
+        with self.lock:
+            return self.conf[name].get()
 
     def getFile(self, name):
         """Get a full path name based on a configuration name.
            Expands 'relTo' names iteratively."""
-                        
-        nameval=self.conf[name].get()
-        if os.path.isabs(nameval):
-            # in this case we're done quickly
-            return nameval
-        retpath=nameval
-        curRel=self.conf[name].relTo
-        while curRel is not None:
-            # now iteratively traverse the reverse path
-            retpath=os.path.join(self.conf[curRel].get(), retpath)
-            curRel=self.conf[curRel].relTo
-        return retpath
+        with self.lock:
+            nameval=self.conf[name].get()
+            if os.path.isabs(nameval):
+                # in this case we're done quickly
+                return nameval
+            retpath=nameval
+            curRel=self.conf[name].relTo
+            while curRel is not None:
+                # now iteratively traverse the reverse path
+                retpath=os.path.join(self.conf[curRel].get(), retpath)
+                curRel=self.conf[curRel].relTo
+            return retpath
 
     def set(self, name, value):
         """Set a new value associated with this configuration."""
-        try:
-            self.conf[name].set(value)
-            self.write()            
-        except KeyError:
-            raise InputError("The config parameter %s do not exist"%(name))    
+        with self.lock:
+            try:
+                self.conf[name].set(value)
+                self._writeLocked()            
+            except KeyError:
+                raise InputError("The config parameter %s do not exist"%
+                                 (name))    
 
     def userSet(self, name, value):
         """Set a new value associated with this configuration while checking
            whether that value can be set by a user."""
-        if self.conf[name].isUserSettable():
-            self.conf[name].set(value)
-        else:
-            raise ConfError("Value of '%s' is not user settable"%name)
+        with self.lock:
+            if self.conf[name].isUserSettable():
+                self.conf[name].set(value)
+            else:
+                raise ConfError("Value of '%s' is not user settable"%name)
 
     def isUserSettable(self, name):
-        return self.conf[name].isUserSettable()
+        with self.lock:
+            return self.conf[name].isUserSettable()
 
     def confFileValid(self):
-        return self.have_conf_file
+        with self.lock:
+            return self.have_conf_file
 
     def getUserSettableConfigs(self):
-        configs = dict()
-        for key,value in self.conf.iteritems():
-            if value.userSettable == True:
-                configs[key] = value
-        
-        return configs
+        with self.lock:
+            configs = dict()
+            for key,value in self.conf.iteritems():
+                if value.userSettable == True:
+                    configs[key] = value
+            return configs
 
     def getConfDir(self):
         return self.get('conf_dir')
@@ -480,26 +502,29 @@ class Conf:
         return self.getFile('caconf_file')    
     
     def getModuleBasePath(self):
-        return self.conf['exec_base_dir'].get()
+        with self.lock:
+            return self.conf['exec_base_dir'].get()
 
     def getPluginPaths(self):
-        lst=self.conf['plugin_path'].get().split(':')
-        retlist=[]
-        for ls in lst:
-            str=ls.strip()
-            if str != "":
-                retlist.append(str)
-        retlist.append(os.path.join(self.execBasedir, 'cpc', 'plugins'))
-        return retlist
+        with self.lock:
+            lst=self.conf['plugin_path'].get().split(':')
+            retlist=[]
+            for ls in lst:
+                str=ls.strip()
+                if str != "":
+                    retlist.append(str)
+            retlist.append(os.path.join(self.execBasedir, 'cpc', 'plugins'))
+            return retlist
     
     
     def getExecutablesPath(self):
-        lst=self.conf['executables_path'].get().split(':')
         retlist=[]
-        for ls in lst:
-            str=ls.strip()
-            if str != "":
-                retlist.append(str)
+        with self.lock:
+            lst=self.conf['executables_path'].get().split(':')
+            for ls in lst:
+                str=ls.strip()
+                if str != "":
+                    retlist.append(str)
         retlist.append(self.getFile('global_executables_dir'))
         retlist.append(self.getFile('local_executables_dir'))
         # now add the plugin path executables
