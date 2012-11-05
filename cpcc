@@ -172,8 +172,7 @@ else:
 
 
 # read in common configuration
-cf= ConnectionBundle(bundleFile)
-#cmd_line_utils.initiateConnectionBundle(bundleFile)
+cf = cmd_line_utils.initiateConnectionBundle(bundleFile)
 
 
 try:

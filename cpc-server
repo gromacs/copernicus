@@ -32,25 +32,19 @@ import cpc.util
 import cpc.util.log
 import cpc.server.tracking
 
-#from cpc.worker.worker import WorkerMessage
-#from cpc.client.view.cmdline import CmdLine
-#from cpc.util.openssl import OpenSSL
 from cpc.network.com.client_base import ClientError
-#from cpc.client import ClientMessage
-#from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
-from cpc.util.conf.server_conf import SetupError
 from cpc.util import cmd_line_utils
-#import os
 
 
 def print_usage():
     print "Usage: cpc-server start [-d]"
     print "       cpc-server config-list"
-    print "       cpc-server config-values"   
-    print "       cpc-server config param value"   
-    print "       cpc-server setup [-force] [-host] default-project-directory"
+    print "       cpc-server config-values"
+    print "       cpc-server config param value"
+    print "       cpc-server setup [-force] [(-host) | (-confdir relative-dir)]"\
+          " default-project-directory"
     print "       cpc-server create-connection-bundle|bundle"
     print ""
     print "Common options:"
@@ -58,108 +52,118 @@ def print_usage():
     sys.exit(1)
 
 # make a copy for later
-args=copy.copy(sys.argv)
+args = copy.copy(sys.argv)
 
-if len(args)<2:
+if len(args) < 2:
     print_usage()
 
 # remove the 0th argument
 args.pop(0)
-confdir=None
+confdir = None
 
-debug=None
+debug = None
 # first parse common options
-while len(args)>0:
-    if args[0][0]!='-':
+while len(args) > 0:
+    if args[0][0] != '-':
         break
-    elif args[0]=='-c':
+    elif args[0] == '-c':
         option = args.pop(0)
         if len(args) < 1:
             sys.stdout.write(
-                        "ERROR: no value specified for global option '%s'\n"%
-                        option)
+                "ERROR: no value specified for global option '%s'\n" %
+                option)
             print_usage()
-        confdir=args.pop(0)
-    elif args[0]=='-d':
+        confdir = args.pop(0)
+    elif args[0] == '-d':
         args.pop(0)
-        debug=cpc.util.log.MODE_DEBUG
+        debug = cpc.util.log.MODE_DEBUG
     else:
-        sys.stdout.write("ERROR: no command or faulty global option '%s'\n"%
+        sys.stdout.write("ERROR: no command or faulty global option '%s'\n" %
                          args[0])
         print_usage()
 
 
-
-
 def getArg(argnr, name):
-    try: 
-        ret=args[argnr]
+    try:
+        ret = args[argnr]
     except IndexError:
-        raise ClientError("Missing argument: %s"%name)
+        raise ClientError("Missing argument: %s" % name)
     return ret
 
 
-cmd=args[0]
+cmd = args[0]
 
 try:
     if cmd == "help":
         print_usage()
     elif cmd == "start":
-        cf=ServerConf(confdir=confdir)
-        serverMode=cpc.util.log.MODE_PRODUCTION
-        if len(args)>1:
+        cf = ServerConf(confdir=confdir)
+        serverMode = cpc.util.log.MODE_PRODUCTION
+        if len(args) > 1:
             if args[1] == "-d":
-                serverMode=cpc.util.log.MODE_DEBUG
+                serverMode = cpc.util.log.MODE_DEBUG
                 cpc.util.log.initServerLogToStdout(serverMode)
             elif args[1] == "-t":
-                serverMode=cpc.util.log.MODE_TRACE
+                serverMode = cpc.util.log.MODE_TRACE
                 cpc.util.log.initServerLogToStdout(serverMode)
 
-        print "Starting server.."        
-        cpc.network.server.forkAndRun(cf, serverMode )
+        print "Starting server.."
+        cpc.network.server.forkAndRun(cf, serverMode)
         sys.exit(0)
-    elif cmd == "setup":    
-        # the -c option will be ignored here.
-        rundir=None
-        altHostName=None
-        forceReset=False
-        hostConfDir=False
+    elif cmd == "setup":
+    # the -c option will be ignored here.
+        rundir = None
+        altHostName = None
+        forceReset = False
+        hostConfDir = False
+        altDir = False
         args.pop(0)
-        for arg in args:
+        i = 0
+        while i < len(args):
+            arg = args[i]
             if arg == '-force':
                 forceReset = True
             elif arg == '-host':
-                hostConfDir = True            
+                if(altDir):
+                    print "cannot use -host in combination with -confdir "
+                    sys.exit(0)
+                hostConfDir = True
+            elif arg == '-confdir':
+                if(hostConfDir):
+                    print "cannot use -confdir in combination with -host"
+                    sys.exit(0)
+                altDir = True
+                altHostName = args[i + 1]
+                i += 1
             else:
                 if rundir is None:
-                    rundir=arg
+                    rundir = arg
                 else:
-                    if altHostName is None:
-                        altHostName=arg
-                    else:
-                        raise ClientError("Unknown option: %s"%arg)
+                    raise ClientError("Unknown option: %s" % arg)
+
+            i += 1
         if rundir is None:
             raise ClientError(
-                 "Missing run directory: the base directory for project output")
+                "Missing run directory: the base directory for project output")
 
         initiateServerSetup(rundir, forceReset, hostConfDir, altHostName)
 
         sys.exit(0)
-   
-    if (cmd == "config-list" or 
-        cmd == "config-values" or 
+
+    if (cmd == "config-list" or
+        cmd == "config-values" or
         cmd == "config"):
-        cf=ServerConf(confdir=confdir)
+        cf = ServerConf(confdir=confdir)
         # initialize the client log
         cpc.util.log.initClientLog(debug)
         # initialize the tracker
-        cpc.server.tracking.tracker.initTracker()     
+        cpc.server.tracking.tracker.initTracker()
         if cmd == "config-list":
             #print '\n'
             conf = ServerConf()
             configs = conf.getUserSettableConfigs()
             cmd_line_utils.printSortedConfigListDescriptions(configs)
-        
+
         elif cmd == "config-values":
             #print '\n'
             conf = ServerConf()
@@ -167,21 +171,21 @@ try:
             cmd_line_utils.printSortedConfigListValues(configs)
 
         elif cmd == "config":
-            param = getArg(1, "parameter name") 
+            param = getArg(1, "parameter name")
             value = getArg(2, "parameter value")
             conf = ServerConf()
-            conf.set(param,value)
+            conf.set(param, value)
 
     elif cmd == "bundle" or cmd == "create-connection-bundle":
-        cf=ServerConf(confdir=confdir)
+        cf = ServerConf(confdir=confdir)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
         print connectionBundle.toJson()
-    else: 
-        print "ERROR: unknown command '%s'"%cmd
+    else:
+        print "ERROR: unknown command '%s'" % cmd
 except ClientError as e:
-    print("ERROR: %s"%str(e))
+    print("ERROR: %s" % str(e))
 except cpc.util.CpcError as e:
-    print("ERROR: %s"%str(e))
+    print("ERROR: %s" % str(e))
 except IOError as e:
     raise e
 

@@ -39,24 +39,25 @@ class SetupError(cpc.util.exception.CpcError):
     pass
 
 
-def initiateServerSetup(rundir, forceReset, hostConfDir, altHostName):
+def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName):
                         #configName =None,confDir=None,forceReset=False):
-    ''' 
+    '''
        @input configName String  
     '''
-    if altHostName is None:
-        hostName = socket.getfqdn()
+    if altDirName is None:
+        dirname = socket.getfqdn()
     else:
-        hostName = altHostName
+        dirname = altDirName
+        useAltDir = True
 
-    confDir=cpc.util.conf.conf_base.getGlobalDir()
+    confDir=cpc.util.conf.conf_base.findGlobalDir()
 
     # now if a host-specific directory already exists, we use that
-    if os.path.exists(os.path.join(confDir, hostName)):
+    if os.path.exists(os.path.join(confDir, dirname)):
        hostConfDir=True 
 
-    if hostConfDir:
-        confDir = os.path.join(confDir, hostName)
+    if hostConfDir or useAltDir:
+        confDir = os.path.join(confDir, dirname)
     else:
         confDir = os.path.join(confDir, conf_base.Conf.default_dir)
 
@@ -73,7 +74,7 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, altHostName):
     outf=open(os.path.join(confFile), 'w')
     outf.close()
     cf=ServerConf(confdir=confDir)
-    openssl = cpc.util.openssl.OpenSSL(hostName)
+    openssl = cpc.util.openssl.OpenSSL(dirname)
     setupCA(openssl,cf,forceReset)
     openssl.setupServer()
     cf.setRunDir(rundir)

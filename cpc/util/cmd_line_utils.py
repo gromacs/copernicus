@@ -27,7 +27,7 @@ import sys
 import shutil
 
 from cpc.util.conf.conf_base import Conf
-import cpc.util.conf.conf_base 
+import cpc.util.conf.conf_base
 import cpc.util.conf.server_conf
 from cpc.network.com.client_base import ClientError
 
@@ -35,25 +35,36 @@ class ConfError(cpc.util.exception.CpcError):
     pass
 
 
-
 def printSortedConfigListDescriptions(configs):
     for key in sorted(configs.keys()):
-            value = configs[key] 
-            spaces = ''
-            for i in range(20-len(value.name)):
-                spaces = spaces + " "
-                
-            print value.name + spaces + value.description #+ '\n' 
-    
-def printSortedConfigListValues(configs):    
-    for key in sorted(configs.keys()): 
         value = configs[key]
         spaces = ''
-        for i in range(20-len(value.name)):
+        for i in range(20 - len(value.name)):
             spaces = spaces + " "
-         
+
+        print value.name + spaces + value.description #+ '\n'
+
+
+def printSortedConfigListValues(configs):
+    for key in sorted(configs.keys()):
+        value = configs[key]
+        spaces = ''
+        for i in range(20 - len(value.name)):
+            spaces = spaces + " "
+
         print value.name + spaces + str(value.get()) #+ '\n'    
 
+
+def initiateConnectionBundle(conffile):
+    cf = None
+    try:
+        cf = ConnectionBundle(conffile)
+        return cf
+    except cpc.util.conf.conf_base.ConfError:
+        print "Could not find a connection bundle \nPlease specify one with " \
+              "with the -c flag or supply the file with the name\nclient.cnx" \
+              " in your configuration folder "
+        sys.exit(0)
 
 
 def initiateWorkerSetup():
@@ -64,16 +75,16 @@ def initiateWorkerSetup():
     '''
 
     configName = socket.getfqdn()
-    openssl = cpc.util.openssl.OpenSSL(cn = configName)
+    openssl = cpc.util.openssl.OpenSSL(cn=configName)
     connectionBundle = openssl.setupClient()
     return connectionBundle
 
 
 def getArg(arglist, argnr, name):
     """Get argument, or print out argument description."""
-    try: 
-        ret=arglist[argnr]
+    try:
+        ret = arglist[argnr]
     except IndexError:
-        raise ClientError("Missing argument: %s"%name)
+        raise ClientError("Missing argument: %s" % name)
     return ret
     
