@@ -45,7 +45,7 @@ class InputError(CpcError):
         self.str=exc.__str__()
 
 
-def getGlobalDir():
+def findGlobalDir():
     """Get the global configuration directory base path for all configuration
         files. This depends on the OS"""
     if "HOME" in os.environ:
@@ -60,8 +60,8 @@ def getGlobalDir():
         buf= ctypes.create_unicode_buffer(ctypes.wintypes.MAX_PATH)
         ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0,
                                                SHGFP_TYPE_CURRENT, buf)
-        self.homedir=buf.value
-        return os.path.join(self.homedir, Conf.base_path_normal)
+        homedir=buf.value
+        return os.path.join(homedir, Conf.base_path_normal)
     raise ConfError("Could not determine global base directory")
  
 class ConfValue:
@@ -198,7 +198,7 @@ class Conf:
         # a list of directories (base_dirs) to try: 
         dirsToTry=[ ]
 
-        globalDir=getGlobalDir()
+        globalDir=findGlobalDir()
         # first with the hostname appended
         dirsToTry.append(os.path.join(globalDir, self.hostname))
         # then in the '_default' directory
