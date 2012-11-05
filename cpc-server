@@ -24,6 +24,7 @@
 
 import sys
 import copy
+import os
 
 import cpc.client
 import cpc.network.server
@@ -31,7 +32,7 @@ import cpc.worker
 import cpc.util
 import cpc.util.log
 import cpc.server.tracking
-
+import cpc.util.conf.conf_base
 from cpc.network.com.client_base import ClientError
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
@@ -43,12 +44,12 @@ def print_usage():
     print "       cpc-server config-list"
     print "       cpc-server config-values"
     print "       cpc-server config param value"
-    print "       cpc-server setup [-force] [(-host) | (-confdir relative-dir)]"\
+    print "       cpc-server setup [-force] [(-host) | (-servername relative-dir)]"\
           " project-directory"
     print "       cpc-server create-connection-bundle|bundle"
     print ""
     print "Common options:"
-    print "       cpc-server [-c confdir]"
+    print "       cpc-server [-c servername]"
     sys.exit(1)
 
 # make a copy for later
@@ -59,7 +60,7 @@ if len(args) < 2:
 
 # remove the 0th argument
 args.pop(0)
-confdir = None
+servername = None
 
 debug = None
 # first parse common options
@@ -73,7 +74,8 @@ while len(args) > 0:
                 "ERROR: no value specified for global option '%s'\n" %
                 option)
             print_usage()
-        confdir = args.pop(0)
+        servername = args.pop(0)
+        servername = os.path.join(cpc.util.conf.conf_base.findGlobalDir(),servername)
     elif args[0] == '-d':
         args.pop(0)
         debug = cpc.util.log.MODE_DEBUG
@@ -97,7 +99,7 @@ try:
     if cmd == "help":
         print_usage()
     elif cmd == "start":
-        cf = ServerConf(confdir=confdir)
+        cf = ServerConf(confdir=servername)
         serverMode = cpc.util.log.MODE_PRODUCTION
         if len(args) > 1:
             if args[1] == "-d":
@@ -125,12 +127,12 @@ try:
                 forceReset = True
             elif arg == '-host':
                 if(altDir):
-                    print "cannot use -host in combination with -confdir "
+                    print "cannot use -host in combination with -servername "
                     sys.exit(0)
                 hostConfDir = True
-            elif arg == '-confdir':
+            elif arg == '-servername':
                 if(hostConfDir):
-                    print "cannot use -confdir in combination with -host"
+                    print "cannot use -servername in combination with -host"
                     sys.exit(0)
                 altDir = True
                 altHostName = args[i + 1]
@@ -153,7 +155,7 @@ try:
     if (cmd == "config-list" or
         cmd == "config-values" or
         cmd == "config"):
-        cf = ServerConf(confdir=confdir)
+        cf = ServerConf(confdir=servername)
         # initialize the client log
         cpc.util.log.initClientLog(debug)
         # initialize the tracker
@@ -177,7 +179,7 @@ try:
             conf.set(param, value)
 
     elif cmd == "bundle" or cmd == "create-connection-bundle":
-        cf = ServerConf(confdir=confdir)
+        cf = ServerConf(confdir=servername)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
         print connectionBundle.toJson()
     else:
