@@ -44,7 +44,7 @@ def print_usage():
     print "       cpc-server config-values"
     print "       cpc-server config param value"
     print "       cpc-server setup [-force] [(-host) | (-confdir relative-dir)]"\
-          " default-project-directory"
+          " project-directory"
     print "       cpc-server create-connection-bundle|bundle"
     print ""
     print "Common options:"
