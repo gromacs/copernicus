@@ -72,6 +72,7 @@ class SCProjects(ServerCommand):
     def run(self, serverState, request, response):
         lst=serverState.getProjectList().list()
         response.add(lst)
+        log.info("Listed %d projects"%(len(lst)))
 
 class SCProjectStart(ServerCommand):
     """Start a new project."""
@@ -83,6 +84,7 @@ class SCProjectStart(ServerCommand):
         serverState.getProjectList().add(name)
         request.session.set("default_project_name", name)
         response.add("Project %s created"%name)
+        log.info("Started new project %s"%(name))
 
 class SCProjectDelete(ProjectServerCommand):
     """Delete a project."""
@@ -105,6 +107,7 @@ class SCProjectDelete(ProjectServerCommand):
              ( name == request.session['default_project_name'] ) ):
             del request.session['default_project_name']
         response.add("Project %s%s deleted."%(name, msg))
+        log.info("Deleted project %s"%(name))
 
 class SCProjectSetDefault(ProjectServerCommand):
     """Set the default project ."""
@@ -118,6 +121,7 @@ class SCProjectSetDefault(ProjectServerCommand):
         project=serverState.getProjectList().get(name)
         request.session.set("default_project_name", name)
         response.add("Changed to project %s"%name)
+        log.info("Changed to project %s"%name)
 
 class SCProjectGetDefault(ProjectServerCommand):
     """Get the default project ."""
@@ -132,8 +136,10 @@ class SCProjectGetDefault(ProjectServerCommand):
         name=prj.getName()
         if name is None:
             response.add("No working project")
+            log.info("No working project")
         else:
             response.add("Working project: %s"%name)
+            log.info("Working project: %s"%name)
 
 class SCProjectActivate(ProjectServerCommand):
     """Activate all elements in a project."""
@@ -149,8 +155,10 @@ class SCProjectActivate(ProjectServerCommand):
         prj.activate(item)
         if item == "":
             response.add("All items in project %s activated."%prj.getName())
+            log.info("All items in project %s activated."%prj.getName())
         else:
             response.add("%s in project %s activated."%(item, prj.getName()))
+            log.info("%s in project %s activated."%(item, prj.getName()))
 
 class SCProjectDeactivate(ProjectServerCommand):
     """De-activate all elements in a project."""
@@ -166,8 +174,10 @@ class SCProjectDeactivate(ProjectServerCommand):
         prj.deactivate(item)
         if item == "":
             response.add("All items in project %s de-activated."%prj.getName())
+            log.info("All items in project %s de-activated."%prj.getName())
         else:
             response.add("%s in project %s de-activated."%(item, prj.getName()))
+            log.info("%s in project %s de-activated."%(item, prj.getName()))
 
 class SCProjectRerun(ProjectServerCommand):
     """Force a rerun and optionally clear an error in an active instance."""
@@ -192,6 +202,7 @@ class SCProjectRerun(ProjectServerCommand):
         outf=StringIO()
         lst=prj.rerun(item, recursive, clearError, outf)
         response.add(outf.getvalue())
+        log.info("Force rerun on %s: %s"%(prj.getName(), item))
 
 class SCProjectList(ProjectServerCommand):
     """List named items in a project: instances or networks."""
@@ -205,6 +216,7 @@ class SCProjectList(ProjectServerCommand):
             item=""
         lst=prj.getNamedItemList(item)
         response.add(lst)
+        log.info("Project list on %s: %s"%(prj.getName(), item))
 
 
 class SCProjectInfo(ProjectServerCommand):
@@ -219,6 +231,7 @@ class SCProjectInfo(ProjectServerCommand):
             item=""
         desc=prj.getNamedDescription(item)
         response.add(desc)
+        log.info("Project info on %s: %s"%(prj.getName(), item))
 
 class SCProjectLog(ProjectServerCommand):
     """Get an active instance log."""
@@ -243,6 +256,7 @@ class SCProjectLog(ProjectServerCommand):
             response.add("Instance %s: can't read log"%item, status="ERROR")
             return
         response.setFile(fob, 'application/text')
+        log.info("Project log on %s: %s"%(prj.getName(), item))
        
 
 class SCProjectGraph(ProjectServerCommand):
@@ -258,6 +272,7 @@ class SCProjectGraph(ProjectServerCommand):
             item=""
         lst=prj.getGraph(item)
         response.add(lst)
+        log.info("Project graph on %s: %s"%(prj.getName(), item))
 
 
 class SCProjectUpload(ProjectServerCommand):
@@ -269,6 +284,7 @@ class SCProjectUpload(ProjectServerCommand):
         prj=self.getProject(request, serverState)
         prj.importTopLevelFile(upfile, "uploaded file")
         response.add("Read file")
+        log.info("Project upload on %s"%(prj.getName()))
 
 
 class SCProjectAddInstance(ProjectServerCommand):
@@ -281,6 +297,8 @@ class SCProjectAddInstance(ProjectServerCommand):
         functionName=request.getParam('function')
         prj.addInstance(name, functionName)
         response.add("Added instance '%s' of function %s"%(name, functionName))
+        log.info("Add-instance on %s: %s of %s"%(prj.getName(), name,
+                                                 functionName))
 
 class SCProjectConnect(ProjectServerCommand):
     """Add a connection to the top-level active network."""
@@ -293,6 +311,7 @@ class SCProjectConnect(ProjectServerCommand):
         outf=StringIO()
         prj.scheduleConnect(src, dst, outf)
         response.add(outf.getvalue())
+        log.info("Connected %s: %s -> %s"%(prj.getName(), src, dst))
 
 class SCProjectImport(ProjectServerCommand):
     """Import a module (file/lib) to the project."""
@@ -303,6 +322,7 @@ class SCProjectImport(ProjectServerCommand):
         module=request.getParam('module')
         prj.importName(module)
         response.add("Imported module %s"%(module))
+        log.info("Imported module %s: %s"%(prj.getName(), module))
 
 class SCProjectGet(ProjectServerCommand):
     """Get an i/o item in a project."""
@@ -343,6 +363,7 @@ class SCProjectGet(ProjectServerCommand):
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
+        log.info("Project get %s: %s"%(prj.getName(), itemname))
 
 
 class SCProjectSave(ProjectServerCommand):
@@ -359,6 +380,7 @@ class SCProjectSave(ProjectServerCommand):
                 response.add(e.message,status="ERROR")
         else:
             response.add("No project specified for save",status="ERROR")
+        log.info("Project save %s"%(prj.getName()))
 
 
 class SCProjectLoad(ProjectServerCommand):
@@ -384,8 +406,10 @@ class SCProjectLoad(ProjectServerCommand):
                 return
 
             response.add("Project restored as %s"%projectName)
+            log.info("Project load %s"%(prj.getName()))
         else:
             response.add("No project file provided",status="ERROR")
+            log.info("Project load %s failed"%(prj.getName()))
 
 
 
@@ -424,6 +448,7 @@ class SCProjectSet(ProjectServerCommand):
             response.add(outf.getvalue())
         except cpc.dataflow.ApplicationError as e:
             response.add("Item not found: %s"%(str(e)))
+        log.info("Project set %s: %s"%(prj.getName(), itemname))
 
 class SCProjectTransact(ProjectServerCommand):
     """Start a transaction to be able to commit several project-set commands 
@@ -436,6 +461,7 @@ class SCProjectTransact(ProjectServerCommand):
         outf=StringIO()
         prj.beginTransaction(outf)
         response.add(outf.getvalue())
+        log.info("Project transact %s"%(prj.getName()))
 
 class SCProjectCommit(ProjectServerCommand):
     """Commit several project-set commands in a project."""
@@ -447,6 +473,7 @@ class SCProjectCommit(ProjectServerCommand):
         outf=StringIO()
         prj.commit(outf)
         response.add(outf.getvalue())
+        log.info("Project commit %s"%(prj.getName()))
 
 class SCProjectRollback(ProjectServerCommand):
     """Cancel several project-set commands in a project."""
@@ -458,5 +485,6 @@ class SCProjectRollback(ProjectServerCommand):
         outf=StringIO()
         prj.rollback(outf)
         response.add(outf.getvalue())
+        log.info("Project rollback %s"%(prj.getName()))
 
 

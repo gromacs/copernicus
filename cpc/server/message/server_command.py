@@ -87,9 +87,9 @@ class SCSaveState(ServerCommand):
         ServerCommand.__init__(self, "save-state")
 
     def run(self, serverState, request, response):
-        log.info("Save-state request received")
         serverState.write() 
         response.add('Saved state.')
+        log.info("Save-state request received")
 
 
 class SCTestServer(ServerCommand):
@@ -101,6 +101,7 @@ class SCTestServer(ServerCommand):
         conf = ServerConf()
         response.add('Server: %s, version:   %s'%(conf.getHostName(), 
                                                   __version__))
+        log.info("Server version %s"%__version__)
 
 
 class SCListServerItems(ServerCommand):
@@ -133,6 +134,7 @@ class SCListServerItems(ServerCommand):
         else:
             raise ServerCommandError("Unknown item to list: '%s'"%toList)
         response.add(retstr)
+        log.info("Listed %s"%toList)
 
 
 class SCNetworkTopology(ServerCommand):
@@ -143,10 +145,13 @@ class SCNetworkTopology(ServerCommand):
         conf = ServerConf()
         topology = Nodes()         
         if request.hasParam('topology'):            
-            topology = json.loads(request.getParam('topology'),object_hook = json_serializer.fromJson)
+            topology = json.loads(request.getParam('topology'),
+                                  object_hook = json_serializer.fromJson)
         
                     
-        thisNode = Node(conf.getHostName(),conf.getServerHTTPPort(),conf.getServerHTTPSPort(),conf.getHostName())                                
+        thisNode = Node(conf.getHostName(),conf.getServerHTTPPort(),
+                        conf.getServerHTTPSPort(),
+                        conf.getHostName())
         thisNode.nodes = conf.getNodes() 
         thisNode.workerStates = serverState.getWorkerStates()             
         topology.addNode(thisNode)
@@ -162,6 +167,7 @@ class SCNetworkTopology(ServerCommand):
         
                                 
         response.add("", topology)                            
+        log.info("Returned network topology size %d"%topology.size())
 
 class SCNetworkTopologyUpdate(ServerCommand):
     def __init__(self):
@@ -170,13 +176,13 @@ class SCNetworkTopologyUpdate(ServerCommand):
     def run(self, serverState, request, response):
         cacheKey = "network-topology"
         Cache().remove(cacheKey)
-        topology = json.loads(request.getParam('topology'),object_hook = json_serializer.fromJson)
+        topology = json.loads(request.getParam('topology'),
+                              object_hook = json_serializer.fromJson)
         Cache().add(cacheKey, topology)
         response.add("Updated network topology")
+        log.info("Update network topology done")
 
-                
 
-       
 class SCReadConf(ServerCommand):
     """Update the configuration based on new settings."""
     def __init__(self):
@@ -186,7 +192,7 @@ class SCReadConf(ServerCommand):
         conf = ServerConf()
         conf.reread()
         response.add("Reread configuration.")
-
+        log.info("Reread configuration done")
 
 
 
@@ -201,8 +207,9 @@ class ScAddClientRequest(ServerCommand):
     def run(self, serverState, request, response):
                 
         #TODO check so that we already havent granted access to this node
-        clientConnectRequest = json.loads(request.getParam('clientConnectRequest'),
-                                        object_hook=json_serializer.fromJson)
+        clientConnectRequest = json.loads(
+                                    request.getParam('clientConnectRequest'),
+                                    object_hook=json_serializer.fromJson)
         conf = ServerConf()
 #        conf.addNodeConnectRequest(clientConnectRequest)
         
@@ -214,6 +221,7 @@ class ScAddClientRequest(ServerCommand):
 #                                         conf.getServerHTTPPort(),
 #                                         conf.getServerHTTPSPort(),inf.read())
         response.add("",inf.read())
+        log.info("Add client request done")
 
 
 #sends an add node request
@@ -244,6 +252,7 @@ class ScAddNode(ServerCommand):
         nodeConnectRequest.http_port = int(http_port)  #http port should always be sent from client
         conf.addSentNodeConnectRequest(nodeConnectRequest)
         response.add('',nodeConnectRequest)    
+        log.info("Added node %s"%host)
     
 
 #receives add node connect request from a server
@@ -271,6 +280,7 @@ class ScAddNodeRequest(ServerCommand):
                                          ,conf.getHostName())
         
         response.add("",nodeConnect)
+        log.info("Handled add node request")
                 
     
 #message to send when a node has beeen accepted
@@ -292,8 +302,10 @@ class ScGrantNodeConnection(ServerCommand):
             topology = ServerToServerMessage.getNetworkTopology()
             broadCastMessage = BroadcastMessage()        
             broadCastMessage.updateNetworkTopology()
+            log.info("Granted node connection for %s"%(nodeKey))
         else: 
             response.add('Node has not requested to connect')    
+            log.info("Did not grant node connection for %s"%(nodeKey))
 
     @staticmethod
     def grant(key): #key is the Node key
@@ -331,10 +343,11 @@ class ScGrantAllNodeConnections(ServerCommand):
         nodeReqs = copy.deepcopy(conf.getNodeConnectRequests())
         connected = []
         notConnected = []
-        
-        
+       
+        N=0 
         for nodeConnectRequest in nodeReqs.nodes.itervalues():
-            ScGrantNodeConnection.grant(nodeConnectRequest.getId())                
+            N+=1
+            ScGrantNodeConnection.grant(nodeConnectRequest.getId())
 #            
 #            if ScGrantNodeConnection.grant(nodeConnectRequest.host, 
 #                                           nodeConnectRequest.https_port) == False:                
@@ -354,9 +367,10 @@ class ScGrantAllNodeConnections(ServerCommand):
         ret['connected'] = connected
        # ret ['notConnected'] = notConnected
         
-        response.add("",ret)            
+        response.add("",ret)
             #find all node connect requests
             #for each node connect request do a grant
+        log.info("Granted node connection for %d nodes"%(N))
 
 #message sent back in the requesting node
 #This is a message that is sent from a server  not a client!!
@@ -368,13 +382,14 @@ class ScAddNodeAccepted(ServerCommand):
     def run(self, serverState, request, response):
         conf = ServerConf()
         nodes = conf.getSentNodeConnectRequests()        
-        node = json.loads(request.getParam('acceptedNode'),object_hook=json_serializer.fromJson)
+        node = json.loads(request.getParam('acceptedNode'),
+                          object_hook=json_serializer.fromJson)
         if(nodes.exists(node.getId())):
             nodeToAdd = nodes.get(node.getId())
             conf.addNode(Node(nodeToAdd.host,
-                nodeToAdd.http_port,
-                nodeToAdd.https_port,
-                nodeToAdd.qualified_name))
+                              nodeToAdd.http_port,
+                              nodeToAdd.https_port,
+                              nodeToAdd.qualified_name))
             #conf.addNode(nodeToAdd)
             openssl = OpenSSL(conf)
             openssl.addCa(nodeToAdd.key)           
@@ -388,6 +403,7 @@ class ScAddNodeAccepted(ServerCommand):
         else:
             response.add('No previous node request sent for host %s:%s'%
                               (node.host,node.https_port))
+        log.info("Node connection accepted")
         
 
 #servers can ask if they are in the nodes list of this server
@@ -404,6 +420,7 @@ class ScListNodes(ServerCommand):
         conf = ServerConf()
         nodes = conf.getNodes()
         response.add("",nodes.getNodesByPriority())
+        log.info("Listed nodes")
 
 
 class ScListSentNodeConnectionRequests(ServerCommand):
@@ -413,6 +430,7 @@ class ScListSentNodeConnectionRequests(ServerCommand):
     def run(self, serverState, request, response):
         conf = ServerConf()
         response.add("",conf.getSentNodeConnectRequests())
+        log.info("Listed sent node connection requests")
 
 class ScListNodeConnectionRequests(ServerCommand):
     def __init__(self):
@@ -421,6 +439,7 @@ class ScListNodeConnectionRequests(ServerCommand):
     def run(self, serverState, request, response):
         conf = ServerConf()
         response.add("",conf.getNodeConnectRequests())
+        log.info("Listed node connection requests")
 
 
 class ScChangeNodePriority(ServerCommand):
@@ -438,4 +457,5 @@ class ScChangeNodePriority(ServerCommand):
         conf.write()
         
         response.add("",nodes.getNodesByPriority())
+        log.info("Changed %s node priority to %d"%(nodeId, priority))
 

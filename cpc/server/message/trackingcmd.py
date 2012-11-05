@@ -44,6 +44,7 @@ class SCPullAsset(ServerCommand):
             log.log(cpc.util.log.TRACE,"Local asset cmdid=%s \nproject server=%s"%
                                        (asset.cmdID, asset.projectServer))
             response.setFile(runfile,'application/x-tar')
+        log.info("Pulled asset %s/%s"%(cmdID, assetType))
 
 
 class SCClearAsset(ServerCommand):
@@ -59,4 +60,5 @@ class SCClearAsset(ServerCommand):
         else:
             response.add("Local asset with cmdID=%s NOT removed successfully."%
                          cmdID, status="ERROR")
+        log.info("Cleared asset %s"%(cmdID))
     

@@ -141,6 +141,7 @@ class WorkerReadyBase(ServerCommand):
             response.setFile(tff,'application/x-tar')
             #project.writeTasks()
             # the file is closed after the response is sent.            
+            log.info("Did direct worker-ready")
         else:
             nodes = conf.getNodes().getNodesByPriority()
             
@@ -194,6 +195,7 @@ class WorkerReadyBase(ServerCommand):
                     #packages 
             if not hasJob:           
                 response.add("No command")
+            log.info("Did delegated worker-ready")
 
 
 class SCWorkerReady(WorkerReadyBase):
@@ -238,10 +240,11 @@ class SCCommandFinishedForward(ServerCommand):
         runfile = None
         if rundata != None:
             runfile = rundata.getRawData()
-        log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
+        #log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
 
         runningCmdList=serverState.getRunningCmdList()
         runningCmdList.handleFinished(cmdID, returncode, cputime, runfile)
+        log.info("finished forward command %s"%cmdID)
 
 
 class SCCommandFinished(ServerCommand):
@@ -271,11 +274,11 @@ class SCCommandFinished(ServerCommand):
                                                        projServer, runfile)
         
         #forward CommandFinished-signal to project server
-        log.debug("finished command %s"%cmdID)
         #FIXME if this is current server do not make a connection to self??
         msg=ServerMessage(projServer)  
         ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
                                                   returncode, cputime, True)
+        log.info("Finished command %s"%cmdID)
 
 class SCCommandFailed(ServerCommand):
     """Get notified about a failed run."""
@@ -311,11 +314,11 @@ class SCCommandFailed(ServerCommand):
             serverState.getLocalAssets().addCmdOutputAsset(cmdID, 
                                                            projServer, runfile)
         #forward CommandFinished-signal to project server
-        log.debug("Run failure reported")
         msg=ServerMessage(projServer)
         ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
                                                   returncode, cputime, 
                                                   (runfile is not None))
+        log.info("Run failure reported on %s"%cmdID)
 
 class SCWorkerHeartbeat(ServerCommand):
     """Handle a worker's heartbeat signal."""
@@ -338,6 +341,7 @@ class SCWorkerHeartbeat(ServerCommand):
         haveADir=False
         # Order the heartbeat items by destination server
         destList={}
+        Nhandled=0
         for item in heartbeatItems:
             dest=item.getServerName()
             item.checkRunDir()
@@ -347,6 +351,7 @@ class SCWorkerHeartbeat(ServerCommand):
                 destList[dest].append(item)
             else:
                 destList[dest]=[item]
+            Nhandled+=1
         if haveADir:
             if iteration!="final":
                 workerDataList.add(workerDir)
@@ -396,6 +401,7 @@ class SCWorkerHeartbeat(ServerCommand):
                 retData['faulty']=faultyItems
             # TODO: per-workload error reporting
             response.add('Heatbeat NOT OK', status="ERROR", data=retData)
+        log.info("Handled %d heartbeat signal items."%(Nhandled))
             
 
 class SCHeartbeatForwarded(ServerCommand):
@@ -412,6 +418,7 @@ class SCHeartbeatForwarded(ServerCommand):
         hwr=cpc.command.heartbeat.HeartbeatItemReader()
         hwr.readString(itemsXML, "worker heartbeat items")
         faultyItems=[]
+        Nhandled=len(hwr.getItems())
         ret=serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
                                                  hwr.getItems(), False, 
                                                  faultyItems)
@@ -419,6 +426,7 @@ class SCHeartbeatForwarded(ServerCommand):
             response.add('', data=serverState.conf.getHeartbeatTime())
         else:
             response.add('Heatbeat NOT OK', status="ERROR", data=faultyItems)
+        log.info("Handled %d forwarded heartbeat signal items."%(Nhandled))
 
 class SCDeadWorkerFetch(ServerCommand):
     """Attempt to fetch the data from a dead worker."""
@@ -443,6 +451,9 @@ class SCDeadWorkerFetch(ServerCommand):
                 response.setFile(tff,'application/x-tar')
                 request.setFlag('remove', True)
             response.add('Returning data')
+            log.info("Fetched data from dead worker")
+        else:
+            log.info("Did not fetch data from dead worker")
 
     def finish(self, serverState, request):
         """Now delete the directories associated with that run.
