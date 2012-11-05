@@ -253,6 +253,14 @@ class FunctionRunInput(object):
         self.project=project
         if self.project is not None:
             self.baseDir=project.getBasedir()
+            if ( self.persistentDir is not None and 
+                 os.path.isabs(self.persistentDir)) : 
+                self.persistentDir=os.path.relpath(self.persistentDir,
+                                                   self.baseDir)
+            if ( self.outputDir is not None and 
+                 os.path.isabs(self.outputDir)) : 
+                self.outputDir=os.path.relpath(self.outputDir,
+                                               self.baseDir)
  
     def destroy(self):
         """Destroy all file object refs associated with this task."""
