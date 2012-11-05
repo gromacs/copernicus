@@ -21,6 +21,7 @@
 
 import sys
 import os
+import signal
 import logging
 import subprocess
 import shlex
@@ -305,6 +306,14 @@ class WorkLoad(object):
             stderrf.close()
             self.args=None
         log.debug("Run with cmd id=%s finished"%self.cmd.id)
+
+
+    def killLocked(self):
+        """Kill the process associated with this run. Assumes a locked 
+           runCondVar"""
+        sp=self.subprocess
+        if self.running and sp!=None:
+            os.kill(sp.pid, signal.SIGTERM)
 
     def signalMainThread(self, startTime, endTime):
         # now signal the main thread that we're finished.

@@ -148,7 +148,8 @@ class Worker(object):
                    "Run cpc-worker from a user-writeable directory (e.g. /tmp)")
             raise WorkerError("Can't create directory '%s' %s."%
                               (self.mainDir, absn))
-        self.heartbeat=heartbeat.HeartbeatSender(self.id, self.mainDir)
+        self.heartbeat=heartbeat.HeartbeatSender(self, #self.id, self.mainDir,
+                                                 self.runCondVar)
         # First get our architecture(s) (hw + sw) from the plugin
         self.plugin=PlatformPlugin(self.type, self.mainDir, self.conf)
         canRun=self.plugin.canRun()
@@ -172,6 +173,37 @@ class Worker(object):
         self.acceptCommands = True
         # install the signal handler
         signalHandlerAddWorker(self)
+
+
+    def getID(self):
+        return self.id
+
+    def getWorkerDir(self):
+        return self.mainDir
+
+
+    def _getWorkloads(self):
+        """Get the list of workloads, assuming a locked runCondVar."""
+        return self.workloads
+
+
+    def killWorkload(self, cmdID):
+        """Kill a workload by command ID."""
+        with self.runCondVar:
+            try:
+                # first try to find it
+                workload=None
+                for nworkload in self.workloads:
+                    if nworkload.cmd.id == cmdID:
+                        workload=nworkload
+                        break
+                if workload is not None:
+                    log.info("Found workload %s to kill"%cmdID)
+                    workload.killLocked()
+                else:
+                    log.debug("Error killWorkload %s not found"%cmdID)
+            except:
+                log.debug("Error in killWorkload %s"%cmdID)
 
     def run(self):
         """Ask for tasks until told to quit."""
@@ -232,6 +264,9 @@ class Worker(object):
                         self.runCondVar.wait()
                 else:
                     continueWaiting=False
+                # now sleep one second to make sure that jobs stopping around
+                # the same time are reported back at once.
+                time.sleep(1)
                 # loop over all workloads
                 for workload in self.workloads:
                     if not workload.running:

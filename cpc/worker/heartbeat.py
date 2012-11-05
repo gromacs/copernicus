@@ -39,14 +39,16 @@ log=logging.getLogger('cpc.heartbeat.client')
 
 
 class HeartbeatSender(object):
-    def __init__(self, workerID, workerDir):
+    def __init__(self, worker, runCondVar):
         """Start a heartbeat thread."""
         self.lock=threading.Lock()
-        self.workerID=workerID
-        self.workerDir=workerDir
+        self.runCondVar=runCondVar
+        self.workerID=worker.getID()#workerID
+        self.workerDir=worker.getWorkerDir()
+        self.worker=worker
         self.run=False
         # dict by cmd id of a tuple of cmd id and originating server:
-        self.cmds=dict() 
+        #self.cmds=dict() 
         self.cmdsChanged=True
         self.thread=None 
         log.debug("Started heartbeat thread")
@@ -60,10 +62,11 @@ class HeartbeatSender(object):
             if len(workloads) > 0:
                 self.run=True
             self.cmdsChanged=True
-            for workload in workloads:
-                self.cmds[workload.cmd.id] = workload
-                for subwl in workload.joinedTo:
-                    self.cmds[subwl.cmd.id]= subwl
+            #for workload in workloads:
+            #    self.cmds[workload.cmd.id] = workload
+            #    for subwl in workload.joinedTo:
+            #        self.cmds[subwl.cmd.id]= subwl
+
             #for workload in workloads:
             #    hbi=cpc.command.heartbeat.HeartbeatItem(workload.cmd.id, 
             #                                    workload.originatingServer,
@@ -80,10 +83,10 @@ class HeartbeatSender(object):
         """Remove a workload list."""
         with self.lock:
             self.cmdsChanged=True
-            for workload in workloads:
-                del self.cmds[workload.cmd.id]
-                for subwl in workload.joinedTo:
-                    del self.cmds[subwl.cmd.id]
+            #for workload in workloads:
+            #    del self.cmds[workload.cmd.id]
+            #    for subwl in workload.joinedTo:
+            #        del self.cmds[subwl.cmd.id]
             self._startThread()
 
     def _startThread(self):
@@ -132,15 +135,21 @@ class HeartbeatSender(object):
         """Do the actual sending"""
         changed=self.cmdsChanged
         self.cmdsChanged=False
-        # first write the items to xml
-        co=StringIO()
-        co.write('<heartbeat worker_id="%s">'%self.workerID)
-        for items in self.cmds.itervalues():
-            items.hbi.writeXML(co)
-        co.write("</heartbeat>")
+        with self.runCondVar:
+            # first write the items to xml
+            cmds=self.worker._getWorkloads()
+            co=StringIO()
+            co.write('<heartbeat worker_id="%s">'%self.workerID)
+            for item in cmds:
+                if item.running:
+                    item.hbi.writeXML(co)
+                    for subwl in item.joinedTo:
+                        subwl.hbi.writeXML(co)
+            co.write("</heartbeat>")
         clnt=WorkerMessage()
         resp=clnt.workerHeartbeatRequest(self.workerID, self.workerDir, 
-                                         first, last, changed, co.getvalue())
+                                         first, last, changed, 
+                                         co.getvalue())
         presp=ProcessedResponse(resp)
         if last:
             timestr=" last"
@@ -150,8 +159,8 @@ class HeartbeatSender(object):
             timestr+=" first"
         if changed:
             timestr+=" update"
-        log.debug("Sent%s heartbeat signal. Result was %s"%(timestr, 
-                                                            presp.getStatus()))
+        log.debug("Sent%s heartbeat signal. Result was %s"%
+                  (timestr, presp.getStatus()))
         if presp.getStatus() != "OK":
             # if the response was not OK, the upstream server thinks we're 
             # dead and has signaled that to the originating server. We 
@@ -159,7 +168,12 @@ class HeartbeatSender(object):
             faulty=presp.getData()
             log.info("Error from heartbeat request. Stopping %s"%str(faulty))
             #log.error("Got error from heartbeat request. Stopping worker.")
-            sys.exit(1)
+            if ( type(faulty) == type(dict()) and 'faulty' in faulty): 
+                for faultyItem in faulty['faulty']:
+                    self.worker.killWorkload(faultyItem)
+            else:
+                pass
+                #sys.exit(1)
         respData=presp.getData()
         if type(respData) == type(dict()):
             rettime=int(respData['heartbeat-time'])
