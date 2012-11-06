@@ -202,13 +202,13 @@ class RunningCmdList(object):
         self.conf=conf
         self.cmdQueue=cmdQueue
         self.runningCommands=dict()
+        self.workerData=workerData
         self.lock=threading.Lock()
         self.thread=threading.Thread(target=heartbeatServerThread, args=(self,))
         # this should be a thread that never stops but doesn't hold the server
         # up once other threads stop
         self.thread.daemon=True
         self.thread.start()
-        self.workerData=workerData
 
     def add(self, cmds, workerServer, heartbeatInterval):
         """Add a set of commands sent to a specific worker."""
