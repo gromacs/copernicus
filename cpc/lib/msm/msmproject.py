@@ -276,10 +276,10 @@ class MSMProject(object):
         
         sys.stderr.write("Calculating implied time scales..\n")
         # Calculate the implied time-scales
-        time = numpy.arange(1,max_time,20)
+        time = numpy.arange(1,max_time+1,1)
         TS = msmbuilder.MSMLib.GetImpliedTimescales(AssFTrimmed,NumStates,time,
-                                                    NumImpliedTimes=len(time))
-        sys.stderr.write("TS=%s\n"%str(TS))
+                                                    NumImpliedTimes=len(time)+1)
+        sys.stderr.write("TS=%s, time=%s\n"%(str(TS), time))
         try:
             plt.scatter(TS[:,0],TS[:,1])
             plt.title('Lag times versus implied time scale')

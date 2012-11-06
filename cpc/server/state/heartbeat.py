@@ -199,6 +199,7 @@ class RunningCmdList(object):
         # out, they will time out closely in time so a small lag time will
         # gather a group of job-failure requests to send to the worker-server
         # in a single batch.
+        self.conf=conf
         self.cmdQueue=cmdQueue
         self.runningCommands=dict()
         self.lock=threading.Lock()
@@ -208,7 +209,6 @@ class RunningCmdList(object):
         self.thread.daemon=True
         self.thread.start()
         self.workerData=workerData
-        self.conf=conf
 
     def add(self, cmds, workerServer, heartbeatInterval):
         """Add a set of commands sent to a specific worker."""
