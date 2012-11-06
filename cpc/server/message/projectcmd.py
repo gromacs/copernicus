@@ -53,15 +53,10 @@ class ProjectServerCommand(ServerCommand):
         if request.hasParam('project'):
             prjName=request.getParam('project')
         else:
-            try:
-                prjName=request.session['default_project_name']
-            except KeyError:
-                # trust the 'global' default project
-                prj=serverState.getProjectList().getDefault()
-                if prj is not None:
-                    return prj
+            prjName=request.session.get('default_project_name', None)
+            if prjName is None:
                 raise cpc.server.state.projectlist.\
-                            ProjectListNoDefaultError()
+                            ProjectListNoDefaultError(0)
         return serverState.getProjectList().get(prjName)
         
 class SCProjects(ServerCommand):
@@ -105,7 +100,7 @@ class SCProjectDelete(ProjectServerCommand):
         serverState.getProjectList().delete(prj, delDir)
         if ( ( 'default_project_name' in request.session ) and 
              ( name == request.session['default_project_name'] ) ):
-            del request.session['default_project_name']
+            request.session['default_project_name'] = None
         response.add("Project %s%s deleted."%(name, msg))
         log.info("Deleted project %s"%(name))
 

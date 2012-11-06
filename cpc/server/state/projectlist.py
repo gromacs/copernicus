@@ -81,7 +81,7 @@ class ProjectList(object):
         # the shared task queue.
         self.taskQueue = cpc.dataflow.TaskQueue(cmdQueue)
         self.conf = conf
-        self.defaultProjectName = ""
+        self.defaultProjectName = None
 
     def get(self, name):
         """get a project by its name"""
@@ -111,8 +111,7 @@ class ProjectList(object):
     def getDefault(self):
         """Get the default project."""
         with self.lock:
-            if ( (self.defaultProjectName is None) or
-                 (self.defaultProjectName == "") ):
+            if self.defaultProjectName is None:
                 raise ProjectListNoDefaultError(len(self.projects))
             try:
                 return self.projects[self.defaultProjectName]
@@ -146,7 +145,7 @@ class ProjectList(object):
         dirname = None
         with self.lock:
             if project.getName() == self.defaultProjectName:
-                self.defaultProjectName = ""
+                self.defaultProjectName = None
             project.cancel()
             del self.projects[project.getName()]
             dirname = project.getBasedir()

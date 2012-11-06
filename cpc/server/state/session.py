@@ -51,7 +51,7 @@ class SessionHandler(object):
             return self.sessions[uid]
         except KeyError as e:
             if not auto_create:
-                raise
+                return None
             return self.createSession(uid)
 
 

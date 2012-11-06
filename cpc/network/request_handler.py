@@ -29,6 +29,7 @@ import mimetypes
 import re
 import traceback
 import sys
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -49,55 +50,55 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
     server_version="Copernicus 1.0"
     protocol_version="HTTP/1.1"
     sys_version="cpc 1.0"
-    
+
 
     def setup(self):
         self.application_root = "/copernicus"
-        self.connection = self.request  
+        self.connection = self.request
         self.responseCode = 200
         self.set_cookie = None
-        self.regexp = '^%s[/?]?'%self.application_root  #checks if a request is referring to application root   
+        self.regexp = '^%s[/?]?'%self.application_root  #checks if a request is referring to application root
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
-  
-  
-  
+
+
+
     def isApplicationRoot(self):
         if(re.search(self.regexp,self.path)):
             return True
         else:
             return False
-        
+
     # With GET we can serve files and simple commands
     def do_GET(self):
 
         log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
-    
+
         # if the path starts with application root + / or ?  we have a message to process
         #otherwise we should just strip any request params and keep the resource reference
-               
+
         if(self.isApplicationRoot()):
             request = HttpMethodParser.parseGET(self.headers.dict,self.path)
             self.processMessage(request)
         #take the input and put it into a request object
-        
-        else:            
+
+        else:
             if self.path == "/":
                 self.path += "index.html"
-                    
+
             webDir = ServerConf().getWebRootPath()
-            resourcePath = webDir+self.path        
-            if not os.path.isfile(resourcePath):  
+            resourcePath = webDir+self.path
+            if not os.path.isfile(resourcePath):
                 self.responseCode = 404
                 resourcePath = webDir+'/404.html'
-            
+
             response = ServerResponse()    #FIXME content type and rendering is not general here
-            file = open(resourcePath,'rb')            
-            response.setFile(file, mimetypes.guess_type(resourcePath))                
-                    
+            file = open(resourcePath,'rb')
+            response.setFile(file, mimetypes.guess_type(resourcePath))
+
             self._sendResponse(response)
-    
-        
+
+
     #with POST we only serve commands, post messages can also handle multipart messages
     def do_POST(self):
         log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
@@ -107,21 +108,21 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         if(self.isApplicationRoot()):
             request = HttpMethodParser.parsePOST(self.headers.dict,self.rfile)
             self.processMessage(request)
-        
+
         else:
             self.processMessage() #this is not a valid command i.e we did not find the resource
-    
-    
-    
+
+
+
     #PUT messages reserved for server to server messages, put supports message delegation
-    def do_PUT(self):        
+    def do_PUT(self):
         conf = ServerConf()
         log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
         log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
-        
+
         if self.headers.has_key('end-node') and \
             ServerToServerMessage.connectToSelf(self.headers)==False:
-                 
+
             # if the request contains an endnode we just delegate the
             # message forward
 
@@ -158,17 +159,17 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             if(self.isApplicationRoot()):
                 request = HttpMethodParser.parsePOST(self.headers.dict,self.rfile) # put message format should be handled exaclty as POST
-                self.processMessage(request)        
-            
+                self.processMessage(request)
+
             else:
-                self.processMessage() 
-            
-            
+                self.processMessage()
+
+
             if self.server.getState().getQuit():
                 log.info("shutting down")
                 self.server.shutdown()
 
-    def _generateSession(self):
+    def _generateCookie(self):
         #TODO Evaluate randomness of algorithm
         cookie = str(uuid.uuid4())
         self.set_cookie = "cpc-session=%s;"%cookie
@@ -195,18 +196,25 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
         if cookie is None:
             #Generate a new session and ship it
-            cookie = self._generateSession()
+            cookie = self._generateCookie()
 
         sid = hashlib.sha224(user_agent + ip + cookie).hexdigest()
         session_handler = self.server.getState().getSessionHandler()
 
         #We don't allow the user to define the cookie, i.e reusage
-        try:
-            session = session_handler.getSession(sid, auto_create=False)
-        except KeyError:
-            cookie = self._generateSession()
+        session = session_handler.getSession(sid, auto_create=False)
+        if session is None:
+            cookie = self._generateCookie()
             sid = hashlib.sha224(user_agent + ip + cookie).hexdigest()
             session = session_handler.createSession(sid)
+            #set the default project
+            try:
+                defaultProj=(self.server.getState().getProjectList().
+                             defaultProjectName)
+            except:
+                defaultProj = None
+            session['default_project_name'] = defaultProj
+
         request.session = session
 
     def processMessage(self,request = None):
@@ -229,7 +237,7 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
                     log.error(e.__str__())
                 except:
                     fo=StringIO()
-                    traceback.print_exception(sys.exc_info()[0], 
+                    traceback.print_exception(sys.exc_info()[0],
                                               sys.exc_info()[1],
                                               sys.exc_info()[2], file=fo)
                     errmsg="Server exception: %s"%(fo.getvalue())
@@ -250,13 +258,13 @@ class handler(BaseHTTPServer.BaseHTTPRequestHandler):
             log.error(e.__str__())
         except:
             fo=StringIO()
-            traceback.print_exception(sys.exc_info()[0], 
+            traceback.print_exception(sys.exc_info()[0],
                                       sys.exc_info()[1],
                                       sys.exc_info()[2], file=fo)
             errmsg="Server exception: %s"%(fo.getvalue())
             log.error(errmsg)
-    
-    
+
+
     def _sendResponse(self,retmsg):
         conf = ServerConf()
         rets = retmsg.render()
