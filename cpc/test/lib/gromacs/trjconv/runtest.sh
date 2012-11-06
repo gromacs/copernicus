@@ -6,8 +6,15 @@ if [ ! -e cpc/test/lib/gromacs/trjconv/traj.xtc ]; then
     exit 1
 fi
 
+if [ $# -lt 1 ]; then
+    echo "Usage:"
+    echo "runtest projectname"
+    exit 1
+fi
+projectname=$1
+
 # start the project
-./cpcc start test
+./cpcc start $projectname
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import gromacs
 # add the grompp and mdrun function instances

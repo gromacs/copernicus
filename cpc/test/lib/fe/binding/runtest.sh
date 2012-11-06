@@ -6,8 +6,15 @@ if [ ! -e cpc/test/lib/fe/conf.gro ]; then
     exit 1
 fi
 
+if [ $# -lt 1 ]; then
+    echo "Usage:"
+    echo "runtest projectname"
+    exit 1
+fi
+projectname=$1
+
 # start the project
-./cpcc start test
+./cpcc start $projectname
 # import the free energy module
 ./cpcc import fe
 # add the function instance

@@ -5,9 +5,14 @@ if [ ! -e examples/msm-test/equil0.gro ]; then
     exit 1
 fi
 
+if [ $# -lt 1 ]; then 
+    echo "Usage:"
+    echo "runtest projectname"
+    exit 1
+fi
+projectname=$1
 
-
-./cpcc start test
+./cpcc start $projectname
 ./cpcc import msm
 # make the MSM function instance
 ./cpcc instance msm::msm_gmx_adaptive msm

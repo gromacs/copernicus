@@ -78,7 +78,7 @@ class SCProjectStart(ServerCommand):
         name=request.getParam('name')
         serverState.getProjectList().add(name)
         request.session.set("default_project_name", name)
-        response.add("Project %s created"%name)
+        response.add("Project created: %s"%name)
         log.info("Started new project %s"%(name))
 
 class SCProjectDelete(ProjectServerCommand):
@@ -101,7 +101,7 @@ class SCProjectDelete(ProjectServerCommand):
         if ( ( 'default_project_name' in request.session ) and 
              ( name == request.session['default_project_name'] ) ):
             request.session['default_project_name'] = None
-        response.add("Project %s%s deleted."%(name, msg))
+        response.add("Project deleted: %s%s."%(name, msg))
         log.info("Deleted project %s"%(name))
 
 class SCProjectSetDefault(ProjectServerCommand):
@@ -115,8 +115,8 @@ class SCProjectSetDefault(ProjectServerCommand):
         # get the project to check whether it exists
         project=serverState.getProjectList().get(name)
         request.session.set("default_project_name", name)
-        response.add("Changed to project %s"%name)
-        log.info("Changed to project %s"%name)
+        response.add("Changed to project: %s"%name)
+        log.info("Changed to project: %s"%name)
 
 class SCProjectGetDefault(ProjectServerCommand):
     """Get the default project ."""
@@ -149,11 +149,11 @@ class SCProjectActivate(ProjectServerCommand):
             item=""
         prj.activate(item)
         if item == "":
-            response.add("All items in project %s activated."%prj.getName())
-            log.info("All items in project %s activated."%prj.getName())
+            response.add("Activated all items in project %s"%prj.getName())
+            log.info("Activated all items in project %s"%prj.getName())
         else:
-            response.add("%s in project %s activated."%(item, prj.getName()))
-            log.info("%s in project %s activated."%(item, prj.getName()))
+            response.add("Activated: %s in project %s"%(item, prj.getName()))
+            log.info("Activated: %s in project %s"%(item, prj.getName()))
 
 class SCProjectDeactivate(ProjectServerCommand):
     """De-activate all elements in a project."""
@@ -168,11 +168,11 @@ class SCProjectDeactivate(ProjectServerCommand):
             item=""
         prj.deactivate(item)
         if item == "":
-            response.add("All items in project %s de-activated."%prj.getName())
-            log.info("All items in project %s de-activated."%prj.getName())
+            response.add("De-activated all items in project %s"%prj.getName())
+            log.info("De-activated all items in project %s"%prj.getName())
         else:
-            response.add("%s in project %s de-activated."%(item, prj.getName()))
-            log.info("%s in project %s de-activated."%(item, prj.getName()))
+            response.add("De-activated: %s in project %s"%(item, prj.getName()))
+            log.info("De-activated: %s in project %s"%(item, prj.getName()))
 
 class SCProjectRerun(ProjectServerCommand):
     """Force a rerun and optionally clear an error in an active instance."""

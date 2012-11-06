@@ -5,9 +5,15 @@ if [ ! -e cpc/test/lib/fe/calc_path/lambda00.edr ]; then
     echo "This test script must be run from within the copernicus base directory"
     exit 1
 fi
+if [ $# -lt 1 ]; then
+    echo "Usage:"
+    echo "runtest projectname"
+    exit 1
+fi
+projectname=$1
 
 # start the project
-./cpcc start test
+./cpcc start $projectname
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import gromacs
 ./cpcc import fe
