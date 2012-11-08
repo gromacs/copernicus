@@ -401,10 +401,10 @@ class SCProjectLoad(ProjectServerCommand):
                 return
 
             response.add("Project restored as %s"%projectName)
-            log.info("Project load %s"%(prj.getName()))
+            log.info("Project load %s"%(projectName))
         else:
             response.add("No project file provided",status="ERROR")
-            log.info("Project load %s failed"%(prj.getName()))
+            log.info("Project load %s failed"%(projectName))
 
 
 
