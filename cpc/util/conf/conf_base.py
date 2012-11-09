@@ -556,4 +556,12 @@ class Conf:
 
     def getGlobalDir(self):
         return self.get("global_dir")
+
+    @staticmethod
+    def getDefaultHttpsPort():
+        return 13807
+
+    @staticmethod
+    def getDefaultHttpPort():
+        return 14807
     

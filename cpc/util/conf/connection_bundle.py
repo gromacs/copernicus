@@ -26,11 +26,9 @@ import socket
 import tempfile
 import sys
 import os
-import traceback
 import threading
 
-from cpc.util.conf.conf_base import Conf  
-from ConfigParser import SafeConfigParser
+from cpc.util.conf.conf_base import Conf
 
 class ConnectionBundle(Conf):
     '''
@@ -40,43 +38,41 @@ class ConnectionBundle(Conf):
     CN_ID = "worker"  #used to distinguish common names in certs
 
 
-
     def __init__(self, userSpecifiedPath=None, create=False):
         # check whether the object is already initialized
-        if not create: 
+        if not create:
             if self.exists():
                 return
-            # call parent constructor with right file name.
-            Conf.__init__(self, name='client.cnx', 
-                          userSpecifiedPath=userSpecifiedPath)
+                # call parent constructor with right file name.
+            Conf.__init__(self, name='client.cnx',
+                userSpecifiedPath=userSpecifiedPath)
         if create:
             # create an empty conf without any values.
-            self.conf=dict()
+            self.conf = dict()
 
         self.client_host = socket.getfqdn()
-        self.client_https_port = '13807'
-        self.client_http_port = '14807'
+        #self.client_https_port = '13807'
+        #self.client_http_port = '14807'
         self.privateKey = ''
         self.publicKey = ''
-        self.cert =  ''
+        self.cert = ''
         self.CAcert = ''
         self.initDefaults()
-        
+
 
         # TODO: make it a regular Lock() - for now this might reduce the 
         # chances of a deadlock
-        self.lock=threading.RLock()
+        self.lock = threading.RLock()
 
 
         #worker specific
-        dn=os.path.dirname(sys.argv[0])
+        dn = os.path.dirname(sys.argv[0])
         self.execBasedir = ''
         if dn != "":
-            self.execBasedir=os.path.abspath(dn)
+            self.execBasedir = os.path.abspath(dn)
 
         self._add('exec_base_dir', self.execBasedir,
-                'executable base directory',writable=False)
-
+            'executable base directory', writable=False)
 
         self.tempfiles = dict()
         #if conffile:
@@ -92,13 +88,13 @@ class ConnectionBundle(Conf):
         self.tempfiles['private_key'] = privKeyTempFile
         privKeyTempFile.close()
 
-        certTempFile =  tempfile.NamedTemporaryFile(delete=False)
+        certTempFile = tempfile.NamedTemporaryFile(delete=False)
         certTempFile.write(self.get('cert'))
         certTempFile.seek(0)
         self.tempfiles['cert'] = certTempFile
         certTempFile.close()
 
-        caCertTempFile =  tempfile.NamedTemporaryFile(delete=False)
+        caCertTempFile = tempfile.NamedTemporaryFile(delete=False)
         caCertTempFile.write(self.get('ca_cert'))
         caCertTempFile.seek(0)
         self.tempfiles['ca_cert'] = caCertTempFile
@@ -108,46 +104,46 @@ class ConnectionBundle(Conf):
     #overrrides method in ConfBase
     def initDefaults(self):
         self._add('client_host', self.client_host,
-                  "Hostname for the client to connect to", True)
-        self._add('client_http_port', self.client_http_port,
-                  "Port number for the client to connect to http", 
-                  True,None,'\d+')
-        self._add('client_https_port', self.client_https_port,
-                  "Port number for the client to connect to https", 
-                  True,None,'\d+')
+            "Hostname for the client to connect to", True)
+        self._add('client_http_port', Conf.getDefaultHttpPort(),
+            "Port number for the client to connect to http",
+            True, None, '\d+')
+        self._add('client_https_port', Conf.getDefaultHttpsPort(),
+            "Port number for the client to connect to https",
+            True, None, '\d+')
 
         self._add('private_key', '',
-                  "Port number for the client to connect to https", True,None)
+            "Port number for the client to connect to https", True, None)
         self._add('public_key', '',
-                  "Port number for the client to connect to https", True,None)
+            "Port number for the client to connect to https", True, None)
         self._add('cert', '',
-                  "Port number for the client to connect to https", True,None)
+            "Port number for the client to connect to https", True, None)
 
         self._add('ca_cert', '',
-                  "Port number for the client to connect to https", True,None)
+            "Port number for the client to connect to https", True, None)
 
         self._add('plugin_path', "",
-                  "Colon-separated list of directories to search for plugins",
-                  True,writable=False)
+            "Colon-separated list of directories to search for plugins",
+            True, writable=False)
 
         self._add('local_executables_dir', "executables",
-                  "Directory containing executables for the run client. Part of executables_path",
-                  False,
-                  relTo='conf_dir',writable=False)
+            "Directory containing executables for the run client. Part of executables_path",
+            False,
+            relTo='conf_dir', writable=False)
         self._add('global_executables_dir', "executables",
-                  "The directory containing executables for the run client. Part of executables_path",
-                  False,
-                  relTo='global_dir',writable=False)
+            "The directory containing executables for the run client. Part of executables_path",
+            False,
+            relTo='global_dir', writable=False)
         self._add('executables_path', "",
-                  "Colon-separated directory list to search for executables",
-                  True,writable=False)
+            "Colon-separated directory list to search for executables",
+            True, writable=False)
 
         # the worker's run directory should NEVER be fixed relative to
         # anything else; instead, it should just run in the current directory
         self._add('run_dir', #os.path.join(os.environ["HOME"],
-                  "cpc-worker-workload",
-                  "The run directory for the run client",
-                  True,writable=False)
+            "cpc-worker-workload",
+            "The run directory for the run client",
+            True, writable=False)
 
 
     def getClientHost(self):
@@ -155,7 +151,7 @@ class ConnectionBundle(Conf):
 
     def getClientHTTPSPort(self):
         return int(self.get('client_https_port'))
-    
+
     def getClientHTTPPort(self):
         return int(self.get('client_http_port'))
 
@@ -175,29 +171,39 @@ class ConnectionBundle(Conf):
         ''' The fully qualified domain name of the client  '''
         return socket.getfqdn()
 
-    def setPrivateKey(self,privateKey):
+    def setClientHTTPSPort(self, httpsPort):
+        self.conf["client_https_port"].set("%s" % httpsPort)
+
+    def setClientHTTPPort(self, httpPort):
+        self.conf["client_http_port"].set("%s" % httpPort)
+
+
+    def setPrivateKey(self, privateKey):
         '''
         @input privateKey String, a pem formatted string
         '''
         self.conf["private_key"].set(privateKey)
 
-    def setPublicKey(self,publicKey):
+    def setPublicKey(self, publicKey):
         '''
         @input publicKey String, a pem formatted string
         '''
         self.conf["public_key"].set(publicKey)
 
-    def setCert(self,cert):
+    def setCert(self, cert):
         '''
         @input cert String, a pem formatted string
         '''
         self.conf["cert"].set(cert)
 
-    def setCaCert(self,caCert):
+    def setCaCert(self, caCert):
         '''
         @input ca_cert String, a pem formatted string
         '''
         self.conf["ca_cert"].set(caCert)
 
-    def setHostname(self,hostname):
+    def setHostname(self, hostname):
         self.conf["client_host"].set(hostname)
+
+
+
