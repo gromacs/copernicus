@@ -70,7 +70,8 @@ class OpenSSL(object):
         Creates a connection bundle for the Client and worker
         @returns ConnectionBundle
         '''
-        connectionBundle = ConnectionBundle(create=True)  #FIXME //change name to ConnectionBundle
+        serverConf = ServerConf()
+        connectionBundle = ConnectionBundle(create=True)
         tempDir = "tmp"
         privKeyFile = "%s/priv.pem"%tempDir
         pubKeyFile = "%s/pub.pem"%tempDir
@@ -96,6 +97,9 @@ class OpenSSL(object):
         connectionBundle.setCaCert(open(self.conf.getCACertFile(),"r").read())
 
         shutil.rmtree(tempDir)
+        connectionBundle.setClientHTTPPort(serverConf.getServerHTTPPort())
+        connectionBundle.setClientHTTPSPort(serverConf.getServerHTTPSPort())
+
         return connectionBundle
 
     def setupServer(self):

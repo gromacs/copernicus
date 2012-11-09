@@ -44,6 +44,7 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName):
     '''
        @input configName String  
     '''
+    useAltDir = False
     if altDirName is None:
         dirname = socket.getfqdn()
     else:
