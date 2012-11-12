@@ -39,25 +39,21 @@ class SetupError(cpc.util.exception.CpcError):
     pass
 
 
-def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName):
+def initiateServerSetup(rundir, forceReset, hostConfDir, altDirName=None):
                         #configName =None,confDir=None,forceReset=False):
     '''
        @input configName String  
     '''
-    useAltDir = False
-    if altDirName is None:
-        dirname = socket.getfqdn()
-    else:
-        dirname = altDirName
-        useAltDir = True
 
-    confDir=cpc.util.conf.conf_base.findGlobalDir()
+    dirname = altDirName or socket.getfqdn()
+
+    confDir=cpc.util.conf.conf_base.findAndCreateGlobalDir()
 
     # now if a host-specific directory already exists, we use that
     if os.path.exists(os.path.join(confDir, dirname)):
        hostConfDir=True 
 
-    if hostConfDir or useAltDir:
+    if hostConfDir or altDirName:
         confDir = os.path.join(confDir, dirname)
     else:
         confDir = os.path.join(confDir, conf_base.Conf.default_dir)

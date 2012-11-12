@@ -18,7 +18,7 @@
 
 
 import sys
-import os.path
+import os
 #from socket import gethostname
 import socket
 import stat
@@ -42,11 +42,11 @@ class InputError(CpcError):
         self.str = exc.__str__()
 
 
-def findGlobalDir():
+def findAndCreateGlobalDir():
     """Get the global configuration directory base path for all configuration
         files. This depends on the OS"""
     if "HOME" in os.environ:
-        return os.path.join(os.environ["HOME"], Conf.base_path)
+        globdir = os.path.join(os.environ["HOME"], Conf.base_path)
     else:
         # we're probably running on Windows.
         # there we store the connection bundlein 
@@ -59,8 +59,10 @@ def findGlobalDir():
         ctypes.windll.shell32.SHGetFolderPathW(0, CSIDL_PERSONAL, 0,
             SHGFP_TYPE_CURRENT, buf)
         homedir = buf.value
-        return os.path.join(homedir, Conf.base_path_normal)
-    raise ConfError("Could not determine global base directory")
+        globdir =  os.path.join(homedir, Conf.base_path_normal)
+    if not os.path.exists(globdir):
+        os.makedirs(globdir)
+    return globdir
 
 
 class ConfValue:
@@ -198,10 +200,10 @@ class Conf:
              
             If confSubdirName is set, the search for conf. files will happen
             with that subdir name set first"""
-        # a list of directories (base_dirs) to try: 
+        # a list of directories (base_dirs) to try:
         dirsToTry = []
 
-        globalDir = findGlobalDir()
+        globalDir = findAndCreateGlobalDir()
         # first with the hostname appended
         dirsToTry.append(os.path.join(globalDir, self.hostname))
         # then in the '_default' directory
@@ -212,13 +214,18 @@ class Conf:
         self._add('global_dir', globalDir, 'The global configuration directory',
             userSettable=False)
 
+        filename = None
+        confdirname = None
+        base_dir = None
         if userSpecifiedPath is not None:
             if confSubdirName is None:
                 # in this case, userSpecifiedPath must be a file
                 if not os.path.isfile(userSpecifiedPath):
                     raise ConfError(
                         "File %s does not exist" % userSpecifiedPath)
-                dirsToTry = [os.path.dirname(userSpecifiedPath)]
+                filename = userSpecifiedPath
+                base_dir = os.path.dirname(userSpecifiedPath)
+                confdirname = base_dir
             else:
                 # it must be a directory name
                 if not os.path.isdir(userSpecifiedPath):
@@ -226,21 +233,25 @@ class Conf:
                                     userSpecifiedPath)
                 dirsToTry = [userSpecifiedPath]
 
-        for dirname in dirsToTry:
-            if confSubdirName is None:
-                confdirname = dirname
-            else:
-                confdirname = os.path.join(dirname, confSubdirName)
-            filename = os.path.join(confdirname, name)
-            if os.path.exists(filename):
-                self._add('conf_file', filename, 'The configuration file name')
-                self._add('base_dir', dirname,
-                    'The base directory containing all client+server confs',
-                    userSettable=False)
-                self._add('conf_dir', confdirname,
-                    'The configuration directory', userSettable=False)
-                return
-        raise ConfError("Configuration file not found")
+        if filename is None:
+            for dirname in dirsToTry:
+                if confSubdirName is None:
+                    confdirname = dirname
+                else:
+                    confdirname = os.path.join(dirname, confSubdirName)
+                    filename = os.path.join(confdirname, name)
+                    if os.path.exists(filename):
+                        base_dir = dirname
+                        break
+        if filename is None:
+            raise ConfError("Configuration file not found")
+
+        self._add('conf_file', filename, 'The configuration file name')
+        self._add('base_dir', base_dir,
+                  'The base directory containing all client+server confs',
+                  userSettable=False)
+        self._add('conf_dir', confdirname,
+                  'The configuration directory', userSettable=False)
 
 
     def initDefaults(self):

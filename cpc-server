@@ -75,7 +75,7 @@ while len(args) > 0:
                 option)
             print_usage()
         servername = args.pop(0)
-        servername = os.path.join(cpc.util.conf.conf_base.findGlobalDir(),servername)
+        servername = os.path.join(cpc.util.conf.conf_base.findAndCreateGlobalDir(),servername)
     elif args[0] == '-d':
         args.pop(0)
         debug = cpc.util.log.MODE_DEBUG

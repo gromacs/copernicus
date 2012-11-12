@@ -41,7 +41,7 @@ class CookieHandler(object):
     def __init__(self, conf):
         self.conf = conf
         #establish cookie path
-        self.cookiepath = os.path.join(conf.getConfDir(), 'clientcookies.dat')
+        self.cookiepath = os.path.join(conf.getGlobalDir(), 'clientcookies.dat')
 
     def getCookie(self):
         if os.path.isfile(self.cookiepath):
