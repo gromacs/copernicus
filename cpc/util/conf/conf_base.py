@@ -239,10 +239,10 @@ class Conf:
                     confdirname = dirname
                 else:
                     confdirname = os.path.join(dirname, confSubdirName)
-                    filename = os.path.join(confdirname, name)
-                    if os.path.exists(filename):
-                        base_dir = dirname
-                        break
+                filename = os.path.join(confdirname, name)
+                if os.path.exists(filename):
+                    base_dir = dirname
+                    break
         if filename is None:
             raise ConfError("Configuration file not found")
 
