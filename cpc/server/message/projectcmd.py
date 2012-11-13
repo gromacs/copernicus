@@ -375,7 +375,7 @@ class SCProjectSave(ProjectServerCommand):
                 response.add(e.message,status="ERROR")
         else:
             response.add("No project specified for save",status="ERROR")
-        log.info("Project save %s"%(prj.getName()))
+        log.info("Project save %s"%project)
 
 
 class SCProjectLoad(ProjectServerCommand):
