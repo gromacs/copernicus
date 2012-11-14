@@ -44,7 +44,7 @@ class OpenSSL(object):
             self.cn = self.conf.getHostName()
         else:            
             self.cn=cn  #always used for the CA
-
+        self.fqdn = self.conf.getHostName()
 
         
     def setupCA(self):
@@ -71,7 +71,7 @@ class OpenSSL(object):
         @returns ConnectionBundle
         '''
         serverConf = ServerConf()
-        connectionBundle = ConnectionBundle(create=True)
+        connectionBundle = ConnectionBundle(create=True, fqdn=self.fqdn)
         tempDir = "tmp"
         privKeyFile = "%s/priv.pem"%tempDir
         pubKeyFile = "%s/pub.pem"%tempDir

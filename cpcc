@@ -28,7 +28,7 @@ import copy
 import cpc.util
 from cpc.util import cmd_line_utils
 from cpc.util.conf.connection_bundle import ConnectionBundle
-
+from cpc.network.com.client_response import ResponseError
 from cpc.client.view.cmdline import CmdLine
 from cpc.network.com.client_base import ClientError
 from cpc.client import ClientMessage
@@ -536,10 +536,15 @@ try:
                                                      projectName)).pprint()
     else: 
         print "ERROR: unknown command '%s'"%cmd
-except ClientError as e:
+        sys.exit(1)
+
+except ResponseError as e:
+    sys.stderr.write("Request failed:\n%s\n"%str(e))
+    sys.exit(1)
+except (ClientError, cpc.util.CpcError) as e:
     print("ERROR: %s"%str(e))
-except cpc.util.CpcError as e:
-    print("ERROR: %s"%str(e))
+    sys.exit(1)
+
 
 
 

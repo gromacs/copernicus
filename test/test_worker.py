@@ -18,7 +18,8 @@
 
 
 from test.utils import *
-class TestClientTest():
+import time
+class TestWorker():
 
     def setUp(self):
         setup_server()
@@ -27,18 +28,12 @@ class TestClientTest():
     def tearDown(self):
         teardown_server()
 
-    def test_ServerSetup(self):
-        pass
+    def testWorker(self):
+        w = Worker()
+        w.startWorker()
+        time.sleep(4)
+        w.waitForOutput(expectedOutput='Got 0 commands.')
+        w.shutdownGracefully()
+        w.waitForOutput(expectedOutput='Received shutdown signal.')
 
-    def test_project_start(self):
-        run_client_command("cd noexist", returnZero=False)
-        run_client_command("start test")
-        run_client_command("cd test", expectstdout='Changed to project: test')
-        run_client_command("start test2")
-        run_client_command("cd test2")
-        run_client_command("rm test")
-
-    def test__simple_save_load(self):
-        run_client_command("start test")
-        run_client_command("save test")
-        run_client_command("load test.tar.gz test2")
+        w.checkForExceptions()

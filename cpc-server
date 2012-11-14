@@ -128,12 +128,12 @@ try:
             elif arg == '-host':
                 if(altDir):
                     print "cannot use -host in combination with -servername "
-                    sys.exit(0)
+                    sys.exit(1)
                 hostConfDir = True
             elif arg == '-servername':
                 if(hostConfDir):
                     print "cannot use -servername in combination with -host"
-                    sys.exit(0)
+                    sys.exit(1)
                 altDir = True
                 altHostName = args[i + 1]
                 i += 1
