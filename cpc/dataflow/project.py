@@ -30,6 +30,7 @@ except ImportError:
 try:
     from pympler import muppy
     from pympler import summary
+    from pympler import refbrowser
     profile=True
 except:
     profile=False
@@ -408,7 +409,9 @@ class Project(object):
             if profile:
                 all_objects = muppy.get_objects()
                 sum1 = summary.summarize(all_objects)
-                summary.print_(sum1)
+                summary.print_(sum1, 100)
+                ib = refbrowser.InteractiveBrowser(self)
+                ib.main()
             return outf.getvalue()
         itemname=keywords.fixID(itemname)
         if self._isIOItem(itemname):
