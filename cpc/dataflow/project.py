@@ -27,7 +27,12 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-
+try:
+    from pympler import muppy
+    from pympler import summary
+    profile=True
+except:
+    profile=False
 
 import cpc.util
 import apperror
@@ -222,17 +227,6 @@ class Project(object):
             raise ProjectError("%s is not an active instance"%instname)
         return item
 
-#<<<<<<< HEAD
-#    def getNamedItemList(self, pathname):
-#        """Get an list based on a path name according to the rule
-#           [instance]:[instance]"""
-#        pathname=keywords.fixID(pathname)
-#        with self.networkLock:
-#            ret=dict()
-#            ret['project']=self.name
-#            if ( (keywords.SubTypeSep in pathname) or 
-#=======
-
     def _isIOItem(self, pathname):
         """Return true if the pathname is an IO item, rather than an instance
            item."""
@@ -244,8 +238,6 @@ class Project(object):
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.SubOut)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtIn)) or
                  pathname.endswith("%s%s"%(keywords.InstSep,keywords.ExtOut)))
-
-
 
     def getNamedItemList(self, pathname):
         """Get an list based on a path name according to the rule
@@ -409,9 +401,14 @@ class Project(object):
 
     def getDebugInfo(self, itemname):
         """Give debug info about a particular item."""
+        global profile
         outf=StringIO()
         if itemname == "":
             outf.write("the item was empty")
+            if profile:
+                all_objects = muppy.get_objects()
+                sum1 = summary.summarize(all_objects)
+                summary.print_(sum1)
             return outf.getvalue()
         itemname=keywords.fixID(itemname)
         if self._isIOItem(itemname):
