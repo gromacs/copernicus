@@ -102,7 +102,7 @@ class ProjectList(object):
             except OSError as e:
                 raise ProjectListError("Error creating project directory: %s" %
                                        str(e))
-            project = cpc.dataflow.Project(name, dirname, self.conf,
+            project = cpc.dataflow.project.Project(name, dirname, self.conf,
                 self.taskQueue, self.cmdQueue)
             self.projects[name] = project
             # and set the new default project
