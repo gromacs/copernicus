@@ -23,6 +23,7 @@ log=logging.getLogger('cpc.dataflow.active_inst')
 
 import threading
 import os
+import sys
 import copy
 import os.path
 import xml.sax.saxutils
@@ -255,6 +256,7 @@ class ActiveInstance(object):
 
     def writeDebug(self, outf):
         outf.write("Active instance %s\n"%self.getCanonicalName())
+        outf.write("memory usage: %d bytes\n"%sys.getsizeof(self))
 
     def getStateStr(self):
         """Get the current state as a string."""
