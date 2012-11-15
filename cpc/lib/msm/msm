@@ -212,6 +212,10 @@ def msm(inp, out):
         # get these numbers from the (locked) persistence object
         run_num=pers.get('running')
         cluster_gen=pers.get('cluster_gen')
+        maxgens=inp.getInput('num_generations') 
+        msm_finished=False
+        if maxgens is not None and cluster_gen >= maxgens:
+            msm_finished=True
         #run_num=inp.getSubnetOutput('n_running')
         #cluster_gen=inp.getSubnetOutput('cluster_gen')
         #sys.stderr.write("\nRead run_num %d\n\n"%run_num)
@@ -233,7 +237,8 @@ def msm(inp, out):
                     # prevent the priority from becoming too low.
                     if priority < min_prio:
                         priority = min_prio 
-                    if conf is not None and conf.value is not None:
+                    if (conf is not None and conf.value is not None and 
+                        not msm_finished):
                         sys.stderr.write("\nCreating sim %d\n\n"%run_num)
                         spawnNewSim(inp, out, run_num, conf.value, priority, 
                                     True, "continuation")
@@ -332,9 +337,10 @@ def msm(inp, out):
                                inp.getSubnetInputValue(
                                             '%s.micro_assignments'%lastnm))
                 # now generate new simulations.
-                if ((inp.getSubnetInput('%s.sim_start_conf'%lastnm) is 
-                        not None) and
-                    inp.isSubnetInputUpdated('%s.sim_start_conf'%lastnm)):
+                if ( (inp.getSubnetInput('%s.sim_start_conf'%lastnm) is 
+                      not None) and
+                     inp.isSubnetInputUpdated('%s.sim_start_conf'%lastnm) and
+                     not msm_finished):
                     startConfs=inp.getSubnetInput('%s.sim_start_conf'%lastnm)
                     sys.stderr.write("\nCreating new simulations.\n")
                     if startConfs is not None:

@@ -43,6 +43,9 @@ projectname=$1
 # select these atoms:
 ./cpcc set msm:in.grpname  Protein
 
+# set the maximum number of generations:
+./cpcc set msm:in.num_generations 5
+
 # commit the changes
 ./cpcc commit
 
