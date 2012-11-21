@@ -29,7 +29,7 @@ import time
 PROJ_DIR = "/tmp/cpc-proj"
 
 def setup_server(heartbeat='20'):
-    ensure_no_running_serverinstance()
+    ensure_no_running_servers_or_workers()
     clear_dirs()
     with open(os.devnull, "w") as null:
         p = subprocess.check_call(["./cpc-server", "setup", PROJ_DIR],
@@ -38,8 +38,6 @@ def setup_server(heartbeat='20'):
                                    "127.0.0.1"], stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
                                    heartbeat], stdout=null, stderr=null)
-        p = subprocess.check_call(["./cpc-server", "config", "client_host",
-                                   "127.0.0.1"], stdout=null, stderr=null)
     generate_bundle()
 
 
@@ -76,11 +74,15 @@ def stop_server():
                                       stdout=null, stderr=null)
     except subprocess.CalledProcessError:
         #hard stop
-        ensure_no_running_serverinstance()
+        ensure_no_running_servers_or_workers()
 
-def ensure_no_running_serverinstance():
+def ensure_no_running_servers_or_workers():
     try:
         p = subprocess.check_call(["pkill", "-9", "-f", "./cpc-server"])
+    except subprocess.CalledProcessError:
+        pass #we swallow this
+    try:
+            p = subprocess.check_call(["pkill", "-9", "-f", "./cpc-worker"])
     except subprocess.CalledProcessError:
         pass #we swallow this
 

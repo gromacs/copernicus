@@ -29,6 +29,9 @@ class TestWorker():
         teardown_server()
 
     def testWorker(self):
+        """
+        Verifies that a worker connects to the server
+        """
         w = Worker()
         w.startWorker()
         time.sleep(4)

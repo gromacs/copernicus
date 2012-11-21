@@ -29,8 +29,7 @@ class TestLifeCycle():
 
     def testGracefulKill(self):
         """
-        Verifies that commands are put back in the queue when a working is
-        shutdown gracefully
+        Verifies that commands are put back on graceful worker kill
         """
         #long hearbeat, we want the worker to signal to the server that it's
         #terminating

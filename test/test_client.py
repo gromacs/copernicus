@@ -28,9 +28,15 @@ class TestClientTest():
         teardown_server()
 
     def test_ServerSetup(self):
+        """
+        Sets up and tears down a server
+        """
         pass
 
     def test_project_start(self):
+        """
+        Creates, changes into, and removes projects
+        """
         run_client_command("cd noexist", returnZero=False)
         run_client_command("start test")
         run_client_command("cd test", expectstdout='Changed to project: test')
@@ -39,6 +45,9 @@ class TestClientTest():
         run_client_command("rm test")
 
     def test__simple_save_load(self):
+        """
+        Tests that project save / load works
+        """
         run_client_command("start test")
         run_client_command("save test")
         run_client_command("load test.tar.gz test2")

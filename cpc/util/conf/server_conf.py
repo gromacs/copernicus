@@ -190,7 +190,7 @@ class ServerConf(conf_base.Conf):
         self._add('web_root', 'web',
                   "The directory where html,js and css files are located")
 
-        self._add('client_host', socket.getfqdn(),
+        self._add('client_host', 'localhost',
             "For when the server needs to connect to self ", True)  #FIXME this will be obsolete once server to server messages does not connect to self
         
         # assets
