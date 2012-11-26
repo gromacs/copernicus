@@ -20,8 +20,9 @@
 import sqlite3
 import os
 import logging
-import hashlib
+
 import cpc.util.exception
+from cpc.server.state.user_handler import UserLevel
 log=logging.getLogger('cpc.server.state.database')
 
 class DataBaseError(cpc.util.exception.CpcError):
@@ -56,7 +57,7 @@ class DBHandler(object):
             c.execute("query")
     This provides a transactional cursor which will rollback any changes if an
     exception is throw at any time during the 'with' clause. The changes are
-    commited once the with-clause goes out of scope.
+    committed once the with-clause goes out of scope.
     """
     def __init__(self):
         from cpc.util.conf.server_conf import ServerConf
@@ -65,38 +66,6 @@ class DBHandler(object):
 
     def getCursor(self):
         return DBCursor(self.dbpath)
-
-
-    def validateUser(self, user, password):
-        hashed_pass = hashed_pass = hashlib.sha256(password).hexdigest()
-        query = "select user from users where user=? and password=?"
-        with self.getCursor() as c:
-            c.execute(query, (user,hashed_pass,))
-            res = c.fetchone()
-        return res is not None
-
-    def createUser(self, user, password):
-        query = "select user from users where user=?"
-        with self.getCursor() as c:
-            c.execute(query, (user,))
-            if c.fetchone() is not None:
-                raise DataBaseError("User already exists: %s"%user)
-
-        query = "insert into users values(?, ?)"
-        hashed_pass = hashlib.sha256(password).hexdigest()
-        with self.getCursor() as c:
-            c.execute(query, (user,hashed_pass,))
-
-    def getProject(self,user):
-        #should have better error handling
-        query = "select default_project from users where user=?"
-        with self.getCursor() as c:
-            c.execute(query, (user,))
-            res = c.fetchone()
-            if res is None:
-                return None
-            else:
-                return res[0]
 
     def allocateDatabase(self):
         if os.path.isfile(self.dbpath):
@@ -107,11 +76,13 @@ def setupDatabase(rootpass):
     """
     Tries to setup the database, may throw
     """
-    handler = DBHandler()
-    handler.allocateDatabase()
-    hashed_pass = hashlib.sha256(rootpass).hexdigest()
-    with handler.getCursor() as c:
-        c.execute("create table users(user TEXT unique, password TEXT)")
-        c.execute("insert into users VALUES('root', '%s')"%hashed_pass)
+    from cpc.server.state.user_handler import UserHandler
+    db_handler = DBHandler()
+    user_handler = UserHandler()
+    db_handler.allocateDatabase()
+    with db_handler.getCursor() as c:
+        c.execute("create table users(id integer primary key autoincrement,"
+        "user TEXT unique, password TEXT, level INTEGER)")
+    user_handler.createUser('root', rootpass, UserLevel.SUPERUSER)
 
 

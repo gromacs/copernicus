@@ -41,6 +41,10 @@ from getpass import getpass
 def print_usage():
     print "Usage: cpcc [global-options] <command> [command-options]"
     print 
+    print "User related commands"
+    print "       cpcc login             username"
+    print "       cpcc adduser           username"
+    print
     print "Project start & stop commands:"
     print "       cpcc projects|p"
     print "       cpcc start             projectname"
@@ -130,7 +134,9 @@ while len(args)>0:
                          args[0])
         print_usage()
 
-
+def _printErrorAndExit(ErrorString):
+    sys.stderr.write('%s\n'%ErrorString)
+    sys.exit(1)
 
 def getArg(arglist, argnr, name):
     """Get argument, or print out argument description."""
@@ -168,8 +174,7 @@ def getProjectArgs(args):
 if len(args)>0:
     cmd=args[0]
 else:
-    print "ERROR: no command" 
-    sys.exit(1)
+    _printErrorAndExit("ERROR: no command")
 
 
 # read in common configuration
@@ -189,7 +194,14 @@ try:
         #password=getArg(args, 2, "password")
         clnt=ClientMessage()
         ProcessedResponse(clnt.loginRequest(user, password)).pprint()
-
+    elif cmd == "adduser":
+        user=getArg(args, 1, "username")
+        password = getpass("Enter password:")
+        password_repeat = getpass("And again:")
+        if password != password_repeat:
+            _printErrorAndExit("Passwords don't match")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.addUser(user, password)).pprint()
     elif cmd == "version":
         print("Client version:  %s"%__version__)
         clnt=ClientMessage()
@@ -530,9 +542,8 @@ try:
                 file.write(filecontents.read(len(filecontents)))
                 file.close()
             except IOError as e:
-                print "Could not save project to %s\nError %s "%(savePath,
-                                                                 e.strerror)
-                sys.exit(1)
+                _printErrorAndExit("Could not save project to %s\nError %s"%(
+                    savePath, e.strerror))
 
 
             print "Saved project to %s"%savePath
@@ -547,15 +558,14 @@ try:
         ProcessedResponse(clnt.projectRestoreRequest(projectFile,
                                                      projectName)).pprint()
     else: 
-        print "ERROR: unknown command '%s'"%cmd
-        sys.exit(1)
+        _printErrorAndExit("ERROR: unknown command '%s'"%cmd)
 
 except ResponseError as e:
-    sys.stderr.write("Request failed:\n%s\n"%str(e))
-    sys.exit(1)
+    _printErrorAndExit("Request failed:\n%s\n"%str(e))
 except (ClientError, cpc.util.CpcError) as e:
-    print("ERROR: %s"%str(e))
-    sys.exit(1)
+    _printErrorAndExit("ERROR: %s"%str(e))
+
+
 
 
 

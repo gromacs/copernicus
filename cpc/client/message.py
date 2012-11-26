@@ -80,6 +80,18 @@ class ClientMessage(ClientBase):
         response = self.postRequest(msg)
         return response
 
+    def addUser(self, user, password):
+        cmdstring="add-user"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+
+        fields.append(Input('user', user))
+        fields.append(Input('password', password))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
+        return response
+
     # @param endNode is the endNode we want to reach
     # @param endNodePort 
     def testServerRequest(self,endNode=None,endNodePort=None):

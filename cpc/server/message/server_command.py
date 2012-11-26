@@ -37,7 +37,7 @@ from cpc.util.openssl import OpenSSL
 from cpc.network.cache import Cache
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
-from cpc.server.state.database import DBHandler
+from cpc.server.state.user_handler import UserLevel, UserHandler, UserError
 import cpc.server.message
 from cpc.server.message.server_message import RawServerMessage
 from cpc.util.version import __version__
@@ -79,12 +79,29 @@ class SCLogin(ServerCommand):
     def run(self, serverState, request, response):
         user=request.getParam('user')
         password=request.getParam('password')
-        dbhandler = DBHandler()
-        if not dbhandler.validateUser(user,password):
+        userhandler = UserHandler()
+        userlevel = userhandler.validateUser(user,password)
+        if userlevel is None:
             raise cpc.util.CpcError("Invalid user/pass")
-        request.session['user'] = user
+        request.session['user'] = dict()
+        request.session['user']['username'] = user
+        request.session['user']['userlevel'] = userlevel
         response.add('Logged in as %s'%user)
 
+class SCAddUser(ServerCommand):
+    """Stop server command"""
+    def __init__(self):
+        ServerCommand.__init__(self, "add-user")
+
+    def run(self, serverState, request, response):
+        user=request.getParam('user')
+        password=request.getParam('password')
+        userhandler = UserHandler()
+        try:
+            userhandler.createUser(user,password, UserLevel.REGULAR_USER)
+        except UserError as e:
+            raise cpc.util.CpcError("Error adding user: %s"%str(e))
+        response.add('Created user %s'%user)
 
 class SCStop(ServerCommand):
     """Stop server command"""

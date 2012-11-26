@@ -41,6 +41,7 @@ from server_to_server_message import ServerToServerMessage
 from server_response import ServerResponse
 from cpc.util.conf.server_conf import ServerConf
 from cpc.network.http.http_method_parser import HttpMethodParser
+from cpc.server.state.user_handler import UserLevel
 import cpc.server.message
 import cpc.util.log
 
@@ -318,4 +319,6 @@ class verified_handler(handler_base):
         self.log=logging.getLogger('crs.server.request_handler_verified')
     def _handleSession(self, request):
         handler_base._handleSession(self,request)
-        request.session['user'] = 'root'
+        request.session['user'] = dict()
+        request.session['user']['username'] = 'root'
+        request.session['user']['userlevel'] = UserLevel.SUPERUSER

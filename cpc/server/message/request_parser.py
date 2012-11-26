@@ -34,7 +34,7 @@ import workercmd
 import projectcmd
 import cpc.network.server_response
 import cpc.util
-
+from cpc.server.state.user_handler import UserLevel
 
 log=logging.getLogger('cpc.server.request_parser')
 
@@ -48,34 +48,47 @@ class ServerCommandList(object):
     def __init__(self):
         self.cmds=dict()
 
-    def add(self, cmd, require_auth=True):
+    def add(self, cmd, userlevel=UserLevel.REGULAR_USER):
         """Add a single server command to the list."""
         name=cmd.getRequestString()
-        self.cmds[name]=(cmd, require_auth)
+        self.cmds[name]=(cmd, userlevel)
 
     def getServerCommand(self, request):
         """Get the server command based on a request's command."""
         cmd=request.getCmd()
         if cmd in self.cmds:
-            log.info('Request: %s'%cmd)
-            if self.cmds[cmd][1]:
-                #it requires auth
+            user = 'Anonymous'
+
+            #check user level
+            required_level = self.cmds[cmd][1]
+            if required_level > UserLevel.ANONYMOUS:
+                #it requires at least auth
                 if 'user' not in request.session:
                     log.info('Unauthorized user requested command "%s"'%cmd)
                     raise cpc.util.CpcError("This command requires login")
+
+                #match command requirement against user level
+                user = request.session['user']['username']
+                user_level = request.session['user']['userlevel']
+                if required_level > user_level:
+                    log.info("user '%s' requested command '%s', which is above"
+                    "its user level"%(user, cmd))
+                    raise cpc.util.CpcError(
+                        "You don't have access to this command")
+            log.info('[%s] Request: %s'%(user, cmd))
+            return self.cmds[cmd]
         else:
             raise ServerCommandError("Unknown command %s"%cmd)
 
-        log.info('Request: %s'%cmd)
-        return self.cmds[cmd]
 
 # these are the server commands that the secure server may run:
 scSecureList=ServerCommandList()
 
 #secure commands that don't require login
-scSecureList.add(server_command.SCLogin(), False)
+scSecureList.add(server_command.SCLogin(), UserLevel.ANONYMOUS)
 
 #secure commands that require login
+scSecureList.add(server_command.SCAddUser(), UserLevel.SUPERUSER)
 scSecureList.add(server_command.SCStop())
 scSecureList.add(server_command.SCSaveState())
 scSecureList.add(server_command.SCTestServer())
