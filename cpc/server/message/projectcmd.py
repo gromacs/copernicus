@@ -18,11 +18,8 @@
 
 
 import logging
-import json
 import os
-import os.path
 import tarfile
-import tempfile
 from cpc.util.conf.server_conf import ServerConf
 
 try:
@@ -35,7 +32,7 @@ from server_command import ServerCommand
 import cpc.dataflow
 import cpc.util
 import cpc.server.state.projectlist
-
+from cpc.server.state.user_handler import UserHandler, UserError, UserLevel
 import cpc.util.exception
 
 
@@ -46,38 +43,60 @@ log=logging.getLogger('cpc.server.projectcmd')
 class ProjectServerCommandException(cpc.util.exception.CpcError):
     pass
 
+
 class ProjectServerCommand(ServerCommand):
     """Base class for commands acting on projects."""
     def getProject(self, request, serverState):
         """Get a named or default project"""
+        #get the user
+        user = self.getUser(request)
+
+        #is the project specified explicitly?
         if request.hasParam('project'):
             prjName=request.getParam('project')
         else:
             prjName=request.session.get('default_project_name', None)
             if prjName is None:
-                raise cpc.server.state.projectlist.\
-                            ProjectListNoDefaultError(0)
-        return serverState.getProjectList().get(prjName)
-        
-class SCProjects(ServerCommand):
-    """List all projects."""
+                raise cpc.util.exception.CpcError("No project selected")
+
+        #we check this at every command, as it may change
+        project = serverState.getProjectList().get(prjName)
+        if not UserHandler().userAccessToProject(user,prjName):
+            raise UserError("You don't have access to this project")
+        return project
+
+    def getUser(self, request):
+        if 'user' not in request.session:
+            log.error("A command related to project was called with no user set")
+            raise UserError("Unauthorized")
+        return request.session['user']
+
+class SCProjects(ProjectServerCommand):
+    """List all projects for user, or all projects in system if user is
+       superuser"""
     def __init__(self):
         ServerCommand.__init__(self, "projects")
 
     def run(self, serverState, request, response):
-        lst=serverState.getProjectList().list()
+        user = self.getUser(request)
+        if user.isSuperuser():
+            lst = lst=serverState.getProjectList().list()
+        else:
+            lst = UserHandler().getProjectListForUser(user)
         response.add(lst)
         log.info("Listed %d projects"%(len(lst)))
 
-class SCProjectStart(ServerCommand):
+class SCProjectStart(ProjectServerCommand):
     """Start a new project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-start")
 
     def run(self, serverState, request, response):
         name=request.getParam('name')
+        user=self.getUser(request)
         serverState.getProjectList().add(name)
         request.session.set("default_project_name", name)
+        UserHandler().addUserToProject(user, name)
         response.add("Project created: %s"%name)
         log.info("Started new project %s"%(name))
 
@@ -88,16 +107,11 @@ class SCProjectDelete(ProjectServerCommand):
 
     def run(self, serverState, request, response):
         prj=self.getProject(request, serverState)
-        q=serverState.getCmdQueue()
-        delDir=False
-        if request.hasParam('delete-dir'):
-            delDir=True
         name=prj.getName()
-        msg = ""
-        if delDir:
-            msg = " and its directory %s"%prj.getBasedir()
-        #q.deleteByProject(prj, False)
+        delDir = request.hasParam('delete-dir')
+        msg = " and its directory %s"%prj.getBasedir() if delDir else ""
         serverState.getProjectList().delete(prj, delDir)
+        UserHandler().wipeAccessToProject(name)
         if ( ( 'default_project_name' in request.session ) and 
              ( name == request.session['default_project_name'] ) ):
             request.session['default_project_name'] = None
@@ -111,9 +125,12 @@ class SCProjectSetDefault(ProjectServerCommand):
 
     def run(self, serverState, request, response):
         name=request.getParam('name')
+        user=self.getUser(request)
         #serverState.getProjectList().setDefault(name)
         # get the project to check whether it exists
         project=serverState.getProjectList().get(name)
+        if not UserHandler().userAccessToProject(user,name):
+            raise UserError("You don't have access to this project")
         request.session.set("default_project_name", name)
         response.add("Changed to project: %s"%name)
         log.info("Changed to project: %s"%name)
@@ -124,17 +141,27 @@ class SCProjectGetDefault(ProjectServerCommand):
         ServerCommand.__init__(self, "project-get-default")
 
     def run(self, serverState, request, response):
-        #name=request.getParam('name')
-        #name=serverState.getProjectList().getDefault().getName()
-        #name=request.session.get("default_project_name")
         prj=self.getProject(request, serverState)
         name=prj.getName()
-        if name is None:
-            response.add("No working project")
-            log.info("No working project")
-        else:
-            response.add("Working project: %s"%name)
-            log.info("Working project: %s"%name)
+        response.add("Working project: %s"%name)
+        log.info("Working project: %s"%name)
+
+class SCProjectGrantAccess(ProjectServerCommand):
+    """Grants access to the current project to a user"""
+    def __init__(self):
+        ServerCommand.__init__(self, "grant-access")
+
+    def run(self, serverState, request, response):
+        name=request.getParam('name')
+        prj=self.getProject(request, serverState)
+        prjName=prj.getName()
+        usrhandler = UserHandler()
+        target_user=usrhandler.getUserFromString(name)
+        if target_user is None:
+            raise ProjectServerCommandException("User %s doesn't exist"%name)
+        usrhandler.addUserToProject(target_user, prjName)
+        response.add("Granted access to user %s on project %s"%(name, prjName))
+        log.info("Granted access to %s on project %s"%(name, prjName))
 
 class SCProjectActivate(ProjectServerCommand):
     """Activate all elements in a project."""
@@ -371,11 +398,12 @@ class SCProjectSave(ProjectServerCommand):
             try:
                 tff = serverState.saveProject(project)
                 response.setFile(tff,'application/x-tar')
+                log.info("Project save %s"%project)
             except Exception as e:
                 response.add(e.message,status="ERROR")
+
         else:
             response.add("No project specified for save",status="ERROR")
-        log.info("Project save %s"%project)
 
 
 class SCProjectLoad(ProjectServerCommand):
@@ -383,13 +411,15 @@ class SCProjectLoad(ProjectServerCommand):
         ServerCommand.__init__(self, "project-load")
 
     def run(self, serverState, request, response):
+        projectName = request.getParam("project")
+        user = self.getUser(request)
         if(request.haveFile("projectFile")):
-            projectName = request.getParam("project")
             projectBundle=request.getFile('projectFile')
 
             try:
 
                 serverState.getProjectList().add(projectName)
+                UserHandler().addUserToProject(user, projectName)
                 extractPath = "%s/%s"%(ServerConf().getRunDir(),projectName)
                 tar = tarfile.open(fileobj=projectBundle,mode="r")
                 tar.extractall(path=extractPath)

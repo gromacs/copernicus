@@ -20,7 +20,7 @@
 import sqlite3
 import os
 import logging
-
+import hashlib
 import cpc.util.exception
 from cpc.server.state.user_handler import UserLevel
 log=logging.getLogger('cpc.server.state.database')
@@ -58,6 +58,8 @@ class DBHandler(object):
     This provides a transactional cursor which will rollback any changes if an
     exception is throw at any time during the 'with' clause. The changes are
     committed once the with-clause goes out of scope.
+    Note that transaction only cover DML statements and will implicitly commit
+    before any non-dml, such as a CREATE TABLE
     """
     def __init__(self):
         from cpc.util.conf.server_conf import ServerConf
@@ -76,13 +78,16 @@ def setupDatabase(rootpass):
     """
     Tries to setup the database, may throw
     """
-    from cpc.server.state.user_handler import UserHandler
     db_handler = DBHandler()
-    user_handler = UserHandler()
     db_handler.allocateDatabase()
+    query = "insert into users (user, password, level) values(?, ?, ?)"
+    hashed_pass = hashlib.sha256(rootpass).hexdigest()
     with db_handler.getCursor() as c:
         c.execute("create table users(id integer primary key autoincrement,"
         "user TEXT unique, password TEXT, level INTEGER)")
-    user_handler.createUser('root', rootpass, UserLevel.SUPERUSER)
+        c.execute(query, ('root', hashed_pass, UserLevel.SUPERUSER))
+        c.execute("create table users_project(user INTEGER, project TEXT)")
+
+
 
 

@@ -51,26 +51,6 @@ class ProjectListNotFoundError(ProjectListError):
     def __str__(self):
         return "Project '%s' not found in project list" % self.name
 
-
-class ProjectListNoDefaultError(ProjectListError):
-    def __init__(self, projectlistlen):
-        self.projectlistlen = projectlistlen
-
-    def __str__(self):
-        if self.projectlistlen > 0:
-            return "No default project"
-        else:
-            return "No project"
-
-
-class ProjectListNoProjectError(ProjectListError):
-    def __init__(self):
-        pass
-
-    def __str__(self):
-        return "No default project"
-
-
 class ProjectList(object):
     """Synchronized project list."""
 
@@ -81,7 +61,6 @@ class ProjectList(object):
         # the shared task queue.
         self.taskQueue = cpc.dataflow.TaskQueue(cmdQueue)
         self.conf = conf
-        self.defaultProjectName = None
 
     def get(self, name):
         """get a project by its name"""
@@ -105,32 +84,12 @@ class ProjectList(object):
             project = cpc.dataflow.Project(name, dirname, self.conf,
                 self.taskQueue, self.cmdQueue)
             self.projects[name] = project
-            # and set the new default project
-            self.defaultProjectName = name
-
-    def getDefault(self):
-        """Get the default project."""
-        with self.lock:
-            if self.defaultProjectName is None:
-                raise ProjectListNoDefaultError(len(self.projects))
-            try:
-                return self.projects[self.defaultProjectName]
-            except KeyError:
-                raise ProjectListNotFoundError(self.defaultProjectName)
 
     def getTaskQueue(self):
         return self.taskQueue
 
     def getCmdQueue(self):
         return self.cmdQueue
-
-    def setDefault(self, name):
-        """Set the default project."""
-        with self.lock:
-            if name in self.projects:
-                self.defaultProjectName = name
-            else:
-                raise ProjectListNotFoundError(self.defaultProjectName)
 
     def list(self):
         """Return a list of project IDs"""
@@ -144,8 +103,6 @@ class ProjectList(object):
         """Delete a project."""
         dirname = None
         with self.lock:
-            if project.getName() == self.defaultProjectName:
-                self.defaultProjectName = None
             project.cancel()
             del self.projects[project.getName()]
             dirname = project.getBasedir()
@@ -160,14 +117,8 @@ class ProjectList(object):
         outf.write(u'<project-list>\n')
         for proj in self.projects.itervalues():
             name = proj.getName()
-            #dir=project.getBaseDir()
-            if name == self.defaultProjectName:
-                defstr = 'default="true" '
-            else:
-                defstr = ""
-            outf.write(u'<project id="%s" dir="%s" %s/>\n' % (name,
-                                                              proj.getBasedir(),
-                                                              defstr))
+            outf.write(u'<project id="%s" dir="%s"/>\n' % (name,
+                                                           proj.getBasedir()))
         outf.write(u'</project-list>\n')
         outf.close()
 
@@ -214,10 +165,6 @@ class ProjectList(object):
             self.projects[prj.getName()] = prj
             prj.readState()
 
-        if rd.getDefault() is not None:
-            #log.debug("Setting default project")
-            self.setDefault(rd.getDefault())
-
     #reads in the project state of a project state that has been restored from backup
     def readProjectState(self, projectName):
         prj = self.projects[projectName]
@@ -258,15 +205,11 @@ class ProjectListReader(xml.sax.handler.ContentHandler):
     def __init__(self, projectList, serverState):
         self.projectList = projectList
         self.serverState = serverState
-        self.default = None
         self.projects = []
 
 
     def getProjects(self):
         return self.projects
-
-    def getDefault(self):
-        return self.default
 
     def read(self, filename):
         self.filename = filename
@@ -289,10 +232,6 @@ class ProjectListReader(xml.sax.handler.ContentHandler):
                 raise ProjectListReaderError("No dir in project", self.loc)
             id = attrs.getValue("id")
             basedir = attrs.getValue("dir")
-            isDefault = cpc.util.getBooleanAttribute(attrs, "default")
-            if isDefault:
-                log.debug("setting %s to default project" % id)
-                self.default = id
             p = cpc.dataflow.Project(id, basedir,
                 self.projectList.conf,
                 self.projectList.getTaskQueue(),

@@ -80,16 +80,17 @@ class SCLogin(ServerCommand):
         user=request.getParam('user')
         password=request.getParam('password')
         userhandler = UserHandler()
-        userlevel = userhandler.validateUser(user,password)
-        if userlevel is None:
+        user_obj = userhandler.validateUser(user,password)
+        if user_obj is None:
             raise cpc.util.CpcError("Invalid user/pass")
-        request.session['user'] = dict()
-        request.session['user']['username'] = user
-        request.session['user']['userlevel'] = userlevel
+        request.session.reset()
+        request.session['default_project_name'] = None
+        request.session['user'] = user_obj
+
         response.add('Logged in as %s'%user)
 
 class SCAddUser(ServerCommand):
-    """Stop server command"""
+    """Adds a user to the system"""
     def __init__(self):
         ServerCommand.__init__(self, "add-user")
 
@@ -98,10 +99,24 @@ class SCAddUser(ServerCommand):
         password=request.getParam('password')
         userhandler = UserHandler()
         try:
-            userhandler.createUser(user,password, UserLevel.REGULAR_USER)
+            userhandler.addUser(user,password, UserLevel.REGULAR_USER)
         except UserError as e:
             raise cpc.util.CpcError("Error adding user: %s"%str(e))
         response.add('Created user %s'%user)
+
+class SCDeleteUser(ServerCommand):
+    """Deletes a user from the system"""
+    def __init__(self):
+        ServerCommand.__init__(self, "delete-user")
+
+    def run(self, serverState, request, response):
+        target_str=request.getParam('user')
+        userhandler = UserHandler()
+        target_user_obj=userhandler.getUserFromString(target_str)
+        if target_user_obj is None:
+            raise ServerCommandError("User %s doesn't exist"%target_str)
+        userhandler.deleteUser(target_user_obj)
+        response.add('Deleted user %s'%target_str)
 
 class SCStop(ServerCommand):
     """Stop server command"""

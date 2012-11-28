@@ -27,26 +27,62 @@ class UserLevel(object):
     REGULAR_USER = 1
     SUPERUSER = 2
 
+
+class User(object):
+    """
+    Represents a user.
+    User data is cached in this instance, but any changes should be written
+    to persistent storage immediately. Multiple instances of the same user may
+    exist
+    """
+    def __init__(self, id, name, level):
+        self.id = id
+        self.name = name
+        self.level = level
+
+    def getUserid(self):
+        return self.id
+
+    def getUserlevel(self):
+        return self.level
+
+    def setUserlevel(self, level):
+        self.level = level
+        #TODO, store in DB
+
+    def isSuperuser(self):
+        return self.level == UserLevel.SUPERUSER
+
+    def getUsername(self):
+        return self.name
+
 class UserHandler(object):
 
     def __init__(self):
         from cpc.server.state.database import DBHandler, DataBaseError
         self.dbHandler = DBHandler()
+
     def validateUser(self, user, password):
         """
-        Returns the users userlevel if the user exist, otherwise None
+        Returns the user if the user exist, otherwise None.
+        User is passed as string
         """
         hashed_pass = hashed_pass = hashlib.sha256(password).hexdigest()
-        query = "select level from users where user=? and password=?"
+        query = "select id,user,level from users where user=? and password=?"
         with self.dbHandler.getCursor() as c:
             c.execute(query, (user,hashed_pass,))
             res = c.fetchone()
             if res is None:
                 return None
             else:
-                return res[0]
+                user = User(res[0], res[1], res[2])
+                return user
 
-    def createUser(self, user, password, userlevel):
+    def addUser(self, user, password, userlevel):
+        """
+        Creates a new user in the database with the given level.
+        User is passed a string.
+        """
         query = "select user from users where user=?"
         with self.dbHandler.getCursor() as c:
             c.execute(query, (user,))
@@ -57,3 +93,77 @@ class UserHandler(object):
         hashed_pass = hashlib.sha256(password).hexdigest()
         with self.dbHandler.getCursor() as c:
             c.execute(query, (user,hashed_pass,userlevel))
+
+    def deleteUser(self, user):
+        """
+        Deletes a user from the system, including its access rights
+        User is passed a User object.
+        """
+        self._ensureType(user)
+        query_users = "delete from users where id=?"
+        query_users_projects = "delete from users_project where user=?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query_users, (user.getUserid(),))
+            c.execute(query_users_projects, (user.getUserid(),))
+
+    def userAccessToProject(self, user, project):
+        """
+        Returns True if a user has permission to read/write the given project.
+        A True return value does NOT guarantee that the project actually exist.
+        """
+        self._ensureType(user)
+        #super users have all access
+        if user.isSuperuser():
+            return True
+        query = "select user from users_project where user=? and project=?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (user.getUserid(), project,))
+            return c.fetchone() is not None
+
+    def getUserFromString(self, user):
+        """
+        Returns the user object if given user string exist, None otherwise
+        """
+        query = "select id,user,level from users where user=?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (user,))
+            res = c.fetchone()
+            if res is None:
+                return None
+            else:
+                user = User(res[0], res[1], res[2])
+                return user
+
+    def wipeAccessToProject(self,project):
+        """
+        Wipes access to everyone for a given project
+        """
+        query = "delete from users_project where project=?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (project,))
+
+    def getProjectListForUser(self,user):
+        """
+        Returns a list of projects a user has access to. Empty list if no access
+        """
+        self._ensureType(user)
+        query = "select project from users_project where user=?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (user.getUserid(),))
+            return [el[0] for el in c.fetchall()]
+
+    def addUserToProject(self, user, project):
+        """
+        Grants access to a user to a project. OK to run multiple times
+        """
+        self._ensureType(user)
+        query = "select user from users_project where user=? and project=?"
+        insertquery = "insert into users_project values(?, ?)"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (user.getUserid(), project,))
+            if c.fetchone() is None:
+                c.execute(insertquery, (user.getUserid(), project,))
+
+    def _ensureType(self, user):
+        if not isinstance(user, User):
+            raise RuntimeError("Internal error: passed wrong type database")

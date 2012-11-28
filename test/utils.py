@@ -26,6 +26,8 @@ import shutil
 import shlex
 import Queue
 import time
+
+from cpc.server.state.user_handler import *
 PROJ_DIR = "/tmp/cpc-proj"
 
 def setup_server(heartbeat='20'):
@@ -102,6 +104,9 @@ def run_mdrun_example(projname = 'mdrun'):
         assert False,\
         "Failed to setup mdrun example. stdout:\n%s\n\stderr:%s\n\n"%(
             stdout, stderr)
+
+def add_user(user, password, userlevel=UserLevel.REGULAR_USER):
+    UserHandler().addUser(user, password, userlevel)
 
 def clear_dirs():
     home = os.path.expanduser("~")

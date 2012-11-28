@@ -47,6 +47,36 @@ class TestClientTest():
         run_client_command("cd test2")
         run_client_command("rm test")
 
+    def test_simple_permissions(self):
+        """
+        Tests that a user can't access anothers project
+        """
+        add_user('dev', 'dev')
+        add_user('foo', 'foo')
+        login_client('dev', 'dev')
+        run_client_command("start test")
+        login_client('foo', 'foo')
+        run_client_command("cd test", returnZero=False)
+        login_client('dev', 'dev')
+        run_client_command("cd test")
+
+    def test_grant_access(self):
+        """
+        Tests granting access to another user
+        """
+        add_user('dev', 'dev')
+        add_user('foo', 'foo')
+        login_client('dev', 'dev')
+        run_client_command("start test")
+        login_client('foo', 'foo')
+        run_client_command("cd test", returnZero=False)
+        login_client('dev', 'dev')
+        run_client_command("cd test")
+        run_client_command("grant-access foo")
+        login_client('foo', 'foo')
+        run_client_command("cd test")
+
+
     def test__simple_save_load(self):
         """
         Tests that project save / load works

@@ -57,7 +57,7 @@ class ServerCommandList(object):
         """Get the server command based on a request's command."""
         cmd=request.getCmd()
         if cmd in self.cmds:
-            user = 'Anonymous'
+            user_str = 'Anonymous'
 
             #check user level
             required_level = self.cmds[cmd][1]
@@ -68,14 +68,14 @@ class ServerCommandList(object):
                     raise cpc.util.CpcError("This command requires login")
 
                 #match command requirement against user level
-                user = request.session['user']['username']
-                user_level = request.session['user']['userlevel']
-                if required_level > user_level:
+                user_obj = request.session['user']
+                user_str = user_obj.getUsername()
+                if required_level > user_obj.getUserlevel():
                     log.info("user '%s' requested command '%s', which is above"
-                    "its user level"%(user, cmd))
+                    "its user level"%(user_str, cmd))
                     raise cpc.util.CpcError(
                         "You don't have access to this command")
-            log.info('[%s] Request: %s'%(user, cmd))
+            log.info('[%s] Request: %s'%(user_str, cmd))
             return self.cmds[cmd]
         else:
             raise ServerCommandError("Unknown command %s"%cmd)
@@ -84,24 +84,28 @@ class ServerCommandList(object):
 # these are the server commands that the secure server may run:
 scSecureList=ServerCommandList()
 
-#secure commands that don't require login
+#commands that don't require login
 scSecureList.add(server_command.SCLogin(), UserLevel.ANONYMOUS)
 
 #secure commands that require login
 scSecureList.add(server_command.SCAddUser(), UserLevel.SUPERUSER)
+scSecureList.add(server_command.SCDeleteUser(), UserLevel.SUPERUSER)
 scSecureList.add(server_command.SCStop())
 scSecureList.add(server_command.SCSaveState())
 scSecureList.add(server_command.SCTestServer())
+
 # worker workload requests
 scSecureList.add(workercmd.SCWorkerReady())  
 scSecureList.add(workercmd.SCWorkerReadyForwarded())  
 scSecureList.add(workercmd.SCCommandFinished())
 scSecureList.add(workercmd.SCCommandFinishedForward())  
-scSecureList.add(workercmd.SCCommandFailed())  
+scSecureList.add(workercmd.SCCommandFailed())
+
 # heartbeat requests
 scSecureList.add(workercmd.SCWorkerHeartbeat())
 scSecureList.add(workercmd.SCHeartbeatForwarded())
 scSecureList.add(workercmd.SCDeadWorkerFetch())
+
 # overlay network topology
 scSecureList.add(server_command.SCListServerItems())
 scSecureList.add(server_command.SCReadConf())
@@ -115,12 +119,15 @@ scSecureList.add(server_command.ScGrantAllNodeConnections())
 scSecureList.add(server_command.ScChangeNodePriority()) 
 scSecureList.add(server_command.SCNetworkTopology())
 scSecureList.add(server_command.SCNetworkTopologyUpdate())
+
 # asset tracking
 scSecureList.add(trackingcmd.SCPullAsset())
 scSecureList.add(trackingcmd.SCClearAsset())
+
 # requests for dataflow
 scSecureList.add(projectcmd.SCProjects())
 scSecureList.add(projectcmd.SCProjectStart())
+scSecureList.add(projectcmd.SCProjectGrantAccess())
 scSecureList.add(projectcmd.SCProjectDelete())
 scSecureList.add(projectcmd.SCProjectSave())
 scSecureList.add(projectcmd.SCProjectLoad())
@@ -143,26 +150,11 @@ scSecureList.add(projectcmd.SCProjectCommit())
 scSecureList.add(projectcmd.SCProjectRollback())
 scSecureList.add(projectcmd.SCProjectLog())
 
-
 # these are the server commands that may be run by the unencrypted HTTP server
 scInsecureList=ServerCommandList()
 scInsecureList.add(server_command.ScAddNodeRequest())
 scInsecureList.add(server_command.ScAddNodeAccepted())
 scInsecureList.add(server_command.ScAddClientRequest())
 
-#class RequestParser(object):
-#    '''
-#        input : cpc.util.Request
-#    '''
-#    def __init__(self, serverState, request, response):
-#        self.cmd=None
-#        self.cmdList=[]
-#        self.request = request
-#        self.serverState=serverState
-#        self.response=response
-#
-#    
-#    def getCmdList(self):
-#        return self.cmdList
 
 

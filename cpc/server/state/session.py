@@ -48,6 +48,8 @@ class Session(object):
         """
         return self.data.get(key, default)
 
+    def reset(self):
+        self.data = dict()
 
     def set(self, key, value):
         """

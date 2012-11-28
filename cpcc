@@ -44,6 +44,8 @@ def print_usage():
     print "User related commands"
     print "       cpcc login             username"
     print "       cpcc adduser           username"
+    print "       cpcc deleteuser        username"
+    print "       cpcc grant-access      username"
     print
     print "Project start & stop commands:"
     print "       cpcc projects|p"
@@ -202,6 +204,14 @@ try:
             _printErrorAndExit("Passwords don't match")
         clnt=ClientMessage()
         ProcessedResponse(clnt.addUser(user, password)).pprint()
+    elif cmd == "deleteeuser":
+        user=getArg(args, 1, "username")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.deleteUser(user)).pprint()
+    elif cmd == "grant-access":
+        user=getArg(args, 1, "username")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.grantAccess(user)).pprint()
     elif cmd == "version":
         print("Client version:  %s"%__version__)
         clnt=ClientMessage()
@@ -236,12 +246,14 @@ try:
         delDir=True
         name=None
         for arg in args:
+            if arg == cmd:
+                continue
             if arg == "-k":
                 delDir=False
             else:
                 name=arg
         if name is None:
-            raise("Missing project name for project-delete")
+            _printErrorAndExit("Missing project name for project-delete")
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectDeleteRequest(name, delDir)).pprint()
     elif cmd == "projects" or cmd == "p":

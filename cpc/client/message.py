@@ -92,6 +92,26 @@ class ClientMessage(ClientBase):
         response = self.postRequest(msg)
         return response
 
+    def deleteUser(self, user):
+        cmdstring="delete-user"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('user', user))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
+        return response
+
+    def grantAccess(self, user):
+        cmdstring="grant-access"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('name', user))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
+        return response
+
     # @param endNode is the endNode we want to reach
     # @param endNodePort 
     def testServerRequest(self,endNode=None,endNodePort=None):
