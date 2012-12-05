@@ -159,6 +159,15 @@ class CmdLine(object):
         return co.getvalue()
 
     @staticmethod
+    def listUsers(messageStr):
+        list=messageStr['message']
+        co=StringIO()
+        co.write("Users:\n")
+        for user in list:
+            co.write('%s (%s)\n'%(user['user'], user['level']))
+        return co.getvalue()
+
+    @staticmethod
     def countValues(val):
         """Count the minimum number of characters of a value description."""
         if isinstance(val, list):

@@ -27,6 +27,22 @@ class UserLevel(object):
     REGULAR_USER = 1
     SUPERUSER = 2
 
+    def __init__(self, level):
+        self.level = level
+
+    def __str__(self):
+        if self.level == UserLevel.ANONYMOUS:
+            return "Anonymous"
+        elif self.level == UserLevel.REGULAR_USER:
+            return "Regular user"
+        elif self.level == UserLevel.SUPERUSER:
+            return "Super user"
+        else:
+            return "Unknown user level"
+
+def isValidLevel(level):
+    """Checks if a given user level is a valid level"""
+    return level in UserLevel.__dict__.values()
 
 class User(object):
     """
@@ -38,23 +54,53 @@ class User(object):
     def __init__(self, id, name, level):
         self.id = id
         self.name = name
-        self.level = level
+        self.level_obj = UserLevel(level)
 
     def getUserid(self):
         return self.id
 
     def getUserlevel(self):
-        return self.level
+        return self.level_obj.level
+
+    def getUserlevelAsString(self):
+        return str(self.level_obj)
 
     def setUserlevel(self, level):
-        self.level = level
-        #TODO, store in DB
+        self.level_obj = UserLevel(level)
+        if not isValidLevel(level):
+            raise UserError("Invalid userlevel")
+        self.syncUser()
 
     def isSuperuser(self):
-        return self.level == UserLevel.SUPERUSER
+        return self.level_obj == UserLevel.SUPERUSER
 
     def getUsername(self):
         return self.name
+
+    def promote(self):
+        """
+        Promotes user to the next user level, if available
+        Throws UserError if the next level is unavailable
+        """
+        if isValidLevel(self.level_obj.level +  1):
+            self.level_obj = UserLevel(self.level_obj.level + 1)
+            self.syncUser()
+        else:
+            raise UserError("User already at highest level")
+
+    def demote(self):
+        """
+        Promotes user to the previous user level, if available
+        Throws UserError if the previous level is unavailable
+        """
+        if isValidLevel(self.level_obj.level - 1):
+            self.level_obj = UserLevel(self.level_obj.level - 1)
+            self.syncUser()
+        else:
+            raise UserError("User already at lowest level")
+
+    def syncUser(self):
+        UserHandler().syncUser(self)
 
 class UserHandler(object):
 
@@ -164,6 +210,38 @@ class UserHandler(object):
             if c.fetchone() is None:
                 c.execute(insertquery, (user.getUserid(), project,))
 
+    def syncUser(self, user):
+        """
+        Updates the database to match the values in the user (name, level)
+        """
+        self._ensureType(user)
+        query = "update users set user=?, level=? where id = ?"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query, (user.getUsername(),user.getUserlevel(),
+                              user.getUserid()))
+
+    def getUsersAsList(self):
+        query = "select user, level from users"
+        with self.dbHandler.getCursor() as c:
+            c.execute(query)
+            return [{"user" : el[0], "level" : str(UserLevel(el[1]))}
+                    for el in c.fetchall()]
+
     def _ensureType(self, user):
         if not isinstance(user, User):
             raise RuntimeError("Internal error: passed wrong type database")
+
+
+class UserPool:
+    """
+    Tries to reuse user objects
+    Benefits of this is that a getUserFromString() in the UserHandler may
+    return the same object, eliminating the need for a user to relogin after
+    any changes has been made to it.
+    """
+    __shared_state = {}
+    def __init__(self):
+        self.__dict__ = self.__shared_state
+
+    #def getUser(self, user):
+

@@ -43,8 +43,8 @@ def print_usage():
     print 
     print "User related commands"
     print "       cpcc login             username"
-    print "       cpcc adduser           username"
-    print "       cpcc deleteuser        username"
+    print "       cpcc add-user          username"
+    print "       cpcc delete-user       username"
     print "       cpcc grant-access      username"
     print
     print "Project start & stop commands:"
@@ -196,7 +196,7 @@ try:
         #password=getArg(args, 2, "password")
         clnt=ClientMessage()
         ProcessedResponse(clnt.loginRequest(user, password)).pprint()
-    elif cmd == "adduser":
+    elif cmd == "add-user":
         user=getArg(args, 1, "username")
         password = getpass("Enter password:")
         password_repeat = getpass("And again:")
@@ -204,14 +204,27 @@ try:
             _printErrorAndExit("Passwords don't match")
         clnt=ClientMessage()
         ProcessedResponse(clnt.addUser(user, password)).pprint()
-    elif cmd == "deleteeuser":
+    elif cmd == "delete-user":
         user=getArg(args, 1, "username")
         clnt=ClientMessage()
         ProcessedResponse(clnt.deleteUser(user)).pprint()
+    elif cmd == "promote-user":
+        user=getArg(args, 1, "username")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.promoteUser(user)).pprint()
+    elif cmd == "demote-user":
+        user=getArg(args, 1, "username")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.demoteUser(user)).pprint()
     elif cmd == "grant-access":
         user=getArg(args, 1, "username")
         clnt=ClientMessage()
         ProcessedResponse(clnt.grantAccess(user)).pprint()
+    elif cmd == "users":
+        clnt=ClientMessage()
+        renderMethod = CmdLine.listUsers
+        resp = clnt.listRequest("users")
+        ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "version":
         print("Client version:  %s"%__version__)
         clnt=ClientMessage()

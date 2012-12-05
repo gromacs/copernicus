@@ -118,6 +118,38 @@ class SCDeleteUser(ServerCommand):
         userhandler.deleteUser(target_user_obj)
         response.add('Deleted user %s'%target_str)
 
+class SCPromoteUser(ServerCommand):
+    """Promotes a user to the next level"""
+    def __init__(self):
+        ServerCommand.__init__(self, "promote-user")
+
+    def run(self, serverState, request, response):
+        user=request.getParam('user')
+        userhandler = UserHandler()
+        try:
+            user_obj = userhandler.getUserFromString(user)
+            user_obj.promote()
+            response.add('Promoted user %s to level %s'%(
+                user, user_obj.getUserlevelAsString()))
+        except UserError as e:
+            raise cpc.util.CpcError("Error promoting user: %s"%str(e))
+
+class SCDemoteUser(ServerCommand):
+    """Demotes a user to the previous level"""
+    def __init__(self):
+        ServerCommand.__init__(self, "demote-user")
+
+    def run(self, serverState, request, response):
+        user=request.getParam('user')
+        userhandler = UserHandler()
+        try:
+            user_obj = userhandler.getUserFromString(user)
+            user_obj.demote()
+            response.add('Demoted user %s to level %s'%(
+                user, user_obj.getUserlevelAsString()))
+        except UserError as e:
+            raise cpc.util.CpcError("Error demoting user: %s"%str(e))
+
 class SCStop(ServerCommand):
     """Stop server command"""
     def __init__(self):
@@ -178,6 +210,8 @@ class SCListServerItems(ServerCommand):
         elif toList == "heartbeats":
             heartbeats=serverState.getRunningCmdList().toJSON() #.list()
             retstr = heartbeats
+        elif toList == "users":
+            retstr = UserHandler().getUsersAsList()
         else:
             raise ServerCommandError("Unknown item to list: '%s'"%toList)
         response.add(retstr)
@@ -466,6 +500,7 @@ class ScListNodes(ServerCommand):
         nodes = conf.getNodes()
         response.add("",nodes.getNodesByPriority())
         log.info("Listed nodes")
+
 
 
 class ScListSentNodeConnectionRequests(ServerCommand):

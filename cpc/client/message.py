@@ -102,6 +102,28 @@ class ClientMessage(ClientBase):
         response = self.postRequest(msg)
         return response
 
+    def promoteUser(self, user):
+        cmdstring="promote-user"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+
+        fields.append(Input('user', user))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
+        return response
+
+    def demoteUser(self, user):
+        cmdstring="demote-user"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+
+        fields.append(Input('user', user))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response = self.postRequest(msg)
+        return response
+
     def grantAccess(self, user):
         cmdstring="grant-access"
         fields = []
