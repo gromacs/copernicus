@@ -100,17 +100,20 @@ try:
         print_usage()
     elif cmd == "start":
         cf = ServerConf(confdir=servername)
-        serverMode = cpc.util.log.MODE_PRODUCTION
+        serverMode = cf.getMode()
+        doFork=True
         if len(args) > 1:
             if args[1] == "-d":
                 serverMode = cpc.util.log.MODE_DEBUG
                 cpc.util.log.initServerLogToStdout(serverMode)
+                doFork=False
             elif args[1] == "-t":
                 serverMode = cpc.util.log.MODE_TRACE
+                doFork=False
                 cpc.util.log.initServerLogToStdout(serverMode)
 
         print "Starting server.."
-        cpc.network.server.forkAndRun(cf, serverMode)
+        cpc.network.server.runServer(serverMode,doFork)
         sys.exit(0)
     elif cmd == "setup":
     # the -c option will be ignored here.

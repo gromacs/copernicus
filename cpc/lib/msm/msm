@@ -88,8 +88,7 @@ def spawnNewSim(inp, out, i, confFile, priority, gen_vel, desc):
                       "traj_collect:in.trajectories[%d]"%i)
 
 def msm(inp, out):
-    #cpc.util.log.initServerLogToStdout(debug=True)
-    # now  
+    # now
     #output=open(os.path.join(inp.getPersistentDir(), "test.out"),"w")
     #output.write("%s"%str(inp.inputs))
     #output.write("%s"%str(inp.subnetInputs))
