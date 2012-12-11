@@ -150,9 +150,6 @@ try:
         print_usage()
     elif cmd == "version":
          print("Worker version:  %s"%__version__)
-         clnt=ClientMessage()
-         resp = clnt.testServerRequest()
-         ProcessedResponse(resp).pprint()
     else:
         type=getArg(0, "Worker type")
         restargs=[]
