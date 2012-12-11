@@ -220,8 +220,6 @@ and if there is an attempt to connect with the wrong connection bundle
 </div>
 
 
-
-
 <a name="worker-setup"><h4>Worker Setup</h4></a>
 <h4>Prerequisites</h4>
 The worker has 2 prerequisites
@@ -243,6 +241,7 @@ The worker has 2 prerequisites
 </ul>
 
 <h4>Installation</h4>
+Workers do not need any specific project directory.
 Provided that the prerequisites are met the server do not need any other
 installation procedure.
 To verify that the worker can connect to a server start it with
@@ -253,7 +252,6 @@ To verify that the worker can connect to a server start it with
 
 It should output something like this:
 
-
 <div class="code">
     INFO, cpc.worker: Worker ID: 130-229-12-163-dhcp.wlan.ki.se-26108.
     Available executables for platform smp:</br>
@@ -261,6 +259,11 @@ It should output something like this:
     INFO, cpc.worker: Got 0 commands.<br/>
     INFO, cpc.worker: Have free resources. Waiting 30 seconds<br/>
 </div>
+
+you will notice the parameter <code>smp</code> in the above command.
+This means that we start the worker with the platform type smp. We will cover
+this in greater detail in the section
+<a href="#platform-types">Platform types</a>
 
 
 in case everything is set up correctly. Two things might go wrong here:
@@ -280,7 +283,6 @@ and if there is an attempt to connect with the wrong connection bundle
 </div>
 
 
-
 <!--END SECTION Getting started-->
 
 <!--START SECTION Running a project-->
@@ -293,6 +295,7 @@ and if there is an attempt to connect with the wrong connection bundle
 
 <!--END SECTION Workers-->
 <h2>Workers</h2>
+<a name="platform-types"><h3>Platform types</h3></a>
 <!--END SECTION Workers-->
 
 
