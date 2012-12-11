@@ -75,7 +75,8 @@ while len(args) > 0:
                 option)
             print_usage()
         servername = args.pop(0)
-        servername = os.path.join(cpc.util.conf.conf_base.findAndCreateGlobalDir(),servername)
+        servername = os.path.join(
+            cpc.util.conf.conf_base.findAndCreateGlobalDir(), servername)
     elif args[0] == '-d':
         args.pop(0)
         debug = cpc.util.log.MODE_DEBUG
@@ -101,19 +102,19 @@ try:
     elif cmd == "start":
         cf = ServerConf(confdir=servername)
         serverMode = cf.getMode()
-        doFork=True
+        doFork = True
         if len(args) > 1:
             if args[1] == "-d":
                 serverMode = cpc.util.log.MODE_DEBUG
                 cpc.util.log.initServerLogToStdout(serverMode)
-                doFork=False
+                doFork = False
             elif args[1] == "-t":
                 serverMode = cpc.util.log.MODE_TRACE
-                doFork=False
+                doFork = False
                 cpc.util.log.initServerLogToStdout(serverMode)
 
         print "Starting server.."
-        cpc.network.server.runServer(serverMode,doFork)
+        cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)
     elif cmd == "setup":
     # the -c option will be ignored here.
@@ -184,7 +185,17 @@ try:
     elif cmd == "bundle" or cmd == "create-connection-bundle":
         cf = ServerConf(confdir=servername)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
-        print connectionBundle.toJson()
+
+        try:
+            file = open("client.cnx","w")
+            file.write(connectionBundle.toJson())
+            file.close()
+
+            print "wrote connection bundle to file client.cnx"
+        except Exception as e:
+            print "could not write the connection bundle please ensure" \
+                  " that you have write access in the current directory"
+
     else:
         print "ERROR: unknown command '%s'" % cmd
 except ClientError as e:
