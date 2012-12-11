@@ -89,12 +89,13 @@ def print_usage():
     print "       cpcc node-pri          priority host [port]"
     print "       cpcc network-topology"
     print "       cpcc readconf"
-    print "       cpcc version"
     print "       cpcc server-info"
     print ""
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
     print "       cpcc load      project-tar projectname"
+    print "Other commands "
+    print "       cpcc version"
     print ""
     print "Common global options:"
     print "       cpcc [-c bundleFile]"
@@ -181,9 +182,6 @@ try:
         print_usage()
     elif cmd == "version":
         print("Client version:  %s"%__version__)
-        clnt=ClientMessage()
-        resp = clnt.testServerRequest()
-        ProcessedResponse(resp).pprint()
     elif cmd == "queue" or cmd=="q":
         clnt=ClientMessage()
         resp = clnt.listRequest("queue")

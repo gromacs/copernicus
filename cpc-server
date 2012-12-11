@@ -38,6 +38,7 @@ from cpc.network.com.client_base import ClientError
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
 from cpc.util import cmd_line_utils
+from cpc.util.version import __version__
 
 
 def print_usage():
@@ -48,6 +49,8 @@ def print_usage():
     print "       cpc-server setup [-force] [(-host) | (-servername relative-dir)]"\
           " project-directory"
     print "       cpc-server create-connection-bundle|bundle"
+    print "Other commands "
+    print "       cpc-server version"
     print ""
     print "Common options:"
     print "       cpc-server [-c servername]"
@@ -100,6 +103,9 @@ cmd = args[0]
 try:
     if cmd == "help":
         print_usage()
+    elif cmd == "version":
+        print("Server version:  %s"%__version__)
+        sys.exit(0)
     elif cmd == "start":
         cf = ServerConf(confdir=servername)
         serverMode = cf.getMode()

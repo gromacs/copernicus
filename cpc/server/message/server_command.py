@@ -213,33 +213,6 @@ class SCReadConf(ServerCommand):
         response.add("Reread configuration.")
         log.info("Reread configuration done")
 
-
-#@DEPRACATED 2012-08-12
-#Clients request a connection
-#HTTP message
-class ScAddClientRequest(ServerCommand):
-    def __init__(self):
-        ServerCommand.__init__(self, "add-client-request")
-
-    def run(self, serverState, request, response):
-        #TODO check so that we already havent granted access to this node
-        clientConnectRequest = json.loads(
-            request.getParam('clientConnectRequest'),
-            object_hook=json_serializer.fromJson)
-        conf = ServerConf()
-        #        conf.addNodeConnectRequest(clientConnectRequest)
-
-        openssl = OpenSSL(conf)
-        #openssl.addCa(clientConnectRequest.key)   
-
-        inf = open(conf.getCACertFile(), "r")
-        #        nodeConnect = NodeConnectRequest(conf.getHostName(),
-        #                                         conf.getServerHTTPPort(),
-        #                                         conf.getServerHTTPSPort(),inf.read())
-        response.add("", inf.read())
-        log.info("Add client request done")
-
-
 #sends an add node request
 class ScAddNode(ServerCommand):
     def __init__(self):

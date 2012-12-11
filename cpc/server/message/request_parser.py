@@ -56,7 +56,6 @@ class ServerCommandList(object):
     def getServerCommand(self, request):
         """Get the server command based on a request's command."""
         cmd=request.getCmd()
-        print self.cmds
         if cmd not in self.cmds:
             raise ServerCommandError("Unknown command %s"%cmd)
 
@@ -124,6 +123,5 @@ scSecureList.add(server_command.SCServerInfo())
 scInsecureList=ServerCommandList()
 scInsecureList.add(server_command.ScAddNodeRequest())
 scInsecureList.add(server_command.ScAddNodeAccepted())
-scInsecureList.add(server_command.ScAddClientRequest())
 
 
