@@ -90,6 +90,7 @@ def print_usage():
     print "       cpcc network-topology"
     print "       cpcc readconf"
     print "       cpcc version"
+    print "       cpcc server-info"
     print ""
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
@@ -490,6 +491,11 @@ try:
     elif cmd == "stop-server":
         clnt=ClientMessage()
         ProcessedResponse(clnt.stopRequest()).pprint()
+
+    elif cmd == "server-info":
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)
+
     elif cmd == "save-state":
         clnt=ClientMessage()
         ProcessedResponse(clnt.saveStateRequest()).pprint()

@@ -56,6 +56,7 @@ class ServerCommandList(object):
     def getServerCommand(self, request):
         """Get the server command based on a request's command."""
         cmd=request.getCmd()
+        print self.cmds
         if cmd not in self.cmds:
             raise ServerCommandError("Unknown command %s"%cmd)
 
@@ -117,27 +118,12 @@ scSecureList.add(projectcmd.SCProjectTransact())
 scSecureList.add(projectcmd.SCProjectCommit())
 scSecureList.add(projectcmd.SCProjectRollback())
 scSecureList.add(projectcmd.SCProjectLog())
-
+scSecureList.add(server_command.SCServerInfo())
 
 # these are the server commands that may be run by the unencrypted HTTP server
 scInsecureList=ServerCommandList()
 scInsecureList.add(server_command.ScAddNodeRequest())
 scInsecureList.add(server_command.ScAddNodeAccepted())
 scInsecureList.add(server_command.ScAddClientRequest())
-
-#class RequestParser(object):
-#    '''
-#        input : cpc.util.Request
-#    '''
-#    def __init__(self, serverState, request, response):
-#        self.cmd=None
-#        self.cmdList=[]
-#        self.request = request
-#        self.serverState=serverState
-#        self.response=response
-#
-#    
-#    def getCmdList(self):
-#        return self.cmdList
 
 

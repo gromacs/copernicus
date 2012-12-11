@@ -472,7 +472,12 @@ class CmdLine(object):
 
         return True
 
-
+    @staticmethod
+    def serverInfo(message):
+        info = message['data']
+        co = StringIO()
+        co.write("Server hostname:%s \nVersion:%s"%(info['fqdn'],info['version']))
+        return co.getvalue()
     
     @staticmethod   
     def addNodeRequest(message):

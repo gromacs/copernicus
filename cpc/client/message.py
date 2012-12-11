@@ -70,7 +70,7 @@ class ClientMessage(ClientBase):
         return response
 
     # @param endNode is the endNode we want to reach
-    # @param endNodePort 
+    # @param endNodePort
     def testServerRequest(self,endNode=None,endNodePort=None):
         cmdstring='test-server'
         fields = []
@@ -83,6 +83,16 @@ class ClientMessage(ClientBase):
             headers['end-node-port'] = endNodePort      
         msg = ServerRequest.prepareRequest(fields,[],headers)        
         response=self.putRequest(msg)                            
+        return response
+
+    def serverInfo(self):
+        cmdstring='server-info'
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('version', "1"))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response=self.putRequest(msg)
         return response
 
     #resides here just for development purposes

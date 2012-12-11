@@ -25,6 +25,7 @@
 import sys
 import copy
 import os
+import shutil
 
 import cpc.client
 import cpc.network.server
@@ -187,11 +188,15 @@ try:
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
 
         try:
-            file = open("client.cnx","w")
+            filename = "client.cnx"
+            if(os.path.exists(filename)):
+                shutil.copyfile(filename,filename+".bak")
+                print("found a connection bundle backed it up as %s.bak"%filename)
+            file = open(filename,"w")
             file.write(connectionBundle.toJson())
             file.close()
 
-            print "wrote connection bundle to file client.cnx"
+            print "wrote connection bundle to file %s"%filename
         except Exception as e:
             print "could not write the connection bundle please ensure" \
                   " that you have write access in the current directory"
