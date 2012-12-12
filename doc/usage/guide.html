@@ -1,5 +1,6 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
 <!--
 This file is part of Copernicus
 http://www.copernicus-computing.org/
@@ -20,27 +21,16 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  -->
 <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <link rel="stylesheet" type="text/css" href="../doc.css"/>
-    <style>
-        span.comment {
-            color: red;
-        }
-    </style>
     <title>Copernicus user guide</title>
 </head>
 <body>
 <div id="leftcol">
 <div id="toc">
-    <h2>Table of Contents</h2>
-    <ol>
-        <!--TODO: generate TOC with JS-->
-        <!--<li><a href="#intro">Introduction</a></li>-->
-        <!--<li><a href="#start">Getting started</a></li>-->
-        <!--<li><a href="#running">Running a project</a></li>-->
-        <!--<li><a href="#conf">Configuration</a></li>-->
-        <!--<li><a href="#servers">Servers</a></li>-->
-        <!--<li><a href="#workers">Workers</a></li>-->
-        <!--<li><a href="#cmd-line">The command line client tool</a></li>-->
+    Table of Contents
+    <ol id="toc-list">
+
     </ol>
 </div>
 
@@ -158,7 +148,7 @@ Make sure to specify the project-dir in a writable location.
 Note that <code>project-dir</code> is only specified during setup
 however the creation happens when we first create a project.
 You will also notice that a directory named <code>.copernicus</code> is
-called in
+created in
 your home directory.
 This is where Copernicus will store its settings.
 
@@ -200,7 +190,8 @@ To verify that the worker can connect to a server start it with
 It should output something like this:
 
 <pre>
-
+Server hostname:127.0.0.1
+Version:1.1.0-dev
 </pre>
 
 in case everything is set up correctly. Two things might go wrong here:
@@ -220,7 +211,7 @@ and if there is an attempt to connect with the wrong connection bundle
 </div>
 
 
-<a name="worker-setup"><h4>Worker Setup</h4></a>
+<a name="worker-setup"><h3>Worker Setup</h3></a>
 <h4>Prerequisites</h4>
 The worker has 2 prerequisites
 <ul>
@@ -301,7 +292,6 @@ and if there is an attempt to connect with the wrong connection bundle
 
 </div>
 </div>
-
 
 </body>
 </html>
