@@ -43,7 +43,7 @@ class TestLifeCycle():
 
         #verify the command is queued
         #run_client_command(command='q', expectstdout='mdrun.1')
-        retry_client_command(command='q', expectstdout='mdrun.1', iterations=25)
+        retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
         #fire up the worker
         w = Worker()
         w.startWorker()

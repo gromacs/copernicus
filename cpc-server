@@ -48,7 +48,7 @@ def print_usage():
     print "       cpc-server config param value"
     print "       cpc-server setup [-force] [(-host) | (-servername relative-dir)]"\
           " project-directory"
-    print "       cpc-server create-connection-bundle|bundle"
+    print "       cpc-server create-connection-bundle|bundle [-o destination] "
     print "Other commands "
     print "       cpc-server version"
     print ""
@@ -192,9 +192,11 @@ try:
     elif cmd == "bundle" or cmd == "create-connection-bundle":
         cf = ServerConf(confdir=servername)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
-
         try:
-            filename = "client.cnx"
+            if len(args)==3 and args[1]=='-o':
+                filename = args[2]
+            else:
+                filename = "client.cnx"
             if(os.path.exists(filename)):
                 shutil.copyfile(filename,filename+".bak")
                 print("found a connection bundle backed it up as %s.bak"%filename)
@@ -202,7 +204,7 @@ try:
             file.write(connectionBundle.toJson())
             file.close()
 
-            print "wrote connection bundle to file %s"%filename
+            print "wrote connection bundle to %s"%filename
         except Exception as e:
             print "could not write the connection bundle please ensure" \
                   " that you have write access in the current directory"
