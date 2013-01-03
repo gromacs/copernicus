@@ -91,6 +91,8 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
             if self.path == "/":
                 self.path += "index.html"
+            else:
+                self.path = self.path.split('?', 1)[0]#strip trailing '?...'
 
             webDir = ServerConf().getWebRootPath()
             resourcePath = webDir+self.path
