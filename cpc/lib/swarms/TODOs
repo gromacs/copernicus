@@ -8,4 +8,5 @@
 9. Improve the organization of reparametrize.py
 10. Allow all types of restraints to be used in swarms: angles, etc.
 11. Eliminate the need for endstate structure. Only a point in colvars space is necessary. 
-12. Compute collective variables drift within python.
+12. Compute collective variables drift within python. (calc_dihedrals added 7/1/2013)
+

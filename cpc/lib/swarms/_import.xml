@@ -36,6 +36,9 @@
             <desc>The protein topology include file with dihedral restraints 
                   for this point in the path</desc>
         </field>
+        <field type="z_point">
+            <desc>The point in z-space being represented</desc>
+        </field>
     </type>
     <type id="conf_path" base="array" member-type="path_point">
         <desc>An array of configurations of the structure</desc>

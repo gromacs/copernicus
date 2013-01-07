@@ -138,7 +138,7 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     sys.stderr.write('Length of the adjusted vector: %d'%len(adjusted))
     # TODO Nchains should depend on the specific residue
     Nchains=len(initpt)/(2*len(rsel))
-    # TODO measure distant
+    # TODO measure distance
     # write the topology for the next iteration
     for k in range(1,len(adjusted)-1):
         for chain in range(Nchains):
