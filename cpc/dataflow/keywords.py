@@ -17,6 +17,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+import string
+import re
+
+import apperror
+
+class IdentifierError(apperror.ApplicationError):
+    def __init__(self, idString):
+        self.str="'%s' is not a valid identifier"
+
 
 # the self instance
 Self="self"
@@ -43,8 +52,43 @@ SubTypeSep='.'
 ModSep='::'
 
 
+# the set of keywords that are not allowed for identifiers
+keywords=set([ Self, In, Out, SubIn, SubOut, ExtIn, ExtOut ])
+
+# the identifier allowed characters
+allowedIdFirstChars = set(string.ascii_letters)
+allowedIdChars = string.ascii_letters + string.digits + '_'
+idTransTable = string.maketrans('-', '_')
+idEmptyTransTable = string.maketrans('','')
+
+def validIdentifier(idString):
+    """Check whether a string is a valid identifier. 
+       Throws an IdentifierError if it is not a valid identifier, 
+       returns a backward-compatibility-fixed string"""
+    global keywords
+    global allowedIdFirstChars
+    global allowedIdChars
+    global idTransTable
+    global idEmptyTransTable
+    # the first MUST be a letter
+    if not idString[0] in allowedIdFirstChars:
+        raise IdentifierError(idString)
+    # now fix the ID for backward compatibility
+    idString=idString.translate(idTransTable)
+    # and check the string for non-allowed characters, or whether it is a
+    # keyword
+    if ( not idString.translate(idEmptyTransTable, allowedIdChars) 
+         or idString in keywords):
+        raise IdentifierError(idString)
+    return idString
+
 # an additional function for backward-compatibility: all IDs should have
 # underscores, not dashes, and we force dashes to be underscores.
 def fixID(idString):
+    """an additional function for backward-compatibility: all IDs should have
+       underscores, not dashes, and we force dashes to be underscores."""
     return idString.replace('-', '_')
+
+
+
 

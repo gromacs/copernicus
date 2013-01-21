@@ -267,13 +267,15 @@ class RunningCmdList(object):
         #    cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
         # run the task
         if task is not None:
-            (newcmds, cancelcmds) = task.run(cmd)
+            (finished, newcmds, cancelcmds) = task.run(cmd)
         if cancelcmds is not None:
             for ccmd in cancelcmds:
                 self.cmdQueue.remove(ccmd)
         if newcmds is not None:
             for ncmd in newcmds:
                 self.cmdQueue.add(ncmd)
+        if finished:
+            task.handleOutput()
 
     def getCmdList(self):
         """Return a list with all running commands as command objects."""

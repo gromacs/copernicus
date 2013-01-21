@@ -168,9 +168,18 @@ class ActiveNetwork(network.Network):
             raise ActiveError("Active instance '%s' not found"%name)
 
     def getActiveInstance(self, name):
-        """Get the named active instance associated with this network."""
+        """Get the named active instance associated with this network.
+           Throw an ActiveError if not found."""
         with self.lock:
             return self._getActiveInstance(name)
+
+
+    def tryGetActiveInstance(self, name):
+        """Get the named active instance and return None if not found."""
+        with self.lock:
+            if name == keywords.Self:
+                return self.inActiveInstance
+            return self.activeInstances.get(name)
 
     def getActiveInstanceList(self, listIO, listSelf):
         """Return a dict of instance names. If listIO is true, each instance's
@@ -370,18 +379,11 @@ class ActiveNetwork(network.Network):
                           (conn.srcAcp.value.getFullName(),
                            conn.dstAcp.value.getFullName()))
             else:
-                #dstAcp.activeInstance.setNamedInputValue(
-                #                                conn.getDstIO().getDir(),
-                #                                conn.getDstItemList(),
-                #                                conn.getInitialValue())
                 val=conn.getInitialValue()
                 #log.debug("Setting input to %s: %s"%
                 #          (conn.dstAcp.value.getFullName(), val.value))
                 conn.dstAcp.update(val, sourceTag, None)
                 conn.dstAcp.propagate(sourceTag, None)
-                #with dstAcp.activeInstance.lock:
-                #    dstAcp.setNewSetValue(conn.getInitialValue(),
-                #                          affectedInputAIs)
 
     def activateAll(self):
         """Activate all activeinstances in this network, starting them."""

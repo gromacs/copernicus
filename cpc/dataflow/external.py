@@ -116,8 +116,6 @@ class ExternalFunction(atomic.AtomicFunction):
                 raise ExternalFunctionError(
                                     "Output directory %s does not exist"%
                                     inp.getOutputDir())
-            #st=os.stat(inp.getOutputDir())
-            #if (st.st_mode & stat.S_IFDIR) == 0:
         # construct full argument list
         nargs=[ self.fullpath ]
 
@@ -150,12 +148,14 @@ class ExternalFunction(atomic.AtomicFunction):
                                         (self.name, 
                                          unicode(retstdout, errors='replace'), 
                                          unicode(retstderr, errors='replace')))
-        reader=run.IOReader(False)
+        #reader=run.IOReader(False)
+        out=inp.getFunctionOutput()
+        reader=run.IOReader(None, out)
         #log.debug(retst)
         instrio=StringIO(retstdout)
         log.debug("Reading output for function %s: %s"%(self.name, 
                                                         instrio.read()))
         instrio.reset()
         reader.read(instrio, self.fullpath)
-        return reader.getFunctionRunOutput()
+        return out
 

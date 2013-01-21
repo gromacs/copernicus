@@ -32,6 +32,7 @@ import xml.sax.saxutils
 import cpc.util
 import apperror
 import connection
+import keywords
 import function
 import instance
 import network
@@ -55,7 +56,7 @@ class ActiveInstanceState:
     def __str__(self):
         return self.str
 
-class ActiveInstance(object):
+class ActiveInstance(value.ValueBase):
     """An active instance is the instance and the data associated with running
        that instance. An active instance can have a subnetwork that is itself an
        active network. 
@@ -182,6 +183,8 @@ class ActiveInstance(object):
         # an ever-increasing number to prevent outputs from overwriting 
         # each other
         self.outputDirNr=0 
+        # whether this instance generates tasks
+        self.genTasks=True
 
         # whether any input value has changed, prompting a task run if 
         # the instance is active.
@@ -387,7 +390,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.stagedInputVal.getSubValue(itemList, True)
+        val=self.stagedInputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find input %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -405,7 +408,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.outputVal.getSubValue(itemList, True)
+        val=self.outputVal.getCreateSubValue(itemList)
         #log.debug("->%s, %s"%(str(type(self.outputVal)), str(type(val))))
         if val is None:
             raise ActiveError("Can't find output %s for active instance %s"%
@@ -424,7 +427,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.stagedSubnetInputVal.getSubValue(itemList, True)
+        val=self.stagedSubnetInputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find subnet input %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -442,7 +445,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.subnetOutputVal.getSubValue(itemList, True)
+        val=self.subnetOutputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find subnet output %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -488,7 +491,7 @@ class ActiveInstance(object):
         with self.inputLock:
            self.tasks.remove(task)
 
-    def handleTaskOutput(self, task, output, subnetOutput):
+    def handleTaskOutput(self, sourceTag, seqNr, output, subnetOutput):
         """Handle the output of a finished task that is generated from 
            this active instance.
 
@@ -501,8 +504,8 @@ class ActiveInstance(object):
             for out in output:
                 outItems=vtype.parseItemList(out.name)
                 # now get the actual entry in the output value tree
-                oval=self.outputVal.getSubValue(outItems, create=True,
-                                                setCreateSourceTag=task)
+                oval=self.outputVal.getCreateSubValue(outItems,
+                                                setCreateSourceTag=sourceTag)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -512,16 +515,16 @@ class ActiveInstance(object):
                               (out.name, self.getCanonicalName(), 
                                self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
-                oval.update(out.val, task.seqNr, task)
+                oval.update(out.val, seqNr, sourceTag)
                 #log.debug("1 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
-                oval.propagate(task, task.seqNr)
+                oval.propagate(sourceTag, seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
-                oval=self.subnetOutputVal.getSubValue(outItems, create=True,
-                                                      setCreateSourceTag=task)
+                oval=self.subnetOutputVal.getCreateSubValue(outItems, 
+                                                   setCreateSourceTag=sourceTag)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -531,18 +534,18 @@ class ActiveInstance(object):
                         (out.name, self.getCanonicalName(), 
                          self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
-                oval.update(out.val, task.seqNr, task)
+                oval.update(out.val, seqNr, sourceTag)
                 #log.debug("2 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
-                oval.propagate(task, task.seqNr)
+                oval.propagate(sourceTag, seqNr)
         # Round 2: now alert the receiving active instances
         if output is not None:
             for out in output:
-                out.item.notifyListeners(task, task.seqNr)
+                out.item.notifyListeners(sourceTag, seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
-                out.item.notifyListeners(task, task.seqNr)
+                out.item.notifyListeners(sourceTag, seqNr)
         self.outputVal.setUpdated(False)
         self.subnetOutputVal.setUpdated(False)
 
@@ -649,31 +652,38 @@ class ActiveInstance(object):
         for listener in listeners:
             listener.searchDestinations()
 
+    #def findClosestNamedInput(self, direction, itemList):
+    #    """Find the *staging* closest value object corresponding to the named 
+    #       item.
+    #       direction = the input/output/subnetinput/subnetoutput direction
+    #       itemList = a path gettable by value.getSubValue """
+    #    if direction==function_io.inputs:
+    #        topval=self.stagedInputVal
+    #    elif direction==function_io.subnetInputs:
+    #        topval=self.stagedSubnetInputVal
+    #    else:
+    #        raise ActiveError("Trying to set output value %s"%
+    #                          str(direction.name))
+    #    val=topval.getClosestSubValue(itemList)
+    #    return val
 
+    #def findCreateNamedInput(self, direction, itemList, sourceTag):
+    #    """Find or create the *staging* value object corresponding to the 
+    #       named item.
+    #       direction = the input/output/subnetinput/subnetoutput direction
+    #       itemList = a path gettable by value.getSubValue """
+    #    if direction==function_io.inputs:
+    #        topval=self.stagedInputVal
+    #    elif direction==function_io.subnetInputs:
+    #        topval=self.stagedSubnetInputVal
+    #    else:
+    #        raise ActiveError("Trying to set output value %s"%
+    #                          str(direction.name))
+    #    val=topval.getCreateSubValue(itemList, 
+    #                                 setCreateSourceTag=sourceTag)
+    #    return val
 
-    def findNamedInput(self, direction, itemList, sourceTag, closestValue):
-        """Find the *staging* value object corresponding to the named item.
-           direction = the input/output/subnetinput/subnetoutput direction
-           itemList = a path gettable by value.getSubValue
-           closestValue = boolean indicating whether to return the closest
-                          value (for getNamedinputAffectedAIs) or the actual
-                          value (for stageNamedInput). If False,
-                          the value will be created if needed.
-           """
-        if direction==function_io.inputs:
-            topval=self.stagedInputVal
-        elif direction==function_io.subnetInputs:
-            topval=self.stagedSubnetInputVal
-        else:
-            raise ActiveError("Trying to set output value %s"%
-                              str(direction.name))
-        val=topval.getSubValue(itemList, create=(not closestValue), 
-                               setCreateSourceTag=sourceTag,
-                               closestValue=closestValue)
-        #log.debug("returning %s"%(val))
-        return val
-
-    def getNamedInputAffectedAIs(self, closestVal, affectedInputAIs):
+    def getValueAffectedAIs(self, closestVal, affectedInputAIs):
         """Get the affected input ais for setting a new value."""
         listeners=[]
         closestVal.findListeners(listeners)
@@ -697,24 +707,24 @@ class ActiveInstance(object):
         val.update(newVal, None, sourceTag=sourceTag)
         val.propagate(sourceTag, None)
 
-    def getNamedValue(self, direction, itemList):
-        """Get a specific named value ."""
-        # now change input values
-        #log.debug("Processing new value for %s of fn %s"%
-        #          (self.instance.getName(), self.function.getName()))
-        if direction==function_io.inputs:
-            with self.inputLock:
-                val=self.inputVal.getSubValue(itemList)
-        elif direction==function_io.outputs:
-            with self.outputLock:
-                val=self.outputVal.getSubValue(itemList)
-        elif direction==function_io.subnetInputs:
-            with self.inputLock:
-                val=self.subnetInputVal.getSubValue(itemList)
-        elif direction==function_io.subnetOutputs:
-            with self.outputLock:
-                val=self.subnetOutputVal.getSubValue(itemList)
-        return val
+    #def getNamedValue(self, direction, itemList):
+    #    """Get a specific named value ."""
+    #    # now change input values
+    #    #log.debug("Processing new value for %s of fn %s"%
+    #    #          (self.instance.getName(), self.function.getName()))
+    #    if direction==function_io.inputs:
+    #        with self.inputLock:
+    #            val=self.inputVal.getSubValue(itemList)
+    #    elif direction==function_io.outputs:
+    #        with self.outputLock:
+    #            val=self.outputVal.getSubValue(itemList)
+    #    elif direction==function_io.subnetInputs:
+    #        with self.inputLock:
+    #            val=self.subnetInputVal.getSubValue(itemList)
+    #    elif direction==function_io.subnetOutputs:
+    #        with self.outputLock:
+    #            val=self.subnetOutputVal.getSubValue(itemList)
+    #    return val
 
     def getNamedType(self, direction, itemList):
         """Get the type of a specific named value."""
@@ -947,7 +957,117 @@ class ActiveInstance(object):
                     tsk.writeXML(outf, indent+2)
                 outf.write('%s</tasks>\n'%iindstr)
             outf.write('%s</active>\n'%indstr)
+
+
+    ########################################################
+    # Member functions from the ValueBase interface:
+    ########################################################
+    def _getSubVal(self, itemList, staging=False):
+        """Helper function"""
+        subval=None
+        if itemList[0]==keywords.In:
+            with self.inputLock:
+                if staging:
+                    subval=self.stagedInputVal
+                else:
+                    subval=self.inputVal
+        elif itemList[0]==keywords.Out:
+            with self.outputLock:
+                subval=self.outputVal
+        elif itemList[0]==keywords.SubIn:
+            with self.inputLock:
+                if staging:
+                    subval=self.stagedSubnetInputVal
+                else:
+                    subval=self.subnetInputVal
+        elif itemList[0]==keywords.SubOut:
+            with self.outputLock:
+                subval=self.subnetOutputVal
+        elif self.subnet is not None:
+            subval=self.subnet.tryGetActiveInstance(itemList[0])
+        return subval
+ 
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or return None 
+           if not found.
+           itemList = the path of the value to return"""
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getSubValue(itemList[1:])
+        return None
         
+    def getCreateSubValue(self, itemList, createType=None,
+                          setCreateSourceTag=None):
+        """Get or create a specific subvalue through a list of subitems, or 
+           return None if not found.
+           itemList = the path of the value to return/create
+           if createType == a type, a subitem will be created with the given 
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+        if len(itemList)==0:
+            return self
+        # staging is true because we know we want to be able to create a new
+        # value.
+        subval=self._getSubVal(itemList, staging=True)
+        if subval is not None:
+            return subval.getCreateSubValue(itemList[1:], createType,
+                                            setCreateSourceTag)
+        raise ValError("Cannot create sub value of active instance")
+
+    def getClosestSubValue(self, itemList):
+        """Get the closest relevant subvalue through a list of subitems, 
+           
+           itemList = the path of the value to get the closest value for """
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getClosestSubValue(itemList[1:])
+        return self
+
+    def getSubValueList(self):
+        """Return a list of addressable subvalues."""
+        ret=[ function_io.inputs, function_io.outputs, 
+              function_io.subnetInputs, function_io.subnetOutputs ]
+        if self.activeNetwork is not None:
+            ailist=self.activeNetwork.getActiveInstanceList(False, False)
+            ret.extend( ailist.keys() )
+        return ret
+
+    def getSubValueIterList(self):
+        """Return an iterable list of addressable subvalues."""
+        return self.getSubValueList()
+
+    def hasSubValue(self, itemList):
+        """Check whether a particular subvalue exists"""
+        if len(itemList) == 0:
+            return True
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.hasSubValue(itemList[1:])
+        return False
+
+    def getType(self):
+        """Return the type associated with this value"""
+        return vtype.instanceType
+
+    def getDesc(self):
+        """Return a 'description' of a value: an item that can be passed to 
+           the client describing the value."""
+        if self.subnet is not None:
+            ret=self.subnet.getActiveInstanceList(False, False)
+        else:
+            ret=dict()
+        ret[keywords.In]="inputs"
+        ret[keywords.Out]="outputs"
+        ret[keywords.SubIn]="subnet_inputs"
+        ret[keywords.SubOut]="subnet_outputs"
+        return ret
+    ########################################################
+
 
 class ActiveRunLog(object):
     """Class holding a run log for an active instance requiring one."""

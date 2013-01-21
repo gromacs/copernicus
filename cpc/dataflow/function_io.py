@@ -64,4 +64,18 @@ class IOType(vtype.RecordType):
     def getDir(self):
         return self.direction
 
+class IOArrayType(vtype.ArrayType):
+    """The list type specific for instance array inputs/outputs/subnetinputs/...
+       """
+    def __init__(self, direction, instName, IOType):
+        """Initialize based on direction and name."""
+        self.direction=direction
+        name="%s%s%s"%(instName,
+                       keywords.InstSep,
+                       direction.name)
+        vtype.ArrayType.__init__(self, name, vtype.arrayType, memberType=IOType)
+
+    def getDir(self):
+        return self.direction
+
 
