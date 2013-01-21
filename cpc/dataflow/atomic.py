@@ -115,7 +115,7 @@ class SimpleFunctionFunction(AtomicFunction):
             inp["_outputDir"] = fnInputs.outputDir
         log.debug(str(inp))
         ret=self.pyFunction( **inp )
-        fo=run.FunctionRunOutput()
+        fo=fnInputs.getFunctionOutput()
         for name, val in ret.iteritems():
             if isinstance(val, float):
                 fo.setOut( name, run.FloatValue(val) ) 
@@ -158,9 +158,6 @@ class ExtendedFunctionFunction(SimpleFunctionFunction):
         outFile.write('%s<controller function="%s" %s/>\n'%
                       (iindstr, self.pyFunction.__name__, importstr))
         outFile.write('%s</function>\n'%indstr)
-
-    #def setFunction(self, pyFunction):
-    #    self.pyFunction=pyFunction
 
     def check(self):
         """check whether function can run. If it throws an exception,

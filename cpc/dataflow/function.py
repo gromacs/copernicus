@@ -125,9 +125,9 @@ class Function(description.Describable):
         """Get the function's library."""
         return self.lib
 
-    def getSelf(self):
-        """Get the 'self' object, if it exists. None, otherwise."""
-        return None
+    #def getSelf(self):
+    #    """Get the 'self' object, if it exists. None, otherwise."""
+    #    return None
 
     def getState(self):
         """Get the state of the function."""

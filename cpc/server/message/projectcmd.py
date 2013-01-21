@@ -341,6 +341,9 @@ class SCProjectGet(ProjectServerCommand):
     def run(self, serverState, request, response):
         prj=self.getProject(request, serverState)
         itemname=request.getParam('item')
+        if itemname is None:
+            itemname=""
+        itemname=itemname.strip()
         if not request.hasParam("getFile"):
             ret=dict()
             ret["name"]=itemname
@@ -350,8 +353,10 @@ class SCProjectGet(ProjectServerCommand):
                     ret["value"]=val.getDesc()
                 else:
                     ret["value"]="not found"    
-            except cpc.dataflow.ApplicationError as e:
-                ret["value"]="not found"    
+            #except cpc.dataflow.ApplicationError as e:
+            #    ret["value"]="not found"    
+            finally:
+                pass
             response.add(ret)
         else:
             try:
