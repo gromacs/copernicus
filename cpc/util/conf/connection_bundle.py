@@ -38,7 +38,8 @@ class ConnectionBundle(Conf):
     CN_ID = "worker"  #used to distinguish common names in certs
 
 
-    def __init__(self, userSpecifiedPath=None, create=False):
+    def __init__(self, userSpecifiedPath=None, create=False,
+                 fqdn=socket.getfqdn()):
         # check whether the object is already initialized
         if not create:
             if self.exists():
@@ -50,7 +51,7 @@ class ConnectionBundle(Conf):
             # create an empty conf without any values.
             self.conf = dict()
 
-        self.client_host = socket.getfqdn()
+        self.client_host = fqdn
         #self.client_https_port = '13807'
         #self.client_http_port = '14807'
         self.privateKey = ''

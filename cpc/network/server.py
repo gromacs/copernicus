@@ -136,7 +136,6 @@ def serveHTTPS(serverState):
 #starts an http server in a thread.
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
-
     cpc.util.log.initServerLog(ServerConf().getMode())
     th=Thread(target = serveHTTP,args=[serverState])
     th.daemon=True
@@ -151,17 +150,16 @@ def shutdownServer(self):
     self.httpd.shutdown
 
 
-def forkAndRun(conf, debugMode=None):
-    """Fork & detach a process to run it as a daemon. Starts the server"""
-    conf = ServerConf()       
-    conf.setMode(debugMode)
-    # debugMode comes from the cmd line
-    # we do not want to use the config setting debug here since we want to be able to set
-    # production mode server conf to debug in order to trace logs
-    if conf.getMode()==cpc.util.log.MODE_PRODUCTION:
-        debug=False
-    else:
-        debug=True
+def runServer(logLevel=None,doFork=True):
+    """
+        Starts the server process
+        logLevel  prod|debug|trace   Determines the log level
+        doFork                       Forks and detaches the process and runs\
+                                     it as a daemon
+    """
+    conf = ServerConf()
+    conf.setMode(logLevel)
+
     # initialize the server state before forking.
     serverState = cpc.server.state.ServerState(conf)
     serverState.read()
@@ -169,7 +167,7 @@ def forkAndRun(conf, debugMode=None):
     pid=0
     try:
         # First fork so the parent can exit. 
-        if not debug:
+        if doFork:
             pid=os.fork()
     except OSError, e:
         raise Error, "%s [%d]"%(e.strerror, e.errno)
@@ -178,14 +176,14 @@ def forkAndRun(conf, debugMode=None):
         # become the session leader so that we won't have a controlling 
         # terminal.
         try:
-            if not debug:
+            if doFork:
                 os.setsid()
         except OSError, e:
             raise Error, "%s [%d]"%(e.strerror, e.errno)
 
         # now fork again to make sure init is our parent.
         try:
-            if not debug:
+            if doFork:
                 pid=os.fork()
         except OSError, e:
             raise Error, "%s [%d]" % (e.strerror, e.errno)
@@ -200,7 +198,7 @@ def forkAndRun(conf, debugMode=None):
             os._exit(0)
 
         # Close all file descriptors.
-        if not debug:
+        if doFork:
             for fd in range(0, server_maxfd):
                 try:
                     os.close(fd)

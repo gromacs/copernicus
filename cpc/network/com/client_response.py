@@ -57,10 +57,8 @@ class ProcessedResponse(object):
                         str = '%s'%item['data']
                         sys.stdout.write(str)
                         sys.stdout.write("\n")                
-            else:                
-                sys.stderr.write("Request failed:\n")
-                sys.stderr.write(item['message'])
-                sys.stderr.write("\n")
+            else:
+                raise ResponseError(item['message'])
 
 
     def isOK(self):

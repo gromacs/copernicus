@@ -484,5 +484,5 @@ class Worker(object):
         self.acceptCommands = False
         self.runCondVar.notifyAll()
         self.runCondVar.release()
-
+        log.debug("release")
 

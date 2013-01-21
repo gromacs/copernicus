@@ -25,6 +25,7 @@
 import sys
 import copy
 import os
+import shutil
 
 import cpc.client
 import cpc.network.server
@@ -37,6 +38,7 @@ from cpc.network.com.client_base import ClientError
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
 from cpc.util import cmd_line_utils
+from cpc.util.version import __version__
 
 
 def print_usage():
@@ -46,7 +48,9 @@ def print_usage():
     print "       cpc-server config param value"
     print "       cpc-server setup [-force] [(-host) | (-servername relative-dir)]"\
           " project-directory"
-    print "       cpc-server create-connection-bundle|bundle"
+    print "       cpc-server create-connection-bundle|bundle [-o destination] "
+    print "Other commands "
+    print "       cpc-server version"
     print ""
     print "Common options:"
     print "       cpc-server [-c servername]"
@@ -75,7 +79,8 @@ while len(args) > 0:
                 option)
             print_usage()
         servername = args.pop(0)
-        servername = os.path.join(cpc.util.conf.conf_base.findAndCreateGlobalDir(),servername)
+        servername = os.path.join(
+            cpc.util.conf.conf_base.findAndCreateGlobalDir(), servername)
     elif args[0] == '-d':
         args.pop(0)
         debug = cpc.util.log.MODE_DEBUG
@@ -98,19 +103,25 @@ cmd = args[0]
 try:
     if cmd == "help":
         print_usage()
+    elif cmd == "version":
+        print("Server version:  %s"%__version__)
+        sys.exit(0)
     elif cmd == "start":
         cf = ServerConf(confdir=servername)
-        serverMode = cpc.util.log.MODE_PRODUCTION
+        serverMode = cf.getMode()
+        doFork = True
         if len(args) > 1:
             if args[1] == "-d":
                 serverMode = cpc.util.log.MODE_DEBUG
                 cpc.util.log.initServerLogToStdout(serverMode)
+                doFork = False
             elif args[1] == "-t":
                 serverMode = cpc.util.log.MODE_TRACE
+                doFork = False
                 cpc.util.log.initServerLogToStdout(serverMode)
 
         print "Starting server.."
-        cpc.network.server.forkAndRun(cf, serverMode)
+        cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)
     elif cmd == "setup":
     # the -c option will be ignored here.
@@ -128,12 +139,12 @@ try:
             elif arg == '-host':
                 if(altDir):
                     print "cannot use -host in combination with -servername "
-                    sys.exit(0)
+                    sys.exit(1)
                 hostConfDir = True
             elif arg == '-servername':
                 if(hostConfDir):
                     print "cannot use -servername in combination with -host"
-                    sys.exit(0)
+                    sys.exit(1)
                 altDir = True
                 altHostName = args[i + 1]
                 i += 1
@@ -181,7 +192,23 @@ try:
     elif cmd == "bundle" or cmd == "create-connection-bundle":
         cf = ServerConf(confdir=servername)
         connectionBundle = cmd_line_utils.initiateWorkerSetup()
-        print connectionBundle.toJson()
+        try:
+            if len(args)==3 and args[1]=='-o':
+                filename = args[2]
+            else:
+                filename = "client.cnx"
+            if(os.path.exists(filename)):
+                shutil.copyfile(filename,filename+".bak")
+                print("found a connection bundle backed it up as %s.bak"%filename)
+            file = open(filename,"w")
+            file.write(connectionBundle.toJson())
+            file.close()
+
+            print "wrote connection bundle to %s"%filename
+        except Exception as e:
+            print "could not write the connection bundle please ensure" \
+                  " that you have write access in the current directory"
+
     else:
         print "ERROR: unknown command '%s'" % cmd
 except ClientError as e:
