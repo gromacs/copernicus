@@ -579,12 +579,17 @@ class ActiveInstance(object):
             # also check the subnet input values
             upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
                                                     sourceTag, True)
+            if noNewTasks:
+                # don't set updated flag if it's not needed; leaving it set
+                # will cause unexpected runs later on.
+                self.updated=False
+                return
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
+            # only continue if we're active
+            if self.state != ActiveInstance.active:
+                return
             if self.updated:
-                # only continue if we're active
-                if self.state != ActiveInstance.active or noNewTasks:
-                    return
                 #log.debug("%s: Processing new input for %s of fn %s"%
                 #          (self.getCanonicalName(), self.instance.getName(), 
                 #           self.function.getName()))
@@ -801,8 +806,6 @@ class ActiveInstance(object):
              (self.function.genTasks) and
              (self.updated) ):
             ret=self.inputVal.haveAllRequiredValues()
-            #log.debug("Checking whether instance %s can run: %s"%
-            #          (self.getCanonicalName(), str(ret)))
             return ret
         return False
 

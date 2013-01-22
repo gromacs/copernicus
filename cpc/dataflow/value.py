@@ -464,6 +464,23 @@ class Value(object):
 
     def isUpdated(self):
         return self.updated
+
+    def hasUpdates(self):
+        """Return whether this value or any of its chidren has the updated
+           field set."""
+        if self.updated:
+           return True
+        if isinstance(self.value, list):
+            for val in self.value:
+                if val.hasUpdates():
+                    return True
+        elif isinstance(self.value, dict):
+            for val in self.value.itervalues():
+                if val.hasUpdates():
+                    return True
+        return False
+
+
    
     def writeXML(self, outf, indent=0, fieldName=None):
         """Write out this value as XML"""
