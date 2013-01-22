@@ -45,7 +45,7 @@ def checkTrajectory(filename):
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.PIPE)
     ret=proc.communicate()
-    step=re.compile('^Step\s*([0-9]*)\s*([0-9]*)', re.MULTILINE)
+    step=re.compile('^Step\s*([0-9.]*)\s*([0-9.]*)', re.MULTILINE)
     if proc.returncode != 0:
         sys.stderr.write('pwd= %s\n'%os.getcwd())
         sys.stderr.write('Got: %s\n'%(unicode(ret[0], errors="ignore")))

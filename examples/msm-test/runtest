@@ -39,7 +39,7 @@ projectname=$1
 ./cpcc set msm:in.num_sim 20
 ./cpcc set msm:in.num_microstates 100
 ./cpcc set msm:in.num_macrostates 10
-./cpcc set msm:in.lag_time 1
+./cpcc set msm:in.lag_time 2
 # select these atoms:
 ./cpcc set msm:in.grpname  Protein
 
