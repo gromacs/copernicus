@@ -241,7 +241,6 @@ class SCCommandFinishedForward(ServerCommand):
         if rundata != None:
             runfile = rundata.getRawData()
         #log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
-
         runningCmdList=serverState.getRunningCmdList()
         runningCmdList.handleFinished(cmdID, returncode, cputime, runfile)
         log.info("finished forward command %s"%cmdID)
