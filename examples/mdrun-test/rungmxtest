@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 # check whether all input files will be available:
 if [ ! -e examples/mdrun-test/conf.gro ]; then
