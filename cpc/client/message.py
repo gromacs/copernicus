@@ -494,7 +494,17 @@ class ClientMessage(ClientBase):
         files = [FileInput('upload','project.xml',open(file,'r'))]  
         response=self.putRequest(ServerRequest.prepareRequest(fields,files)) 
         return response
-           
+
+    #list modules available on the server
+    def listModules(self):
+        cmdString = "list-modules"
+        fields  = []
+        input = Input('cmd',cmdString)
+        fields.append(input)
+        fields.append(Input('version', "1"))
+        msg = ServerRequest.prepareRequest(fields,[])
+        return self.postRequest(msg)
+
     def projectImportRequest(self, project, module):
         """Import a module in a network"""
         cmdstring="project-import"

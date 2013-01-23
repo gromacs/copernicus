@@ -568,6 +568,12 @@ class CmdLine(object):
         
         str+="}"    
         return str
-       
-       
-        
+
+    @staticmethod
+    def listModules(message):
+        co = StringIO()
+        co.write("Available modules:\n")
+        for module in message['message']:
+            co.write("%s\n"%module)
+
+        return co.getvalue()

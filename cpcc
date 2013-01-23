@@ -64,6 +64,7 @@ def print_usage():
     print "       cpcc log               instance_name"
     print 
     print "Project manipulation commands."
+    print "       cpcc list-modules"
     print "       cpcc import            modulename"
     print "       cpcc instance          function_name instance_name"
     print "       cpcc activate          [item]"
@@ -422,6 +423,11 @@ try:
         project, pargs = getProjectArgs(args)
         clnt=ClientMessage()
         ProcessedResponse(clnt.projectRollbackRequest(project)).pprint()
+    elif cmd == "list-modules":
+        clnt=ClientMessage()
+        resp = clnt.listRequest("modules")
+        renderMethod = CmdLine.listModules
+        ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "import":
         project, pargs = getProjectArgs(args)
         module=getArg(pargs, 1, "name of module to import")

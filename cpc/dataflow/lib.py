@@ -26,11 +26,12 @@ except ImportError:
     from cpc.util.ordered_dict import OrderedDict
 
 
-import cpc.util
 import apperror
 import description
 import keywords
 import vtype
+import os
+from cpc.util.conf.server_conf import ServerConf
 
 
 log=logging.getLogger('cpc.dataflow.lib')
@@ -209,3 +210,18 @@ class ImportLibrary(description.Describable):
             outf.write('\n')
         #outf.write('%s</cpc>\n'%indstr)
 
+def getModulesList():
+    """
+    Returns a list of modules available on the server
+    """
+    ret = []
+    for libDir in ServerConf().getImportPaths():
+        if not os.path.exists(libDir):
+            continue
+        subdirs = os.listdir(libDir)
+        for dir in subdirs:
+            if not os.path.isdir(os.path.join(libDir, dir)):
+                continue
+            if os.path.isfile(os.path.join(libDir, dir, '_import.xml')):
+                ret.append(dir)
+    return ret

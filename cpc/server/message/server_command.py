@@ -38,6 +38,7 @@ from cpc.network.cache import Cache
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
 from cpc.server.state.user_handler import UserLevel, UserHandler, UserError
+from cpc.dataflow.lib import getModulesList
 import cpc.server.message
 from cpc.server.message.server_message import RawServerMessage
 from cpc.util.version import __version__
@@ -212,6 +213,8 @@ class SCListServerItems(ServerCommand):
             retstr = heartbeats
         elif toList == "users":
             retstr = UserHandler().getUsersAsList()
+        elif toList == "modules":
+            retstr = getModulesList()
         else:
             raise ServerCommandError("Unknown item to list: '%s'"%toList)
         response.add(retstr)
