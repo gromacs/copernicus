@@ -86,6 +86,9 @@ scSecureList=ServerCommandList()
 
 #commands that don't require login
 scSecureList.add(server_command.SCLogin(), UserLevel.ANONYMOUS)
+scSecureList.add(server_command.ScAddNodeRequest(), UserLevel.ANONYMOUS)
+scSecureList.add(server_command.ScAddNodeAccepted(), UserLevel.ANONYMOUS)
+
 
 #secure commands that require login
 scSecureList.add(server_command.SCAddUser(), UserLevel.SUPERUSER)
@@ -112,7 +115,6 @@ scSecureList.add(workercmd.SCDeadWorkerFetch())
 scSecureList.add(server_command.SCListServerItems())
 scSecureList.add(server_command.SCReadConf())
 scSecureList.add(server_command.ScAddNode())
-scSecureList.add(server_command.ScAddNodeRequest())
 scSecureList.add(server_command.ScListNodes())
 scSecureList.add(server_command.ScListNodeConnectionRequests())
 scSecureList.add(server_command.ScListSentNodeConnectionRequests())

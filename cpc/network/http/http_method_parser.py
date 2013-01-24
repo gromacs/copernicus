@@ -95,6 +95,7 @@ class HttpMethodParser(object):
         contentLength = long(headers['content-length'])
         if headers['content-type'] == 'application/x-www-form-urlencoded' or headers['content-type'] == 'application/x-www-form-urlencoded; charset=UTF-8': #TODO generalize
             msg =  message.read(contentLength)
+            log.log(cpc.util.log.TRACE,'RAW msg is %s'%msg)
             parsedDict = urlparse.parse_qs(msg)  #Note values here are stored in lists, this is so one can handle many inputs with same name, for now we dont want that as our multipart parsing does not support it
             params = dict()
             for k,v in parsedDict.iteritems():

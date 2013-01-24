@@ -40,7 +40,7 @@ class ClientMessage(ClientBase):
         Messages that end users should be able to call should be defined here
     '''
 
-    def __init__(self,host=None,port=None,conf=None):
+    def __init__(self,host=None,port=None,conf=None, use_verified_https=False):
         '''
         @input String host : the hostname
         @input String port : the port to connect to
@@ -49,7 +49,7 @@ class ClientMessage(ClientBase):
         self.host = host
         self.port = port
         self.conf = conf
-        self.use_verified_https = False #the client runs on unverified https
+        self.use_verified_https = use_verified_https #the client runs on unverified https
         if self.conf is None: 
             self.conf = ConnectionBundle()
         if self.host is None:
