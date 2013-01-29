@@ -25,7 +25,7 @@ projectname=$1
 ./cpcc setf msm:in.grompp.top examples/msm-test/topol.top
 ./cpcc setf msm:in.grompp.mdp examples/msm-test/grompp.mdp
 # reference pdb 
-./cpcc setf msm:in.reference  examples/msm-test/reference.pdb
+#./cpcc setf msm:in.reference  examples/msm-test/reference.pdb
 
 # starting configurations
 ./cpcc setf msm:in.confs[+] examples/msm-test/equil0.gro
