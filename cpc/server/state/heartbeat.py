@@ -242,7 +242,6 @@ class RunningCmdList(object):
            runfile
            cmd = the command to remove
            returncode = the return code
-           runfile = a file object containing run results
            runfile = None or a file handle to the tarfile containing run data
            """
         task=None
@@ -256,7 +255,12 @@ class RunningCmdList(object):
         if runfile is not None:
             log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.getDir()))
             cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
-        self._handleFinishedCmd(cmd, returncode, cputime)
+            self._handleFinishedCmd(cmd, returncode, cputime)
+        else:
+            # there was no output. Try again
+            cmd.addCputime(cputime)
+            cmd.running=False
+            self.cmdQueue.add(cmd)
 
     def _handleFinishedCmd(self, cmd, returncode, cputime):
         """Handle the command finishing itself. The command must be removed
@@ -468,14 +472,16 @@ class RunningCmdList(object):
                                               sys.exc_info()[1],
                                               sys.exc_info()[2], file=fo)
                     log.error("Heartbeat exception: %s"%(fo.getvalue()))
-                if not finishedReported:
-                    log.info("Running command %s died: didn't get its data."%
-                             rc.cmd.id)
-                    # just add it back into the queue
-                    self.cmdQueue.add(rc.cmd)
-                else:
-                    log.info("Running command %s died: got its data."%
-                             rc.cmd.id)
+                finally:
+                    if not finishedReported:
+                        log.info(
+                               "Running command %s died: didn't get its data."%
+                               rc.cmd.id)
+                        # just add it back into the queue
+                        self.cmdQueue.add(rc.cmd)
+                    else:
+                        log.info("Running command %s died: got its data."%
+                                 rc.cmd.id)
         return firstExpiry
 
 def heartbeatServerThread(runningCommandList, conf):
