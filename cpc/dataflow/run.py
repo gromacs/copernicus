@@ -667,7 +667,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                 raise IOReaderError("function-input is from the future (%d)"%
                                     self.fileVersion, self)
             self.inp=FunctionRunInput()
-        if name=="function-output":
+        elif name=="function-output":
             # the return top-level tag
             if self.isInput:
                 raise IOReaderError("Misplaced controller-output tag", self)
@@ -746,7 +746,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                     self.out.cancelPrevCommands()
                 else:
                     raise IOReaderError("Can't cancel commands in input", self)
-            if self.cmdReader is not None:
+            if self.cmdReader is None:
                 self.cmdReader=cpc.command.CommandReader()
         elif name == "value":
             if not attrs.has_key('id'):
