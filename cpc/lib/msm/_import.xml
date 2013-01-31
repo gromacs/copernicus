@@ -195,9 +195,10 @@
                       is usually sufficient).</desc> 
             </field>
             <!--  -->
-            <field type="file" id="reference">
+            <field type="file" id="reference" opt="true">
                 <desc>reference pdb file for clustering. This pdb file
                       must contain all (and only) atoms in the 'grpname' group.
+                      (DEPRECATED)
                 </desc>
             </field>
             <!--  -->
@@ -287,6 +288,9 @@
             <field type="file" id="tuned_mdp">
                 <desc>The tuned mdp file.</desc>
             </field>
+            <field type="file" id="reference">
+                <desc>Reference pdb</desc>
+            </field>
         </subnet-inputs>
         <subnet-outputs>
             <field type="grompp_input" id="grompp_inp_gen_vel">
@@ -359,6 +363,30 @@
             </field>
         </outputs>
         <controller log="true" executable="tolh5" />
+    </function>
+
+    <function id="gen_ref_pdb" type="external">
+        <desc>Create a reference PDB.</desc>
+        <inputs>
+            <field type="file" id="tpr">
+                <desc>A valid tpr</desc>
+            </field>
+            <field type="string" id="grpname">
+                <desc>Gromacs group name of atoms of interest</desc>
+            </field>
+            <field type="file" id="ndx" opt="true">
+                <desc>Optional gromacs index file</desc>
+            </field>
+            <field type="file" id="conf">
+                <desc>A configuration</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="reference">
+                <desc>A reference PDB file.</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="gen_ref_pdb" />
     </function>
 
     <function id="trajectory_collect" type="external">

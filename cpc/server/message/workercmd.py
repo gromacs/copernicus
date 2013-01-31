@@ -208,17 +208,41 @@ class SCWorkerReadyForwarded(WorkerReadyBase):
         self.forwarded=True
         ServerCommand.__init__(self, "worker-ready-forward")
 
+class CommandFinishError(cpc.util.CpcError):
+    pass
 
-class SCCommandFinishedForward(ServerCommand):
-    """Handle forwarded finished command. The command output is not sent in 
-       this message"""
-    def __init__(self):
-        ServerCommand.__init__(self, "command-finished-forward")
+class CommandFinishedBase(ServerCommand):
+    """Base class for command finished requests"""
+    def __init__(self, name, forwarded):
+        """name is the message name, forwarded is whether the request is
+           forwarded."""
+        ServerCommand.__init__(self, name)
+        self.forwarded=forwarded
 
-    def run(self, serverState, request, response):
+    def runLocal(self, serverState, request, response):
         #self.lock = threading.Lock()
         cmdID=request.getParam('cmd_id')
-        workerServer=request.getParam('worker_server')
+
+        selfNode=getSelfNode(serverState.conf)
+        selfName = selfNode.getId()
+
+        # get the source server if set. If not set, it means that this server
+        # is the worker server.
+        workerServer=selfName
+        if request.hasParam('worker_server'):
+            workerServer=request.getParam('worker_server')
+
+        # get the destination server if set
+        projServer=selfName
+        if request.hasParam('project_server'):
+            projServer=request.getParam('project_server')
+        else:
+            # for backward compatibility, we assume that we are the project
+            # server if it's forwarded. If not, there's something wrong.
+            if not self.forwarded:
+                raise CommandFinishError(
+                           "no project server set in command finished request.")
+
         #cmd=runningCmdList.getCmd(cmdID)
         returncode=None
         if request.hasParam('return_code'):
@@ -227,97 +251,76 @@ class SCCommandFinishedForward(ServerCommand):
         if request.hasParam('used_cpu_time'):
             cputime=float(request.getParam('used_cpu_time'))
 
-        if ( workerServer is not None and 
-            ( request.hasParam('run_data') and 
-              int(request.getParam('run_data'))!=0 ) ): 
-            #remote asset tracking
-            serverState.getRemoteAssets().addAsset(cmdID, workerServer)
-            
-            #for now, get the command data output immediately
-            rundata = Tracker.getCommandOutputData(cmdID, workerServer)
+        runfile=None
+        if request.haveFile('run_data'):
+            runfile=request.getFile('run_data')
+        elif request.haveFile('rundata'):
+            # backward compatibility
+            runfile=request.getFile('rundata')
+
+        if projServer != selfName:
+            # forward the request using remote assets. Note that the workers
+            # usually don't take this path anyway and forward directly to the
+            # project server. This might change in the futuure.
+            # TODO: some sort of verification  to check whether this was in fact
+            #       the client that we sent the command to
+            serverState.getLocalAssets().addCmdOutputAsset(cmdID,
+                                                           projServer, runfile)
+            #forward CommandFinished-signal to project server
+            msg=ServerMessage(projServer)
+            ret = msg.commandFinishedForwardedRequest(cmdID,
+                                                      workerServer,
+                                                      projServer,
+                                                      returncode,
+                                                      cputime,
+                                                      runfile is not None)
         else:
-            rundata=None
-        runfile = None
-        if rundata != None:
-            runfile = rundata.getRawData()
-        #log.log(cpc.util.log.TRACE,"finished forward command %s"%cmdID)
+            # handle the input locally.
+            # get the remote asset if it exists
+            if ( workerServer is not None and
+                 runfile is None and
+                 ( request.hasParam('run_data') and
+                   int(request.getParam('run_data'))!=0 ) ):
+                #remote asset tracking
+                log.info("Pulling asset from %s"%workerServer)
+                serverState.getRemoteAssets().addAsset(cmdID, workerServer)
+                #for now, get the command data output immediately
+                rundata = Tracker.getCommandOutputData(cmdID, workerServer)
+                if rundata != None:
+                    runfile = rundata.getRawData()
+            # now handle the finished command.
+            runningCmdList=serverState.getRunningCmdList()
+            runningCmdList.handleFinished(cmdID, returncode, cputime, runfile)
 
-        runningCmdList=serverState.getRunningCmdList()
-        runningCmdList.handleFinished(cmdID, returncode, cputime, runfile)
-        log.info("finished forward command %s"%cmdID)
-
-
-class SCCommandFinished(ServerCommand):
-    """Get finished command data."""
+class SCCommandFinishedForward(CommandFinishedBase):
+    """Handle forwarded finished command. The command output is not sent in
+       this message"""
     def __init__(self):
-        ServerCommand.__init__(self, "command-finished")
+        CommandFinishedBase.__init__(self, "command-finished-forward", True)
 
     def run(self, serverState, request, response):
         cmdID=request.getParam('cmd_id')
-        runfile=request.getFile('rundata')
-        projServer=request.getParam('project_server')
-        returncode=None
-        if request.hasParam('return_code'):
-            returncode=int(request.getParam('return_code'))
-        cputime=0
-        if request.hasParam('used_cpu_time'):
-            cputime=float(request.getParam('used_cpu_time'))
-       
-        #the command's workerserver is by definition this server
-        selfNode=getSelfNode(serverState.conf)
-        workerServer = selfNode.getId() #ServerConf().getHostName() 
-        #workerServer = serverState.conf.getHostName()
-        
-        # TODO: some sort of verification  to check whether this was in fact
-        #       the client that we sent the command to
-        serverState.getLocalAssets().addCmdOutputAsset(cmdID, 
-                                                       projServer, runfile)
-        
-        #forward CommandFinished-signal to project server
-        #FIXME if this is current server do not make a connection to self??
-        msg=ServerMessage(projServer)  
-        ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
-                                                  returncode, cputime, True)
+        self.runLocal(serverState, request, response)
+        log.info("finished forward command %s"%cmdID)
+
+class SCCommandFinished(CommandFinishedBase):
+    """Get finished command data."""
+    def __init__(self):
+        CommandFinishedBase.__init__(self, "command-finished", False)
+
+    def run(self, serverState, request, response):
+        cmdID=request.getParam('cmd_id')
+        self.runLocal(serverState, request, response)
         log.info("Finished command %s"%cmdID)
 
-class SCCommandFailed(ServerCommand):
+class SCCommandFailed(CommandFinishedBase):
     """Get notified about a failed run."""
     def __init__(self):
-        ServerCommand.__init__(self, "command-failed")
+        CommandFinishedBase.__init__(self, "command-failed", False)
     
     def run(self, serverState, request, response):
         cmdID=request.getParam('cmd_id')
-        # For now, do a similar thing to WorkerFinished
-        try:
-            runfile=request.getFile('rundata')
-        except cpc.util.CpcError:
-            runfile=None
-        returncode=None
-        if request.hasParam('return_code'):
-            returncode=int(request.getParam('return_code'))
-        cputime=0
-        if request.hasParam('used_cpu_time'):
-            cputime=float(request.getParam('used_cpu_time'))
-        log.error("Failed cmd_id = %s\n"%cmdID)
-        cmdID=request.getParam('cmd_id')
-        projServer=request.getParam('project_server')
-        
-        #the command's workerserver is by definition this server
-        selfNode=getSelfNode(serverState.conf)
-        workerServer = selfNode.getId() #ServerConf().getHostName() 
-        #workerServer = serverState.conf.getHostName()
-   
-        log.debug("runfile= %s, projServer=%s"%(str(runfile), str(projServer)) )
-        if runfile is not None:    
-            # TODO: some sort of verification  to check whether this was in fact
-            #       the client that we sent the command to
-            serverState.getLocalAssets().addCmdOutputAsset(cmdID, 
-                                                           projServer, runfile)
-        #forward CommandFinished-signal to project server
-        msg=ServerMessage(projServer)
-        ret = msg.commandFinishedForwardedRequest(cmdID, workerServer, 
-                                                  returncode, cputime, 
-                                                  (runfile is not None))
+        self.runLocal(serverState, request, response)
         log.info("Run failure reported on %s"%cmdID)
 
 class SCWorkerHeartbeat(ServerCommand):

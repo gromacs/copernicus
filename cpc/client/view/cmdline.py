@@ -476,7 +476,8 @@ class CmdLine(object):
     def serverInfo(message):
         info = message['data']
         co = StringIO()
-        co.write("Server hostname:%s \nVersion:%s"%(info['fqdn'],info['version']))
+        co.write("    Server hostname: %s \n"%info['fqdn'])
+        co.write("    Server version:  %s"%(info['version']))
         return co.getvalue()
     
     @staticmethod   

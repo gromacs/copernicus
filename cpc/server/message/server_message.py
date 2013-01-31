@@ -128,7 +128,8 @@ class ServerMessage(ServerToServerMessage):
         return response
 
 
-    def commandFinishedForwardedRequest(self, cmdID, workerServer, returncode,
+    def commandFinishedForwardedRequest(self, cmdID, workerServer,
+                                        projectServer, returncode,
                                         cputime, haveData):
         """A server-to-sever request doing command-finished. Used in
             forwarding non-local command-finished requests."""
@@ -139,6 +140,7 @@ class ServerMessage(ServerToServerMessage):
         fields.append(Input('cmd_id', cmdID))
         fields.append(Input('version', "1"))
         fields.append(Input('worker_server', workerServer))
+        fields.append(Input('project_server', projectServer))
         if returncode is not None:
             fields.append(Input('return_code', returncode))
         fields.append(Input('used_cpu_time', cputime))

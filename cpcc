@@ -182,6 +182,9 @@ try:
         print_usage()
     elif cmd == "version":
         print("Client version:  %s"%__version__)
+        print("\nConnecting to server for version information:")
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)
     elif cmd == "queue" or cmd=="q":
         clnt=ClientMessage()
         resp = clnt.listRequest("queue")

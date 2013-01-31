@@ -70,15 +70,17 @@ class WorkerMessage(ClientBase):
         cmdstring='command-finished'
         fields = []
         fields.append(Input('cmd', cmdstring))
-        fields.append(Input('version', "1"))
+        fields.append(Input('version', "2"))
         fields.append(Input('cmd_id', cmdID))
         fields.append(Input('project_server', origServer))
         if returncode is not None:
             fields.append(Input('return_code', str(returncode)))
         fields.append(Input('used_cpu_time', str(cputime)))
         jobTarFileobj.seek(0)
-        files = [FileInput('rundata','cmd.tar.gz',jobTarFileobj)]
+        files = [FileInput('run_data','cmd.tar.gz',jobTarFileobj)]
         headers = dict()
+        # NOTE we directly forward to the originating server. We don't have to
+        # because there's active relaying, but for now this simplifies things
         headers['end-node'] = origServer
         log.debug("sending command finished for cmd id %s"%cmdID)
         response=self.putRequest(ServerRequest.prepareRequest(fields, 
