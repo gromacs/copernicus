@@ -220,7 +220,7 @@ class Project(object):
 
 
     def getNamedInstance(self, instname):
-        pathname=keywords.fixID(pathname)
+        pathname=keywords.fixID(instname)
         with self.updateLock:
             itemlist=vtype.parseItemList(pathname)
             item=self.getSubValue(itemlist)
