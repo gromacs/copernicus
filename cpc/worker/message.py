@@ -47,7 +47,7 @@ class WorkerMessage(ClientBase):
         if self.host == None:
             self.host = self.conf.getClientHost()
         if self.port == None:
-            self.port = self.conf.getClientUnverifiedHTTPSPort()
+            self.port = self.conf.getClientVerifiedHTTPSPort()
         
             
         self.privateKey = self.conf.getPrivateKey()
