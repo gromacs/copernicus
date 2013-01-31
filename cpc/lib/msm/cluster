@@ -56,8 +56,18 @@ def cluster(inp, out):
         lagTime=inp.getInput('lag_time')
         if lagTime is not None:
             # and the macro state MSM
-            msmProject.createMacroStates()
-
+            try:
+                msmProject.createMacroStates()
+            except:
+                fo=StringIO()
+                traceback.print_exception(sys.exc_info()[0],
+                                          sys.exc_info()[1],
+                                          sys.exc_info()[2], file=fo)
+                errmsg=("Run error generating macrostates assignment: %s\n"%
+                        (fo.getvalue()))
+                sys.stderr.write(errmsg)
+                sys.stderr.write("This is usually due to undersampling.\n")
+                sys.stderr.write("Not producing any macrostate output.\n")
         # now set the outputs for the new runs:
         i=0
         for fname in msmProject.newRuns:
