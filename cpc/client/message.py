@@ -219,6 +219,18 @@ class ClientMessage(ClientBase):
         response=self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
+    def statusRequest(self, project):
+        """Fetches an aggregated general information about the server and
+           and its projects. The argument project is optional"""
+        cmdstring="status"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        if project is not None:
+            fields.append(Input('project', project))
+        fields.append(Input('version', "1"))
+        response=self.postRequest(ServerRequest.prepareRequest(fields,[]))
+        return response
+
     def readConfRequest(self):
         """Tell the server to re-read its configuration."""
         cmdstring="readconf"

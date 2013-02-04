@@ -52,8 +52,7 @@ import task
 import transaction
 import lib
 import readxml
-import connection
-import run
+from cpc.dataflow.value import ValError
 
 log=logging.getLogger('cpc.dataflow.project')
 

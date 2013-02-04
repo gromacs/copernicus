@@ -72,6 +72,7 @@ scSecureList.add(state.SCTestServer())
 scSecureList.add(state.SCListServerItems())
 scSecureList.add(state.SCReadConf())
 scSecureList.add(state.SCServerInfo())
+scSecureList.add(state.SCStatus())
 # worker workload requests
 scSecureList.add(worker.SCWorkerReady())  
 scSecureList.add(worker.SCWorkerReadyForwarded())  

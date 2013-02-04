@@ -45,6 +45,8 @@ import value
 import active_value
 import function_io
 
+from cpc.dataflow.value import ValError
+
 class ActiveError(apperror.ApplicationError):
     pass
 
@@ -269,6 +271,10 @@ class ActiveInstance(value.ValueBase):
             else:
                 return "ERROR: %s"%self.errmsg
 
+    def getState(self):
+        """ Get the current state as an object """
+        return self.state
+
     def getPropagatedStateStr(self):
         """Get the propagated state associated with this active instance:
            i.e. with any error conditions of sub-instances."""
@@ -364,7 +370,9 @@ class ActiveInstance(value.ValueBase):
         """Get the active instance's absolute base directory."""
         return os.path.join(self.project.basedir, self.baseDir)
 
-
+    def getTasks(self):
+        """ Get the task list """
+        return self.tasks
     def getInputs(self):
         """Get the input value object."""
         return self.inputVal
@@ -1033,7 +1041,7 @@ class ActiveInstance(value.ValueBase):
         ret=[ function_io.inputs, function_io.outputs, 
               function_io.subnetInputs, function_io.subnetOutputs ]
         if self.activeNetwork is not None:
-            ailist=self.activeNetwork.getActiveInstanceList(False, False)
+            ailist=self.subnet.getActiveInstanceList(False, False)
             ret.extend( ailist.keys() )
         return ret
 

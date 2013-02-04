@@ -53,8 +53,11 @@ class CmdLine(object):
         return co.getvalue()
 
     @staticmethod
-    def _listQueue(queueList, co, showFmt):
-        fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
+    def _listQueue(queueList, co, showFmt, custom_fmtstring=None):
+        if custom_fmtstring is not None:
+            fmtstring = custom_fmtstring
+        else:
+            fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
         if showFmt: 
             co.write(fmtstring%('Pty', 'Project', 'Task ID', 'Executable'))
         for cmd in queueList:
@@ -565,6 +568,68 @@ class CmdLine(object):
         
         str+="}"    
         return str
-       
-       
-        
+
+    @staticmethod
+    def status(message):
+        #nodes = message['data']
+        co = StringIO()
+        # network
+        if 'network' in message['data']:
+            network = message['data']['network']
+            co.write("Network:\n"
+                     "   connected to %d other server%s\n"
+                     "   connected to %d local worker%s\n"
+                     "   %d worker%s in total in network\n"
+                     "   %d server%s in total in network\n"%(
+                         network['local_servers'],
+                         "s"[network['local_servers']==1:],
+                         network['local_workers'],
+                         "s"[network['local_workers']==1:],
+                         network['workers'],
+                         "s"[network['workers']==1:],
+                         network['servers'],
+                         "s"[network['servers']==1:]))
+
+        # projects
+        projects = message['data']['projects']
+        if len(projects) == 0:
+            co.write("No projects\n")
+        fmtstring = " %3.3s %-12s %-34.34s %-20.20s\n"
+        num_prjs = len(projects)
+        for prj_str, prj_obj in projects.iteritems():
+            co.write("\nProject %s:\n"%prj_str)
+            # states
+            co.write("   %d function instances, of which\n"%(
+                sum(prj_obj['states'].values())))
+            for state, count in prj_obj['states'].iteritems():
+                co.write("      %d are %s\n"%(count, state))
+
+            # queue
+            if num_prjs > 1: #ony count commands when more than one project
+                if(len(prj_obj['queue']['queue']) > 0):
+                    co.write("   %d command%s in queue\n"%(
+                        len(prj_obj['queue']['queue']),
+                            "s"[len(prj_obj['queue']['queue'])==1:]))
+                else:
+                    co.write("   no commands in queue\n")
+                if(len(prj_obj['queue']['running']) > 0):
+                    co.write("   %d command%s running\n"%(
+                        len(prj_obj['queue']['running']),
+                        "s"[len(prj_obj['queue']['running'])==1:]))
+                else:
+                    co.write("   no commands running\n")
+            else:
+                co.write("   Queued commands:\n")
+                if(len(prj_obj['queue']['queue']) > 0):
+                    CmdLine._listQueue(prj_obj['queue']['queue'], co, True,
+                                        custom_fmtstring=fmtstring)
+                else:
+                    co.write("      none\n")
+                co.write("   Running commands:\n")
+                if(len(prj_obj['queue']['running']) > 0):
+                    CmdLine._listQueue(prj_obj['queue']['running'], co,
+                                    len(prj_obj['queue']['queue']) == 0,
+                                    custom_fmtstring=fmtstring)
+                else:
+                    co.write("      none\n")
+        return co.getvalue()

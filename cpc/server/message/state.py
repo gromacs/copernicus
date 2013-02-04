@@ -30,8 +30,10 @@ from cpc.util.version import __version__
 
 from server_command import ServerCommand
 from server_command import ServerCommandError
-
-
+from cpc.dataflow.vtype import instanceType
+from cpc.network.node import Nodes, getSelfNode
+from cpc.client.message import ClientMessage
+from cpc.network.com.client_response import ProcessedResponse
 log = logging.getLogger('cpc.server.message.state')
 
 class SCStop(ServerCommand):
@@ -130,3 +132,95 @@ class SCReadConf(ServerCommand):
         response.add("Reread configuration.")
         log.info("Reread configuration done")
 
+class SCStatus(ServerCommand):
+    """ Fetches general information about the server, network and projects """
+    def __init__(self):
+        ServerCommand.__init__(self, "status")
+
+    def run(self, serverState, request, response):
+        ret_dict = {}
+
+        # handle project status
+        ret_prj_dict = {}
+        list_project = request.getParam('project')
+        if list_project is not None:
+            # client only want info for this project
+            projects = [list_project]
+        else:
+            projects = serverState.getProjectList().list()
+        for prj_str in projects:
+            ret_prj_dict[prj_str] = dict()
+            queue = {'queue' : [], 'running': []}
+            state_count = {}
+            prj_obj = serverState.getProjectList().get(prj_str)
+            # we iterate over the childred rather than calling _traverseInstance
+            # here to avoid the project itself being counted as an instance
+            for child in prj_obj.getSubValueIterList():
+                self._traverseInstance(prj_obj.getSubValue([child]), state_count,
+                                  queue)
+            ret_prj_dict[prj_str]['states'] = state_count
+            ret_prj_dict[prj_str]['queue']  = queue
+        ret_dict['projects'] = ret_prj_dict
+        if list_project is not None:
+            # client only want info for this project, return with that.
+            response.add("", ret_dict)
+            return
+
+        # handle network
+        topology = self._getTopology(serverState)
+        num_workers = 0
+        num_servers = 0
+        num_local_workers = len(serverState.getWorkerStates())
+        num_local_servers = len(ServerConf().getNodes().nodes)
+        for name, node in topology.nodes.iteritems():
+            num_workers += len(node.workerStates)
+            num_servers += 1
+        ret_dict['network'] = {
+            'workers': num_workers,
+            'servers': num_servers,
+            'local_workers': num_local_workers,
+            'local_servers': num_local_servers
+        }
+
+        response.add("", ret_dict)
+
+    def _handle_instance(self,instance, state_count, queue):
+        """ Parse an instance: check for errors, state etc """
+        if instance.getStateStr() in state_count:
+            state_count[str(instance.getState())] += 1
+        else:
+            state_count[str(instance.getState())] = 1
+        for task in instance.getTasks():
+            for cmd in task.getCommands():
+                if cmd.getRunning():
+                    queue['running'].append(cmd.toJSON())
+                else:
+                    queue['queue'].append(cmd.toJSON())
+
+    def _traverseInstance(self,instance, state_count, queue):
+        """Recursively traverse the instance tree, depth first search"""
+        self._handle_instance(instance, state_count, queue)
+        for child_str in instance.getSubValueIterList():
+            child_obj = instance.getSubValue([child_str])
+            if child_obj is not None:
+                if child_obj.getType() == instanceType:
+                    self._traverseInstance(child_obj,state_count, queue)
+
+    def _getTopology(self, serverState):
+        """ Fetches topology information about the network """
+        # TODO Caching
+        conf = ServerConf()
+        topology = Nodes()
+        thisNode = getSelfNode(conf)
+        thisNode.nodes = conf.getNodes()
+        thisNode.workerStates = serverState.getWorkerStates()
+        topology.addNode(thisNode)
+        for node in thisNode.nodes.nodes.itervalues():
+            if not topology.exists(node.getId()):
+                #connect to correct node
+                clnt = ClientMessage(node.host, node.https_port, conf=conf)
+                #send along the current topology
+                rawresp = clnt.networkTopology(topology)
+                processedResponse = ProcessedResponse(rawresp)
+                topology = processedResponse.getData()
+        return topology
