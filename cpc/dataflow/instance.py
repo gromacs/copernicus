@@ -25,9 +25,6 @@ log=logging.getLogger('cpc.dataflow.instance')
 
 import cpc.util
 import apperror
-import keywords
-import connection
-import function
 import function_io
 
 class InstanceError(apperror.ApplicationError):

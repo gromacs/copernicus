@@ -20,13 +20,11 @@
 
 import logging
 import copy
-import threading
+
 try:
     from collections import OrderedDict
 except ImportError:
     from cpc.util.ordered_dict import OrderedDict
-import string
-
 
 log=logging.getLogger('cpc.dataflow.vtype')
 

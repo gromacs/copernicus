@@ -20,21 +20,15 @@
 
 import logging
 import os
-import sys
-import os.path
+
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-import traceback
 import subprocess
-import xml.sax
-import stat
-
 
 import cpc.util
 import apperror
-import value
 import function
 import run
 import atomic

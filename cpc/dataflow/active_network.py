@@ -23,21 +23,14 @@ log=logging.getLogger('cpc.dataflow.active_network')
 
 import threading
 import os
-import os.path
-
 
 import cpc.util
 import apperror
 import keywords
 import connection
-import instance
 import network
 import active_inst
-import active_conn
-import task
 import vtype
-import run
-import value
 import function_io
 
 class ActiveError(apperror.ApplicationError):

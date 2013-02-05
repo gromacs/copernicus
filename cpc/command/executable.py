@@ -29,7 +29,6 @@ except ImportError:
 
 import cpc.util.plugin
 from cpc.util.conf.server_conf import ServerConf
-import platform
 from version import Version
 import logging
 

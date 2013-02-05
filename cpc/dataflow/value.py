@@ -19,9 +19,7 @@
 
 
 import logging
-import collections
 import os
-import os.path
 import xml.sax
 
 

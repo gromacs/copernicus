@@ -29,7 +29,6 @@ import json
 from cpc.network.com.client_base import ClientBase
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.com.input import Input
-from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.server_conf import ServerConf
 from cpc.network.node import Node

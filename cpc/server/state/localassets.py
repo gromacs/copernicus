@@ -19,7 +19,6 @@
 
 import logging
 import os.path
-import mmap
 
 from cpc.util.conf.server_conf import ServerConf
 from cpc.server.state.asset import Asset

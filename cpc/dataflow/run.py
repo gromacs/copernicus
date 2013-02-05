@@ -20,9 +20,7 @@
 
 import logging
 import os
-import os.path
 import xml.sax
-import stat
 import sys
 try:
     from cStringIO import StringIO
@@ -33,7 +31,6 @@ log=logging.getLogger('cpc.dataflow.run')
 
 import cpc.util
 import apperror
-import keywords
 import value
 import vtype
 import cpc.command

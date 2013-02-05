@@ -28,7 +28,6 @@ from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.util import json_serializer
 from cpc.util.conf.connection_bundle import ConnectionBundle
-from cpc.util.openssl import OpenSSL
 
 from cpc.network.node_connect_request import NodeConnectRequest
 

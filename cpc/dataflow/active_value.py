@@ -19,18 +19,14 @@
 
 
 import logging
-import collections
 import os
 import sys
-import os.path
-import xml.sax
 
 
 log=logging.getLogger('cpc.dataflow.active_value')
 
 
 import cpc.util
-import apperror
 import vtype
 import value
 

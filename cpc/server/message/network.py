@@ -36,7 +36,6 @@ from cpc.util.openssl import OpenSSL
 from cpc.network.cache import Cache
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.broadcast_message import BroadcastMessage
-import cpc.server.message
 from cpc.server.message.server_message import RawServerMessage
 from cpc.network.node_connect_request import NodeConnectRequest
 import json

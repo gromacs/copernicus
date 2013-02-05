@@ -25,17 +25,13 @@ import threading
 import os
 import sys
 import copy
-import os.path
 import xml.sax.saxutils
 
 
 import cpc.util
 import apperror
-import connection
 import keywords
 import function
-import instance
-import network
 import active_network
 import active_conn
 import vtype

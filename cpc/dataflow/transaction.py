@@ -19,16 +19,11 @@
 
 
 import logging
-import os
-import sys
-import os.path
+
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-import traceback
-import subprocess
-import stat
 import threading
 
 import apperror

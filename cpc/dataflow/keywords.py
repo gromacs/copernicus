@@ -18,7 +18,6 @@
 
 
 import string
-import re
 
 import apperror
 

@@ -28,7 +28,6 @@ import cpc.dataflow.project
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.file
 import cpc.util
-from cpc.network.server_response import ServerResponse
 
 log = logging.getLogger('cpc.server.projectlist')
 

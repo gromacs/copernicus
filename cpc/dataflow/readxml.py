@@ -28,8 +28,6 @@ except ImportError:
 
 import logging
 
-import operator
-
 
 log=logging.getLogger('cpc.dataflow.readxml')
 
@@ -37,11 +35,8 @@ import cpc.util
 import apperror
 import keywords
 import description
-import function
 import atomic
-import network
 import network_function
-import function_io
 import instance
 import connection
 import external

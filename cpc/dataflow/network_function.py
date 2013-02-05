@@ -28,9 +28,7 @@ import cpc.util
 import apperror
 import keywords
 import instance
-import connection
 import function
-import function_io
 import network
 
 class NetworkFunctionError(apperror.ApplicationError):

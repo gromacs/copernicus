@@ -21,7 +21,7 @@
 import logging
 import threading
 import os
-import os.path
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -38,14 +38,10 @@ except:
 import cpc.util
 import apperror
 import keywords
-import function_io
 import instance
-import connection
-import network
 import vtype
 import function
 import value
-import active_value
 import active_inst
 import active_network
 import task

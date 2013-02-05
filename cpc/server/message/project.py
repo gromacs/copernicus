@@ -18,11 +18,8 @@
 
 
 import logging
-import json
 import os
-import os.path
 import tarfile
-import tempfile
 from cpc.util.conf.server_conf import ServerConf
 
 try:

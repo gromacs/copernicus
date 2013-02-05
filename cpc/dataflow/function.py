@@ -21,8 +21,6 @@
 #import logging
 
 
-import collections
-
 #log=logging.getLogger('cpc.dataflow.function')
 
 

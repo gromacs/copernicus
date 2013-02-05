@@ -28,7 +28,6 @@ except ImportError:
 
 import cpc.util
 import apperror
-import value
 import function
 import run
 import network_function

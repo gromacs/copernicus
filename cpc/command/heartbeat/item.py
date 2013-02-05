@@ -17,11 +17,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import time
 import logging
 import os
 import xml.sax
-import threading
+
 try:
     from cStringIO import StringIO
 except ImportError:

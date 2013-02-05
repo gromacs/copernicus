@@ -27,9 +27,6 @@ log=logging.getLogger('cpc.dataflow.function')
 import cpc.util
 import apperror
 import keywords
-import instance
-import connection
-import function
 #import value
 
 
