@@ -106,14 +106,14 @@ class ServerMessage(ServerToServerMessage):
     """ Server-to-server messages."""
            
     def workerReadyForwardedRequest(self, workerID, archdata, topology,
-                                    originatingServer, heartbeatInterval):
+                                    originatingServer, heartbeatInterval,
+                                    originatingClient=None):
         cmdstring='worker-ready-forward'
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
-        fields.append(Input('originating-server', originatingServer))
         fields.append(Input('heartbeat-interval', str(heartbeatInterval)))
         topologyInput = Input('topology',
                               # a json structure that needs to be dumped
@@ -122,6 +122,9 @@ class ServerMessage(ServerToServerMessage):
                                          indent=4))
         fields.append(topologyInput)
         headers = dict()
+        headers['originating-server'] = originatingServer
+        if originatingClient is not None:
+            headers['originating-client'] = originatingClient
         response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
                                                               headers))
         return response
