@@ -21,6 +21,7 @@
 import logging
 import os
 import xml.sax
+import xml.sax.saxutils
 import sys
 try:
     from cStringIO import StringIO
@@ -349,6 +350,10 @@ class FunctionRunOutput(object):
         self.newConnections=None
         # whether to cancel all existing commands.
         self.cancelCmds=False
+        # Error message. If None, the run is succesful
+        self.errMsg=None
+        # Warning message.
+        self.warnMsg=None
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
@@ -416,6 +421,16 @@ class FunctionRunOutput(object):
             self.cmds=[]
         self.cmds.append(cmd)
 
+    def setError(self, msg):
+        """Set an error leading to an error state, or
+           clear an error previously set during this run if msg=None. """
+        self.errMsg=msg
+
+    def setWarning(self, msg):
+        """Set a warning message leading to a warning state, or
+           clear a warning previously set during this run if msg=None. """
+        self.warnMsg=msg
+
     def cancelPrevCommands(self):
         """Cancel any previous commands."""
         self.cancelCmds=True
@@ -460,6 +475,17 @@ class FunctionRunOutput(object):
             for cmd in self.cmds:
                 self.cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
+
+        if self.errMsg is not None:
+            outf.write('%s<error msg=%s />\n'%
+                       (iindstr,
+                        xml.sax.saxutils.quoteattr(self.errMsg).
+                        encode('utf-8')))
+        if self.warnMsg is not None:
+            outf.write('%s<warning msg=%s />\n'%
+                       (iindstr,
+                        xml.sax.saxutils.quoteattr(self.warnMsg).
+                        encode('utf-8')))
         outf.write('%s</function-output>\n'%indstr)
 
 class NewInstance(object):
@@ -821,7 +847,15 @@ class IOReader(xml.sax.handler.ContentHandler):
                 tp=vtype.basicTypes[tpname]
                 val=value.interpretLiteral(attrs.getValue('value'), tp)
                 self.out.addConnection(None, attrs.getValue('dst'), val)
-
+        elif name == "error":
+            if not attrs.has_key('msg'):
+                raise IOReaderError("Error has no message", self)
+            self.out.setError(xml.sax.saxutils.unescape(attrs.getValue('msg')))
+        elif name == "warning":
+            if not attrs.has_key('msg'):
+                raise IOReaderError("Warning has no message", self)
+            self.out.setWarning(xml.sax.saxutils.unescape(attrs.
+                                                          getValue('msg')))
     def endElement(self, name):
         if self.valueReader is not None:
             if name == self.valueReaderEndTag:

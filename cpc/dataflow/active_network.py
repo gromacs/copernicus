@@ -118,10 +118,6 @@ class ActiveNetwork(network.Network):
             for ai in affectedInputAIs:
                 ai.handleNewInput(self, None)
 
-    def getBasedir(self):
-        """Get the base directory."""
-        return baseDir
-
     def getParentInstance(self):
         """Get the instance this active network belongs to."""
         return self.inActiveInstance
@@ -258,7 +254,7 @@ class ActiveNetwork(network.Network):
         topNet=topItem.getNet()
         if topNet is None:
             raise ActiveError("Active instance %s has not subnet"%
-                              topInst.getName())
+                              topItem.getName())
         rest=instancePathList[1:]
         return topNet._getContainingNet( rest )
 
@@ -409,12 +405,13 @@ class ActiveNetwork(network.Network):
                 cputime += ai.getCumulativeCputime()
         return cputime
 
-    def findErrorStates(self, retlist):
+    def findErrorStates(self, errlist, warnlist):
         """Find any error states associated with this any of the 
-           sub-instances. Fills retlist with tuples of (ai, errormessage)"""
+           sub-instances. Fill errlist & warnlist with active instances in
+           these states."""
         with self.lock:
             for ai in self.activeInstances.itervalues():
-                ai.findErrorStates(retlist)
+                ai.findErrorStates(errlist, warnlist)
 
     def getNet(self):
         """Get the first network, or None if none exists."""

@@ -122,7 +122,7 @@ class SimpleFunctionFunction(AtomicFunction):
                 fo.setOut( name, run.IntValue(val) ) 
             elif isinstance(val, string):
                 fo.setOut( name, run.StringValue(val) ) 
-        return fo 
+        #return fo
 
 
 class ExtendedFunctionFunction(SimpleFunctionFunction):
@@ -181,7 +181,8 @@ class ExtendedFunctionFunction(SimpleFunctionFunction):
         """run this function, based on a list of input values, and the run 
             directory."""
         #log.debug("Basedir=%s"%(fnInputs.getBaseDir()))
-        return self.pyFunction(fnInputs)
+        self.pyFunction(fnInputs)
+        #return self.pyFunction(fnInputs)
 
 
 

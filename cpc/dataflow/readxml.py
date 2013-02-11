@@ -580,8 +580,12 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             ai.setState(state)
             ai.setSeqNr(seqnr)
             if attrs.has_key('errmsg'):
-                ai.setErrmsg(xml.sax.saxutils.unescape(attrs.
-                                                       getValue('errmsg')))
+                ai.markError(xml.sax.saxutils.unescape(attrs.
+                                                       getValue('errmsg')),
+                             False)
+            if attrs.has_key('warnmsg'):
+                ai.setWarning(xml.sax.saxutils.unescape(attrs.
+                                                        getValue('warnmsg')))
             if attrs.has_key('cputime'):
                 try:
                     ai.setCputime(float(attrs.getValue('cputime')))

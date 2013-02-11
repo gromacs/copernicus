@@ -235,7 +235,7 @@ def tune_fn(inp):
                           cwd=inp.getOutputDir())
     (stdo, stde) = proc.communicate(None)
     if proc.returncode != 0:
-        raise GromacsError("Error running grompp: %s, %s"%
+        fo.setError("Error running grompp: %s, %s"%
                            (stdo, stde))
     rsrc=Resources()
     tune.tune(rsrc, inp.getInput('conf'), 

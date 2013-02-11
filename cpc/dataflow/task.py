@@ -157,15 +157,17 @@ class Task(object):
                                                  self.function.getLib())
                 self.fnInput.setFunctionRunOutput(fnOutput)
                 self.fnInput.cmd=cmd
+                self.fnOutput=fnOutput
                 #self.fnInput.reset()
 
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.acquire()
                     locked=True
                 # now actually run
-                self.ret=self.function.run(self.fnInput)
+                #self.ret=self.function.run(self.fnInput)
+                self.function.run(self.fnInput)
                 # and we're done.
-                if self.ret.cancelCmds:
+                if self.fnOutput.cancelCmds:
                     # cancel all outstanding commands.
                     canceled=self.activeInstance.cancelTasks(self.seqNr)
                 if self.activeInstance.runLock is not None:
@@ -183,17 +185,20 @@ class Task(object):
                         self.activeInstance.addCputime(cputime)
 
                 # handle things that can throw exceptions:
-                haveRetcmds=(self.ret.cmds is not None) and len(self.ret.cmds)>0
-                   
-                if ( (self.ret.hasOutputs() or self.ret.hasSubnetOutputs()) and
+                haveRetcmds=( (self.fnOutput.cmds is not None) and
+                              (len(self.fnOutput.cmds)>0) )
+
+                if ( (self.fnOutput.hasOutputs() or 
+                      self.fnOutput.hasSubnetOutputs()) and
                      ( haveRetcmds or len(self.cmds)>0 ) ):
                     raise TaskError(
                        "Task returned both outputs: %s, %s and commands %s,%s"%
-                       (str(self.ret.outputs), str(self.ret.subnetOutputs), 
-                       str(self.cmds),str(self.ret.cmds)))
+                       (str(self.fnOutput.outputs),
+                        str(self.fnOutput.subnetOutputs),
+                        str(self.cmds),str(self.fnOutput.cmds)))
 
-                if self.ret.cmds is not None: 
-                    for cmd in self.ret.cmds:
+                if self.fnOutput.cmds is not None:
+                    for cmd in self.fnOutput.cmds:
                         cmd.setTask(self)
                         self.cmds.append(cmd)
                     finished=False
@@ -204,7 +209,8 @@ class Task(object):
                 if locked:
                     if self.activeInstance.runLock is not None:
                         self.activeInstance.runLock.release()
-                self.activeInstance.markError(e.__unicode__())
+                self.fnOutput.setError(e.__unicode__())
+                #self.activeInstance.markError(e.__unicode__())
                 return (True, None, canceled)
             except:
                 if locked:
@@ -214,19 +220,22 @@ class Task(object):
                 traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
                                           sys.exc_info()[2], file=fo)
                 errmsg="Run error: %s"%(fo.getvalue())
-                self.activeInstance.markError(errmsg)
+                self.fnOutput.setError(errmsg)
+                #self.activeInstance.markError(errmsg)
                 return (True, None, canceled)
-        return (finished, self.ret.cmds, canceled)
+        return (finished, self.fnOutput.cmds, canceled)
 
     def handleOutput(self):
+        """Called after the run() method returns 'finished=True'."""
         with self.lock:
-            self.ret.run()
+            # run the output as a transaction.
+            self.fnOutput.run()
 
             self.activeInstance.removeTask(self)
 
             # everything went OK; we got results
             log.debug("Ran fn %s, got %s"%(self.function.getName(), 
-                                           str(self.ret.outputs)) )
+                                           str(self.fnOutput.outputs)) )
             # there is nothing more to execute
             if len(self.cmds) == 0:
                 self.fnInput.destroy()

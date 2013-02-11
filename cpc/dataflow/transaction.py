@@ -25,6 +25,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 import threading
+import traceback
 
 import apperror
 import connection
@@ -172,8 +173,14 @@ class Transaction(run.FunctionRunOutput):
         addedInstances=None
         affectedOutputAIs=None
         affectedInputAIs=None
+        # check for errors
+        if (self.errMsg is not None):
+            if self.activeInstance is not None:
+                self.activeInstance.markError(self.errMsg)
+                # and bail out immediately
+                return
         try:
-            log.debug("TRANSACTION STARTING *****************")
+            #log.debug("TRANSACTION STARTING *****************")
             if (self.newConnections is None and self.setValues is None):
                 # In this case, there is only one active instance to lock
                 pass
@@ -249,12 +256,18 @@ class Transaction(run.FunctionRunOutput):
                     self.activeInstance.handleTaskOutput(self, 
                                                          self.seqNr, 
                                                          self.outputs, 
-                                                         self.subnetOutputs)
-                                                         #affectedInputAIs)
+                                                         self.subnetOutputs,
+                                                         self.warnMsg)
             if affectedInputAIs is not None:
                 for ai in affectedInputAIs:
                     #log.debug("affected input AI %s"%ai.getCanonicalName())
                     ai.handleNewInput(self, self.seqNr)
+        except:
+            fo=StringIO()
+            traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
+                                      sys.exc_info()[2], file=fo)
+            errmsg="Transaction error: %s"%(fo.getvalue())
+            self.activeInstance.markError(errmsg)
         finally:
             if locked:
                 if affectedOutputAIs is None:
@@ -269,7 +282,7 @@ class Transaction(run.FunctionRunOutput):
         if addedInstances is not None:
             for inst in addedInstances: 
                 inst.activate()
-        log.debug("TRANSACTION ENDING *****************")
+        #log.debug("TRANSACTION ENDING *****************")
             
 
  

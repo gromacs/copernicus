@@ -25,6 +25,7 @@ class IdentifierError(apperror.ApplicationError):
     def __init__(self, idString):
         self.str="'%s' is not a valid identifier"
 
+# keyword strings belong here.
 
 # the self instance
 Self="self"
@@ -38,6 +39,15 @@ SubOut="sub_out"
 # explicitly named external inputs/outputs
 ExtIn="ext_in"
 ExtOut="ext_out"
+
+
+
+# The message objects
+Msg="msg"
+MsgError="error"
+MsgWarning="warning"
+MsgLog="log"
+
 
 # instance separator
 InstSep=':'

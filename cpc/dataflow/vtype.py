@@ -552,6 +552,7 @@ arrayType   = ArrayType("array", valueType, memberType=valueType)
 dictType    = DictType("dict", valueType, memberType=valueType)
 # other types
 instanceType    = Type("instance", valueType)
+msgType    = Type("msg", valueType)
 
 valueType.builtin=True
 nullType.builtin=True
@@ -562,7 +563,9 @@ stringType.builtin=True
 recordType.builtin=True
 arrayType.builtin=True
 dictType.builtin=True
+
 instanceType.builtin=True
+msgType.builtin=True
 
 # the primitives
 primitives = [ valueType, boolType, intType, floatType, stringType, fileType ]

@@ -250,19 +250,31 @@ class Value(ValueBase):
         elif isinstance(self.value, list):
             for val in self.value:
                 val.destroy()
+        #self.value=None
 
-    def _set(self, value, basetype=None):
+    def _set(self, literalValue, basetype=None):
         """Set a value: a value without subtypes."""
-        self.value=value
+        rmref=self.fileValue
+        self.value=literalValue
         if ( (self.fileList is not None ) and 
-             (value is not None ) and
+             (literalValue is not None ) and
              (basetype is not None) and
              (basetype.isSubtype(vtype.fileType) ) ):
-            if os.path.isabs(value):
-                self.fileValue=self.fileList.getAbsoluteFile(value)
+            if os.path.isabs(literalValue):
+                self.fileValue=self.fileList.getAbsoluteFile(literalValue)
                 self.value=self.fileValue.getName()
             else:
-                self.fileValue=self.fileList.getFile(value)
+                self.fileValue=self.fileList.getFile(literalValue)
+        if rmref is not None:
+            rmref.rmRef()
+
+    def setLiteral(self, literalValue):
+        """Set a value: a value without subtypes."""
+        self._set(self.type.valueFromLiteral(literalValue))
+
+    def setNone(self):
+        """Set a value to None"""
+        self._set(None)
 
     def get(self):
         """Set a literal value: a value without subtypes."""

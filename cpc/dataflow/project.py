@@ -197,7 +197,7 @@ class Project(object):
     def commit(self, outf):
         """Commit a set of changes scheduled with scheduleSet()"""
         with self.transactionStackLock:
-            if len(self.transactionStack) > 0:
+            if len(self.transactionStack) > 1:
                 li=self.transactionStack.pop(-1)
                 li.run(outf)
             else:
@@ -431,7 +431,7 @@ class Project(object):
             nm=""
             if net.inActiveInstance is not None:
                 nm=net.inActiveInstance.getCanonicalName()
-            log.debug("net=%s, instanceName=%s"%(nm, instanceName))
+            #log.debug("net=%s, instanceName=%s"%(nm, instanceName))
             inst=instance.Instance(instanceName, func, functionName)
             net.addInstance(inst)
 

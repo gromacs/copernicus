@@ -223,7 +223,11 @@ class CmdLine(object):
             else:
                 co.write(' }')
         else:
-            co.write("%s"%(str(val)))
+            if isinstance(val, unicode):
+                valstr=val.encode('utf-8')
+            else:
+                valstr=str(val)
+            co.write("%s"%valstr)
 
     @staticmethod
     def getItem(messageStr):
