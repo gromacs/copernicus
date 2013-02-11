@@ -374,6 +374,8 @@ class SCProjectGet(ProjectServerCommand):
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
+            except IOError as e:
+                response.add('Item %s not found'%itemname, status="ERROR")
         log.info("Project get %s: %s"%(prj.getName(), itemname))
 
 
