@@ -38,7 +38,12 @@ log=logging.getLogger('cpc.server.state')
 
 class ServerState:
     """Maintains the server state. Must provide synchronized access 
-       because the server is threaded."""
+       because the server is threaded.
+
+       No threads are to be started in the __init__ method, but rather
+       in the startExecThreads method. This is because the ServerState
+       is initialized before the server forks. The main process would
+       take those threads with it to the grave"""
 
     def __init__(self, conf):
         self.conf=conf
@@ -55,17 +60,19 @@ class ServerState:
         self.sessionHandler=SessionHandler()
         self.workerStates = dict()
         log.debug("Starting state save thread.")
-        self.stateSaveThread=threading.Thread(target=stateSaveLoop,
-                                              args=(self, conf, ))
-        self.stateSaveThread.daemon=True
-        self.stateSaveThread.start()
+        self.stateSaveThread=None
+
 
     def startExecThreads(self):
         """Start the exec threads."""
         self.taskExecThreads=cpc.server.queue.TaskExecThreads(self.conf, 1,
                                                 self.projectlist.getTaskQueue(),
                                                 self.cmdQueue)
-
+        self.stateSaveThread=threading.Thread(target=stateSaveLoop,
+                                              args=(self, self.conf, ))
+        self.stateSaveThread.daemon=True
+        self.stateSaveThread.start()
+        self.runningCmdList.startHeartbeatThread()
     def doQuit(self):
         """set the quit state to true"""
         with self.quitlock:
