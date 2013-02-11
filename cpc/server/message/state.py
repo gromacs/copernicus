@@ -151,14 +151,19 @@ class SCStatus(ServerCommand):
             ret_prj_dict[prj_str] = dict()
             queue = {'queue' : [], 'running': []}
             state_count = {}
+            err_list=[]
+            warn_list=[]
             prj_obj = serverState.getProjectList().get(prj_str)
             # we iterate over the childred rather than calling _traverseInstance
             # here to avoid the project itself being counted as an instance
             for child in prj_obj.getSubValueIterList():
-                self._traverseInstance(prj_obj.getSubValue([child]), state_count,
-                                  queue)
+                self._traverseInstance(prj_obj.getSubValue([child]), 
+                                       state_count, queue, err_list, 
+                                       warn_list)
             ret_prj_dict[prj_str]['states'] = state_count
             ret_prj_dict[prj_str]['queue']  = queue
+            ret_prj_dict[prj_str]['errors'] = err_list
+            ret_prj_dict[prj_str]['warnings'] = warn_list
         ret_dict['projects'] = ret_prj_dict
         if list_project is not None:
             # client only want info for this project, return with that.
@@ -183,12 +188,18 @@ class SCStatus(ServerCommand):
 
         response.add("", ret_dict)
 
-    def _handle_instance(self,instance, state_count, queue):
+    def _handle_instance(self, instance, state_count, queue, 
+                         err_list, warn_list):
         """ Parse an instance: check for errors, state etc """
-        if instance.getStateStr() in state_count:
-            state_count[str(instance.getState())] += 1
+        stateStr=instance.getStateStr()
+        if stateStr in state_count:
+            state_count[stateStr] += 1
         else:
-            state_count[str(instance.getState())] = 1
+            state_count[stateStr] = 1
+        if stateStr == "error":
+            err_list.append(instance.getCanonicalName())
+        elif stateStr == "warning":
+            warn_list.append(instance.getCanonicalName())
         for task in instance.getTasks():
             for cmd in task.getCommands():
                 if cmd.getRunning():
@@ -196,14 +207,16 @@ class SCStatus(ServerCommand):
                 else:
                     queue['queue'].append(cmd.toJSON())
 
-    def _traverseInstance(self,instance, state_count, queue):
+    def _traverseInstance(self, instance, state_count, queue, 
+                          err_list, warn_list):
         """Recursively traverse the instance tree, depth first search"""
-        self._handle_instance(instance, state_count, queue)
+        self._handle_instance(instance, state_count, queue, err_list, warn_list)
         for child_str in instance.getSubValueIterList():
             child_obj = instance.getSubValue([child_str])
             if child_obj is not None:
                 if child_obj.getType() == instanceType:
-                    self._traverseInstance(child_obj,state_count, queue)
+                    self._traverseInstance(child_obj,state_count, queue, 
+                                           err_list, warn_list)
 
     def _getTopology(self, serverState):
         """ Fetches topology information about the network """

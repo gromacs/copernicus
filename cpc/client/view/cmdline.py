@@ -606,10 +606,24 @@ class CmdLine(object):
             co.write("   %d function instances, of which\n"%(
                 sum(prj_obj['states'].values())))
             for state, count in prj_obj['states'].iteritems():
-                co.write("      %d are %s\n"%(count, state))
+                co.write("      %4d in state '%s'\n"%(count, state))
+            if 'errors' in prj_obj and len(prj_obj['errors'])>0:
+                co.write("   There are runtime errors in this project; ")
+                co.write("fetch error messages with:\n")
+                # print 5 errors at most
+                for i in range(min(len(prj_obj['errors']), 5)):
+                    inst=prj_obj['errors'][i]
+                    co.write("        %s get %s.msg.error\n"%('cpcc', inst))
+            if 'warnings' in prj_obj and len(prj_obj['warnings'])>0:
+                co.write("   There are warnings in this project; ")
+                co.write("fetch messages with:\n")
+                # print 5 errors at most
+                for i in range(min(len(prj_obj['warnings']), 5)):
+                    inst=prj_obj['warnings'][i]
+                    co.write("        %s get %s.msg.warning\n"%('cpcc', inst))
 
             # queue
-            if num_prjs > 1: #ony count commands when more than one project
+            if True: 
                 if(len(prj_obj['queue']['queue']) > 0):
                     co.write("   %d command%s in queue\n"%(
                         len(prj_obj['queue']['queue']),
