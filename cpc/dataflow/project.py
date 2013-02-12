@@ -165,6 +165,21 @@ class Project(object):
             item=self.getSubValue(itemlist)
             return item 
 
+
+    def _tryImmediateTransaction(self, outf):
+        """Perform an immediate transaction, if the transaction stack has
+           length 1 (i.e. the last operation was on the topmost level)..
+
+           NOTE: assumes a locked tranactionStackLock"""
+        if len(self.transactionStack) == 1:
+            self.transactionStack[0].run(outf)
+            # now replace the transaction with a fresh one.
+            self.transactionStack[0] = transaction.Transaction(self, None,
+                                                 self.network,
+                                                 self.topLevelImport)
+            return True
+        return False
+
     def scheduleSet(self, itemname, literal, outf, sourceType=None,
                     printName=None):
         """Add an instance of a set in the transaction schedule."""
@@ -172,7 +187,8 @@ class Project(object):
         with self.transactionStackLock:
             sv=self.transactionStack[-1].addSetValue(itemname, literal, 
                                                      sourceType, printName)
-        sv.describe(outf)
+            if not self._tryImmediateTransaction(outf):
+                sv.describe(outf)
 
 
     def scheduleConnect(self, src, dst, outf):
@@ -181,7 +197,8 @@ class Project(object):
         dst=keywords.fixID(dst)
         with self.transactionStackLock:
             ac=self.transactionStack[-1].addConnection(src, dst)
-        ac.describe(outf)
+            if not self._tryImmediateTransaction(outf):
+                ac.describe(outf)
 
 
 
