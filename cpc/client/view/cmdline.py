@@ -93,13 +93,6 @@ class CmdLine(object):
                 CmdLine._listQueue(queueList['running'], co, showFmt)
         return co.getvalue()
 
-    #@staticmethod
-    #def listRunningQueue(messageStr):
-    #    co=StringIO()
-    #    co.write("Running\n")
-    #    CmdLine._listQueue(messageStr, co, False)
-    #    return co.getvalue()
-
     @staticmethod
     def listRunning(messageStr):
         queueList = messageStr['message']
@@ -601,7 +594,14 @@ class CmdLine(object):
         fmtstring = " %3.3s %-12s %-34.34s %-20.20s\n"
         num_prjs = len(projects)
         for prj_str, prj_obj in projects.iteritems():
-            co.write("\nProject %s:\n"%prj_str)
+            current=False
+            if 'default' in prj_obj and prj_obj['default']:
+                co.write("\nProject %s (current project):\n"%prj_str)
+                current=True
+                projectGetStr=""
+            else:
+                co.write("\nProject %s:\n"%prj_str)
+                projectGetStr="-p %s "%prj_str
             # states
             co.write("   %d function instances, of which\n"%(
                 sum(prj_obj['states'].values())))
@@ -613,15 +613,18 @@ class CmdLine(object):
                 # print 5 errors at most
                 for i in range(min(len(prj_obj['errors']), 5)):
                     inst=prj_obj['errors'][i]
-                    co.write("        %s get %s.msg.error\n"%('cpcc', inst))
+                    co.write("        %s get %s%s.msg.error\n"%('cpcc', 
+                                                                projectGetStr,
+                                                                inst))
             if 'warnings' in prj_obj and len(prj_obj['warnings'])>0:
                 co.write("   There are warnings in this project; ")
                 co.write("fetch messages with:\n")
                 # print 5 errors at most
                 for i in range(min(len(prj_obj['warnings']), 5)):
                     inst=prj_obj['warnings'][i]
-                    co.write("        %s get %s.msg.warning\n"%('cpcc', inst))
-
+                    co.write("        %s get %s%s.msg.warning\n"%('cpcc', 
+                                                                  projectGetStr,
+                                                                  inst))
             # queue
             if True: 
                 if(len(prj_obj['queue']['queue']) > 0):

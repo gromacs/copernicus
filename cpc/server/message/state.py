@@ -164,6 +164,8 @@ class SCStatus(ServerCommand):
             ret_prj_dict[prj_str]['queue']  = queue
             ret_prj_dict[prj_str]['errors'] = err_list
             ret_prj_dict[prj_str]['warnings'] = warn_list
+            if prj_str == request.session.get('default_project_name', None):
+                ret_prj_dict[prj_str]['default']=True
         ret_dict['projects'] = ret_prj_dict
         if list_project is not None:
             # client only want info for this project, return with that.
