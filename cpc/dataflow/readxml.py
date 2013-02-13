@@ -452,6 +452,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             # get the value from the type object
             val=active_value.ActiveValue(value.interpretLiteral(valueString,tp),
                                          tp)
+            val.setUpdated(True)
             #log.debug("value is %s, %s"%(str(val), valueString))
             # get the destination
             dstInstName,dstDir,dstItemName=(connection.splitIOName(dst, 

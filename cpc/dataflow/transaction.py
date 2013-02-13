@@ -26,6 +26,7 @@ except ImportError:
     from StringIO import StringIO
 import threading
 import traceback
+import sys
 
 import apperror
 import connection

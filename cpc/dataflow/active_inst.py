@@ -587,13 +587,14 @@ class ActiveInstance(value.ValueBase):
             # also check the subnet input values
             upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
                                                     sourceTag, True)
-            if noNewTasks:
-                # don't set updated flag if it's not needed; leaving it set
-                # will cause unexpected runs later on.
-                # self.updated=False
-                return
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
+            if noNewTasks:
+                # don't set updated flag if it's not needed; noNewTasks
+                # is true when reading in current state, and setting updated
+                # to True will cause unexpected runs later on.
+                self.updated=False
+                return
             # only continue if we're active
             if self.state != ActiveInstance.active:
                 return
@@ -616,6 +617,7 @@ class ActiveInstance(value.ValueBase):
         with self.inputLock:
             self.outputVal.setUpdated(False)
             self.subnetOutputVal.setUpdated(False)
+            self.updated=False
 
     #def resetUpdated(self):
     #    """Reset the updated tag."""
@@ -710,8 +712,7 @@ class ActiveInstance(value.ValueBase):
             if changed:
                 for task in self.tasks:
                     task.activateCommands()
-                if self._canRun():
-                    self._genTask()
+                self._reactivate()
         return changed
 
 
@@ -743,9 +744,14 @@ class ActiveInstance(value.ValueBase):
                         task.activateCommands()
                     changed=True
             if changed:
-                if self._canRun():
-                    self._genTask()
+                self._reactivate()
 
+    def _reactivate(self):
+        """Check for new inputs, and run if there are any."""
+        if self.inputVal.hasUpdates() or self.subnetInputVal.hasUpdates():
+            self.updated=True
+        if self._canRun():
+            self._genTask()
           
     def cancelTasks(self, seqNr):
         """Cancel all tasks (and commands) with sequence number before 
