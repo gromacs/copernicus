@@ -250,7 +250,6 @@ class Value(ValueBase):
         elif isinstance(self.value, list):
             for val in self.value:
                 val.destroy()
-        #self.value=None
 
     def _set(self, literalValue, basetype=None):
         """Set a value: a value without subtypes."""

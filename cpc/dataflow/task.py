@@ -239,6 +239,7 @@ class Task(object):
             # there is nothing more to execute
             if len(self.cmds) == 0:
                 self.fnInput.destroy()
+                self.fnInput=None
 
     def getID(self):
         return "%s.%s"%(self.activeInstance.getCanonicalName(), self.seqNr)
