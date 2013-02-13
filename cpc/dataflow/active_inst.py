@@ -590,7 +590,7 @@ class ActiveInstance(value.ValueBase):
             if noNewTasks:
                 # don't set updated flag if it's not needed; leaving it set
                 # will cause unexpected runs later on.
-                self.updated=False
+                # self.updated=False
                 return
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
