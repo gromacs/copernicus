@@ -24,8 +24,6 @@
 # We can assume that the current directory is the right directory. 
 
 import sys
-import os
-import subprocess
 
 # check the number of arguments
 if len(sys.argv)<3:

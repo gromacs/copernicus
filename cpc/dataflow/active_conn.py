@@ -22,13 +22,9 @@ import logging
 
 
 log=logging.getLogger('cpc.dataflow.active_conn')
-import threading
-import copy
-
 
 import cpc.util
 import apperror
-import value
 import function_io
 import active_value
 

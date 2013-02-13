@@ -208,8 +208,12 @@ class RunningCmdList(object):
         self.runningCommands=dict()
         self.workerData=workerData
         self.lock=threading.Lock()
+        self.thread=None
+
+
+    def startHeartbeatThread(self):
         self.thread=threading.Thread(target=heartbeatServerThread,
-                                     args=(self, conf,))
+                                     args=(self, self.conf,))
         # this should be a thread that never stops but doesn't hold the server
         # up once other threads stop
         self.thread.daemon=True
@@ -276,13 +280,15 @@ class RunningCmdList(object):
         #    cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
         # run the task
         if task is not None:
-            (newcmds, cancelcmds) = task.run(cmd)
+            (finished, newcmds, cancelcmds) = task.run(cmd)
         if cancelcmds is not None:
             for ccmd in cancelcmds:
                 self.cmdQueue.remove(ccmd)
         if newcmds is not None:
             for ncmd in newcmds:
                 self.cmdQueue.add(ncmd)
+        if finished:
+            task.handleOutput()
 
     def getCmdList(self):
         """Return a list with all running commands as command objects."""
@@ -489,13 +495,22 @@ def heartbeatServerThread(runningCommandList, conf):
        runningCommandList = the heartbeat list associated with this loop."""
     log.info("Starting heartbeat monitor thread.")
     while True:
-        # so we can reread the ocnfiguration
-        interval = conf.getHeartbeatTime()
-        sleepTime = runningCommandList.checkHeartbeatTimes(interval)
-        # The sleep time has a minimum of runningCommandList.rateLimitTime
-        # seconds (this serves as a rate limiter)
-        if sleepTime < runningCommandList.rateLimitTime:
-            sleepTime=runningCommandList.rateLimitTime
-        log.debug("Heartbeat thread sleeping for %d seconds."%sleepTime)
-        time.sleep(sleepTime)
+        try:
+            # so we can reread the ocnfiguration
+            interval = conf.getHeartbeatTime()
+            sleepTime = runningCommandList.checkHeartbeatTimes(interval)
+            # The sleep time has a minimum of runningCommandList.rateLimitTime
+            # seconds (this serves as a rate limiter)
+            if sleepTime < runningCommandList.rateLimitTime:
+                sleepTime=runningCommandList.rateLimitTime
+            log.debug("Heartbeat thread sleeping for %d seconds."%sleepTime)
+            time.sleep(sleepTime)
+        # we catch (almost) everything here as we want this thread to continue
+        except Exception as e:
+            fo=StringIO()
+            traceback.print_exception(sys.exc_info()[0],
+                                      sys.exc_info()[1],
+                                      sys.exc_info()[2], file=fo)
+            errmsg="Exception in heartbeat thread: %s"%(fo.getvalue())
+            log.error(errmsg)
 

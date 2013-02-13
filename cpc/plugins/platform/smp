@@ -23,8 +23,6 @@
 # A platform plugin for SMP. Directly runs jobs.
 
 import sys
-import os
-import subprocess
 import multiprocessing
 
 # check the number of arguments

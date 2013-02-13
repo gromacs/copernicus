@@ -18,11 +18,8 @@
 
 
 import logging
-import json
 import os
-import os.path
 import tarfile
-import tempfile
 from cpc.util.conf.server_conf import ServerConf
 
 try:
@@ -213,6 +210,20 @@ class SCProjectList(ProjectServerCommand):
         response.add(lst)
         log.info("Project list on %s: %s"%(prj.getName(), item))
 
+class SCProjectDebug(ProjectServerCommand):
+    """Debug named items in a project - implementation dependent."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-debug")
+    def run(self, serverState, request, response):
+        prj=self.getProject(request, serverState)
+        if request.hasParam('item'):
+            item=request.getParam('item')
+        else:
+            item=""
+        resp=prj.getDebugInfo(item)
+        log.info("Debug request %s, response is '%s'"%(item, resp))
+        response.add(resp)
+
 
 class SCProjectInfo(ProjectServerCommand):
     """Get project item descriptions."""
@@ -327,6 +338,9 @@ class SCProjectGet(ProjectServerCommand):
     def run(self, serverState, request, response):
         prj=self.getProject(request, serverState)
         itemname=request.getParam('item')
+        if itemname is None:
+            itemname=""
+        itemname=itemname.strip()
         if not request.hasParam("getFile"):
             ret=dict()
             ret["name"]=itemname
@@ -336,8 +350,10 @@ class SCProjectGet(ProjectServerCommand):
                     ret["value"]=val.getDesc()
                 else:
                     ret["value"]="not found"    
-            except cpc.dataflow.ApplicationError as e:
-                ret["value"]="not found"    
+            #except cpc.dataflow.ApplicationError as e:
+            #    ret["value"]="not found"    
+            finally:
+                pass
             response.add(ret)
         else:
             try:
@@ -357,6 +373,8 @@ class SCProjectGet(ProjectServerCommand):
                 else:
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
+                response.add('Item %s not found'%itemname, status="ERROR")
+            except IOError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
         log.info("Project get %s: %s"%(prj.getName(), itemname))
 

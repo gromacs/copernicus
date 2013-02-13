@@ -3,9 +3,7 @@ Created on Aug 16, 2011
 
 @author: iman
 '''
-from cpc.network.server_to_server_message import ServerToServerMessage
 
-from cpc.util.conf.server_conf import ServerConf
 #A messaging system intended to be used for communication between copernicus servers
 #class Message(object):
 #    

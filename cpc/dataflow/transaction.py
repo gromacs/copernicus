@@ -19,30 +19,274 @@
 
 
 import logging
-import os
-import sys
-import os.path
+
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-import traceback
-import subprocess
-import stat
 import threading
+import traceback
+import sys
 
 import apperror
 import connection
 import value
+import run
+import instance
+import active_value
+import vtype
 
 
 log=logging.getLogger('cpc.dataflow.transaction')
 
-class TransactionError(apperror.ApplicationError):
+class SetError(apperror.ApplicationError):
     pass
 
+class SetValue(object):
+    def __init__(self, project, itemName, 
+                 #activeInstance, direction, ioItemList, 
+                 literal, sourceType, printName):
+        """Object to hold an set value for an arbitrary active instance."""
+        self.itemName=itemName
+        self.project=project
+        #instanceName,direction,ioItemList=connection.splitIOName(itemName,
+        #                                                         None)
+        #instance=self.activeNetwork.getNamedActiveInstance(instanceName)
+        self.itemList=vtype.parseItemList(itemName)
+        item=project.getClosestSubValue(self.itemList)
+        if not isinstance(item, active_value.ActiveValue):
+            raise SetError("Value of '%s' cannot be set"%itemname)
+        #self.activeInstance=item.owner
+        self.closestVal=item
+        #self.activeInstance=activeInstance
+        #self.direction=direction
+        #self.ioItemList=ioItemList
+        self.literal=literal
+        self.sourceType=sourceType
+        if printName is not None:
+            self.printName=printName
+        else:
+            self.printName=literal
+        #with self.activeInstance.lock:
+        #    self.closestVal=self.activeInstance.findClosestNamedInput(
+        #                                                self.direction,
+        #                                                self.ioItemList)
+        #if self.closestVal is None:
+        #    raise SetError(itemName)
 
 
+    def findAffected(self, affectedOutputAIs, affectedInputAIs):
+        """Find all affected input and output active instances."""
+        activeInstance=self.closestVal.owner
+        activeInstance.getValueAffectedAIs(self.closestVal, affectedInputAIs)
+
+    def set(self, project, sourceTag):
+        activeInstance=self.closestVal.owner
+        with activeInstance.lock:
+            dstVal=self.project.getCreateSubValue(self.itemList)
+            #dstVal=activeInstance.findCreateNamedInput(self.direction,
+            #                                                self.ioItemList,
+            #                                                sourceTag)
+            # now we can extract the type.
+            tp=dstVal.getType()
+            if not isinstance(self.literal, value.Value):
+                newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
+                                              project.fileList)
+            else:
+                newVal=self.literal
+                if not (tp.isSubtype(rval.getType()) or
+                        rval.getType().isSubtype(tp) ):
+                    raise SetError(
+                              "Incompatible types in assignment: '%s' to '%s'"%
+                              (rval.getType().getName(), tp.getName()))
+        activeInstance.stageNamedInput(dstVal, newVal, sourceTag)
+        # this should be done in the transaction:
+        #dstVal.notifyOwner(sourceTag, None)
+        #dstVal.notifyDestinations(sourceTag, None)
+
+    def describe(self, outf):
+        """Print a description of this setValue to outf"""
+        outf.write('Set %s to %s\n'%(self.itemName, self.printName))
+
+class Transaction(run.FunctionRunOutput):
+    """Holds a set of new output data + new connections + new instances to
+       add in a single transaction. All updates must happen through this
+       object"""
+    def __init__(self, project, task, activeNetwork, importLib):
+        """Initialize. Task may be None if outputs/subnetOutputs/cmds are 
+           empty.
+
+           project = the project this transaction belongs to
+           task = the task this transaction belongs to (may be None)
+           activeNetwork = the active network this transaction manipulates
+           importLib = the import library to use."""
+        run.FunctionRunOutput.__init__(self)
+        self.activeNetwork=activeNetwork
+        self.task=task
+        if task is not None:
+            self.activeInstance=task.activeInstance
+            self.seqNr=task.seqNr
+        else:
+            self.activeInstance=None
+            self.seqNr=None
+        self.project=project
+        #self.imports=project.imports
+        self.lib=importLib
+        self.setValues=None # a list of new values to set 
+
+    def addSetValue(self, itemName, literal, sourceType, printName):
+        sv=SetValue(self.project, itemName, 
+                    #instance, direction, ioItemList,
+                    literal, sourceType, printName)
+        if not isinstance(self.setValues, list):
+            self.setValues=[sv]
+        else:
+            self.setValues.append(sv)
+        return sv
+
+    def _makeConn(self, newConnection):
+        """Make a connection object for a new connection."""
+        if newConnection.srcStr is not None:
+            log.debug("Making new connection %s -> %s"%
+                      (newConnection.srcStr, newConnection.dstStr))
+            conn=connection.makeConnectionFromDesc(self.activeNetwork,
+                                                   newConnection.srcStr,
+                                                   newConnection.dstStr)
+        else:
+            log.debug("Making assignment %s -> %s"%
+                      (newConnection.val.value, 
+                       newConnection.dstStr))
+            conn=connection.makeInitialValueFromDesc(self.activeNetwork,
+                                                     newConnection.dstStr,
+                                                     newConnection.val)
+        newConnection.conn=conn
+
+    def check(self, outf=None):
+        """Check the transaction items for any errors."""
+        # TODO: implement!!
+        pass
+
+    def run(self, outf=None):
+        """Do a transaction."""
+        # we start out with 'none' objects, and initialize them to sets if
+        # there's a need for it.
+        locked=False
+        addedInstances=None
+        affectedOutputAIs=None
+        affectedInputAIs=None
+        # check for errors
+        if (self.errMsg is not None):
+            if self.activeInstance is not None:
+                self.activeInstance.markError(self.errMsg)
+                # and bail out immediately
+                return
+        try:
+            #log.debug("TRANSACTION STARTING *****************")
+            if (self.newConnections is None and self.setValues is None):
+                # In this case, there is only one active instance to lock
+                pass
+            else:
+                # there are multiple updates, so we must lock a network lock
+                self.project.updateLock.acquire()
+                # these are the active instances for which output locks are set
+                affectedOutputAIs=set()
+                # these are active instances for which handleNewInput() is 
+                # called
+                affectedInputAIs=set()
+                if self.activeInstance is not None: 
+                    affectedOutputAIs.add(self.activeInstance)
+            # now make the new instances
+            if self.newInstances is not None:
+                addedInstances=[]
+                for newInstance in self.newInstances:
+                    log.debug("Making new instance %s of fn %s"%
+                              (newInstance.name, newInstance.functionName))
+                    fn=self.project.imports.getFunctionByFullName(
+                                                    newInstance.functionName,
+                                                    self.lib)
+                    inst=instance.Instance(newInstance.name, fn, 
+                                           fn.getFullName())
+                    # for later activation
+                    addedInstances.append(self.activeNetwork.addInstance(inst))
+            # make the new connections
+            if self.newConnections is not None:
+                # Make the connections
+               for newConnection in self.newConnections:
+                    if newConnection.conn is None:
+                        self._makeConn(newConnection)
+                    self.activeNetwork.findConnectionSrcDest(
+                                                        newConnection.conn, 
+                                                        affectedOutputAIs,
+                                                        affectedInputAIs)
+            if self.setValues is not None:
+                for val in self.setValues:
+                    log.debug("Setting new value %s"%(val.itemName))
+                    val.findAffected(affectedOutputAIs, affectedInputAIs)
+            if affectedOutputAIs is None:
+                if self.activeInstance is not None: 
+                    self.activeInstance.outputLock.acquire()
+                    locked=True
+            else:
+                for ai in affectedOutputAIs:
+                    ai.outputLock.acquire()
+                locked=True
+                log.debug("Locked.")
+            # now do the transaction
+            # new values
+            if self.setValues is not None:
+                for val in self.setValues:
+                    if outf is not None:
+                        val.describe(outf)
+                    val.set(self.project, self)
+            # connections
+            if self.newConnections is not None:
+                for newConnection in self.newConnections:
+                    if outf is not None:
+                        newConnection.describe(outf)
+                    self.activeNetwork.addConnection(newConnection.conn, self)
+            # call the function meant specifically for this 
+            if self.activeInstance is not None:
+                if outf is not None:
+                    if self.outputs is not None:
+                        for output in self.outputs:
+                            output.describe(outf)
+                    if self.subnetOutputs is not None:
+                        for output in self.subnetOutputs:
+                            output.describe(outf)
+                if len(self.outputs) > 0 or len(self.subnetOutputs)>0:
+                    self.activeInstance.handleTaskOutput(self, 
+                                                         self.seqNr, 
+                                                         self.outputs, 
+                                                         self.subnetOutputs,
+                                                         self.warnMsg)
+            if affectedInputAIs is not None:
+                for ai in affectedInputAIs:
+                    #log.debug("affected input AI %s"%ai.getCanonicalName())
+                    ai.handleNewInput(self, self.seqNr)
+        except:
+            fo=StringIO()
+            traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
+                                      sys.exc_info()[2], file=fo)
+            errmsg="Transaction error: %s"%(fo.getvalue())
+            self.activeInstance.markError(errmsg)
+        finally:
+            if locked:
+                if affectedOutputAIs is None:
+                    self.activeInstance.outputLock.release()
+                else:
+                    for ai in affectedOutputAIs:
+                        ai.outputLock.release()
+            #if affectedOutputAIs is not None:
+            if not (self.newConnections is None and self.setValues is None):
+                self.project.updateLock.release() 
+        log.debug("Finished transaction locks")
+        if addedInstances is not None:
+            for inst in addedInstances: 
+                inst.activate()
+        #log.debug("TRANSACTION ENDING *****************")
+            
+
+ 
 class TransactionList(object):
     """A list of transaction items (TransactionItem objects)"""
     def __init__(self, networkLock, autoCommit):
@@ -95,152 +339,4 @@ class TransactionList(object):
                             ai.outputLock.release()
                     self.lst=[]
 
-class TransactionItem(object):
-    """Common base class for transaction item types. 
-      
-       The actual functions are getAffected() and run(). getAffected should
-       return the affected input and output active instance. These are then
-       locked, and run() is called to perform the changes. 
-
-       Between getAffected() and run(), the global project.networkLock is 
-       locked.
-       """
-    def getAffected(self, project, affectedDestACPs, affectedOutputAIs):
-        """Get the affected items of this transaction
-
-           This is the first item to run. The affected ais are locked
-           after this.
-
-           project = the project this item belongs to
-           affectedInputAIs = a set of active instances that will be 
-                              updated with affected inputs generated by 
-                              this change.
-           affectedOutputAIs = a set of active instances that will be 
-                               updated with active instances with affected 
-                               inputs generated by this change.  """
-        pass
-    def run(self, project, sourceTag, outf=None):
-        """Run the transaction item. After this run is finished, 
-           handleNewInput() will be called on all affectedInputAIs.
-           
-           project = the project this item belongs to
-           sourceTag = the source tag.
-           outf = an output file to write a description of the commited change
-                  to (or None)"""
-        pass
-
-    def describe(self, outf):
-        """Describe the item to be committed later.
-           outf =  a file object to write the description to"""
-        pass
-
-class SetError(apperror.ApplicationError):
-    def __init__(self, name):
-        self.str="Assignment: %s not found"%(name)
-
-class Set(TransactionItem):
-    """Transaction item for setting a value."""
-    def __init__(self, project, itemname, activeInstance, direction, 
-                 ioItemList, literal, sourceType, printName):
-        """initialize based on the active instance, old value associated
-           with the instance, and a new value."""
-        self.itemname=itemname
-        self.activeInstance=activeInstance
-        self.direction=direction
-        self.ioItemList=ioItemList
-        self.literal=literal
-        self.sourceType=sourceType
-        if printName is not None:
-            self.printName=printName
-        else:
-            self.printName=literal
-        with self.activeInstance.lock:
-            closestVal=self.activeInstance.findNamedInput(self.direction, 
-                                                          self.ioItemList, 
-                                                          project,
-                                                          True)
-        if closestVal is None:
-            raise SetError(itemname)
-
-
-    def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
-        """Get the affected items of this transaction"""
-        ## there are no affected output AIs: only input AIs change.
-        with self.activeInstance.lock:
-            closestVal=self.activeInstance.findNamedInput(self.direction, 
-                                                          self.ioItemList, 
-                                                          project,
-                                                          True)
-        self.activeInstance.getNamedInputAffectedAIs(closestVal, 
-                                                     affectedInputAIs)
-
-    def run(self, project, sourceTag, outf=None):
-        """Run the transaction item."""
-        ## there are no affected output AIs: only input AIs change.
-        with self.activeInstance.lock:
-            oldVal=self.activeInstance.findNamedInput(self.direction, 
-                                                      self.ioItemList, 
-                                                      project,
-                                                      False)
-            # now we can extract the type.
-            tp=oldVal.getType()
-            if not isinstance(self.literal, value.Value):
-                newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
-                                              project.fileList)
-            else:
-                newVal=self.literal
-                if not (tp.isSubtype(rval.getType()) or
-                        rval.getType().isSubtype(tp) ):
-                    raise TransactionError(
-                              "Incompatible types in assignment: %s to %s"%
-                              (rval.getType().getName(), tp.getName()))
-        self.activeInstance.stageNamedInput(oldVal, newVal, sourceTag)
-        if outf is not None:
-            outf.write("Set %s:%s to %s\n"%
-                       (self.activeInstance.getCanonicalName(),
-                        oldVal.getFullName(),
-                        newVal.getDesc()))
-
-    def describe(self, outf):
-        """Describe the item."""
-        outf.write("set %s to %s"%(self.itemname, self.printName))
-
-class Connect(TransactionItem):
-    """Transaction item for connecting a value"""
-    def __init__(self, project, src, dst):
-        self.src=src
-        self.dst=dst
-
-    def getAffected(self, project, affectedInputAIs, affectedOutputAIs):
-        """Get the affected items of this transaction"""
-        # we can do this because the global lock prevents other updates
-        # at the same time.
-        fullSrcInstName,srcDir,srcItemName=connection.splitIOName(self.src, 
-                                                                  None)
-        fullDstInstName,dstDir,dstItemName=connection.splitIOName(self.dst, 
-                                                                  None)
-        srcNet,srcInstName=project.active.getContainingNetwork(fullSrcInstName)
-        dstNet,dstInstName=project.active.getContainingNetwork(fullDstInstName)
-        if srcNet != dstNet:
-            raise TransactionError(
-                        "Source %s and destination %s not in same network"%
-                        (fullSrcInstName, fullDstInstName))
-        self.net=srcNet
-        cn=connection.makeConnection(self.net,
-                                     #project.active,
-                                     srcInstName, srcDir, srcItemName,
-                                     dstInstName, dstDir, dstItemName)
-        self.connection=cn
-        self.net.findConnectionSrcDest(cn, affectedInputAIs, affectedOutputAIs)
-
-    def run(self, project, sourceTag, outf=None):
-        """Run the transaction item."""
-        self.net.addConnection(self.connection, sourceTag)
-        if outf is not None:
-            outf.write("Connected %s to %s\n"%(self.connection.srcString(),
-                                               self.connection.dstString()))
-
-    def describe(self, outf):
-        """Describe the item."""
-        outf.write("connect %s to %s"%(self.src, self.dst) )
 

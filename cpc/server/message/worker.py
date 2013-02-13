@@ -22,7 +22,6 @@ import logging
 import os
 import tarfile
 import tempfile
-import threading
 import time
 import shutil
 
@@ -40,13 +39,11 @@ import cpc.util.log
 
 from cpc.command.worker_matcher import CommandWorkerMatcher
 
-from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util import json_serializer
 from cpc.network.node import Nodes,Node
 from cpc.server.message.server_message import ServerMessage
 from cpc.server.tracking.tracker import Tracker
-from cpc.util.conf.connection_bundle import ConnectionBundle
 from server_command import ServerCommand
 from cpc.network.node import getSelfNode
 
@@ -87,34 +84,35 @@ class WorkerReadyBase(ServerCommand):
             cmds.extend(cwm.getWork(serverState.getCmdQueue()))
         # now check the forwarded variables
         conf=serverState.conf
-        originating=None
+        originatingServer=None
         heartbeatInterval=None
         # check whether there is an originating server. If not, we're it
         if self.forwarded:
-            if request.hasParam('originating-server'):
-                originating = request.getParam('originating-server')
+            if 'originating-server' in request.headers:
+                originatingServer = request.headers['originating-server']
             # check the expected heartbeat time.
             log.debug("Forwarded message")
             if request.hasParam('heartbeat-interval'): 
                 heartbeatInterval = int(request.getParam('heartbeat-interval'))
                 log.debug("Forwarded heartbeat interval is %d"%
                           heartbeatInterval)
-        if originating is None:
-            # If the originating server property has not been set,  the 
+        if originatingServer is None:
+            # If the originating server property has not been set,  the
             # request hasn't been forwarded, therefore we are the originating 
             # server
             selfNode=getSelfNode(conf)
-            originating = selfNode.getId() 
+            originatingServer = selfNode.getId()
+            # we only store worker state in the server the worker connects to
+            serverState.setWorkerState("idle",workerData,
+                                       request.headers['originating-client'])
         if heartbeatInterval is None:
             heartbeatInterval = conf.getHeartbeatTime() 
         log.debug("worker identified %s"%request.headers['originating-client'] )
-        serverState.setWorkerState("idle",workerData,
-                                   request.headers['originating-client'])
-        
+
         if len(cmds) > 0:
             # first add them to the running list so they never get lost
             runningCmdList=serverState.getRunningCmdList()
-            runningCmdList.add(cmds, originating, heartbeatInterval)
+            runningCmdList.add(cmds, originatingServer, heartbeatInterval)
             # construct the tar file with the workloads. 
             tff=tempfile.TemporaryFile()
             tf=tarfile.open(fileobj=tff, mode="w:gz")
@@ -163,10 +161,11 @@ class WorkerReadyBase(ServerCommand):
                     clnt=ServerMessage(node.getId())
                     
                     clientResponse=clnt.workerReadyForwardedRequest(workerID,
-                                                            workerData,
-                                                            topology,
-                                                            originating,
-                                                            heartbeatInterval)
+                                        workerData,
+                                        topology,
+                                        originatingServer,
+                                        heartbeatInterval,
+                                        request.headers['originating-client'])
                     
                     if clientResponse.getType() == 'application/x-tar':
 

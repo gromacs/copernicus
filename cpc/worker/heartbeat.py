@@ -33,7 +33,6 @@ except ImportError:
 
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
-import cpc.command.heartbeat
 
 log=logging.getLogger('cpc.heartbeat.client')
 

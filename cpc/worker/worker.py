@@ -18,11 +18,8 @@
 
 
 import os
-import os.path
 import copy
-import tarfile
 import shutil
-import tempfile
 import logging
 import threading
 import signal

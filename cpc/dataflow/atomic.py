@@ -28,7 +28,6 @@ except ImportError:
 
 import cpc.util
 import apperror
-import value
 import function
 import run
 import network_function
@@ -115,7 +114,7 @@ class SimpleFunctionFunction(AtomicFunction):
             inp["_outputDir"] = fnInputs.outputDir
         log.debug(str(inp))
         ret=self.pyFunction( **inp )
-        fo=run.FunctionRunOutput()
+        fo=fnInputs.getFunctionOutput()
         for name, val in ret.iteritems():
             if isinstance(val, float):
                 fo.setOut( name, run.FloatValue(val) ) 
@@ -123,7 +122,7 @@ class SimpleFunctionFunction(AtomicFunction):
                 fo.setOut( name, run.IntValue(val) ) 
             elif isinstance(val, string):
                 fo.setOut( name, run.StringValue(val) ) 
-        return fo 
+        #return fo
 
 
 class ExtendedFunctionFunction(SimpleFunctionFunction):
@@ -159,9 +158,6 @@ class ExtendedFunctionFunction(SimpleFunctionFunction):
                       (iindstr, self.pyFunction.__name__, importstr))
         outFile.write('%s</function>\n'%indstr)
 
-    #def setFunction(self, pyFunction):
-    #    self.pyFunction=pyFunction
-
     def check(self):
         """check whether function can run. If it throws an exception,
            it can't"""
@@ -185,7 +181,8 @@ class ExtendedFunctionFunction(SimpleFunctionFunction):
         """run this function, based on a list of input values, and the run 
             directory."""
         #log.debug("Basedir=%s"%(fnInputs.getBaseDir()))
-        return self.pyFunction(fnInputs)
+        self.pyFunction(fnInputs)
+        #return self.pyFunction(fnInputs)
 
 
 

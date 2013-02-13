@@ -21,8 +21,6 @@
 #import logging
 
 
-import collections
-
 #log=logging.getLogger('cpc.dataflow.function')
 
 
@@ -125,9 +123,9 @@ class Function(description.Describable):
         """Get the function's library."""
         return self.lib
 
-    def getSelf(self):
-        """Get the 'self' object, if it exists. None, otherwise."""
-        return None
+    #def getSelf(self):
+    #    """Get the 'self' object, if it exists. None, otherwise."""
+    #    return None
 
     def getState(self):
         """Get the state of the function."""
@@ -253,32 +251,34 @@ class Function(description.Describable):
            command to be queued, or None.
           
            fnInput = a run.FunctionRunInput object. 
-           returns: a run.FunctionRunOutput object. 
+
+           fnInput contains the functionRunOutput object that must be
+                   filled with output data
            """
-        return run.FunctionRunOutput()
-
-
-class ConstFunction(Function):
-    """A function that holds a constant value."""
-    def __init__(self, name, tp, value, lib):
-        """Initializes a const function.
-
-           type = a const type
-           value = its value
-        """
-        self.type=tp
-        self.value=value
-        inputs=[]
-        outputs=[ function_io.FunctionOutput("val", tp)  ]
-        Function.__init__(self, "const", inputs, outputs)
-        self.genTasks=False
-
-    def writeXML(self, outFile, indent=0):
-        """The function itself does not need to be described."""
         pass
 
-    def run(self, fnInput):
-        """Run the const function, returning the value."""
-        return run.FunctionRunOutput( 
-                      outputs={ "val" : value.Value(self.value, self.type) })
+
+#class ConstFunction(Function):
+#    """A function that holds a constant value."""
+#    def __init__(self, name, tp, value, lib):
+#        """Initializes a const function.
+#
+#           type = a const type
+#           value = its value
+#        """
+#        self.type=tp
+#        self.value=value
+#        inputs=[]
+#        outputs=[ function_io.FunctionOutput("val", tp)  ]
+#        Function.__init__(self, "const", inputs, outputs)
+#        self.genTasks=False
+#
+#    def writeXML(self, outFile, indent=0):
+#        """The function itself does not need to be described."""
+#        pass
+#
+#    def run(self, fnInput):
+#        """Run the const function, returning the value."""
+#        return run.FunctionRunOutput( 
+#                      outputs={ "val" : value.Value(self.value, self.type) })
 

@@ -28,8 +28,6 @@ except ImportError:
 
 import logging
 
-import operator
-
 
 log=logging.getLogger('cpc.dataflow.readxml')
 
@@ -37,11 +35,8 @@ import cpc.util
 import apperror
 import keywords
 import description
-import function
 import atomic
-import network
 import network_function
-import function_io
 import instance
 import connection
 import external
@@ -246,8 +241,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("function has no id", self)
             fntype=attrs.getValue("type")
             id=keywords.fixID(attrs.getValue("id"))
-            #if type == "command":
-            #    tsk=atomic.CommandFunction(id, [], [], None, None, None)
             if fntype == "python":
                 tsk=atomic.SimpleFunctionFunction(id, lib=self.thisImport)
             elif fntype == "python-extended":
@@ -266,7 +259,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                       (fntype), self)
             self.function=tsk
             self.functionType=fntype
-        elif name=="type":
+        elif name == "type":
             if self.function is not None:
                 raise ProjectXMLError(
                         "type-in-function definitions not supported", self)
@@ -280,7 +273,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             name=keywords.fixID(attrs.getValue("id"))
             basetype=self.importList.getTypeByFullName(attrs.getValue("base"), 
                                                        self.thisImport)
-            #basetype=self.project.getType(attrs.getValue("base"))
             self.type=basetype.inherit(name, self.thisImport)
             self.typeStack.append( (self.type, None) )
             if basetype.isSubtype(vtype.arrayType):
@@ -288,18 +280,16 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     tnm=keywords.fixID(attrs.getValue("member-type"))
                     members=self.importList.getTypeByFullName(tnm, 
                                                               self.thisImport)
-                    #members=self.project.getType(attrs.getValue("members"))
                     self.type.setMembers(members)
                     log.debug("new array(%s) type %s"%(members.name, name))
-                else:
-                    raise ProjectXMLError("Array type %s has no member type"%
-                                          name, self)
+                #else:
+                #    raise ProjectXMLError("Array type %s has no member type"%
+                #                          name, self)
             elif basetype.isSubtype(vtype.dictType):
                 if attrs.has_key("member-type"):
                     tnm=keywords.fixID(attrs.getValue("member-type"))
                     members=self.importList.getTypeByFullName(tnm, 
                                                               self.thisImport)
-                    #members=self.project.getType(attrs.getValue("members"))
                     self.type.setMembers(members)
                     log.debug("new dict(%s) type %s"%(members.name, name))
             elif basetype.isSubtype(vtype.fileType):
@@ -398,8 +388,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if self.type is not None and self.type.isCompound():
                 tp=self.importList.getTypeByFullName(tpnm, self.thisImport)
                 nm=None
-                #basetype=self.importList.getTypeByFullName(tpnm,
-                #                                           self.thisImport)
                 if self.type.isSubtype(vtype.arrayType):
                     self.type.setMembers(tp)
                 elif self.type.isSubtype(vtype.dictType):
@@ -460,11 +448,11 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             typestr=keywords.fixID(attrs.getValue('type'))
             dst=keywords.fixID(attrs.getValue('dest'))
             # get the type object
-            #tp=self.project.getType(typestr)
             tp=self.importList.getTypeByFullName(typestr, self.thisImport)
             # get the value from the type object
             val=active_value.ActiveValue(value.interpretLiteral(valueString,tp),
                                          tp)
+            val.setUpdated(True)
             #log.debug("value is %s, %s"%(str(val), valueString))
             # get the destination
             dstInstName,dstDir,dstItemName=(connection.splitIOName(dst, 
@@ -500,7 +488,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 typestr=keywords.fixID(attrs.getValue('type'))
                 valueString=attrs.getValue('value')
                 tp=self.importList.getTypeByFullName(typestr, self.thisImport)
-                #tp=self.project.getType(typestr)
                 # get the value from the type object
                 val=value.interpetLiteral(valueString, tp)
                 cn=connection.makeInitialValue(self.network,
@@ -510,8 +497,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             self.network.findConnectionSrcDest(cn, self.affectedInputAIs,
                                                self.affectedOutputAIs)
             self.network.addConnection(cn, self)
-            #self.network.addConnection(cn, self.affectedInputAIs,
-            #                           self.affectedOutputAIs)
         elif name=="controller":
             # generic items
             if cpc.util.getBooleanAttribute(attrs,"persistent_dir"):
@@ -596,8 +581,12 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             ai.setState(state)
             ai.setSeqNr(seqnr)
             if attrs.has_key('errmsg'):
-                ai.setErrmsg(xml.sax.saxutils.unescape(attrs.
-                                                       getValue('errmsg')))
+                ai.markError(xml.sax.saxutils.unescape(attrs.
+                                                       getValue('errmsg')),
+                             False)
+            if attrs.has_key('warnmsg'):
+                ai.setWarning(xml.sax.saxutils.unescape(attrs.
+                                                        getValue('warnmsg')))
             if attrs.has_key('cputime'):
                 try:
                     ai.setCputime(float(attrs.getValue('cputime')))
@@ -615,8 +604,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                 self)
             if not attrs.has_key("id"):
                 raise ProjectXMLError("active conn field has no id", self)
-            #if not attrs.has_key("seqnr"):
-            #    raise ProjectXMLError("active conn field has no seqnr", self)
             if not attrs.has_key("type"):
                 raise ProjectXMLError("active conn field has no type", self)
             tpnm=keywords.fixID(attrs.getValue("type"))
@@ -633,7 +620,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     raise ProjectXMLError(
                         "active connection value without value_type", 
                         self)
-                #vtp=self.project.getType(attrs.getValue("value_type"))
                 vtpnm=keywords.fixID(attrs.getValue("value_type"))
                 vtp=self.importList.getTypeByFullName(vtpnm, self.thisImport)
                 valnm=attrs.getValue("value")
@@ -669,14 +655,14 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         elif name == "function-input":
             if self.curTask is None:
                 raise ProjectXMLError("function-input without task", self)
-            self.setFnInputReader(run.IOReader(True), name)
+            inp=run.FunctionRunInput()
+            self.setFnInputReader(run.IOReader(inp, None), name)
             self.fnInputReader.setReportFilename(self.filename)
             self.fnInputReader.startElement(name, attrs)
         elif name == "command-list":
             if self.curTask is None:
                 raise ProjectXMLError("commands without task", self)
             self.cmdReader=cpc.command.CommandReader()
-            #self.cmdReader.setReportFilename(self.filename)
         elif name == "desc":
             # A description. First find out what it describes.
             if self.type is not None:
@@ -714,13 +700,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
 
     def endElement(self, name):
         # first handle sub-input-readers:
-        #if self.fnInputReader is not None:
-        #    self.fnInputReader.endElement(name)
-        #    if name == "function-input":
-        #        fni=self.fnInputReader.getFunctionRunInput()
-        #        fni.setMissing(self.activeInst, self.project)
-        #        self.curTask.setFnInput(fni)
-        #        self.fnInputReader=None
         if self.cmdReader is not None:
             self.cmdReader.endElement(name)
             if name == "command-list":
@@ -752,7 +731,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             self.function=None
             self.functionType=None
         elif name == "instance":
-            #self.network.addInstance(self.instance)
             self.network.addInstance(self.instance)
             self.instance=None
         elif name == "network":
@@ -788,8 +766,6 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             else:
                 self.type=None
         elif name == "active":
-            #self.affectedInputAIs.discard(self.activeInst)
-            #self.affectedOutputAIs.discard(self.activeInst)
             self.activeInstStack.pop()
             if len(self.activeInstStack) > 0:
                 self.activeInst=self.activeInstStack[-1]

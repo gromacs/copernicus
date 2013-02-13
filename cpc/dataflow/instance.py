@@ -25,9 +25,6 @@ log=logging.getLogger('cpc.dataflow.instance')
 
 import cpc.util
 import apperror
-import keywords
-import connection
-import function
 import function_io
 
 class InstanceError(apperror.ApplicationError):
@@ -51,29 +48,13 @@ class Instance(object):
         self.fullFnName=fullFnName
 
         # if it has a self.
-        if name != keywords.Self:
-            self.selfInst=func.getSelf()
-        else:
-            self.selfInst=None
+        #if name != keywords.Self:
+        #    self.selfInst=func.getSelf()
+        #else:
+        #    self.selfInst=None
         #self.selfInst=None
+        self._genIO()
             
-        # dicts with dynamic input/output/subnetInput/subnetOutput connections
-        # in addition to those defined in the function.
-        self.inputs=function_io.IOType(function_io.inputs, self.name, 
-                                       func.getInputs())
-        self.outputs=function_io.IOType(function_io.outputs, self.name, 
-                                        func.getOutputs())
-        self.subnetInputs=function_io.IOType(function_io.subnetInputs, 
-                                             self.name, 
-                                             func.getSubnetInputs())
-        self.subnetOutputs=function_io.IOType(function_io.subnetOutputs, 
-                                              self.name,
-                                              func.getSubnetOutputs())
-        self.inputs.markImplicit()
-        self.outputs.markImplicit()
-        self.subnetInputs.markImplicit()
-        self.subnetOutputs.markImplicit()
-
         # lists of input connections. Inputs can have multiple
         # values if they point to separate subitems
         self.inputConns=[]
@@ -89,6 +70,27 @@ class Instance(object):
         if lib is not None:
             self.setLib(lib)
 
+    def _genIO(self):
+        """Generate the input/output IO types."""
+        # dicts with dynamic input/output/subnetInput/subnetOutput connections
+        # in addition to those defined in the function.
+        self.inputs=function_io.IOType(function_io.inputs, self.name, 
+                                       self.function.getInputs())
+        self.outputs=function_io.IOType(function_io.outputs, self.name, 
+                                        self.function.getOutputs())
+        self.subnetInputs=function_io.IOType(function_io.subnetInputs, 
+                                             self.name, 
+                                             self.function.getSubnetInputs())
+        self.subnetOutputs=function_io.IOType(function_io.subnetOutputs, 
+                                              self.name,
+                                              self.function.getSubnetOutputs())
+        self.inputs.markImplicit()
+        self.outputs.markImplicit()
+        self.subnetInputs.markImplicit()
+        self.subnetOutputs.markImplicit()
+
+
+
     def copy(self):
         """Return a copy of this instance with its own copied types."""
         inst=Instance(self.name, self.function, self.fullFnName)
@@ -99,8 +101,13 @@ class Instance(object):
         return inst
 
     def markImplicit(self):
+        """Mark this instance as automatically generated. If marked, the 
+           instance will not be written out when an XML state file is 
+           written."""
         self.implicit=True
+
     def isImplicit(self):
+        """Return whether this instance is automatically generated."""
         return self.implicit
 
     def getName(self):
@@ -115,6 +122,7 @@ class Instance(object):
         return self.function
 
     def getFullFnName(self):
+        """Get the full (including module names) function name."""
         return self.fullFnName
 
     def setLib(self, lib):
@@ -229,21 +237,5 @@ class Instance(object):
         iiindstr=cpc.util.indStr*(indent+2)
         outf.write('%s<instance id="%s" function="%s">\n'%
                    (indstr, self.name, self.fullFnName))
-        #if self.inputs.hasMembers():
-        #    outf.write('%s<inputs>\n'%iindstr)
-        #    self.inputs.writePartsXML(outf, indent+2)
-        #    outf.write('%s</inputs>\n'%iindstr)
-        #if self.outputs.hasMembers():
-        #    outf.write('%s<outputs>\n'%iindstr)
-        #    self.outputs.writePartsXML(outf, indent+2)
-        #    outf.write('%s</outputs>\n'%iindstr)
-        #if self.subnetInputs.hasMembers():
-        #    outf.write('%s<subnet-inputs>\n'%iindstr)
-        #    self.subnetInputs.writePartsXML(outf, indent+2)
-        #    outf.write('%s</subnet-inputs>\n'%iindstr)
-        #if self.subnetOutputs.hasMembers():
-        #    outf.write('%s<subnet-outputs>\n'%iindstr)
-        #    self.subnetOutputs.writePartsXML(outf, indent+2)
-        #    outf.write('%s</subnet-outputs>\n'%iindstr)
         outf.write('%s</instance>\n'%indstr)
 

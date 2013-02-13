@@ -27,10 +27,7 @@ from cpc.network.com.client_base import ClientBase
 from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
-from cpc.util import json_serializer
 from cpc.util.conf.connection_bundle import ConnectionBundle
-import json
-from cpc.network.node_connect_request import NodeConnectRequest
 
 log=logging.getLogger('cpc.worker.message')
 class WorkerMessage(ClientBase):

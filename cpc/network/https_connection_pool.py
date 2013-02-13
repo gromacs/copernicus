@@ -23,9 +23,8 @@ Created on Jul 18, 2011
 @author: iman
 '''
 import logging
-from Queue import Queue,Empty,Full
+from Queue import Queue,Empty
 import threading
-import httplib
 import cpc.util.log
 from cpc.network.https.real_https_connection import RealHttpsConnection
 #Singleton

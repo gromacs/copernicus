@@ -72,6 +72,7 @@ def print_usage():
     print "       cpcc force-rerun       item"
     print ""
     print "Worker and heartbeat monitoring commands."
+    print "       cpcc status | s        [project]"
     print "       cpcc queue | q"
     print "       cpcc running | r "
     print "       cpcc heartbeats | h "
@@ -250,6 +251,12 @@ try:
         resp = clnt.projectInfoRequest(project, item)
         renderMethod = CmdLine.writeInfo
         ProcessedResponse(resp).pprint(renderMethod)
+    elif cmd == "debug":
+        project, pargs = getProjectArgs(args)
+        item=getArg(pargs, 1, "item to get debug info for")
+        clnt=ClientMessage()
+        resp = clnt.projectDebugRequest(project, item)
+        ProcessedResponse(resp).pprint(None)
     elif cmd == "graph": 
         project, pargs = getProjectArgs(args)
         if len(pargs) > 1:
@@ -484,6 +491,13 @@ try:
         file.close()
             
         subprocess.call(["dot","-Tsvg",filename,'-o',filename+".svg"])
+
+    elif cmd == "status" or cmd == "s":
+        project = None
+        if len(args) > 1:
+            project = getArg(args,1,"project")
+        clnt = ClientMessage()
+        ProcessedResponse(clnt.statusRequest(project)).pprint(CmdLine.status)
 
     elif cmd == "readconf":
         clnt = ClientMessage()

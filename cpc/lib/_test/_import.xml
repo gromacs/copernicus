@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<cpc>
+    <desc>Test functions</desc>
+    <function id="extended_err" type="python-extended">
+        <desc>Test python-extended function. Gives an error if a negative, a
+              warning if b negative.</desc>
+        <inputs>
+            <field type="float" id="a">
+                <desc>Float input a</desc>
+            </field>
+            <field type="float" id="b">
+                <desc>Float input b</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="float" id="a">
+                <desc>Float output a</desc>
+            </field>
+        </outputs>
+        <controller log="true"
+                    function="cpc.lib._test.extended_err" 
+                    import="cpc.lib._test"
+                    persistent_dir="true" />
+    </function>
+
+    <function id="external_err" type="external">
+        <desc>Test python-extended function. Gives an error if a negative, a
+              warning if b negative.</desc>
+        <inputs>
+            <field type="float" id="a">
+                <desc>Float input a</desc>
+            </field>
+            <field type="float" id="b">
+                <desc>Float input b</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="float" id="a">
+                <desc>Float output a</desc>
+            </field>
+        </outputs>
+        <controller log="true" executable="external_err" persistent_dir="true"/>
+    </function>
+</cpc>

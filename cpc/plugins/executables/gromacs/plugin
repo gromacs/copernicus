@@ -7,20 +7,45 @@ import sys
 def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     # try and report on a gromacs command. Assumes the '-version' flag
     # works
-    par=None
+    MPI=False
+    threadMPI=False
+    OpenMP=False
+    GPU=False
     version=None
     try:
         np=subprocess.Popen([cmd, "-version"], stdin=None, 
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for line in np.stdout:
-            if re.match(r"Parallellization", line):
+            if (re.match(r"Version:", line, re.IGNORECASE) or 
+                re.match(r"Gromacs version:", line, re.IGNORECASE)):
+                version=re.sub(r'([0-9]\.[0-9.]+).*', r'\1', line.split()[-1])
+            elif re.match(r"Parallellization", line): # 4.5
                 par=line.split()[-1]
-            if re.match(r"Version", line):
-                version=re.sub(r'.*([0-9][.][0-9]*[.][0-9]*).*', r'\1',
-                               line.split()[-1])
+                if par == "thread_mpi":
+                    threadMPI=True
+            elif re.match(r"MPI Library", line, re.IGNORECASE): # 4.6
+                if re.match(r".*thread_mpi", line, re.IGNORECASE):
+                    threadMPI=True
+                elif line.split()[-1] == "MPI":
+                    MPI=True
+            elif re.match(r"GPU", line, re.IGNORECASE):
+                if line.split()[-1] != "disabled":
+                    GPU=True
+            elif re.match(r"OpenMP", line, re.IGNORECASE):
+                if line.split()[-1] != "disabled":
+                    OpenMP=True
         np.communicate(None)
         if np.returncode == 0:
-            if par == "thread_mpi":
+            if MPI:
+                outf.write(
+                    '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
+                    (name, version))
+                outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
+                           (cmd, opts))
+                outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
+                outf.write('</executable>\n')
+
+            elif threadMPI:
                 outf.write(
                     '<executable name="gromacs/%s" platform="smp" arch="" version="%s">\n'%
                     (name, version))
@@ -30,14 +55,6 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                     nopts=opts
                 outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
                            (cmd, nopts))
-                outf.write('</executable>\n')
-            elif par == "mpi" or par == "MPI":
-                outf.write(
-                    '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
-                    (name, version))
-                outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
-                           (cmd, opts))
-                outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
                 outf.write('</executable>\n')
         return True
     except OSError:

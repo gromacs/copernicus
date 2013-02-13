@@ -20,7 +20,7 @@
 
 
 import xml.sax
-import os
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -28,8 +28,6 @@ except ImportError:
 
 
 import cpc.util.plugin
-import platform
-from version import Version
 import logging
 
 log = logging.getLogger('cpc.command.extras_handler')

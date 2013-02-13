@@ -24,11 +24,10 @@ import os
 import shutil
 
 #import cpc.server.project
-import cpc.dataflow
+import cpc.dataflow.project
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.file
 import cpc.util
-from cpc.network.server_response import ServerResponse
 
 log = logging.getLogger('cpc.server.projectlist')
 
@@ -102,7 +101,7 @@ class ProjectList(object):
             except OSError as e:
                 raise ProjectListError("Error creating project directory: %s" %
                                        str(e))
-            project = cpc.dataflow.Project(name, dirname, self.conf,
+            project = cpc.dataflow.project.Project(name, dirname, self.conf,
                 self.taskQueue, self.cmdQueue)
             self.projects[name] = project
             # and set the new default project
@@ -293,7 +292,7 @@ class ProjectListReader(xml.sax.handler.ContentHandler):
             if isDefault:
                 log.debug("setting %s to default project" % id)
                 self.default = id
-            p = cpc.dataflow.Project(id, basedir,
+            p = cpc.dataflow.project.Project(id, basedir,
                 self.projectList.conf,
                 self.projectList.getTaskQueue(),
                 self.projectList.getCmdQueue())

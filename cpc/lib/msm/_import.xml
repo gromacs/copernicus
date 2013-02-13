@@ -189,6 +189,11 @@
             <field type="float" id="recluster">
                 <desc>when to do re-clustering (in trajectory-ns) </desc>
             </field>
+            <field type="int" id="num_generations" opt="true">
+                <desc>The number of generations after which to stop
+                      generating new runs (for protein folding, 5-6 generations
+                      is usually sufficient).</desc> 
+            </field>
             <!--  -->
             <field type="file" id="reference" opt="true">
                 <desc>reference pdb file for clustering. This pdb file

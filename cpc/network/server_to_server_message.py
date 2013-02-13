@@ -18,23 +18,17 @@
 
 
 
-import httplib
-import socket
 import logging
 import tempfile
 import mmap
-import copy
 import cpc.util.log
 
 from cpc.client.message import ClientMessage
-from cpc.network.com.client_connection import ClientConnection
 from cpc.util.exception import CpcError
-from cpc.network.com.input import Input
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.server_conf import  ServerConf
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.com.client_base import ClientBase
-from cpc.network.node import Node
 from cpc.network.node import Nodes
 from cpc.network.node import getSelfNode
 from cpc.network.cache import Cache

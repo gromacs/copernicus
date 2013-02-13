@@ -20,21 +20,15 @@
 
 import logging
 import os
-import sys
-import os.path
+
 try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
-import traceback
 import subprocess
-import xml.sax
-import stat
-
 
 import cpc.util
 import apperror
-import value
 import function
 import run
 import atomic
@@ -116,8 +110,6 @@ class ExternalFunction(atomic.AtomicFunction):
                 raise ExternalFunctionError(
                                     "Output directory %s does not exist"%
                                     inp.getOutputDir())
-            #st=os.stat(inp.getOutputDir())
-            #if (st.st_mode & stat.S_IFDIR) == 0:
         # construct full argument list
         nargs=[ self.fullpath ]
 
@@ -150,12 +142,14 @@ class ExternalFunction(atomic.AtomicFunction):
                                         (self.name, 
                                          unicode(retstdout, errors='replace'), 
                                          unicode(retstderr, errors='replace')))
-        reader=run.IOReader(False)
+        #reader=run.IOReader(False)
+        out=inp.getFunctionOutput()
+        reader=run.IOReader(None, out)
         #log.debug(retst)
         instrio=StringIO(retstdout)
         log.debug("Reading output for function %s: %s"%(self.name, 
                                                         instrio.read()))
         instrio.reset()
         reader.read(instrio, self.fullpath)
-        return reader.getFunctionRunOutput()
+        return out
 

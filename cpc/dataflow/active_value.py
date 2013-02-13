@@ -19,17 +19,14 @@
 
 
 import logging
-import collections
 import os
-import os.path
-import xml.sax
+import sys
 
 
 log=logging.getLogger('cpc.dataflow.active_value')
 
 
 import cpc.util
-import apperror
 import vtype
 import value
 
@@ -82,6 +79,10 @@ class ActiveValue(value.Value):
     def getListener(self):
         """Get the associated listener."""
         return self.listener
+
+    def writeDebug(self, outf):
+        outf.write("Active value %s\n"%self.getFullName())
+        outf.write("Memory usage: %d bytes\n"%sys.getsizeof(self))
 
     def update(self, srcVal, newSeqNr, sourceTag=None, resetSourceTag=False):
         """Set a new value from a Value, and call update() on all subitems. 

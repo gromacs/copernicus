@@ -25,9 +25,7 @@
 
 import sys
 import os
-import subprocess
 import json
-import StringIO
 
 # check the number of arguments
 if len(sys.argv)<3:
