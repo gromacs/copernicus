@@ -27,11 +27,12 @@
 #import traceback
 import logging
 
-
-import server_command 
-import trackingcmd 
-import workercmd
-import projectcmd
+import state
+import network
+import worker
+import project
+import user
+import tracking 
 import cpc.network.server_response
 import cpc.util
 from cpc.server.state.user_handler import UserLevel
@@ -79,86 +80,76 @@ class ServerCommandList(object):
             return self.cmds[cmd]
         else:
             raise ServerCommandError("Unknown command %s"%cmd)
-
-
-# these are the server commands that the secure server may run:
 scSecureList=ServerCommandList()
-
-#commands that don't require login
-scSecureList.add(server_command.SCLogin(), UserLevel.ANONYMOUS)
-scSecureList.add(server_command.ScAddNodeRequest(), UserLevel.ANONYMOUS)
-scSecureList.add(server_command.ScAddNodeAccepted(), UserLevel.ANONYMOUS)
+scSecureList.add(user.SCLogin(), UserLevel.ANONYMOUS)
+scSecureList.add(network.ScAddNodeRequest(), UserLevel.ANONYMOUS)
+scSecureList.add(network.ScAddNodeAccepted(), UserLevel.ANONYMOUS)
 
 
-#secure commands that require login
-scSecureList.add(server_command.SCAddUser(), UserLevel.SUPERUSER)
-scSecureList.add(server_command.SCDeleteUser(), UserLevel.SUPERUSER)
-scSecureList.add(server_command.SCPromoteUser(), UserLevel.SUPERUSER)
-scSecureList.add(server_command.SCDemoteUser(), UserLevel.SUPERUSER)
-scSecureList.add(server_command.SCStop())
-scSecureList.add(server_command.SCSaveState())
-scSecureList.add(server_command.SCTestServer())
+
+scSecureList.add(user.SCAddUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCDeleteUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCPromoteUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCDemoteUser(), UserLevel.SUPERUSER)
+# these are the server commands that the secure server may run:
+
+scSecureList.add(state.SCStop())
+scSecureList.add(state.SCSaveState())
+scSecureList.add(state.SCTestServer())
+scSecureList.add(state.SCListServerItems())
+scSecureList.add(state.SCReadConf())
+scSecureList.add(state.SCServerInfo())
 
 # worker workload requests
-scSecureList.add(workercmd.SCWorkerReady())  
-scSecureList.add(workercmd.SCWorkerReadyForwarded())  
-scSecureList.add(workercmd.SCCommandFinished())
-scSecureList.add(workercmd.SCCommandFinishedForward())  
-scSecureList.add(workercmd.SCCommandFailed())
-
+scSecureList.add(worker.SCWorkerReady())  
+scSecureList.add(worker.SCWorkerReadyForwarded())  
+scSecureList.add(worker.SCCommandFinished())
+scSecureList.add(worker.SCCommandFinishedForward())  
+scSecureList.add(worker.SCCommandFailed())  
 # heartbeat requests
-scSecureList.add(workercmd.SCWorkerHeartbeat())
-scSecureList.add(workercmd.SCHeartbeatForwarded())
-scSecureList.add(workercmd.SCDeadWorkerFetch())
-
+scSecureList.add(worker.SCWorkerHeartbeat())
+scSecureList.add(worker.SCHeartbeatForwarded())
+scSecureList.add(worker.SCDeadWorkerFetch())
 # overlay network topology
-scSecureList.add(server_command.SCListServerItems())
-scSecureList.add(server_command.SCReadConf())
-scSecureList.add(server_command.ScAddNode())
-scSecureList.add(server_command.ScListNodes())
-scSecureList.add(server_command.ScListNodeConnectionRequests())
-scSecureList.add(server_command.ScListSentNodeConnectionRequests())
-scSecureList.add(server_command.ScGrantNodeConnection()) 
-scSecureList.add(server_command.ScGrantAllNodeConnections())    
-scSecureList.add(server_command.ScChangeNodePriority()) 
-scSecureList.add(server_command.SCNetworkTopology())
-scSecureList.add(server_command.SCNetworkTopologyUpdate())
-
+scSecureList.add(network.ScAddNode())
+scSecureList.add(network.ScAddNodeRequest())
+scSecureList.add(network.ScListNodes())   
+scSecureList.add(network.ScListNodeConnectionRequests())
+scSecureList.add(network.ScListSentNodeConnectionRequests())
+scSecureList.add(network.ScGrantNodeConnection()) 
+scSecureList.add(network.ScGrantAllNodeConnections())    
+scSecureList.add(network.ScChangeNodePriority()) 
+scSecureList.add(network.SCNetworkTopology())
+scSecureList.add(network.SCNetworkTopologyUpdate())
 # asset tracking
-scSecureList.add(trackingcmd.SCPullAsset())
-scSecureList.add(trackingcmd.SCClearAsset())
-
+scSecureList.add(tracking.SCPullAsset())
+scSecureList.add(tracking.SCClearAsset())
 # requests for dataflow
-scSecureList.add(projectcmd.SCProjects())
-scSecureList.add(projectcmd.SCProjectStart())
-scSecureList.add(projectcmd.SCProjectGrantAccess())
-scSecureList.add(projectcmd.SCProjectDelete())
-scSecureList.add(projectcmd.SCProjectSave())
-scSecureList.add(projectcmd.SCProjectLoad())
-scSecureList.add(projectcmd.SCProjectGetDefault())
-scSecureList.add(projectcmd.SCProjectSetDefault())
-scSecureList.add(projectcmd.SCProjectActivate())
-scSecureList.add(projectcmd.SCProjectDeactivate())
-scSecureList.add(projectcmd.SCProjectRerun())
-scSecureList.add(projectcmd.SCProjectUpload())
-scSecureList.add(projectcmd.SCProjectList())
-scSecureList.add(projectcmd.SCProjectInfo())
-scSecureList.add(projectcmd.SCProjectImport())
-scSecureList.add(projectcmd.SCProjectAddInstance())
-scSecureList.add(projectcmd.SCProjectConnect())
-scSecureList.add(projectcmd.SCProjectGraph())
-scSecureList.add(projectcmd.SCProjectSet())
-scSecureList.add(projectcmd.SCProjectGet())
-scSecureList.add(projectcmd.SCProjectTransact())
-scSecureList.add(projectcmd.SCProjectCommit())
-scSecureList.add(projectcmd.SCProjectRollback())
-scSecureList.add(projectcmd.SCProjectLog())
+scSecureList.add(project.SCProjects())
+scSecureList.add(project.SCProjectStart())
+scSecureList.add(project.SCProjectDelete())
 
-# these are the server commands that may be run by the unencrypted HTTP server
-scInsecureList=ServerCommandList()
-scInsecureList.add(server_command.ScAddNodeRequest())
-scInsecureList.add(server_command.ScAddNodeAccepted())
-scInsecureList.add(server_command.ScAddClientRequest())
-
-
+scSecureList.add(project.SCProjectGrantAccess())
+scSecureList.add(project.SCProjectSave())
+scSecureList.add(project.SCProjectLoad())
+scSecureList.add(project.SCProjectGetDefault())
+scSecureList.add(project.SCProjectSetDefault())
+scSecureList.add(project.SCProjectActivate())
+scSecureList.add(project.SCProjectDeactivate())
+scSecureList.add(project.SCProjectRerun())
+scSecureList.add(project.SCProjectUpload())
+scSecureList.add(project.SCProjectList())
+scSecureList.add(project.SCProjectInfo())
+scSecureList.add(project.SCProjectDebug())
+scSecureList.add(project.SCProjectImport())
+scSecureList.add(project.SCProjectAddInstance())
+scSecureList.add(project.SCProjectConnect())
+scSecureList.add(project.SCProjectGraph())
+scSecureList.add(project.SCProjectSet())
+scSecureList.add(project.SCProjectGet())
+scSecureList.add(project.SCProjectTransact())
+scSecureList.add(project.SCProjectCommit())
+scSecureList.add(project.SCProjectRollback())
+scSecureList.add(project.SCProjectLog())
+scSecureList.add(project.SCStatus())
 

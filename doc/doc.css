@@ -18,31 +18,54 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-body 
-{ 
-    font-family: Helvetica,Arial; 
-    /*text-align: justify;*/
-    background: #F2F2F2;    
+
+/*
+1. Standard body format and Header numbering
+===========================================*/
+
+body {
+    counter-reset: h2counter;
+    font-family: Helvetica,Arial;
+    background: #F2F2F2;
+
 }
 
-p
-{
+h2{counter-reset: h3counter}
+h3{counter-reset: h4counter}
+h4{counter-reset: h5counter}
+
+
+h2:before {
+    counter-increment: h2counter;
+    content: counter(h2counter) ".\0000a0\0000a0";
+
+
+}
+h3:before {
+    counter-increment: h3counter;
+    content: counter(h2counter) "." counter(h3counter) ".\0000a0\0000a0";
 }
 
-#symbols{
- float:left; 
+h4:before {
+    counter-increment: h4counter;
+    content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) ".\0000a0\0000a0";
 }
 
-#content
-{
-   
+
+h5:before {
+    counter-increment: h5counter;
+    content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) "." counter(h5counter) ".\0000a0\0000a0";
 }
 
-#toc
-{
-    /*float: right;*/
-}
 
+
+
+
+/*
+2. Content boxes
+===========================================*/
+
+/** Column containing textual content **/
 #leftcol{
 width:50em;
 float:left;
@@ -63,13 +86,22 @@ float:right
 }
 
 
-.graph
-{
-    /*float: left;
-    clear: both;*/
-    /*background-color: blue;
-border: 1px solid red;*/
-    margin-left: 20px;
+
+
+/*
+3. Styles
+===========================================*/
+
+/** gray textbox with dashed borders to highlight code sections**/
+.code ,pre{
+    font-family: "Courier New",monospace,serif;
+    font-size: 0.8em;
+    background: #F2F2F2;
+    padding:10px;
+    border: 1px dashed #646969;
+    margin-top: 10px;
+    margin-bottom: 10px;
+
 }
 
 .figure{
@@ -88,7 +120,11 @@ text-align:center
 padding: 0px 100px 0px 100px;
 }
 
+
 .cmd {
     font-weight: bold;
 }
+
+
+
 

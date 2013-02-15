@@ -1,0 +1,91 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import os.path
+import shutil
+import re
+import traceback
+import subprocess
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+import cpc.util
+
+def gen_ref_pdb(inp, out): 
+    """Create a reference pdb."""
+    #fo=inp.getFunctionOutput()
+    try:
+        out_fname=os.path.join(inp.getOutputDir(), "reference.pdb")
+        out_tmpfname="ref-tmp.pdb"
+        tpr_fname=inp.getInput('tpr')
+        grp_name=inp.getInput('grpname')
+        ndx_fname=inp.getInput('ndx')
+        conf_fname=inp.getInput('conf')
+        cmd=["trjconv", "-f", conf_fname, "-s", tpr_fname, "-o", out_tmpfname]
+        if ndx_fname is not None and ndx_fname.strip() != "":
+            cmd.extend(['-n', ndx_fname])
+        proc=subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                              stdout=sys.stderr, stderr=sys.stderr)
+        proc.communicate(grp_name)
+        if proc.returncode != 0:
+            sys.stderr.write("Error generating PDB file.\n")
+        
+        inf=open(out_tmpfname,'r')
+        outf=open(out_fname,'w')
+        for line in inf:
+            # exclude any lines that could lead to errors
+            if line.startswith( ('TITLE', 'MODEL', 'ATOM', 'TER', 'ENDMOL') ):
+                outf.write(line)
+        outf.close()
+        inf.close() 
+        out.setOut('reference', cpc.dataflow.FileValue(out_fname))
+    except:
+        # TODO: we should mark errors but for now we silently ignore
+        # faulty trajectories
+        fos=StringIO()
+        traceback.print_exception(sys.exc_info()[0],
+                                  sys.exc_info()[1],
+                                  sys.exc_info()[2], file=fos)
+        errmsg="Run error generating reference PDB: %s\n"%(fos.getvalue())
+        sys.stderr.write(errmsg)
+        sys.exit(1)
+
+# read the input data
+inp=cpc.dataflow.readInput()
+
+if inp.testing():
+    cpc.util.plugin.testCommand("trjconv -version")
+    sys.exit(0)
+
+# prepare the output data
+sys.stderr.write('basedir=%s"\n'%inp.getBaseDir())
+out=inp.getFunctionOutput()
+gen_ref_pdb(inp, out)
+
+out.writeXML(sys.stdout)
+out.writeXML(sys.stderr)
+
+

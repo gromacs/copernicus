@@ -81,15 +81,14 @@ def spawnNewSim(inp, out, i, confFile, priority, gen_vel, desc):
     out.addConnection("self:sub_out.priority[%d]"%i, "sim_%d:in.priority"%i)
     out.addConnection("self:sub_out.desc[%d]"%i, "sim_%d:in.desc"%i)
     out.addConnection("self:ext_in.ndx", "sim_%d:in.ndx"%i)
-    out.addConnection("self:ext_in.reference", "sim_%d:in.reference"%i)
+    out.addConnection("gen_ref_pdb:out.reference", "sim_%d:in.reference"%i)
     out.addConnection("self:ext_in.grpname", "sim_%d:in.grpname"%i)
     out.addConnection("mdrun_tune:out.resources", "sim_%d:in.resources"%i)
     out.addConnection("sim_%d:out.trajectory"%i, 
                       "traj_collect:in.trajectories[%d]"%i)
 
 def msm(inp, out):
-    #cpc.util.log.initServerLogToStdout(debug=True)
-    # now  
+    # now
     #output=open(os.path.join(inp.getPersistentDir(), "test.out"),"w")
     #output.write("%s"%str(inp.inputs))
     #output.write("%s"%str(inp.subnetInputs))
@@ -108,7 +107,6 @@ def msm(inp, out):
         init=True
     elif inp.isSubnetInputUpdated("tuned_mdp"):
         init2=True
-        
 
     # set up the persistence object. We need it because we must spawn
     # numbered runs and could get clashing number otherwise due to 
@@ -116,6 +114,31 @@ def msm(inp, out):
     # directory means that only one controller can be running at a time.
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
+
+    # initialize the reference pdb.
+    refpdb=pers.get('ref_pdb')
+    if refpdb is None or refpdb == 0:
+        sys.stderr.write("Generating reference pdb\n")
+        out.addInstance('grompp_ref', 'gromacs::grompp')
+        out.addInstance('gen_ref_pdb', 'gen_ref_pdb')
+        # connect the grompp_ref_pdb
+        out.addConnection('mdrun_tune:out.mdp', 'grompp_ref:in.mdp')
+        out.addConnection('self:ext_in.grompp.top', 'grompp_ref:in.top')
+        out.addConnection('self:ext_in.grompp.include', 'grompp_ref:in.include')
+        out.addConnection('self:ext_in.grompp.settings',
+                          'grompp_ref:in.settings')
+        out.addConnection('self:ext_in.ndx', 'grompp_ref:in.ndx')
+        out.addConnection('self:ext_in.confs[0]', 'grompp_ref:in.conf')
+
+        # connect the gen_ref_pdb
+        out.addConnection('self:ext_in.grpname', 'gen_ref_pdb:in.grpname')
+        out.addConnection('grompp_ref:out.tpr', 'gen_ref_pdb:in.tpr')
+        out.addConnection('self:ext_in.confs[0]', 'gen_ref_pdb:in.conf')
+        out.addConnection('self:ext_in.ndx', 'gen_ref_pdb:in.ndx')
+        out.addConnection('gen_ref_pdb:out.reference', 'self:sub_in.reference')
+        refpdb=1
+        pers.set('ref_pdb', refpdb)
+
     if init:
         sys.stderr.write("Initializing msm\n")
         # here we create an entirely new sampling set.
@@ -133,6 +156,7 @@ def msm(inp, out):
         out.addConnection('self:ext_in.confs[0]', 'mdrun_tune:in.conf')
         out.addConnection('mdrun_tune:out.resources', 'self:sub_in.resources')
         out.addConnection('mdrun_tune:out.mdp', 'self:sub_in.tuned_mdp')
+
     elif init2:
         #initializing stage 2
         sys.stderr.write("Initializing stage 2 of msm\n")
@@ -140,7 +164,9 @@ def msm(inp, out):
         # initialize the trajectory collector
         out.addInstance('traj_collect', 'trajectory_collect')
         # from self to traj_collect
-        out.addConnection('self:ext_in.reference',
+        #out.addConnection('self:ext_in.reference',
+        #                  'traj_collect:in.reference')
+        out.addConnection('gen_ref_pdb:out.reference',
                           'traj_collect:in.reference')
         out.addConnection('self:ext_in.grpname',
                           'traj_collect:in.grpname')
@@ -212,6 +238,10 @@ def msm(inp, out):
         # get these numbers from the (locked) persistence object
         run_num=pers.get('running')
         cluster_gen=pers.get('cluster_gen')
+        maxgens=inp.getInput('num_generations') 
+        msm_finished=False
+        if maxgens is not None and cluster_gen >= maxgens:
+            msm_finished=True
         #run_num=inp.getSubnetOutput('n_running')
         #cluster_gen=inp.getSubnetOutput('cluster_gen')
         #sys.stderr.write("\nRead run_num %d\n\n"%run_num)
@@ -233,7 +263,8 @@ def msm(inp, out):
                     # prevent the priority from becoming too low.
                     if priority < min_prio:
                         priority = min_prio 
-                    if conf is not None and conf.value is not None:
+                    if (conf is not None and conf.value is not None and 
+                        not msm_finished):
                         sys.stderr.write("\nCreating sim %d\n\n"%run_num)
                         spawnNewSim(inp, out, run_num, conf.value, priority, 
                                     True, "continuation")
@@ -242,7 +273,8 @@ def msm(inp, out):
         total_traj_ns=inp.getSubnetInput('total_traj_ns')
         recluster=inp.getInput('recluster')
         # now check if we need to recluster
-        if total_traj_ns is not None:
+        if (  total_traj_ns is not None and 
+              inp.getSubnetInputValue('reference') is not None  ):
             sys.stderr.write("total_traj_ns=%g, recluster=%g, cluster_gen=%d\n"%
                              (total_traj_ns, recluster, cluster_gen))
             recluster_now=False
@@ -259,7 +291,8 @@ def msm(inp, out):
                 nclust.addItem('num_macrostates', 
                                inp.getInputValue('num_macrostates'))
                 nclust.addItem('lag_time', inp.getInputValue('lag_time'))
-                nclust.addItem('reference', inp.getInputValue('reference'))
+                nclust.addItem('reference',
+                               inp.getSubnetInputValue('reference'))
                 nclust.addItem('grpname', inp.getInputValue('grpname'))
                 start_per_state=int(inp.getInput('num_sim')/
                                     inp.getInput('num_macrostates'))
@@ -332,9 +365,10 @@ def msm(inp, out):
                                inp.getSubnetInputValue(
                                             '%s.micro_assignments'%lastnm))
                 # now generate new simulations.
-                if ((inp.getSubnetInput('%s.sim_start_conf'%lastnm) is 
-                        not None) and
-                    inp.isSubnetInputUpdated('%s.sim_start_conf'%lastnm)):
+                if ( (inp.getSubnetInput('%s.sim_start_conf'%lastnm) is 
+                      not None) and
+                     inp.isSubnetInputUpdated('%s.sim_start_conf'%lastnm) and
+                     not msm_finished):
                     startConfs=inp.getSubnetInput('%s.sim_start_conf'%lastnm)
                     sys.stderr.write("\nCreating new simulations.\n")
                     if startConfs is not None:

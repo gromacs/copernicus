@@ -45,13 +45,20 @@ def checkTrajectory(filename):
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.PIPE)
     ret=proc.communicate()
-    step=re.compile('^Step\s*([0-9]*)\s*([0-9]*)', re.MULTILINE)
+    step=re.compile('^Step\s*([0-9.]*)\s*([0-9.]*)', re.MULTILINE)
     if proc.returncode != 0:
         sys.stderr.write('pwd= %s\n'%os.getcwd())
         sys.stderr.write('Got: %s\n'%(unicode(ret[0], errors="ignore")))
     match=step.search(ret[0])
     frames=int(match.group(1))
-    dt=float(match.group(2))
+    dtstring=match.group(2)
+    if dtstring.strip() == "":
+        sys.stderr.write("Can't extract time step from trajectory\n");
+        dt=0
+        raise(cpc.util.CpcError("Can't extract time step from trajectory %s\n"%
+                                filename))
+    else:
+        dt=float(match.group(2))
     ns=(frames-1)*dt/1000.
     sys.stderr.write("Using trajectory %s with %g ns of trajectories\n"%
                      (filename, ns))

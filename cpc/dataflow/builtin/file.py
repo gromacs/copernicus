@@ -18,14 +18,11 @@
 
 
 import os
-import os.path
 import logging
 
 log=logging.getLogger('cpc.dataflow.builtin.file')
 
-from cpc.dataflow import Value
 from cpc.dataflow import FileValue
-from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import FunctionRunOutput
 from cpc.dataflow import NewInstance

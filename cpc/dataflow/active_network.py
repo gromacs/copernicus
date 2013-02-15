@@ -23,21 +23,14 @@ log=logging.getLogger('cpc.dataflow.active_network')
 
 import threading
 import os
-import os.path
-
 
 import cpc.util
 import apperror
 import keywords
 import connection
-import instance
 import network
 import active_inst
-import active_conn
-import task
 import vtype
-import run
-import value
 import function_io
 
 class ActiveError(apperror.ApplicationError):
@@ -125,10 +118,6 @@ class ActiveNetwork(network.Network):
             for ai in affectedInputAIs:
                 ai.handleNewInput(self, None)
 
-    def getBasedir(self):
-        """Get the base directory."""
-        return baseDir
-
     def getParentInstance(self):
         """Get the instance this active network belongs to."""
         return self.inActiveInstance
@@ -168,9 +157,18 @@ class ActiveNetwork(network.Network):
             raise ActiveError("Active instance '%s' not found"%name)
 
     def getActiveInstance(self, name):
-        """Get the named active instance associated with this network."""
+        """Get the named active instance associated with this network.
+           Throw an ActiveError if not found."""
         with self.lock:
             return self._getActiveInstance(name)
+
+
+    def tryGetActiveInstance(self, name):
+        """Get the named active instance and return None if not found."""
+        with self.lock:
+            if name == keywords.Self:
+                return self.inActiveInstance
+            return self.activeInstances.get(name)
 
     def getActiveInstanceList(self, listIO, listSelf):
         """Return a dict of instance names. If listIO is true, each instance's
@@ -256,7 +254,7 @@ class ActiveNetwork(network.Network):
         topNet=topItem.getNet()
         if topNet is None:
             raise ActiveError("Active instance %s has not subnet"%
-                              topInst.getName())
+                              topItem.getName())
         rest=instancePathList[1:]
         return topNet._getContainingNet( rest )
 
@@ -370,18 +368,11 @@ class ActiveNetwork(network.Network):
                           (conn.srcAcp.value.getFullName(),
                            conn.dstAcp.value.getFullName()))
             else:
-                #dstAcp.activeInstance.setNamedInputValue(
-                #                                conn.getDstIO().getDir(),
-                #                                conn.getDstItemList(),
-                #                                conn.getInitialValue())
                 val=conn.getInitialValue()
                 #log.debug("Setting input to %s: %s"%
                 #          (conn.dstAcp.value.getFullName(), val.value))
                 conn.dstAcp.update(val, sourceTag, None)
                 conn.dstAcp.propagate(sourceTag, None)
-                #with dstAcp.activeInstance.lock:
-                #    dstAcp.setNewSetValue(conn.getInitialValue(),
-                #                          affectedInputAIs)
 
     def activateAll(self):
         """Activate all activeinstances in this network, starting them."""
@@ -414,12 +405,13 @@ class ActiveNetwork(network.Network):
                 cputime += ai.getCumulativeCputime()
         return cputime
 
-    def findErrorStates(self, retlist):
+    def findErrorStates(self, errlist, warnlist):
         """Find any error states associated with this any of the 
-           sub-instances. Fills retlist with tuples of (ai, errormessage)"""
+           sub-instances. Fill errlist & warnlist with active instances in
+           these states."""
         with self.lock:
             for ai in self.activeInstances.itervalues():
-                ai.findErrorStates(retlist)
+                ai.findErrorStates(errlist, warnlist)
 
     def getNet(self):
         """Get the first network, or None if none exists."""

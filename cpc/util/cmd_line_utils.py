@@ -20,11 +20,9 @@
 '''Very simple functions used by the command line tools'''
 from cpc.util.conf.connection_bundle import ConnectionBundle
 import cpc.util.openssl
-import os
 #from socket import gethostname
 import socket
 import sys
-import shutil
 
 from cpc.util.conf.conf_base import Conf
 import cpc.util.conf.conf_base

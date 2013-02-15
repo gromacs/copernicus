@@ -23,17 +23,15 @@ log=logging.getLogger('cpc.dataflow.active_inst')
 
 import threading
 import os
+import sys
 import copy
-import os.path
 import xml.sax.saxutils
 
 
 import cpc.util
 import apperror
-import connection
+import keywords
 import function
-import instance
-import network
 import active_network
 import active_conn
 import vtype
@@ -42,6 +40,9 @@ import run
 import value
 import active_value
 import function_io
+import msg
+
+from cpc.dataflow.value import ValError
 
 class ActiveError(apperror.ApplicationError):
     pass
@@ -54,7 +55,7 @@ class ActiveInstanceState:
     def __str__(self):
         return self.str
 
-class ActiveInstance(object):
+class ActiveInstance(value.ValueBase):
     """An active instance is the instance and the data associated with running
        that instance. An active instance can have a subnetwork that is itself an
        active network. 
@@ -68,13 +69,17 @@ class ActiveInstance(object):
     held=ActiveInstanceState("held")
     # The active state where it's waiting for inputs to complete
     active=ActiveInstanceState("active")
+    # A warning has been emitted. (ActiveInstance.state itself will never
+    # actually be set to this value but it is returned with getState when there
+    # is a current warning).
+    warning=ActiveInstanceState("warning")
     # one of the non-var inputs have changed. Must be set to active to run again
     blocked=ActiveInstanceState("blocked")
-    # one of the non-var inputs have changed. Must be set to active to run again
+    # The active instance encountered a run-time error
     error=ActiveInstanceState("error")
 
     # a list of them
-    states=[ held, active, blocked, error ]
+    states=[ held, active, warning, blocked, error ]
 
     def __init__(self, inst, project, activeNetwork, dirName):
         """Initialize an active instance, based on an already existing
@@ -173,14 +178,14 @@ class ActiveInstance(object):
         else:
             self.persDir=None
 
-        if self.function.hasLog():
-            self.log=ActiveRunLog(os.path.join(project.basedir, dirName, 
-                                               "_log"))
-        else:
-            self.log=None
+        # the message object.
+        self.msg=msg.ActiveInstanceMsg(self)
+
         # an ever-increasing number to prevent outputs from overwriting 
         # each other
         self.outputDirNr=0 
+        # whether this instance generates tasks
+        self.genTasks=True
 
         # whether any input value has changed, prompting a task run if 
         # the instance is active.
@@ -229,7 +234,6 @@ class ActiveInstance(object):
         # whether the instance has already been called with all required inputs:
         self.state=ActiveInstance.held
         self.tasks=[]
-        self.errmsg=None
         # now check whether the instance has a sub-network, and
         # activate that network if needed.
         subnet=inst.getSubnet()
@@ -253,35 +257,47 @@ class ActiveInstance(object):
         self.lastUpdateAI=None
         self.lastUpdateSeqNr=-1
 
+    def writeDebug(self, outf):
+        outf.write("Active instance %s\n"%self.getCanonicalName())
+        outf.write("memory usage: %d bytes\n"%sys.getsizeof(self))
+
     def getStateStr(self):
         """Get the current state as a string."""
+        ret=self.getState()
+        return str(ret)
+
+    def getState(self):
+        """ Get the current state as an object """
         with self.lock:
-            if self.state != ActiveInstance.error:
-                return str(self.state)
-            else:
-                return "ERROR: %s"%self.errmsg
+            ret = self.state
+            if self.state == ActiveInstance.active and self.msg.hasWarning():
+                ret=ActiveInstance.warning
+        return ret
 
     def getPropagatedStateStr(self):
         """Get the propagated state associated with this active instance:
            i.e. with any error conditions of sub-instances."""
-        retlist=[]
+        errlist=[]
+        warnlist=[]
         # find any errors
-        self.findErrorStates(retlist)
-        if len(retlist) == 0:
-            return self.getStateStr()
+        self.findErrorStates(errlist, warnlist)
+        if len(errlist) > 0:
+            return str(ActiveInstance.error)
+        elif len(warnlist) > 0:
+            return str(ActiveInstance.warning)
         else:
-            retst=""
-            for (ai, errmsg) in retlist:
-                retst="ERROR in %s: %s\n"%(ai.getCanonicalName(), errmsg)
-            return retst
+            return self.getStateStr()
 
-    def findErrorStates(self, retlist):
-        """Find any error states associated with this ai or any of its 
-           sub-instances. Fills retlist with tuples of (ai, errormessage)"""
+    def findErrorStates(self, errlist, warnlist):
+        """Find any error & warning states associated with this ai or any
+           of its sub-instances. Fills errlist and warnlist active instances
+           in these states."""
         with self.lock:
             if self.state == ActiveInstance.error:
-                retlist.append( (self, self.errmsg) )
-        self.subnet.findErrorStates(retlist)
+                errlist.append( self )
+            elif self.state == ActiveInstance.warning:
+                warnlist.append( self )
+        self.subnet.findErrorStates(errlist, warnlist)
 
     def getFunction(self):
         """Get the function associated with this a.i."""
@@ -333,19 +349,7 @@ class ActiveInstance(object):
 
     def getLog(self):
         """Get the log object associated with this active instance, or None"""
-        return self.log
-
-    def setErrmsg(self, msg):
-        """Set the error message."""
-        with self.lock:
-            # try to convert it to unicode, we *should* be getting a 
-            # unicode object or a utf-8 encoded string.
-            if type(msg) != type(u''):
-                # as a last resort, just ignore everything we don't know
-                # how to deal with
-                self.errmsg = unicode(msg, encoding='utf-8', errors='ignore')
-            else: 
-                self.errmsg=msg
+        return self.msg.getLog()
 
     def getBasedir(self):
         """Get the active instance's base directory relative to the project 
@@ -356,7 +360,9 @@ class ActiveInstance(object):
         """Get the active instance's absolute base directory."""
         return os.path.join(self.project.basedir, self.baseDir)
 
-
+    def getTasks(self):
+        """ Get the task list """
+        return self.tasks
     def getInputs(self):
         """Get the input value object."""
         return self.inputVal
@@ -382,7 +388,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.stagedInputVal.getSubValue(itemList, True)
+        val=self.stagedInputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find input %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -400,7 +406,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.outputVal.getSubValue(itemList, True)
+        val=self.outputVal.getCreateSubValue(itemList)
         #log.debug("->%s, %s"%(str(type(self.outputVal)), str(type(val))))
         if val is None:
             raise ActiveError("Can't find output %s for active instance %s"%
@@ -419,7 +425,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.stagedSubnetInputVal.getSubValue(itemList, True)
+        val=self.stagedSubnetInputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find subnet input %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -437,7 +443,7 @@ class ActiveInstance(object):
 
            It is assumed project.networkLock is locked when using this 
            function."""
-        val=self.subnetOutputVal.getSubValue(itemList, True)
+        val=self.subnetOutputVal.getCreateSubValue(itemList)
         if val is None:
             raise ActiveError("Can't find subnet output %s for active instance %s"%
                               (itemList, self.instance.getName()))
@@ -483,7 +489,8 @@ class ActiveInstance(object):
         with self.inputLock:
            self.tasks.remove(task)
 
-    def handleTaskOutput(self, task, output, subnetOutput):
+    def handleTaskOutput(self, sourceTag, seqNr, output, subnetOutput,
+                         warnMsg):
         """Handle the output of a finished task that is generated from 
            this active instance.
 
@@ -496,8 +503,8 @@ class ActiveInstance(object):
             for out in output:
                 outItems=vtype.parseItemList(out.name)
                 # now get the actual entry in the output value tree
-                oval=self.outputVal.getSubValue(outItems, create=True,
-                                                setCreateSourceTag=task)
+                oval=self.outputVal.getCreateSubValue(outItems,
+                                                setCreateSourceTag=sourceTag)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -507,16 +514,16 @@ class ActiveInstance(object):
                               (out.name, self.getCanonicalName(), 
                                self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
-                oval.update(out.val, task.seqNr, task)
+                oval.update(out.val, seqNr, sourceTag)
                 #log.debug("1 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
-                oval.propagate(task, task.seqNr)
+                oval.propagate(sourceTag, seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
-                oval=self.subnetOutputVal.getSubValue(outItems, create=True,
-                                                      setCreateSourceTag=task)
+                oval=self.subnetOutputVal.getCreateSubValue(outItems, 
+                                                   setCreateSourceTag=sourceTag)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
                 out.item=oval
@@ -526,20 +533,21 @@ class ActiveInstance(object):
                         (out.name, self.getCanonicalName(), 
                          self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
-                oval.update(out.val, task.seqNr, task)
+                oval.update(out.val, seqNr, sourceTag)
                 #log.debug("2 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
                 # now stage all the inputs 
-                oval.propagate(task, task.seqNr)
+                oval.propagate(sourceTag, seqNr)
         # Round 2: now alert the receiving active instances
         if output is not None:
             for out in output:
-                out.item.notifyListeners(task, task.seqNr)
+                out.item.notifyListeners(sourceTag, seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
-                out.item.notifyListeners(task, task.seqNr)
+                out.item.notifyListeners(sourceTag, seqNr)
         self.outputVal.setUpdated(False)
         self.subnetOutputVal.setUpdated(False)
+        self.msg.setWarning(warnMsg)
 
     def handleNewInput(self, sourceTag, seqNr, noNewTasks=False):
         """Process new input based on the changing of values.
@@ -581,10 +589,16 @@ class ActiveInstance(object):
                                                     sourceTag, True)
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
+            if noNewTasks:
+                # don't set updated flag if it's not needed; noNewTasks
+                # is true when reading in current state, and setting updated
+                # to True will cause unexpected runs later on.
+                self.updated=False
+                return
+            # only continue if we're active
+            if self.state != ActiveInstance.active:
+                return
             if self.updated:
-                # only continue if we're active
-                if self.state != ActiveInstance.active or noNewTasks:
-                    return
                 #log.debug("%s: Processing new input for %s of fn %s"%
                 #          (self.getCanonicalName(), self.instance.getName(), 
                 #           self.function.getName()))
@@ -603,6 +617,7 @@ class ActiveInstance(object):
         with self.inputLock:
             self.outputVal.setUpdated(False)
             self.subnetOutputVal.setUpdated(False)
+            self.updated=False
 
     #def resetUpdated(self):
     #    """Reset the updated tag."""
@@ -639,31 +654,7 @@ class ActiveInstance(object):
         for listener in listeners:
             listener.searchDestinations()
 
-
-
-    def findNamedInput(self, direction, itemList, sourceTag, closestValue):
-        """Find the *staging* value object corresponding to the named item.
-           direction = the input/output/subnetinput/subnetoutput direction
-           itemList = a path gettable by value.getSubValue
-           closestValue = boolean indicating whether to return the closest
-                          value (for getNamedinputAffectedAIs) or the actual
-                          value (for stageNamedInput). If False,
-                          the value will be created if needed.
-           """
-        if direction==function_io.inputs:
-            topval=self.stagedInputVal
-        elif direction==function_io.subnetInputs:
-            topval=self.stagedSubnetInputVal
-        else:
-            raise ActiveError("Trying to set output value %s"%
-                              str(direction.name))
-        val=topval.getSubValue(itemList, create=(not closestValue), 
-                               setCreateSourceTag=sourceTag,
-                               closestValue=closestValue)
-        #log.debug("returning %s"%(val))
-        return val
-
-    def getNamedInputAffectedAIs(self, closestVal, affectedInputAIs):
+    def getValueAffectedAIs(self, closestVal, affectedInputAIs):
         """Get the affected input ais for setting a new value."""
         listeners=[]
         closestVal.findListeners(listeners)
@@ -686,25 +677,6 @@ class ActiveInstance(object):
         newVal.markUpdated(True)
         val.update(newVal, None, sourceTag=sourceTag)
         val.propagate(sourceTag, None)
-
-    def getNamedValue(self, direction, itemList):
-        """Get a specific named value ."""
-        # now change input values
-        #log.debug("Processing new value for %s of fn %s"%
-        #          (self.instance.getName(), self.function.getName()))
-        if direction==function_io.inputs:
-            with self.inputLock:
-                val=self.inputVal.getSubValue(itemList)
-        elif direction==function_io.outputs:
-            with self.outputLock:
-                val=self.outputVal.getSubValue(itemList)
-        elif direction==function_io.subnetInputs:
-            with self.inputLock:
-                val=self.subnetInputVal.getSubValue(itemList)
-        elif direction==function_io.subnetOutputs:
-            with self.outputLock:
-                val=self.subnetOutputVal.getSubValue(itemList)
-        return val
 
     def getNamedType(self, direction, itemList):
         """Get the type of a specific named value."""
@@ -740,8 +712,7 @@ class ActiveInstance(object):
             if changed:
                 for task in self.tasks:
                     task.activateCommands()
-                if self._canRun():
-                    self._genTask()
+                self._reactivate()
         return changed
 
 
@@ -773,9 +744,14 @@ class ActiveInstance(object):
                         task.activateCommands()
                     changed=True
             if changed:
-                if self._canRun():
-                    self._genTask()
+                self._reactivate()
 
+    def _reactivate(self):
+        """Check for new inputs, and run if there are any."""
+        if self.inputVal.hasUpdates() or self.subnetInputVal.hasUpdates():
+            self.updated=True
+        if self._canRun():
+            self._genTask()
           
     def cancelTasks(self, seqNr):
         """Cancel all tasks (and commands) with sequence number before 
@@ -801,8 +777,6 @@ class ActiveInstance(object):
              (self.function.genTasks) and
              (self.updated) ):
             ret=self.inputVal.haveAllRequiredValues()
-            #log.debug("Checking whether instance %s can run: %s"%
-            #          (self.getCanonicalName(), str(ret)))
             return ret
         return False
 
@@ -855,20 +829,27 @@ class ActiveInstance(object):
         """Append an existing task to the task list. Useful for reading in"""
         self.tasks.append(tsk)
 
-    def markError(self, msg):
-        """Mark active instance as being in error state."""
+    def markError(self, msg, reportAsNew=True):
+        """Mark active instance as being in error state.
+
+           If reportAsNew is True, the error will be reported as new, otherwise
+           it is an existing error that is being re-read"""
         with self.lock:
-            if isinstance(msg, unicode):
-                self.errmsg=msg
-            else:
-                self.errmsg=unicode(msg, encoding="utf-8", errors='ignore')
+            self.msg.setError(msg)
             self.state=ActiveInstance.error
             for task in self.tasks:
                 task.deactivateCommands()
             #print msg
-            log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(), 
-                                                  self.function.getName(), 
-                                                  self.errmsg))
+            if reportAsNew:
+                log.error(u"Instance %s (fn %s): %s"%(self.instance.getName(),
+                                                      self.function.getName(),
+                                                      self.msg.getError()))
+
+
+    def setWarning(self, msg):
+        """Set warning message."""
+        with self.lock:
+            self.msg.setWarning(msg)
 
     def rerun(self, recursive, clearError, outf=None):
         """Force the rerun of this instance, or clear the error if in error
@@ -882,6 +863,8 @@ class ActiveInstance(object):
                 if clearError:
                     if self.state == ActiveInstance.error:
                         self.updated=True
+                        self.msg.setError(None)
+                        self.msg.setWarning(None)
                         self.state=ActiveInstance.active
                         log.debug("Clearing error on %s"%
                                   self.getCanonicalName())
@@ -913,7 +896,12 @@ class ActiveInstance(object):
                         str(self.state), self.runSeqNr, self.cputime) )
             if self.state==ActiveInstance.error:
                 outf.write(' errmsg=%s'%
-                        xml.sax.saxutils.quoteattr(self.errmsg).encode('utf-8'))
+                           xml.sax.saxutils.quoteattr(self.msg.getError()).
+                           encode('utf-8'))
+            if self.msg.hasWarning():
+                outf.write(' warnmsg=%s'%
+                           xml.sax.saxutils.quoteattr(self.msg.getWarning()).
+                           encode('utf-8'))
             outf.write('>\n')
             outf.write('%s<inputs>\n'%(iindstr))
             self.inputVal.writeContentsXML(outf, indent+2)
@@ -939,27 +927,121 @@ class ActiveInstance(object):
                     tsk.writeXML(outf, indent+2)
                 outf.write('%s</tasks>\n'%iindstr)
             outf.write('%s</active>\n'%indstr)
-        
 
-class ActiveRunLog(object):
-    """Class holding a run log for an active instance requiring one."""
-    def __init__(self, filename):
-        """Initialize with an absolute path name"""
-        self.filename=filename
-        self.lock=threading.Lock()
-        self.outf=None
-    def open(self):
-        """Open the run log and return a file object, locking the log."""
-        self.lock.acquire()
-        self.outf=open(self.filename, 'a')
-        return self.outf
-    def close(self):
-        """Close the file opened with open()"""
-        self.outf.close()
-        self.outf=None
-        self.lock.release()
-    def getFilename(self):
-        """Get the file name"""
-        return self.filename
+
+    ########################################################
+    # Member functions from the ValueBase interface:
+    ########################################################
+    def _getSubVal(self, itemList, staging=False):
+        """Helper function"""
+        subval=None
+        if itemList[0]==keywords.In:
+            with self.inputLock:
+                if staging:
+                    subval=self.stagedInputVal
+                else:
+                    subval=self.inputVal
+        elif itemList[0]==keywords.Out:
+            with self.outputLock:
+                subval=self.outputVal
+        elif itemList[0]==keywords.SubIn:
+            with self.inputLock:
+                if staging:
+                    subval=self.stagedSubnetInputVal
+                else:
+                    subval=self.subnetInputVal
+        elif itemList[0]==keywords.SubOut:
+            with self.outputLock:
+                subval=self.subnetOutputVal
+        elif itemList[0]==keywords.Msg:
+            with self.outputLock:
+                subval=self.msg
+        elif self.subnet is not None:
+            subval=self.subnet.tryGetActiveInstance(itemList[0])
+        return subval
+ 
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or return None 
+           if not found.
+           itemList = the path of the value to return"""
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getSubValue(itemList[1:])
+        return None
+        
+    def getCreateSubValue(self, itemList, createType=None,
+                          setCreateSourceTag=None):
+        """Get or create a specific subvalue through a list of subitems, or 
+           return None if not found.
+           itemList = the path of the value to return/create
+           if createType == a type, a subitem will be created with the given 
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+        if len(itemList)==0:
+            return self
+        # staging is true because we know we want to be able to create a new
+        # value.
+        subval=self._getSubVal(itemList, staging=True)
+        if subval is not None:
+            return subval.getCreateSubValue(itemList[1:], createType,
+                                            setCreateSourceTag)
+        raise ValError("Cannot create sub value of active instance")
+
+    def getClosestSubValue(self, itemList):
+        """Get the closest relevant subvalue through a list of subitems, 
+           
+           itemList = the path of the value to get the closest value for """
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getClosestSubValue(itemList[1:])
+        return self
+
+    def getSubValueList(self):
+        """Return a list of addressable subvalues."""
+        ret=[ function_io.inputs, function_io.outputs, 
+              function_io.subnetInputs, function_io.subnetOutputs,
+              keywords.Msg ]
+        if self.activeNetwork is not None:
+            ailist=self.subnet.getActiveInstanceList(False, False)
+            ret.extend( ailist.keys() )
+        return ret
+
+    def getSubValueIterList(self):
+        """Return an iterable list of addressable subvalues."""
+        return self.getSubValueList()
+
+    def hasSubValue(self, itemList):
+        """Check whether a particular subvalue exists"""
+        if len(itemList) == 0:
+            return True
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.hasSubValue(itemList[1:])
+        return False
+
+    def getType(self):
+        """Return the type associated with this value"""
+        return vtype.instanceType
+
+    def getDesc(self):
+        """Return a 'description' of a value: an item that can be passed to 
+           the client describing the value."""
+        if self.subnet is not None:
+            ret=self.subnet.getActiveInstanceList(False, False)
+        else:
+            ret=dict()
+        ret[keywords.In]="inputs"
+        ret[keywords.Out]="outputs"
+        ret[keywords.SubIn]="subnet_inputs"
+        ret[keywords.SubOut]="subnet_outputs"
+        ret[keywords.Msg]="msg"
+        return ret
+    ########################################################
+
 
 

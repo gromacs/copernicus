@@ -57,7 +57,7 @@ def toJson(obj):
                  'host' : obj.host,                 
                  'workerId' : obj.workerId,
                  'id':obj.id,
-                 'status':obj.status
+                 'state':obj.state
                }
     
     raise TypeError(repr(obj)+ ' is not JSON serializable')
@@ -80,7 +80,7 @@ def fromJson(jsonObj):
             return node
         
         if jsonObj['class'] == 'WorkerState':
-            return WorkerState(jsonObj['host'],jsonObj['status'])
+            return WorkerState(jsonObj['host'],jsonObj['state'])
         
         if jsonObj['class'] == 'Nodes':
             nodes = Nodes()

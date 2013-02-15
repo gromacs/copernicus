@@ -80,6 +80,7 @@ def print_usage():
     print "       cpcc force-rerun       item"
     print ""
     print "Worker and heartbeat monitoring commands."
+    print "       cpcc status | s        [project]"
     print "       cpcc queue | q"
     print "       cpcc running | r "
     print "       cpcc heartbeats | h "
@@ -97,11 +98,13 @@ def print_usage():
     print "       cpcc node-pri          priority host [port]"
     print "       cpcc network-topology"
     print "       cpcc readconf"
-    print "       cpcc version"
+    print "       cpcc server-info"
     print ""
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
     print "       cpcc load      project-tar projectname"
+    print "Other commands "
+    print "       cpcc version"
     print ""
     print "Common global options:"
     print "       cpcc [-c bundleFile]"
@@ -228,9 +231,9 @@ try:
         ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "version":
         print("Client version:  %s"%__version__)
+        print("\nConnecting to server for version information:")
         clnt=ClientMessage()
-        resp = clnt.testServerRequest()
-        ProcessedResponse(resp).pprint()
+        ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)
     elif cmd == "queue" or cmd=="q":
         clnt=ClientMessage()
         resp = clnt.listRequest("queue")
@@ -298,6 +301,12 @@ try:
         resp = clnt.projectInfoRequest(project, item)
         renderMethod = CmdLine.writeInfo
         ProcessedResponse(resp).pprint(renderMethod)
+    elif cmd == "debug":
+        project, pargs = getProjectArgs(args)
+        item=getArg(pargs, 1, "item to get debug info for")
+        clnt=ClientMessage()
+        resp = clnt.projectDebugRequest(project, item)
+        ProcessedResponse(resp).pprint(None)
     elif cmd == "graph": 
         project, pargs = getProjectArgs(args)
         if len(pargs) > 1:
@@ -538,6 +547,13 @@ try:
             
         subprocess.call(["dot","-Tsvg",filename,'-o',filename+".svg"])
 
+    elif cmd == "status" or cmd == "s":
+        project = None
+        if len(args) > 1:
+            project = getArg(args,1,"project")
+        clnt = ClientMessage()
+        ProcessedResponse(clnt.statusRequest(project)).pprint(CmdLine.status)
+
     elif cmd == "readconf":
         clnt = ClientMessage()
         ProcessedResponse(clnt.readConfRequest()).pprint()
@@ -545,6 +561,11 @@ try:
     elif cmd == "stop-server":
         clnt=ClientMessage()
         ProcessedResponse(clnt.stopRequest()).pprint()
+
+    elif cmd == "server-info":
+        clnt=ClientMessage()
+        ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)
+
     elif cmd == "save-state":
         clnt=ClientMessage()
         ProcessedResponse(clnt.saveStateRequest()).pprint()

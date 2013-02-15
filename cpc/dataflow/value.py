@@ -19,9 +19,7 @@
 
 
 import logging
-import collections
 import os
-import os.path
 import xml.sax
 
 
@@ -76,7 +74,57 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
         return retval
     raise ValError("Non-simple literals not yet implemented.")
 
-class Value(object):
+
+class ValueBase(object):
+    """The basic interface for a value-like object."""
+
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or return None 
+           if not found.
+           itemList = the path of the value to return"""
+        return None 
+
+    def getCreateSubValue(self, itemList, createType=None, 
+                          setCreateSourceTag=None):
+        """Get or create a specific subvalue through a list of subitems, or 
+           return None if not found.
+           itemList = the path of the value to return/create
+           if createType == a type, a subitem will be created with the given 
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+        raise ValError("Cannot create sub value")
+
+    def getClosestSubValue(self, itemList):
+        """Get the closest relevant subvalue through a list of subitems, 
+           
+           itemList = the path of the value to get the closest value for """
+        return None
+        
+
+    def getSubValueList(self):
+        """Return a list of addressable subvalues."""
+        return []
+
+    def getSubValueIterList(self):
+        """Return an iterable list of addressable subvalues."""
+        return []
+
+    def hasSubValue(self, itemList):
+        """Check whether a particular subvalue exists"""
+        return False
+
+    def getType(self):
+        """Return the type associated with this value"""
+        raise ValError("Value has no type")
+
+    def getDesc(self):
+        """Return a 'description' of a value: an item that can be passed to 
+           the client describing the value."""
+        return None
+
+
+class Value(ValueBase):
     """The class describing a data value. Value classes hold function input 
        and output data, and are used to transmit external i/o data."""
     def __init__(self, value, tp, parent=None, owner=None, selfName=None, 
@@ -203,24 +251,36 @@ class Value(object):
             for val in self.value:
                 val.destroy()
 
-    def _set(self, value, basetype=None):
+    def _set(self, literalValue, basetype=None):
         """Set a value: a value without subtypes."""
-        self.value=value
+        rmref=self.fileValue
+        self.value=literalValue
         if ( (self.fileList is not None ) and 
-             (value is not None ) and
+             (literalValue is not None ) and
              (basetype is not None) and
              (basetype.isSubtype(vtype.fileType) ) ):
-            if os.path.isabs(value):
-                self.fileValue=self.fileList.getAbsoluteFile(value)
+            if os.path.isabs(literalValue):
+                self.fileValue=self.fileList.getAbsoluteFile(literalValue)
                 self.value=self.fileValue.getName()
             else:
-                self.fileValue=self.fileList.getFile(value)
+                self.fileValue=self.fileList.getFile(literalValue)
+        if rmref is not None:
+            rmref.rmRef()
+
+    def setLiteral(self, literalValue):
+        """Set a value: a value without subtypes."""
+        self._set(self.type.valueFromLiteral(literalValue))
+
+    def setNone(self):
+        """Set a value to None"""
+        self._set(None)
 
     def get(self):
         """Set a literal value: a value without subtypes."""
         return self.value
 
     def getType(self):
+        """Return the type associated with this value"""
         return self.type
 
     def getBasetype(self):
@@ -238,19 +298,19 @@ class Value(object):
         subVal=self.value[itemList[0]]
         return subVal.hasSubValue(itemList[1:])
 
-    def getSubValue(self, itemList, create=False, createType=None, 
-                    setCreateSourceTag=None, closestValue=False):
-        """Get or create (if create==True) a specific subvalue through a 
-           list of subitems, or return None if not found.
+    def _getCreateSubValue(self, itemList, create=False, createType=None, 
+                           setCreateSourceTag=None, closestValue=False):
+        """Base function for getSubValue, getCreateSubValue and 
+           getClosestValue
            
-           If create==true, a subitem will be created for arrays/dicts
-           if createType == a type, a subitem will be created with the given 
-                            type
-           if setCreateSourceTag = not None, the source tag will be set for
-                                   any items that are created.
-           if closestValue is true, the closest relevant value will be
-                                    returned """
-
+           Returns a value, which is created if create is True, or the closest
+           value if closestValue is True
+           itemList = the path of the value to find
+           createType = the type to create if a new value must be created
+           setCreateSourceTag = if not None, the source tag to set if a value 
+                                must be created
+           closestValue = whether to return the closest value (mutually 
+                          exclusive with create)"""
         #log.debug("getSubValue on on %s"%(self.getFullName()))
         if len(itemList)==0:
             return self
@@ -281,13 +341,6 @@ class Value(object):
                     nval=self._create(None, ntp, len(self.value), 
                                       setCreateSourceTag)
                     self.value.append(nval)
-                #elif (itemList[0] > len(self.value)):
-                    # the list is too long, but in the context of a transaction
-                    # might be OK
-                #    if closestValue:
-                #        return self
-                #    else:
-                #        return None
             else:
                 raise ValError("Array type not a list.")
         else:
@@ -323,9 +376,46 @@ class Value(object):
                             return None
         # try to find the child value
         subVal=self.value[itemList[0]]
-        return subVal.getSubValue(itemList[1:], create=create, 
-                                  setCreateSourceTag=setCreateSourceTag,
-                                  closestValue=closestValue)
+        return subVal._getCreateSubValue(itemList[1:], create=create, 
+                                         setCreateSourceTag=setCreateSourceTag,
+                                         closestValue=closestValue)
+
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or 
+           return None if not found.
+           itemList = the path of the value to return"""
+        return self._getCreateSubValue(itemList, create=False)
+
+
+    def getCreateSubValue(self, itemList, createType=None, 
+                          setCreateSourceTag=None):
+        """Get or create a specific subvalue through a list of subitems, or 
+           return None if not found.
+           itemList = the path of the value to return/create
+           If create==true, a subitem will be created for arrays/dicts
+           if createType == a type, a subitem will be created with the given 
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+ 
+        return self._getCreateSubValue(itemList, create=True, 
+                                       createType=createType, 
+                                       setCreateSourceTag=setCreateSourceTag)
+
+    def getClosestSubValue(self, itemList):
+        """Get or create (if create==True) a specific subvalue through a 
+           list of subitems, or return None if not found.
+           
+           itemList = the path of the value to get the closest value for
+           If create==true, a subitem will be created for arrays/dicts
+           if createType == a type, a subitem will be created with the given 
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created.
+           if closestValue is true, the closest relevant value will be
+                                    returned """
+        return self._getCreateSubValue(itemList, create=False, 
+                                       closestValue=True)
 
     def getSubType(self, itemList):
         """Determine the type of a sub-item (even if it doesn't exist yet)."""
@@ -464,6 +554,23 @@ class Value(object):
 
     def isUpdated(self):
         return self.updated
+
+    def hasUpdates(self):
+        """Return whether this value or any of its chidren has the updated
+           field set."""
+        if self.updated:
+           return True
+        if isinstance(self.value, list):
+            for val in self.value:
+                if val.hasUpdates():
+                    return True
+        elif isinstance(self.value, dict):
+            for val in self.value.itervalues():
+                if val.hasUpdates():
+                    return True
+        return False
+
+
    
     def writeXML(self, outf, indent=0, fieldName=None):
         """Write out this value as XML"""
@@ -681,7 +788,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                         createType=None
                         if self.allowUnknownTypes:
                             createType=tp
-                        subVal=subVal.getSubValue([itemStackAdd], create=True,
+                        subVal=subVal.getCreateSubValue([itemStackAdd], 
                                             createType=createType,
                                             setCreateSourceTag=self.sourceTag)
                         if subVal is None:
@@ -694,7 +801,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     # this is a single, directly addressed sub-item
                     subitems=vtype.parseItemList(
                                     keywords.fixID(attrs.getValue('subitem')))
-                    subVal=subVal.getSubValue(subitems, create=True,
+                    subVal=subVal.getCreateSubValue(subitems, 
                                               setCreateSourceTag=self.sourceTag)
                 elif ( len(self.typeStack) > 0 and 
                        (self.typeStack[-1] == vtype.arrayType) ):
@@ -702,7 +809,7 @@ class ValueReader(xml.sax.handler.ContentHandler):
                     createType=None
                     if self.allowUnknownTypes:
                         createType=tp
-                    subVal=subVal.getSubValue([itemStackAdd], create=True,
+                    subVal=subVal.getCreateSubValue([itemStackAdd], 
                                               createType=createType,
                                               setCreateSourceTag=self.sourceTag)
             else:

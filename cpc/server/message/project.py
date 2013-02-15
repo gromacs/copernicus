@@ -34,7 +34,8 @@ import cpc.util
 import cpc.server.state.projectlist
 from cpc.server.state.user_handler import UserHandler, UserError, UserLevel
 import cpc.util.exception
-
+from cpc.dataflow.vtype import instanceType
+from cpc.network.node import Nodes, getSelfNode
 
 
 log=logging.getLogger('cpc.server.projectcmd')
@@ -45,8 +46,9 @@ class ProjectServerCommandException(cpc.util.exception.CpcError):
 
 
 class ProjectServerCommand(ServerCommand):
-    """Base class for commands acting on projects."""
-    def getProject(self, request, serverState):
+    """Base class for commands acting on projects.
+        If only_explicit, then return explicit project or None"""
+    def getProject(self, request, serverState, only_explicit=False):
         """Get a named or default project"""
         #get the user
         user = self.getUser(request)
@@ -55,6 +57,8 @@ class ProjectServerCommand(ServerCommand):
         if request.hasParam('project'):
             prjName=request.getParam('project')
         else:
+            if only_explicit:
+                return None
             prjName=request.session.get('default_project_name', None)
             if prjName is None:
                 raise cpc.util.exception.CpcError("No project selected")
@@ -240,6 +244,20 @@ class SCProjectList(ProjectServerCommand):
         response.add(lst)
         log.info("Project list on %s: %s"%(prj.getName(), item))
 
+class SCProjectDebug(ProjectServerCommand):
+    """Debug named items in a project - implementation dependent."""
+    def __init__(self):
+        ServerCommand.__init__(self, "project-debug")
+    def run(self, serverState, request, response):
+        prj=self.getProject(request, serverState)
+        if request.hasParam('item'):
+            item=request.getParam('item')
+        else:
+            item=""
+        resp=prj.getDebugInfo(item)
+        log.info("Debug request %s, response is '%s'"%(item, resp))
+        response.add(resp)
+
 
 class SCProjectInfo(ProjectServerCommand):
     """Get project item descriptions."""
@@ -354,6 +372,9 @@ class SCProjectGet(ProjectServerCommand):
     def run(self, serverState, request, response):
         prj=self.getProject(request, serverState)
         itemname=request.getParam('item')
+        if itemname is None:
+            itemname=""
+        itemname=itemname.strip()
         if not request.hasParam("getFile"):
             ret=dict()
             ret["name"]=itemname
@@ -363,8 +384,10 @@ class SCProjectGet(ProjectServerCommand):
                     ret["value"]=val.getDesc()
                 else:
                     ret["value"]="not found"    
-            except cpc.dataflow.ApplicationError as e:
-                ret["value"]="not found"    
+            #except cpc.dataflow.ApplicationError as e:
+            #    ret["value"]="not found"    
+            finally:
+                pass
             response.add(ret)
         else:
             try:
@@ -384,6 +407,8 @@ class SCProjectGet(ProjectServerCommand):
                 else:
                     response.add('Item %s not a file'%itemname, status="ERROR")
             except cpc.dataflow.ApplicationError as e:
+                response.add('Item %s not found'%itemname, status="ERROR")
+            except IOError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
         log.info("Project get %s: %s"%(prj.getName(), itemname))
 
@@ -512,4 +537,118 @@ class SCProjectRollback(ProjectServerCommand):
         response.add(outf.getvalue())
         log.info("Project rollback %s"%(prj.getName()))
 
+class SCStatus(ProjectServerCommand):
+    """ Fetches general information about the server, network and projects """
+    def __init__(self):
+        ServerCommand.__init__(self, "status")
+
+    def run(self, serverState, request, response):
+        ret_dict = {}
+
+        # handle project status
+        user = self.getUser(request)
+        explicit_project=self.getProject(request, serverState, only_explicit=True)
+        if explicit_project is not None:
+            log.warning("not none!")
+            projects = [explicit_project.getName()]
+        else:
+            if user.isSuperuser():
+                projects = lst=serverState.getProjectList().list()
+                log.warning("superuser!")
+            else:
+                projects = UserHandler().getProjectListForUser(user)
+                log.warning("from db!")
+        ret_prj_dict = {}
+
+        for prj_str in projects:
+            ret_prj_dict[prj_str] = dict()
+            queue = {'queue' : [], 'running': []}
+            state_count = {}
+            err_list=[]
+            warn_list=[]
+            prj_obj = serverState.getProjectList().get(prj_str)
+            # we iterate over the childred rather than calling _traverseInstance
+            # here to avoid the project itself being counted as an instance
+            for child in prj_obj.getSubValueIterList():
+                self._traverseInstance(prj_obj.getSubValue([child]), 
+                                       state_count, queue, err_list, 
+                                       warn_list)
+            ret_prj_dict[prj_str]['states'] = state_count
+            ret_prj_dict[prj_str]['queue']  = queue
+            ret_prj_dict[prj_str]['errors'] = err_list
+            ret_prj_dict[prj_str]['warnings'] = warn_list
+            if prj_str == request.session.get('default_project_name', None):
+                ret_prj_dict[prj_str]['default']=True
+        ret_dict['projects'] = ret_prj_dict
+        if explicit_project is not None:
+            # client only want info for this project, return with that.
+            response.add("", ret_dict)
+            return
+
+        # handle network
+        topology = self._getTopology(serverState)
+        num_workers = 0
+        num_servers = 0
+        num_local_workers = len(serverState.getWorkerStates())
+        num_local_servers = len(ServerConf().getNodes().nodes)
+        for name, node in topology.nodes.iteritems():
+            num_workers += len(node.workerStates)
+            num_servers += 1
+        ret_dict['network'] = {
+            'workers': num_workers,
+            'servers': num_servers,
+            'local_workers': num_local_workers,
+            'local_servers': num_local_servers
+        }
+
+        response.add("", ret_dict)
+
+    def _handle_instance(self, instance, state_count, queue, 
+                         err_list, warn_list):
+        """ Parse an instance: check for errors, state etc """
+        stateStr=instance.getStateStr()
+        if stateStr in state_count:
+            state_count[stateStr] += 1
+        else:
+            state_count[stateStr] = 1
+        if stateStr == "error":
+            err_list.append(instance.getCanonicalName())
+        elif stateStr == "warning":
+            warn_list.append(instance.getCanonicalName())
+        for task in instance.getTasks():
+            for cmd in task.getCommands():
+                if cmd.getRunning():
+                    queue['running'].append(cmd.toJSON())
+                else:
+                    queue['queue'].append(cmd.toJSON())
+
+    def _traverseInstance(self, instance, state_count, queue, 
+                          err_list, warn_list):
+        """Recursively traverse the instance tree, depth first search"""
+        self._handle_instance(instance, state_count, queue, err_list, warn_list)
+        for child_str in instance.getSubValueIterList():
+            child_obj = instance.getSubValue([child_str])
+            if child_obj is not None:
+                if child_obj.getType() == instanceType:
+                    self._traverseInstance(child_obj,state_count, queue, 
+                                           err_list, warn_list)
+
+    def _getTopology(self, serverState):
+        """ Fetches topology information about the network """
+        # TODO Caching
+        conf = ServerConf()
+        topology = Nodes()
+        thisNode = getSelfNode(conf)
+        thisNode.nodes = conf.getNodes()
+        thisNode.workerStates = serverState.getWorkerStates()
+        topology.addNode(thisNode)
+        for node in thisNode.nodes.nodes.itervalues():
+            if not topology.exists(node.getId()):
+                #connect to correct node
+                clnt = ClientMessage(node.host, node.https_port, conf=conf)
+                #send along the current topology
+                rawresp = clnt.networkTopology(topology)
+                processedResponse = ProcessedResponse(rawresp)
+                topology = processedResponse.getData()
+        return topology
 

@@ -99,6 +99,12 @@ class RunningCommand(object):
         """Update the timer to reflect a new heartbeat signal"""
         self.lastHeard=time.time()
 
+    def expiry(self, now):
+        """Get the expiry time relative to now (which the current time
+           in seconds obtained through time.time()"""
+        # calculate how long we can sleep before we need to check again.
+        return int(self.lastHeard + 2*self.heartbeatInterval - now)
+
     def toJSON(self):
         ret=dict()
         ret['cmd_id']=self.cmd.id
@@ -106,19 +112,17 @@ class RunningCommand(object):
         if self.workerID is not None:
             ret['worker_id']=self.workerID
         else:
-            ret['worker_id']="not set"
+            ret['worker_id']="(unknown)"
         if self.workerDir is not None:
             ret['worker_dir']=self.workerDir
         else:
-            ret['worker_dir']="not set"
+            ret['worker_dir']="(unknown)"
         if self.runDir is not None:
             ret['run_dir']=self.runDir
         else:
-            ret['run_dir']="not set"
+            ret['run_dir']="(unknown)"
         ret['task_id']=self.cmd.task.getID()
-        ret['heartbeat_expiry_time']= int( (self.lastHeard + 
-                                            2*self.heartbeatInterval) - 
-                                           time.time())
+        ret['heartbeat_expiry_time']= self.expiry(time.time())
         ret['data_accessible']=self.haveData
         return ret
 
@@ -204,7 +208,12 @@ class RunningCmdList(object):
         self.runningCommands=dict()
         self.workerData=workerData
         self.lock=threading.Lock()
-        self.thread=threading.Thread(target=heartbeatServerThread, args=(self,))
+        self.thread=None
+
+
+    def startHeartbeatThread(self):
+        self.thread=threading.Thread(target=heartbeatServerThread,
+                                     args=(self, self.conf,))
         # this should be a thread that never stops but doesn't hold the server
         # up once other threads stop
         self.thread.daemon=True
@@ -237,7 +246,6 @@ class RunningCmdList(object):
            runfile
            cmd = the command to remove
            returncode = the return code
-           runfile = a file object containing run results
            runfile = None or a file handle to the tarfile containing run data
            """
         task=None
@@ -251,7 +259,12 @@ class RunningCmdList(object):
         if runfile is not None:
             log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.getDir()))
             cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
-        self._handleFinishedCmd(cmd, returncode, cputime)
+            self._handleFinishedCmd(cmd, returncode, cputime)
+        else:
+            # there was no output. Try again
+            cmd.addCputime(cputime)
+            cmd.running=False
+            self.cmdQueue.add(cmd)
 
     def _handleFinishedCmd(self, cmd, returncode, cputime):
         """Handle the command finishing itself. The command must be removed
@@ -267,13 +280,15 @@ class RunningCmdList(object):
         #    cpc.util.file.extractSafely(cmd.getDir(), fileobj=runfile)
         # run the task
         if task is not None:
-            (newcmds, cancelcmds) = task.run(cmd)
+            (finished, newcmds, cancelcmds) = task.run(cmd)
         if cancelcmds is not None:
             for ccmd in cancelcmds:
                 self.cmdQueue.remove(ccmd)
         if newcmds is not None:
             for ncmd in newcmds:
                 self.cmdQueue.add(ncmd)
+        if finished:
+            task.handleOutput()
 
     def getCmdList(self):
         """Return a list with all running commands as command objects."""
@@ -417,21 +432,21 @@ class RunningCmdList(object):
                 shutil.rmtree(tmpBackupDir)
             return done
           
-    def checkHeartbeatTimes(self):
+    def checkHeartbeatTimes(self, interval):
         """Check the heartbeat times and deal with dead jobs. 
+           interval = the max. heartbeat interval
            Returns the time of the first heartbeat expiry."""
-        interval = self.conf.getHeartbeatTime()
         with self.lock:
             # The maximum first expiry time is the server heartbeat interval
-            firstExpiry=time.time()+interval
             todelete=[]
+            firstExpiry=interval
             now=time.time()
             for rc in self.runningCommands.itervalues():
-                expiry = rc.lastHeard + 2*rc.heartbeatInterval
-                if now  > expiry:
+                expiry = rc.expiry(now) 
+                if expiry < 0:
                     todelete.append(rc)
                 elif expiry < firstExpiry:
-                    firstExpiry = rc.lastHeard + 2*rc.heartbeatInterval + 1
+                    firstExpiry = expiry + 1
             # first remove the expired running commands from the 
             # running list
             for rc in todelete:
@@ -463,32 +478,39 @@ class RunningCmdList(object):
                                               sys.exc_info()[1],
                                               sys.exc_info()[2], file=fo)
                     log.error("Heartbeat exception: %s"%(fo.getvalue()))
-                if not finishedReported:
-                    log.info("Running command %s died: didn't get its data."%
-                             rc.cmd.id)
-                    # just add it back into the queue
-                    self.cmdQueue.add(rc.cmd)
-                else:
-                    log.info("Running command %s died: got its data."%
-                             rc.cmd.id)
-        return (interval, firstExpiry)
+                finally:
+                    if not finishedReported:
+                        log.info(
+                               "Running command %s died: didn't get its data."%
+                               rc.cmd.id)
+                        # just add it back into the queue
+                        self.cmdQueue.add(rc.cmd)
+                    else:
+                        log.info("Running command %s died: got its data."%
+                                 rc.cmd.id)
+        return firstExpiry
 
-def heartbeatServerThread(runningCommandList):
+def heartbeatServerThread(runningCommandList, conf):
     """The hearbeat thread's endless loop.
        runningCommandList = the heartbeat list associated with this loop."""
     log.info("Starting heartbeat monitor thread.")
     while True:
-        # so we can reread the ocnfiguration
-        (interval, firstExpiry)=runningCommandList.checkHeartbeatTimes()
-        # calculate how long we can sleep before we need to check again.
-        # we simply double the first expiry time, with a minimum of
-        # runningCommandList.rateLimitTime seconds
-        # (this serves as a rate limiter)
-        now=time.time()
-        #serverHeartbeatInterval=runningCommandList.conf.getHeartbeatTime()
-        sleepTime = (firstExpiry - now) 
-        if sleepTime < runningCommandList.rateLimitTime:
-            sleepTime=runningCommandList.rateLimitTime
-        log.debug("Heartbeat thread sleeping for %d seconds."%sleepTime)
-        time.sleep(sleepTime)
+        try:
+            # so we can reread the ocnfiguration
+            interval = conf.getHeartbeatTime()
+            sleepTime = runningCommandList.checkHeartbeatTimes(interval)
+            # The sleep time has a minimum of runningCommandList.rateLimitTime
+            # seconds (this serves as a rate limiter)
+            if sleepTime < runningCommandList.rateLimitTime:
+                sleepTime=runningCommandList.rateLimitTime
+            log.debug("Heartbeat thread sleeping for %d seconds."%sleepTime)
+            time.sleep(sleepTime)
+        # we catch (almost) everything here as we want this thread to continue
+        except Exception as e:
+            fo=StringIO()
+            traceback.print_exception(sys.exc_info()[0],
+                                      sys.exc_info()[1],
+                                      sys.exc_info()[2], file=fo)
+            errmsg="Exception in heartbeat thread: %s"%(fo.getvalue())
+            log.error(errmsg)
 

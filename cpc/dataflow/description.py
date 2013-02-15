@@ -19,7 +19,6 @@
 
 
 import logging
-import copy
 import textwrap
 import xml.sax
 import xml.sax.saxutils

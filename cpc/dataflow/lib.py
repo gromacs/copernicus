@@ -26,6 +26,7 @@ except ImportError:
     from cpc.util.ordered_dict import OrderedDict
 
 
+import cpc.util
 import apperror
 import description
 import keywords

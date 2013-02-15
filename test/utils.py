@@ -39,7 +39,8 @@ def setup_server(heartbeat='20'):
     (stdout, stderr) = p.communicate(input='root\n')
     assert p.returncode == 0
     with open(os.devnull, "w") as null:
-
+        p = subprocess.check_call(["./cpc-server", "setup", PROJ_DIR],
+            stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "server_fqdn",
                                    "127.0.0.1"], stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
@@ -50,38 +51,39 @@ def setup_server(heartbeat='20'):
 def generate_bundle():
     #generate bundle
     home = os.path.expanduser("~")
-    cmd_line = './cpc-server bundle'
+    cmd_line = './cpc-server bundle -o %s/.copernicus/client.cnx' % home
     args = shlex.split(cmd_line)
     try:
         with open(os.devnull, "w") as null:
-            with open('%s/.copernicus/client.cnx'%home, 'w') as f:
-                p = subprocess.Popen(args, stdout=f,
-                                     stderr=null)
-                p.wait()
-                assert p.returncode == 0
+            p = subprocess.Popen(args, stdout=null, stderr=null)
+            p.wait()
+
     except Exception as e:
-        sys.stderr.write("Failed to write bundle: %s\n"%str(e))
+        sys.stderr.write("Failed to write bundle: %s\n" % str(e))
         assert False #NOT OK
+
 
 def start_server():
     cmd_line = './cpc-server start'
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+        stderr=subprocess.PIPE)
 
     (stdout, stderr) = p.communicate()
     assert p.returncode == 0,\
-    "Failed to start server. stderr:%s\nstdout%s"%(stderr,stdout)
+    "Failed to start server. stderr:%s\nstdout%s" % (stderr, stdout)
+
 
 def stop_server():
     #soft stop
     try:
         with open(os.devnull, "w") as null:
             p = subprocess.check_call(["./cpcc", "stop-server"],
-                                      stdout=null, stderr=null)
+                stdout=null, stderr=null)
     except subprocess.CalledProcessError:
         #hard stop
         ensure_no_running_servers_or_workers()
+
 
 def ensure_no_running_servers_or_workers():
     try:
@@ -89,20 +91,21 @@ def ensure_no_running_servers_or_workers():
     except subprocess.CalledProcessError:
         pass #we swallow this
     try:
-            p = subprocess.check_call(["pkill", "-9", "-f", "./cpc-worker"])
+        p = subprocess.check_call(["pkill", "-9", "-f", "./cpc-worker"])
     except subprocess.CalledProcessError:
         pass #we swallow this
 
-def run_mdrun_example(projname = 'mdrun'):
-    cmd_line = 'examples/mdrun-test/rungmxtest %s'%projname
+
+def run_mdrun_example(projname='mdrun'):
+    cmd_line = 'examples/mdrun-test/rungmxtest %s' % projname
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                     stderr=subprocess.PIPE)
+        stderr=subprocess.PIPE)
 
     (stdout, stderr) = p.communicate()
     if p.returncode != 0:
         assert False,\
-        "Failed to setup mdrun example. stdout:\n%s\n\stderr:%s\n\n"%(
+        "Failed to setup mdrun example. stdout:\n%s\n\stderr:%s\n\n" % (
             stdout, stderr)
 
 def add_user(user, password, userlevel=UserLevel.REGULAR_USER):
@@ -119,41 +122,42 @@ def clear_dirs():
     except Exception as e:
         pass #OK
 
+
 def teardown_server():
     stop_server()
 
 
 def run_client_command(command, returnZero=True, expectstdout=None):
-    cmd_line = './cpcc %s'%command
+    cmd_line = './cpcc %s' % command
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+        stderr=subprocess.PIPE)
 
     (stdout, stderr) = p.communicate()
     if returnZero:
         assert p.returncode == 0,\
         "Client returned nonzero when expecting zero."\
-        " Command: \"%s\"\nstderr: %s\nstdout: %s"%(command, stderr,stdout)
+        " Command: \"%s\"\nstderr: %s\nstdout: %s" % (command, stderr, stdout)
     else:
         assert p.returncode != 0,\
         "Client returned zero when expecting nonzero."\
-        " Command: \"%s\"\nstderr: %s\nstdout %s"%(command, stderr,stdout)
+        " Command: \"%s\"\nstderr: %s\nstdout %s" % (command, stderr, stdout)
 
     if expectstdout is not None:
         assert expectstdout in stdout,\
-        "Expected '%s' in stdout, but got '%s'"%(expectstdout,stdout)
+        "Expected '%s' in stdout, but got '%s'" % (expectstdout, stdout)
 
 
 def retry_client_command(command, expectstdout, iterations=5, sleep=3):
     for attempt in xrange(iterations):
         try:
-            run_client_command(command,expectstdout=expectstdout)
+            run_client_command(command, expectstdout=expectstdout)
             return
         except AssertionError:
             pass #we swallow this for now
         time.sleep(sleep)
     assert False,\
-    "Attempted to read '%s' from server, but gave up after %d attempts"%(
+    "Attempted to read '%s' from server, but gave up after %d attempts" % (
         expectstdout, iterations)
 
 def login_client(username='root', password='root'):
@@ -178,7 +182,7 @@ class Worker(object):
             cmd_line = './cpc-worker -d smp'
             args = shlex.split(cmd_line)
             self.process = subprocess.Popen(args, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE, preexec_fn=os.setsid)
+                stderr=subprocess.PIPE, preexec_fn=os.setsid)
 
         self.thread = threading.Thread(
             target=self.eguard.wrap_function, args=(workerThread,))
@@ -201,7 +205,7 @@ class Worker(object):
                 if line == '':
                     assert False,\
                     "Reach EOF while waiting for '%s', last line"\
-                    "outputed was '%s'"%(expectedOutput, self.lastline)
+                    "outputed was '%s'" % (expectedOutput, self.lastline)
                 if expectedOutput in line:
                     break
                 self.lastline = line
@@ -223,9 +227,9 @@ class Worker(object):
             self.thread.join()
             assert False,\
             "Expected worker to output '%s', but timed out waiting for it,"\
-            "last line outputed was '%s'"%(expectedOutput, self.lastline)
+            "last line outputed was '%s'" % (expectedOutput, self.lastline)
 
-        #we got the expected output
+            #we got the expected output
 
 
 class ExceptionCatcher(object):
@@ -233,6 +237,7 @@ class ExceptionCatcher(object):
     Wraps thread targets as exceptions thrown in threads are not propagated
     back to the parent, leading to false positive tests
     """
+
     def __init__(self):
         self.queue = Queue.Queue()
 
@@ -246,8 +251,9 @@ class ExceptionCatcher(object):
         do_raise = not self.queue.empty()
         while not self.queue.empty():
             exc_type, exc_obj, exc_trace = self.queue.get()
-            sys.stderr.write("%s\n%s"%(exc_type, exc_obj))
+            sys.stderr.write("%s\n%s" % (exc_type, exc_obj))
             import traceback
+
             traceback.print_tb(exc_trace)
         if do_raise:
             assert False,\

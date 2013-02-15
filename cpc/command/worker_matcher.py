@@ -17,17 +17,8 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import json
 import logging
-import os
-import tarfile
-import tempfile
-import threading
-import time
 
-
-
-import platform_exec_reader
 import cpc.util
 import cpc.util.log
 import resource

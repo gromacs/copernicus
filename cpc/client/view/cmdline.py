@@ -53,8 +53,11 @@ class CmdLine(object):
         return co.getvalue()
 
     @staticmethod
-    def _listQueue(queueList, co, showFmt):
-        fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
+    def _listQueue(queueList, co, showFmt, custom_fmtstring=None):
+        if custom_fmtstring is not None:
+            fmtstring = custom_fmtstring
+        else:
+            fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
         if showFmt: 
             co.write(fmtstring%('Pty', 'Project', 'Task ID', 'Executable'))
         for cmd in queueList:
@@ -89,13 +92,6 @@ class CmdLine(object):
                 showFmt = (nqueued<1) and (nrun>0)
                 CmdLine._listQueue(queueList['running'], co, showFmt)
         return co.getvalue()
-
-    #@staticmethod
-    #def listRunningQueue(messageStr):
-    #    co=StringIO()
-    #    co.write("Running\n")
-    #    CmdLine._listQueue(messageStr, co, False)
-    #    return co.getvalue()
 
     @staticmethod
     def listRunning(messageStr):
@@ -229,7 +225,11 @@ class CmdLine(object):
             else:
                 co.write(' }')
         else:
-            co.write("%s"%(str(val)))
+            if isinstance(val, unicode):
+                valstr=val.encode('utf-8')
+            else:
+                valstr=str(val)
+            co.write("%s"%valstr)
 
     @staticmethod
     def getItem(messageStr):
@@ -481,7 +481,13 @@ class CmdLine(object):
 
         return True
 
-
+    @staticmethod
+    def serverInfo(message):
+        info = message['data']
+        co = StringIO()
+        co.write("    Server hostname: %s \n"%info['fqdn'])
+        co.write("    Server version:  %s"%(info['version']))
+        return co.getvalue()
     
     @staticmethod   
     def addNodeRequest(message):
@@ -576,4 +582,93 @@ class CmdLine(object):
         for module in message['message']:
             co.write("%s\n"%module)
 
+        return co.getvalue()
+
+    @staticmethod
+    def status(message):
+        #nodes = message['data']
+        co = StringIO()
+        # network
+        if 'network' in message['data']:
+            network = message['data']['network']
+            co.write("Network:\n"
+                     "   connected to %d other server%s\n"
+                     "   connected to %d local worker%s\n"
+                     "   %d worker%s in total in network\n"
+                     "   %d server%s in total in network\n"%(
+                         network['local_servers'],
+                         "s"[network['local_servers']==1:],
+                         network['local_workers'],
+                         "s"[network['local_workers']==1:],
+                         network['workers'],
+                         "s"[network['workers']==1:],
+                         network['servers'],
+                         "s"[network['servers']==1:]))
+
+        # projects
+        projects = message['data']['projects']
+        if len(projects) == 0:
+            co.write("No projects\n")
+        fmtstring = " %3.3s %-12s %-34.34s %-20.20s\n"
+        num_prjs = len(projects)
+        for prj_str, prj_obj in projects.iteritems():
+            current=False
+            if 'default' in prj_obj and prj_obj['default']:
+                co.write("\nProject %s (current project):\n"%prj_str)
+                current=True
+                projectGetStr=""
+            else:
+                co.write("\nProject %s:\n"%prj_str)
+                projectGetStr="-p %s "%prj_str
+            # states
+            co.write("   %d function instances, of which\n"%(
+                sum(prj_obj['states'].values())))
+            for state, count in prj_obj['states'].iteritems():
+                co.write("      %4d in state '%s'\n"%(count, state))
+            if 'errors' in prj_obj and len(prj_obj['errors'])>0:
+                co.write("   There are runtime errors in this project; ")
+                co.write("fetch error messages with:\n")
+                # print 5 errors at most
+                for i in range(min(len(prj_obj['errors']), 5)):
+                    inst=prj_obj['errors'][i]
+                    co.write("        %s get %s%s.msg.error\n"%('cpcc', 
+                                                                projectGetStr,
+                                                                inst))
+            if 'warnings' in prj_obj and len(prj_obj['warnings'])>0:
+                co.write("   There are warnings in this project; ")
+                co.write("fetch messages with:\n")
+                # print 5 errors at most
+                for i in range(min(len(prj_obj['warnings']), 5)):
+                    inst=prj_obj['warnings'][i]
+                    co.write("        %s get %s%s.msg.warning\n"%('cpcc', 
+                                                                  projectGetStr,
+                                                                  inst))
+            # queue
+            if True: 
+                if(len(prj_obj['queue']['queue']) > 0):
+                    co.write("   %d command%s in queue\n"%(
+                        len(prj_obj['queue']['queue']),
+                            "s"[len(prj_obj['queue']['queue'])==1:]))
+                else:
+                    co.write("   no commands in queue\n")
+                if(len(prj_obj['queue']['running']) > 0):
+                    co.write("   %d command%s running\n"%(
+                        len(prj_obj['queue']['running']),
+                        "s"[len(prj_obj['queue']['running'])==1:]))
+                else:
+                    co.write("   no commands running\n")
+            else:
+                co.write("   Queued commands:\n")
+                if(len(prj_obj['queue']['queue']) > 0):
+                    CmdLine._listQueue(prj_obj['queue']['queue'], co, True,
+                                        custom_fmtstring=fmtstring)
+                else:
+                    co.write("      none\n")
+                co.write("   Running commands:\n")
+                if(len(prj_obj['queue']['running']) > 0):
+                    CmdLine._listQueue(prj_obj['queue']['running'], co,
+                                    len(prj_obj['queue']['queue']) == 0,
+                                    custom_fmtstring=fmtstring)
+                else:
+                    co.write("      none\n")
         return co.getvalue()

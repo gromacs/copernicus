@@ -5,18 +5,23 @@ Created on Nov 6, 2011
 '''
 
 class WorkerState(object):
-    '''
-    classdocs
-    '''
+    """
+    Maintains state and information for a worker
+    Only servers which workers are directly connected to maintains these state
+    objects
+    """
 
 
-    def __init__(self,host,status,workerId=None):        
-        #host and id   
+    def __init__(self,host,state,workerId=None):
+        #host and id
         self.workerId = workerId
         self.host= host
         #self.id = "%s:%s"%(host,workerId)
         self.id = host
-        self.status = status
+        self.state = state
 
+    def setState(self, state):
+        """Sets the state for this worker"""
+        self.state = state
     
         

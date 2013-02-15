@@ -29,7 +29,6 @@ import json
 from cpc.network.com.client_base import ClientBase
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.com.input import Input
-from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.server_conf import ServerConf
 from cpc.network.node import Node
@@ -107,14 +106,14 @@ class ServerMessage(ServerToServerMessage):
     """ Server-to-server messages."""
            
     def workerReadyForwardedRequest(self, workerID, archdata, topology,
-                                    originatingServer, heartbeatInterval):
+                                    originatingServer, heartbeatInterval,
+                                    originatingClient=None):
         cmdstring='worker-ready-forward'
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
-        fields.append(Input('originating-server', originatingServer))
         fields.append(Input('heartbeat-interval', str(heartbeatInterval)))
         topologyInput = Input('topology',
                               # a json structure that needs to be dumped
@@ -123,12 +122,16 @@ class ServerMessage(ServerToServerMessage):
                                          indent=4))
         fields.append(topologyInput)
         headers = dict()
+        headers['originating-server'] = originatingServer
+        if originatingClient is not None:
+            headers['originating-client'] = originatingClient
         response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
                                                               headers))
         return response
 
 
-    def commandFinishedForwardedRequest(self, cmdID, workerServer, returncode,
+    def commandFinishedForwardedRequest(self, cmdID, workerServer,
+                                        projectServer, returncode,
                                         cputime, haveData):
         """A server-to-sever request doing command-finished. Used in
             forwarding non-local command-finished requests."""
@@ -139,6 +142,7 @@ class ServerMessage(ServerToServerMessage):
         fields.append(Input('cmd_id', cmdID))
         fields.append(Input('version', "1"))
         fields.append(Input('worker_server', workerServer))
+        fields.append(Input('project_server', projectServer))
         if returncode is not None:
             fields.append(Input('return_code', returncode))
         fields.append(Input('used_cpu_time', cputime))

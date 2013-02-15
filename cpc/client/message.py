@@ -28,7 +28,6 @@ from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.util import json_serializer
 from cpc.util.conf.connection_bundle import ConnectionBundle
-from cpc.util.openssl import OpenSSL
 
 from cpc.network.node_connect_request import NodeConnectRequest
 
@@ -135,7 +134,7 @@ class ClientMessage(ClientBase):
         return response
 
     # @param endNode is the endNode we want to reach
-    # @param endNodePort 
+    # @param endNodePort
     def testServerRequest(self,endNode=None,endNodePort=None):
         cmdstring='test-server'
         fields = []
@@ -148,6 +147,16 @@ class ClientMessage(ClientBase):
             headers['end-node-port'] = endNodePort      
         msg = ServerRequest.prepareRequest(fields,[],headers)        
         response=self.putRequest(msg)                            
+        return response
+
+    def serverInfo(self):
+        cmdstring='server-info'
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('version', "1"))
+        msg = ServerRequest.prepareRequest(fields,[])
+        response=self.putRequest(msg)
         return response
 
     #resides here just for development purposes
@@ -274,6 +283,18 @@ class ClientMessage(ClientBase):
         response=self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
+    def statusRequest(self, project):
+        """Fetches an aggregated general information about the server and
+           and its projects. The argument project is optional"""
+        cmdstring="status"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
+        if project is not None:
+            fields.append(Input('project', project))
+        fields.append(Input('version', "1"))
+        response=self.postRequest(ServerRequest.prepareRequest(fields,[]))
+        return response
+
     def readConfRequest(self):
         """Tell the server to re-read its configuration."""
         cmdstring="readconf"
@@ -389,6 +410,17 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
+        if project is not None:
+            fields.append(Input('project', project))
+        fields.append(Input('item', item))
+        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        return response
+
+    def projectDebugRequest(self, project, item):
+        """Get debug info for project items"""
+        cmdstring="project-debug"
+        fields = []
+        fields.append(Input('cmd', cmdstring))
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))

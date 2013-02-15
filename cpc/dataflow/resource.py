@@ -19,15 +19,12 @@
 
 
 import logging
-import os
-import os.path
 import json
 
 
 log=logging.getLogger('cpc.dataflow.resource')
 
 import cpc.util
-import apperror
 import run
 import cpc.command
 

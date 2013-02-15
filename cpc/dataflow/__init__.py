@@ -23,7 +23,7 @@ __all__=["apperror.py", "project.py", "readxml.py", "task.py", "value.py"]
 
 from apperror import *
 from readxml import *
-from project import *
+#from project import *
 from task import *
 from value import *
 from vtype import *

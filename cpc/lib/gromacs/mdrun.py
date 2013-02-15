@@ -170,6 +170,8 @@ class TrajFileCollection(object):
             checkFileNumbers=True
         newFileNumber=0
         if self.lastcpt is not None:
+            stepnr=0
+            nsteps=1
             # now check how far along the run is by inspecting the
             # step number we're at.
             cmd=['gmxdump', '-cp', self.lastcpt ]

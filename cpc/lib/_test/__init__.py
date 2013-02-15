@@ -18,7 +18,7 @@
 
 
 
-# this file has to be here for imports of sub-libraries to work
-
 __all__=[]
+
+from extended import *
 

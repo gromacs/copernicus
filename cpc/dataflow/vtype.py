@@ -20,12 +20,11 @@
 
 import logging
 import copy
-import threading
+
 try:
     from collections import OrderedDict
 except ImportError:
     from cpc.util.ordered_dict import OrderedDict
-
 
 log=logging.getLogger('cpc.dataflow.vtype')
 
@@ -38,9 +37,11 @@ import description
 class TypeErr(apperror.ApplicationError):
     pass
 
+
 def parseItemList(itemStr, startDotted=True):
     """Parse a string into a list of items + subitems. Returns a list
        of subitems"""
+    global itemListTransTable
     ret=[]
     inSquareBrackets=False
     inDottedItem=startDotted
@@ -58,7 +59,7 @@ def parseItemList(itemStr, startDotted=True):
                 #cur.append(c)
                 cur+=c
         elif inDottedItem:
-            if c==keywords.SubTypeSep:
+            if c==keywords.SubTypeSep or c==keywords.InstSep:
                 ret.append(cur)
                 cur=""
             elif c=='[':
@@ -70,7 +71,7 @@ def parseItemList(itemStr, startDotted=True):
                 #cur.append(c)
                 cur+=c
         else:
-            if c==keywords.SubTypeSep:
+            if c==keywords.SubTypeSep or c==keywords.InstSep:
                 inDottedItem=True
                 cur=""
             elif c=='[':
@@ -79,7 +80,8 @@ def parseItemList(itemStr, startDotted=True):
             else:
                 raise TypeErr("Couldn't parse '%s'."%itemStr)
     if inDottedItem:
-        ret.append(cur)
+        if cur!="":
+            ret.append(cur)
     if inSquareBrackets:
         raise TypeErr("Couldn't parse '%s': unclosed square bracket."%itemStr)
     return ret
@@ -548,6 +550,9 @@ fileType    = FileType("file", valueType)
 recordType    = RecordType("record", valueType)
 arrayType   = ArrayType("array", valueType, memberType=valueType)
 dictType    = DictType("dict", valueType, memberType=valueType)
+# other types
+instanceType    = Type("instance", valueType)
+msgType    = Type("msg", valueType)
 
 valueType.builtin=True
 nullType.builtin=True
@@ -558,6 +563,9 @@ stringType.builtin=True
 recordType.builtin=True
 arrayType.builtin=True
 dictType.builtin=True
+
+instanceType.builtin=True
+msgType.builtin=True
 
 # the primitives
 primitives = [ valueType, boolType, intType, floatType, stringType, fileType ]

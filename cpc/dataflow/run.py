@@ -20,9 +20,8 @@
 
 import logging
 import os
-import os.path
 import xml.sax
-import stat
+import xml.sax.saxutils
 import sys
 try:
     from cStringIO import StringIO
@@ -33,7 +32,6 @@ log=logging.getLogger('cpc.dataflow.run')
 
 import cpc.util
 import apperror
-import keywords
 import value
 import vtype
 import cpc.command
@@ -47,9 +45,9 @@ curVersion=1
 
 def readInput(inputFile=sys.stdin, name="stdin"):
     """Read input from stdin and parse it into a FunctionRunInput object."""
-    reader=IOReader()
+    inp=FunctionRunInput()
+    reader=IOReader(inp, None)
     reader.read(inputFile, name)
-    inp=reader.getFunctionRunInput()
     return inp
 
 class FunctionRunInput(object):
@@ -269,6 +267,10 @@ class FunctionRunInput(object):
         if self.subnetInputs is not None:
             self.subnetInputs.destroy()
 
+    def setFunctionRunOutput(self, fo):
+        """Set a specific FunctionRunOutput object."""
+        self.fo=fo
+
     def getFunctionOutput(self):
         """Create a functionrunoutput object, possibly based on information
            read in with this object."""
@@ -276,8 +278,9 @@ class FunctionRunInput(object):
             self.fo=FunctionRunOutput()
         return self.fo
 
-    def reset(self):
-        self.fo=None
+    def setFunctionRunOutput(self, fo):
+        """Set a specific FunctionRunOutput object."""
+        self.fo=fo
 
     def _writeXML(self, outf, writeState, indent=0):
         """Write the contents of this object in XML form to a file."""
@@ -347,6 +350,10 @@ class FunctionRunOutput(object):
         self.newConnections=None
         # whether to cancel all existing commands.
         self.cancelCmds=False
+        # Error message. If None, the run is succesful
+        self.errMsg=None
+        # Warning message.
+        self.warnMsg=None
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
@@ -356,7 +363,10 @@ class FunctionRunOutput(object):
             raise FunctionRunError(
                         "Output value for '%s' is not a Value object."%
                         (ioitem))
-        self.outputs.append( OutputItem(ioitem, outval) )
+        oi=OutputItem(ioitem, outval) 
+        self.outputs.append( oi )
+        return oi
+        #self.outputs.append( OutputItem(ioitem, outval) )
 
     def setSubOut(self, ioitem, outval):
         """Set a specified subnet output value.
@@ -366,7 +376,10 @@ class FunctionRunOutput(object):
             raise FunctionRunError(
                         "Subnet output value for '%s' is not a Value object."%
                         (ioitem))
-        self.subnetOutputs.append( OutputItem(ioitem, outval) )
+        oi=OutputItem(ioitem, outval) 
+        self.subnetOutputs.append( oi )
+        return oi
+        #self.subnetOutputs.append( OutputItem(ioitem, outval) )
 
     def hasOutputs(self):
         """Check whether there are outputs."""
@@ -382,7 +395,10 @@ class FunctionRunOutput(object):
         # initialize if it doesn't exist
         if self.newInstances is None:
             self.newInstances=[]
-        self.newInstances.append(NewInstance(instanceName, functionName))
+        ni=NewInstance(instanceName, functionName)
+        self.newInstances.append(ni)
+        return ni
+        #self.newInstances.append(NewInstance(instanceName, functionName))
 
     def addConnection(self, srcStr, dstStr, val=None):
         """Add a new subnet connection to the list.
@@ -392,7 +408,10 @@ class FunctionRunOutput(object):
         # initialize if it doesn't exist
         if self.newConnections is None:
             self.newConnections=[]
-        self.newConnections.append(NewConnection(srcStr, dstStr, val))
+        nc=NewConnection(srcStr, dstStr, val)
+        self.newConnections.append(nc)
+        return nc
+        #self.newConnections.append(NewConnection(srcStr, dstStr, val))
 
     def addCommand(self, cmd):
         """Add a command to the list.
@@ -401,6 +420,16 @@ class FunctionRunOutput(object):
         if self.cmds is None:
             self.cmds=[]
         self.cmds.append(cmd)
+
+    def setError(self, msg):
+        """Set an error leading to an error state, or
+           clear an error previously set during this run if msg=None. """
+        self.errMsg=msg
+
+    def setWarning(self, msg):
+        """Set a warning message leading to a warning state, or
+           clear a warning previously set during this run if msg=None. """
+        self.warnMsg=msg
 
     def cancelPrevCommands(self):
         """Cancel any previous commands."""
@@ -446,6 +475,17 @@ class FunctionRunOutput(object):
             for cmd in self.cmds:
                 self.cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
+
+        if self.errMsg is not None:
+            outf.write('%s<error msg=%s />\n'%
+                       (iindstr,
+                        xml.sax.saxutils.quoteattr(self.errMsg).
+                        encode('utf-8')))
+        if self.warnMsg is not None:
+            outf.write('%s<warning msg=%s />\n'%
+                       (iindstr,
+                        xml.sax.saxutils.quoteattr(self.warnMsg).
+                        encode('utf-8')))
         outf.write('%s</function-output>\n'%indstr)
 
 class NewInstance(object):
@@ -458,7 +498,12 @@ class NewInstance(object):
         indstr=cpc.util.indStr*indent
         outf.write('%s<instance id="%s" function="%s" />\n'%
                    (indstr, self.name, self.functionName))
+    def describe(self, outf):
+        """Print a description of this new instance to outf."""
+        outf.write('Function instance of %s, named %s\n'%
+                   (self.functionName, self.instanceName))
 
+ 
 class NewConnection(object):
     """A class describing a new connection, as an output of a function."""
     def __init__(self, srcStr, dstStr, val=None):
@@ -476,6 +521,11 @@ class NewConnection(object):
         self.srcStr=srcStr
         self.dstStr=dstStr
         self.val=val
+        self.conn=None # used in transaction object
+    def describe(self, outf):
+        """Print a description of this new connection to outf."""
+        outf.write('Connection from %s to %s\n'%(self.srcStr, self.dstStr))
+
 
     def writeXML(self, outf, indent=0):
         indstr=cpc.util.indStr*indent
@@ -506,12 +556,17 @@ class OutputItem:
     """Class to hold information about an output item:
        name = the full name of the output item
        val = the value
-       item = (optional) the actual output subvalue as used by the server
+       destVal = (optional) the actual output subvalue as used by the server
        """
-    def __init__(self, name, val, item=None):
+    def __init__(self, name, val, destVal=None):
         self.name=name
         self.val=val
-        self.item=None
+        #self.item=None
+        self.destVal=destVal
+
+    def describe(self, outf):
+        """Print a description of this outputItem to outf"""
+        outf.write('Set %s to %s\n'%(self.name, self.val))
 
 class BoolValue(value.Value):
     """OutValue for boolean objects."""
@@ -589,9 +644,9 @@ class IOReader(xml.sax.handler.ContentHandler):
     newConnections=7
     cmd=8
 
-    def __init__(self, isInput=True):
+    def __init__(self, functionRunInput, functionRunOutput):
         """Initialize based on whether the reader is for input or output."""
-        self.isInput=isInput
+        #self.isInput=isInput
         self.commands=[]
         self.cmdReader=None
         self.cmdReaderEndTag=None
@@ -600,9 +655,18 @@ class IOReader(xml.sax.handler.ContentHandler):
         self.valueReader=None
         self.valueReaderEndTag=None
         self.valueName=None
-        self.inp=None
-        self.out=None
+        self.inp=functionRunInput
+        self.out=functionRunOutput
         self.loc=None
+        if self.inp is None:
+            if self.out is None:
+                raise IOReaderError("IOReader is neither input nor output", 
+                                    self)
+            self.isInput=False
+        else:
+            if self.out is not None:
+                raise IOReaderError("IOReader is both input nor output", self)
+            self.isInput=True
 
     def setCmdReader(self, cmdReader, endTag):
         self.curCmdReader=cmdReader
@@ -657,8 +721,6 @@ class IOReader(xml.sax.handler.ContentHandler):
             # the top-level input tag
             if not self.isInput:
                 raise IOReaderError("Misplaced controller-input tag", self)
-            if self.inp is not None:
-                raise IOReaderError("Double function-input tag", self)
             if attrs.has_key("version"):
                 self.fileVersion=int(attrs.getValue("version"))
             else:
@@ -666,13 +728,10 @@ class IOReader(xml.sax.handler.ContentHandler):
             if self.fileVersion > curVersion:
                 raise IOReaderError("function-input is from the future (%d)"%
                                     self.fileVersion, self)
-            self.inp=FunctionRunInput()
-        if name=="function-output":
+        elif name=="function-output":
             # the return top-level tag
             if self.isInput:
                 raise IOReaderError("Misplaced controller-output tag", self)
-            if self.out is not None:
-                raise IOReaderError("Double function-output tag", self)
             if attrs.has_key("version"):
                 self.fileVersion=int(attrs.getValue("version"))
             else:
@@ -680,7 +739,6 @@ class IOReader(xml.sax.handler.ContentHandler):
             if self.fileVersion > curVersion:
                 raise IOReaderError("function-output is from the future (%d)"%
                                     self.fileVersion, self)
-            self.out=FunctionRunOutput()
         elif name == "env":
             if (self.section != IOReader.none) or not self.isInput:
                 raise IOReaderError("Misplaced env tag", self)
@@ -733,8 +791,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.section=IOReader.newInstances
         elif name == "new-connections":
             if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-connections tag", 
-                                       self)
+                raise IOReaderError("Misplaced new-connections tag", self)
             self.section=IOReader.newConnections
         elif name == "commands":
             if (self.section != IOReader.none): 
@@ -746,7 +803,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                     self.out.cancelPrevCommands()
                 else:
                     raise IOReaderError("Can't cancel commands in input", self)
-            if self.cmdReader is not None:
+            if self.cmdReader is None:
                 self.cmdReader=cpc.command.CommandReader()
         elif name == "value":
             if not attrs.has_key('id'):
@@ -788,13 +845,17 @@ class IOReader(xml.sax.handler.ContentHandler):
                                 "Value connection with non-basic type %s"%
                                 tpname,self)
                 tp=vtype.basicTypes[tpname]
-                #val=value.Value(tp.valueFromLiteral(attrs.getValue('value')), 
-                #                tp)
                 val=value.interpretLiteral(attrs.getValue('value'), tp)
-                #val=Value(attrs.getValue("value"), tpname)
-                #conn=NewConnection(None, attrs.getValue('dst'), val)
                 self.out.addConnection(None, attrs.getValue('dst'), val)
-
+        elif name == "error":
+            if not attrs.has_key('msg'):
+                raise IOReaderError("Error has no message", self)
+            self.out.setError(xml.sax.saxutils.unescape(attrs.getValue('msg')))
+        elif name == "warning":
+            if not attrs.has_key('msg'):
+                raise IOReaderError("Warning has no message", self)
+            self.out.setWarning(xml.sax.saxutils.unescape(attrs.
+                                                          getValue('msg')))
     def endElement(self, name):
         if self.valueReader is not None:
             if name == self.valueReaderEndTag:
