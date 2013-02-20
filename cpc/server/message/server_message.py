@@ -62,7 +62,7 @@ class RawServerMessage(ClientBase):
         input=Input('cmd',cmdstring)
         
         nodeConnectRequest = NodeConnectRequest(conf.getHostName()
-                                                ,conf.getServerHTTPPort()
+                                                ,conf.getServerUnverifiedHTTPSPort()
                                                 ,conf.getServerVerifiedHTTPSPort()
                                                 ,key
                                                 ,conf.getHostName())
@@ -76,15 +76,15 @@ class RawServerMessage(ClientBase):
         fields.append(input2)
         fields.append(input3)
         fields.append(Input('version', "1"))
-        response= self.putRequest(ServerRequest.prepareRequest(fields), 
-                                  https=False)        
+        response= self.putRequest(ServerRequest.prepareRequest(fields),
+                                  use_verified_https=False)
         return response 
 
     #This is a HTTP message
     def addNodeAccepted(self):
         conf = ServerConf()
         node = Node(conf.getHostName(),
-                    conf.getServerHTTPPort(),
+                    conf.getServerUnverifiedHTTPSPort(),
                     conf.getServerVerifiedHTTPSPort(),
                     conf.getHostName())
         cmdstring ='node-connection-accepted'
@@ -98,8 +98,8 @@ class RawServerMessage(ClientBase):
         fields.append(input2)
         fields.append(Input('version', "1"))
         
-        response= self.putRequest(ServerRequest.prepareRequest(fields), 
-                                  https=False)
+        response= self.putRequest(ServerRequest.prepareRequest(fields),
+                                  use_verified_https=False)
         return response 
 
 class ServerMessage(ServerToServerMessage):
@@ -125,8 +125,8 @@ class ServerMessage(ServerToServerMessage):
         headers['originating-server'] = originatingServer
         if originatingClient is not None:
             headers['originating-client'] = originatingClient
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, [],
+                                                               headers))
         return response
 
 
@@ -155,10 +155,10 @@ class ServerMessage(ServerToServerMessage):
         headers = dict()
         #headers['end-node'] = self.host
         #headers['end-node-port'] = self.port
-        self.connect()
+        #self.connect()
         #log.debug("forwarding command finished to %s"%self.endNode)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files,
+                                                               headers))
         return response
 
 
@@ -179,10 +179,10 @@ class ServerMessage(ServerToServerMessage):
         headers = dict()
         #headers['end-node'] = self.host
         #headers['end-node-port'] = self.port
-        self.connect()
+        #self.connect()
         #log.debug("forwarding command finished to %s"%self.endNode)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files,
+                                                               headers))
         return response
 
     def deadWorkerFetchRequest(self, workerDir, runDir):
@@ -196,9 +196,9 @@ class ServerMessage(ServerToServerMessage):
         fields.append(Input('run_dir', runDir))
         files = []
         headers = dict()
-        self.connect()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files,    
-                                                              headers))
+        #self.connect()
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files,
+                                                               headers))
         return response
 
     def pullAssetRequest(self, cmdID, assetType):
@@ -212,9 +212,9 @@ class ServerMessage(ServerToServerMessage):
         headers['end-node'] = self.host
         headers['end-node-port'] = self.port
 
-        self.connect()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
-                                                              headers))
+        #self.connect()
+        response= self.putRequest(ServerRequest.prepareRequest(fields, [],
+                                                               headers))
         return response
 
     def clearAssetRequest(self, cmdID):
@@ -226,8 +226,8 @@ class ServerMessage(ServerToServerMessage):
         headers = dict()
         headers['end-node'] = self.host
         headers['end-node-port'] = self.port
-        self.connect()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [],       
-                                                              headers))
+        #self.connect()
+        response= self.putRequest(ServerRequest.prepareRequest(fields, [],
+                                                               headers))
         return response
 

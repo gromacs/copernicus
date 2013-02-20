@@ -49,10 +49,10 @@ class TestNode(unittest.TestCase):
         route = Nodes.findRoute(start,end,topology)
         
         #for node in route:
-            #print "%s %s"%(node.host,node.https_port)
+            #print "%s %s"%(node.host,node.verified_https_port)
         
-        self.assertEquals(route[0].https_port,13807)
-        self.assertEquals(route[len(route)-1].https_port,13811)
+        self.assertEquals(route[0].verified_https_port,13807)
+        self.assertEquals(route[len(route)-1].verified_https_port,13811)
  
         
     def test_findShortestRoute(self):
@@ -70,10 +70,10 @@ class TestNode(unittest.TestCase):
         route = Nodes.findRoute(start,end,topology)
         
         for node in route:
-            print "%s %s"%(node.host,node.https_port)
+            print "%s %s"%(node.host,node.verified_https_port)
         
-        self.assertEquals(route[0].https_port,13808)
-        self.assertEquals(route[len(route)-1].https_port,13807)
+        self.assertEquals(route[0].verified_https_port,13808)
+        self.assertEquals(route[len(route)-1].verified_https_port,13807)
         self.assertEquals(len(route),3)
     
     #try to find a route that doesnt exist

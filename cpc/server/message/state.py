@@ -30,8 +30,6 @@ from cpc.util.version import __version__
 from server_command import ServerCommand
 from server_command import ServerCommandError
 
-from cpc.client.message import ClientMessage
-from cpc.network.com.client_response import ProcessedResponse
 log = logging.getLogger('cpc.server.message.state')
 
 class SCStop(ServerCommand):

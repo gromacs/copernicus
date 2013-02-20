@@ -122,7 +122,6 @@ class ServerConf(conf_base.Conf):
         server_host = ''
         self.defaultVerifiedHTTPSPort = Conf.getDefaultVerifiedHttpsPort()
         self.defaultUnverifiedHTTPSPort = Conf.getDefaultUnverifiedHttpsPort()
-        self.defaultHTTPPort = Conf.getDefaultHttpPort()
         
         self._add('server_host', server_host, 
                   "Address the server listens on", True)
@@ -137,10 +136,6 @@ class ServerConf(conf_base.Conf):
 
         self._add('server_unverified_https_port', self.defaultUnverifiedHTTPSPort,
                   "Port number the server listens on for unverified https connections",
-                  True,None,'\d+')
-
-        self._add('server_http_port', self.defaultHTTPPort,
-                  "Port number the server listens on for http connections", 
                   True,None,'\d+')
 
         self._add('client_unverified_https_port', Conf.getDefaultUnverifiedHttpsPort(),
@@ -353,10 +348,6 @@ class ServerConf(conf_base.Conf):
         with self.lock:
             return int(self.conf['server_unverified_https_port'].get())
 
-    def getServerHTTPPort(self):
-        with self.lock:
-            return int(self.conf['server_http_port'].get())
-
     def getHostName(self):
         #return self.hostname
         with self.lock:
@@ -366,7 +357,7 @@ class ServerConf(conf_base.Conf):
     #just a wrapper method to conform with clientConnection
     def getClientHTTPPort(self):
         with self.lock:
-            return int(self.get('server_http_port'))
+            return int(self.get('server_unverified_https_port'))
 
     #just a wrapper method to conform with clientConnection
     def getClientHost(self):

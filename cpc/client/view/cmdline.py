@@ -493,7 +493,7 @@ class CmdLine(object):
     def addNodeRequest(message):
         nodeConnectRequest = message['data']        
         co = StringIO()
-        co.write("Node connect request sent to %s:%s "%(nodeConnectRequest.host,nodeConnectRequest.https_port))
+        co.write("Node connect request sent to %s:%s "%(nodeConnectRequest.host,nodeConnectRequest.verified_https_port))
         return co.getvalue()
     
     @staticmethod
@@ -540,7 +540,7 @@ class CmdLine(object):
 #        if len(notConnected) >0:
 #            co.write("Following nodes was not trusted:\n")    
 #            for node in notConnected:
-#                co.write("%s %s\n"%(node.host,node.https_port))
+#                co.write("%s %s\n"%(node.host,node.verified_https_port))
         return co.getvalue() 
     
     @staticmethod

@@ -71,7 +71,7 @@ class Network(object):
         pass
 
     def addConnection(self, conn, source):
-        """Connect a connection within the network. """ 
+        """Connect a connection within the network. """
         conn.connect()
         self.connections.append(conn)
 

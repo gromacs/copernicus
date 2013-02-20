@@ -475,18 +475,18 @@ try:
     
     elif cmd == "add-node":
         host = getArg(args,1,"hostname")
-        http_port = None
-        https_port = None        
+        unverified_https_port = None
+        verified_https_port = None        
         if len(args)>2:
-            http_port = str(getArg(args,2,'http_port'))
+            unverified_https_port = str(getArg(args,2,'unverified_https_port'))
         
         if len(args)>3:
-            https_port = str(getArg(args,3,'https_port'))
+            verified_https_port = str(getArg(args,3,'verified_https_port'))
         else:
-            http_port = "14807"
+            unverified_https_port = ServerConf().getDefaultUnverifiedHttpsPort()
                   
         clnt = ClientMessage()
-        ProcessedResponse(clnt.addNode(host, http_port,https_port)).\
+        ProcessedResponse(clnt.addNode(host, unverified_https_port,verified_https_port)).\
                   pprint(CmdLine.addNodeRequest)
 
     elif cmd == 'list-nodes':

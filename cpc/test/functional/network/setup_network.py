@@ -112,19 +112,19 @@ class TestNetworkSetup(unittest.TestCase):
 #        subprocess.call(args)
     
     def createConfFolders(self,num):
-        https_port = 13807
-        http_port = 14807
+        verified_https_port = 13807
+        unverified_https_port = 14807
         for i in range(num):            
             self.createConfFolder(i)
             server_conf = ServerConf(confdir=self.serverConfs[i],reload=True)
-            server_conf.set('server_https_port',str(https_port))
-            server_conf.set('server_http_port',str(http_port))
+            server_conf.set('server_https_port',str(verified_https_port))
+            server_conf.set('server_unverified_https_port',str(unverified_https_port))
             server_conf.set('mode',"debug")
             client_conf  = ConnectionBundle(confdir=self.serverConfs[i],reload=True)
-            client_conf.set('client_http_port',str(http_port))
-            client_conf.set('client_https_port',str(https_port))
-            http_port +=1
-            https_port +=1
+            client_conf.set('client_unverified_https_port',str(unverified_https_port))
+            client_conf.set('client_https_port',str(verified_https_port))
+            unverified_https_port +=1
+            verified_https_port +=1
     
     def createConfFolder(self,name):
         path = os.path.join(os.environ["HOME"], ".cpc/test",str(name))

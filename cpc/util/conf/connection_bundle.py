@@ -56,7 +56,6 @@ class ConnectionBundle(Conf):
         #TODO use same default as server?
         self.client_verified_https_port = Conf.getDefaultVerifiedHttpsPort()
         self.client_unverified_https_port = Conf.getDefaultUnverifiedHttpsPort()
-        self.client_http_port = Conf.getDefaultHttpPort()
         self.privateKey = ''
         self.publicKey = ''
         self.cert = ''
@@ -109,9 +108,6 @@ class ConnectionBundle(Conf):
     def initDefaults(self):
         self._add('client_host', self.client_host,
                   "Hostname for the client to connect to", True)
-        self._add('client_http_port', Conf.getDefaultHttpPort(),
-                  "Port number for the client to connect to http", 
-                  True,None,'\d+')
         self._add('client_verified_https_port', Conf.getDefaultVerifiedHttpsPort(),
                   "Port number for the client to connect to verified https",
                   True,None,'\d+')
@@ -162,9 +158,6 @@ class ConnectionBundle(Conf):
     def getClientUnverifiedHTTPSPort(self):
         return int(self.get('client_unverified_https_port'))
 
-    def getClientHTTPPort(self):
-        return int(self.get('client_http_port'))
-
     def getPrivateKey(self):
         return self.tempfiles['private_key'].name
 
@@ -186,10 +179,6 @@ class ConnectionBundle(Conf):
 
     def setClientUnverifiedHTTPSPort(self, httpsPort):
         self.conf["client_unverified_https_port"].set("%s" % httpsPort)
-
-    def setClientHTTPPort(self, httpPort):
-        self.conf["client_http_port"].set("%s" % httpPort)
-
 
     def setPrivateKey(self, privateKey):
         '''

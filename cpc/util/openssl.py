@@ -93,7 +93,6 @@ class OpenSSL(object):
         connectionBundle.setCaCert(open(self.conf.getCACertFile(),"r").read())
 
         shutil.rmtree(tempDir)
-        connectionBundle.setClientHTTPPort(serverConf.getServerHTTPPort())
         connectionBundle.setClientUnverifiedHTTPSPort(
             serverConf.getServerUnverifiedHTTPSPort())
         connectionBundle.setClientVerifiedHTTPSPort(

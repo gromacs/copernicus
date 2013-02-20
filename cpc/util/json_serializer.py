@@ -35,8 +35,8 @@ def toJson(obj):
     if isinstance(obj,NodeConnectRequest):
         return {'class' : 'NodeConnectRequest',
                  'host' : obj.host,
-                 'http_port' : obj.http_port,
-                 'https_port' : obj.https_port,
+                 'unverified_https_port' : obj.unverified_https_port,
+                 'verified_https_port' : obj.verified_https_port,
                  'key'  : obj.key,
                  'qualified_name':obj.qualified_name
                }
@@ -44,8 +44,8 @@ def toJson(obj):
     if isinstance(obj,Node):
         return {'class' : 'Node',
                  'host' : obj.host,                 
-                 'http_port' : obj.http_port,
-                 'https_port' : obj.https_port,
+                 'unverified_https_port' : obj.unverified_https_port,
+                 'verified_https_port' : obj.verified_https_port,
                  'nodes':obj.nodes,
                  'priority':obj.priority,
                  'workerStates':obj.workerStates,
@@ -68,8 +68,8 @@ def fromJson(jsonObj):
     if 'class' in jsonObj:        
         if jsonObj['class'] == 'Node':
             node = Node(jsonObj['host'],
-                        int(jsonObj['http_port']),
-                        int(jsonObj['https_port']),
+                        int(jsonObj['unverified_https_port']),
+                        int(jsonObj['verified_https_port']),
                         jsonObj['qualified_name'])            
             if "nodes" in jsonObj:
                 node.nodes = jsonObj['nodes'] 
@@ -90,8 +90,8 @@ def fromJson(jsonObj):
         
         if jsonObj['class'] == 'NodeConnectRequest':
             return NodeConnectRequest(jsonObj['host'],
-                                      jsonObj['http_port'],
-                                      jsonObj['https_port'], 
+                                      jsonObj['unverified_https_port'],
+                                      jsonObj['verified_https_port'], 
                                       jsonObj['key'],
                                       jsonObj['qualified_name'])
         

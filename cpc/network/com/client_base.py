@@ -19,7 +19,8 @@
 
 import httplib
 import socket
-
+import logging
+import cpc.util.log
 import client_connection
 from cpc.util import CpcError
 '''
@@ -27,6 +28,7 @@ Created on Mar 10, 2011
 
 @author: iman
 '''
+log=logging.getLogger('cpc.network.com.client_base')
 
 class ClientError(CpcError):
     def __init__(self, exc):
@@ -38,7 +40,7 @@ class ClientBase(object):
     '''
 
 
-    def __init__(self,host,port,conf, use_verified_https=True):
+    def __init__(self,host,port,conf):
         """Connect to a server opening a connection
            a privatekey and an keychain is needed if a https connection
            is established
@@ -46,11 +48,10 @@ class ClientBase(object):
         self.host = host
         self.port = port
         self.conf = conf
-        self.use_verified_https = use_verified_https
                 
 
-    def putRequest(self, req,https=True):
-        self.connect(https)
+    def putRequest(self, req, use_verified_https=True):
+        self.connect(use_verified_https)
         try:
             ret=self.conn.sendRequest(req,"PUT")
         except httplib.HTTPException as e:
@@ -59,8 +60,8 @@ class ClientBase(object):
             raise ClientError(e)
         return ret
 
-    def postRequest(self,req,https=True):
-        self.connect(https)
+    def postRequest(self, req, use_verified_https=True):
+        self.connect(use_verified_https)
         try:
             ret=self.conn.sendRequest(req)
         except httplib.HTTPException as e:
@@ -73,18 +74,16 @@ class ClientBase(object):
         self.conn.conn.close()
 
     #FIXME private method
-    def connect(self,https=True):
+    def connect(self, use_verified_https=True):
         try:
-            self.use_verified_https
-        except AttributeError:
-            self.use_verified_https = True
-        try:
-            if self.use_verified_https:
+            if use_verified_https:
+                log.log(cpc.util.log.TRACE,"Connecting using verified HTTPS")
                 self.conn=client_connection.VerifiedClientConnection(self.conf)
             else:
+                log.log(cpc.util.log.TRACE,"Connecting using unverified HTTPS")
                 self.conn=client_connection.UnverifiedClientConnection(
                             self.conf)
-            self.conn.connect(self.host,self.port,https)
+            self.conn.connect(self.host,self.port)
         except httplib.HTTPException as e:
             raise ClientError(e)
         except socket.error as e:

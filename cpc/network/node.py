@@ -152,17 +152,17 @@ class Nodes(object):
 #small object used in config context
 class Node(object):
 
-    def __init__(self,host,http_port,https_port,qualified_name):
+    def __init__(self,host,unverified_https_port,verified_https_port,qualified_name):
         self.host = host #this name is what we use to connect to the node
         self.qualified_name = qualified_name  # this name is the unique fully qualified domain name of the server
-        self.http_port = http_port
-        self.https_port = https_port
+        self.unverified_https_port = unverified_https_port
+        self.verified_https_port = verified_https_port
         self.priority = None
         self.nodes = Nodes()
         self.workerStates = dict()  #workers connected to this node
         
     def getId(self):
-        #return '%s:%s'%(self.qualified_name,self.https_port)
+        #return '%s:%s'%(self.qualified_name,self.verified_https_port)
         return '%s'%(self.qualified_name)
 
 
@@ -172,7 +172,7 @@ def getSelfNode(conf):
     with selfNodeLock:
         if selfNode is None:
             selfNode=Node(conf.getHostName(),
-                          conf.getServerHTTPPort(),
+                          conf.getServerUnverifiedHTTPSPort(),
                           conf.getServerVerifiedHTTPSPort(),
                           conf.getHostName())
     return selfNode

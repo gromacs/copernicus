@@ -74,7 +74,7 @@ class ServerToServerMessage(ClientBase):
             #TODO caching mechanism  
           
         self.host = self.hostNode.host
-        self.port = self.hostNode.https_port
+        self.port = self.hostNode.verified_https_port
         log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%
                 (self.host,self.port))
 
@@ -107,7 +107,7 @@ class ServerToServerMessage(ClientBase):
         if headers['end-node']==conf.getHostName():
             if headers.has_key('end-node-port'):
                 if headers['end-node-port'] == str(conf.getServerVerifiedHTTPSPort()) \
-                     or headers['end-node-port'] == str(conf.getServerHTTPPort()):
+                     or headers['end-node-port'] == str(conf.getServerUnverifiedHTTPSPort()):
                     return True 
                 else:
                     return False
@@ -124,35 +124,5 @@ class ServerToServerMessage(ClientBase):
             topology = ProcessedResponse(response).getData()
             Cache().add(cacheKey,topology)
         return topology
-      
-#THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE
-#FIXME messages should not be located here
-#    def pullAssetRequest(self, cmdID, assetType):
-#        cmdstring='pull-asset' 
-#        fields = []
-#        fields.append(Input('cmd', cmdstring))
-#        fields.append(Input('cmd_id', cmdID))
-#        fields.append(Input('asset_type', assetType))
-#        headers = dict()
-#        headers['end-node'] = self.host
-#        headers['end-node-port'] = self.port
-#        
-#        self.connect()
-#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-#        return response
-#    
-#    def clearAssetRequest(self, cmdID):
-#        cmdstring='clear-asset' 
-#        fields = []
-#        fields.append(Input('cmd', cmdstring))
-#        fields.append(Input('cmd_id', cmdID))
-#        headers = dict()
-#        headers['end-node'] = self.host
-#        headers['end-node-port'] = self.port
-#        self.connect()
-#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-#        return response
 
-#END -- THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE      
-    
 

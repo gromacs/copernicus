@@ -576,9 +576,5 @@ class Conf:
 
     @staticmethod
     def getDefaultUnverifiedHttpsPort():
-        return '13808'
-
-    @staticmethod
-    def getDefaultHttpPort():
         return '14807'
-    
+

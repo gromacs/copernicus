@@ -126,28 +126,6 @@ class UnverifiedSecureServer(HTTPServer__base):
             print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
             serverState.doQuit()
 
-
-class HTTPServer(HTTPServer__base):
-    """
-    Pure HTTP server. Will be replaced by unverified HTTPS
-    """
-    def __init__(self,handler_class,conf,serverState):
-        self.serverState = serverState
-        self.conf = conf
-
-        BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
-                                                      conf.getServerHTTPPort()),
-                                               handler_class)
-
-def serveHTTP(serverState):
-    try:
-        httpserver = HTTPServer(request_handler.unverified_handler,ServerConf(),serverState)
-        sa2 = httpserver.socket.getsockname()
-        log.info("Serving HTTP on %s port %s..."%(sa2[0], sa2[1]))
-        httpserver.serve_forever()
-    except Exception:
-        print "HTTP port %s already taken"%ServerConf().getServerHTTPPort()
-        serverState.doQuit()
    
 
 def serveVerifiedHTTPS(serverState):
@@ -169,7 +147,7 @@ def serveUnverifiedHTTPS(serverState):
         httpd = UnverifiedSecureServer(request_handler.unverified_handler, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
         log.info("Serving unverified HTTPS on %s port %s..."%(sa[0], sa[1]))
-        httpd.serve_forever();
+        httpd.serve_forever()
 
     except KeyboardInterrupt:
         print "Interrupted"
@@ -183,9 +161,6 @@ def serveUnverifiedHTTPS(serverState):
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
     cpc.util.log.initServerLog(ServerConf().getMode())
-    th=Thread(target = serveHTTP,args=[serverState])
-    th.daemon=True
-    th.start()
     th2=Thread(target = serveUnverifiedHTTPS,args=[serverState])
     th2.daemon=True
     th2.start()
@@ -195,7 +170,7 @@ def serverLoop(conf, serverState):
     
 def shutdownServer(self):
     log.info("shutdown complete")
-    self.httpd.shutdown
+    #self.httpd.shutdown
 
 
 def runServer(logLevel=None,doFork=True):

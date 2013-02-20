@@ -64,7 +64,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd', cmdstring)   
         fields.append(input)
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def loginRequest(self, user, password):
@@ -146,7 +146,7 @@ class ClientMessage(ClientBase):
             headers['end-node'] = endNode
             headers['end-node-port'] = endNodePort      
         msg = ServerRequest.prepareRequest(fields,[],headers)        
-        response=self.putRequest(msg)                            
+        response= self.putRequest(msg)
         return response
 
     def serverInfo(self):
@@ -156,7 +156,7 @@ class ClientMessage(ClientBase):
         fields.append(input)
         fields.append(Input('version', "1"))
         msg = ServerRequest.prepareRequest(fields,[])
-        response=self.putRequest(msg)
+        response= self.putRequest(msg)
         return response
 
     #resides here just for development purposes
@@ -177,7 +177,7 @@ class ClientMessage(ClientBase):
         return response
 
     #port is what port the request should be sent to not what port to communicate with later on
-    def addNode(self,host,http_port,https_port=None):
+    def addNode(self,host,unverified_https_port,verified_https_port=None):
         #sends an add node request to the server 
         cmdstring = "add-node"
         fields = []
@@ -187,9 +187,9 @@ class ClientMessage(ClientBase):
         fields.append(Input('version', "1"))
         
         input2 = Input('host',host)
-        input3 = Input('http_port',http_port)
-        if(https_port !=None):
-            fields.append(Input('https_port',https_port))
+        input3 = Input('unverified_https_port',unverified_https_port)
+        if(verified_https_port !=None):
+            fields.append(Input('verified_https_port',verified_https_port))
           
         fields.append(input)    
         fields.append(input2)
@@ -280,7 +280,7 @@ class ClientMessage(ClientBase):
         fields.append(input)     
         fields.append(Input('version', "1"))
         fields.append(typeInput)     
-        response=self.postRequest(ServerRequest.prepareRequest(fields, []))
+        response= self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def statusRequest(self, project):
@@ -292,7 +292,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('version', "1"))
-        response=self.postRequest(ServerRequest.prepareRequest(fields,[]))
+        response= self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def readConfRequest(self):
@@ -302,7 +302,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd', cmdstring)   
         fields.append(input)
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def saveStateRequest(self):
@@ -312,7 +312,7 @@ class ClientMessage(ClientBase):
         input = Input('cmd', cmdstring)   
         fields.append(input)
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def commandFailedRequest(self, cmdID, cputime):
@@ -335,8 +335,8 @@ class ClientMessage(ClientBase):
         #if origServer is not None:
         #    headers['end-node'] = origServer
         
-        response=self.putRequest(ServerRequest.prepareRequest(fields, files,
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files,
+                                                               headers))
         return response
 
 
@@ -348,7 +348,7 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectStartRequest(self, name):
@@ -358,7 +358,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         fields.append(Input('name',name))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectDeleteRequest(self, project, deleteDir):
@@ -370,7 +370,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('project',project))
         if deleteDir:
             fields.append(Input('delete-dir',1))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectGetDefaultRequest(self):
@@ -379,7 +379,7 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectSetDefaultRequest(self, name):
@@ -389,7 +389,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         fields.append(Input('name',name))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectListRequest(self, project, item):
@@ -401,7 +401,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectInfoRequest(self, project, item):
@@ -413,7 +413,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectDebugRequest(self, project, item):
@@ -424,7 +424,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectLogRequest(self, project, item):
@@ -436,7 +436,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectGraphRequest(self, project, item):
@@ -448,7 +448,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectAddInstanceRequest(self, project,  func, name):
@@ -461,7 +461,7 @@ class ClientMessage(ClientBase):
             fields.append(Input('project', project))
         fields.append(Input('name', name))
         fields.append(Input('function', func))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectConnectRequest(self, project, src, dst):
@@ -474,7 +474,7 @@ class ClientMessage(ClientBase):
             fields.append(Input('project', project))
         fields.append(Input('source', src))
         fields.append(Input('destination', dst))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectActivateRequest(self, project, item):
@@ -486,7 +486,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectHoldRequest(self, project, item):
@@ -498,7 +498,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('item', item))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectRerunRequest(self, project, item, clearError):
@@ -511,7 +511,7 @@ class ClientMessage(ClientBase):
         if clearError:
             fields.append(Input('clear-error', 1))
             fields.append(Input('recursive', 1))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
 
@@ -524,7 +524,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         files = [FileInput('upload','project.xml',open(file,'r'))]  
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files)) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files))
         return response
 
     #list modules available on the server
@@ -546,7 +546,7 @@ class ClientMessage(ClientBase):
         if project is not None:
             fields.append(Input('project', project))
         fields.append(Input('module', module))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
 
@@ -561,7 +561,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('item', item))
         if getFile:
             fields.append(Input('getFile',True))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectSetRequest(self, project, item, value, filename):
@@ -579,7 +579,7 @@ class ClientMessage(ClientBase):
         if filename is not None:
             fields.append(Input('filename', os.path.basename(filename)))
             files = [FileInput('upload','upload.dat',open(filename,'r'))]  
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files)) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files))
         return response
 
     def projectTransactRequest(self, project):
@@ -589,7 +589,7 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectCommitRequest(self, project):
@@ -599,7 +599,7 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
     def projectRollbackRequest(self, project):
         """Cancel a series of previously scheduled set&connect requests."""
@@ -607,7 +607,7 @@ class ClientMessage(ClientBase):
         fields = []
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
     
     def addClientRequest(self,host,port):
@@ -631,8 +631,7 @@ class ClientMessage(ClientBase):
 
         fields.append(input2)
         
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files),
-                                 https=False)
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files))
                   
         return response
 
@@ -644,7 +643,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('version', "1"))
         #if project is not None:
         fields.append(Input('project', project))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[]))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
     def projectRestoreRequest(self, projectBundle,projectName):
@@ -659,7 +658,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('project', projectName))
         files = [FileInput('projectFile',filename,open(projectBundle,'r'))]
 
-        response=self.putRequest(ServerRequest.prepareRequest(fields,files))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, files))
         return response
 
     

@@ -31,7 +31,7 @@ class NodeConnectRequest(Node):
     '''
 
 
-    def __init__(self,host,http_port,https_port,key,qualified_name):
-        Node.__init__(self,host,http_port,https_port,qualified_name)
+    def __init__(self,host,unverified_https_port,verified_https_port,key,qualified_name):
+        Node.__init__(self,host,unverified_https_port,verified_https_port,qualified_name)
         self.key = key  #the public key of the server
             

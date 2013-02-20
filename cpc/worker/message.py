@@ -58,8 +58,8 @@ class WorkerMessage(ClientBase):
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
         headers = dict()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [],
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, [],
+                                                               headers))
         return response
     
     def commandFinishedRequest(self, cmdID, origServer, returncode, cputime, 
@@ -80,8 +80,8 @@ class WorkerMessage(ClientBase):
         # because there's active relaying, but for now this simplifies things
         headers['end-node'] = origServer
         log.debug("sending command finished for cmd id %s"%cmdID)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, 
-                                                              files, headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields,
+                                                               files, headers))
         return response
     
     def workerHeartbeatRequest(self, workerID, workerDir, first, last, changed,
@@ -102,5 +102,5 @@ class WorkerMessage(ClientBase):
         fields.append(Input('worker_dir', workerDir))
         fields.append(Input('iteration', iteration))
         fields.append(Input('heartbeat_items', heartbeatItemsXML))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response

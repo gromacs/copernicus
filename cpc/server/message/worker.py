@@ -149,7 +149,7 @@ class WorkerReadyBase(ServerCommand):
                                       ,object_hook = json_serializer.fromJson)
             
             thisNode = Node(conf.getHostName(),
-                            conf.getServerHTTPPort(),
+                            conf.getServerUnverifiedHTTPSPort(),
                             conf.getServerVerifiedHTTPSPort(),
                             conf.getHostName())                                
             thisNode.nodes = conf.getNodes()      

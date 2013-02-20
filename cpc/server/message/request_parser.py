@@ -80,19 +80,20 @@ class ServerCommandList(object):
             return self.cmds[cmd]
         else:
             raise ServerCommandError("Unknown command %s"%cmd)
+
+
 scSecureList=ServerCommandList()
+
+# Various commands with non default access level, for easy overview
 scSecureList.add(user.SCLogin(), UserLevel.ANONYMOUS)
 scSecureList.add(network.ScAddNodeRequest(), UserLevel.ANONYMOUS)
 scSecureList.add(network.ScAddNodeAccepted(), UserLevel.ANONYMOUS)
-
-
-
 scSecureList.add(user.SCAddUser(), UserLevel.SUPERUSER)
 scSecureList.add(user.SCDeleteUser(), UserLevel.SUPERUSER)
 scSecureList.add(user.SCPromoteUser(), UserLevel.SUPERUSER)
 scSecureList.add(user.SCDemoteUser(), UserLevel.SUPERUSER)
-# these are the server commands that the secure server may run:
 
+# state commands
 scSecureList.add(state.SCStop())
 scSecureList.add(state.SCSaveState())
 scSecureList.add(state.SCTestServer())
@@ -112,8 +113,7 @@ scSecureList.add(worker.SCHeartbeatForwarded())
 scSecureList.add(worker.SCDeadWorkerFetch())
 # overlay network topology
 scSecureList.add(network.ScAddNode())
-scSecureList.add(network.ScAddNodeRequest())
-scSecureList.add(network.ScListNodes())   
+scSecureList.add(network.ScListNodes())
 scSecureList.add(network.ScListNodeConnectionRequests())
 scSecureList.add(network.ScListSentNodeConnectionRequests())
 scSecureList.add(network.ScGrantNodeConnection()) 

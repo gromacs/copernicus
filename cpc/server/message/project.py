@@ -33,6 +33,8 @@ import cpc.dataflow
 import cpc.util
 import cpc.server.state.projectlist
 from cpc.server.state.user_handler import UserHandler, UserError, UserLevel
+from cpc.client.message import ClientMessage
+from cpc.network.com.client_response import ProcessedResponse
 import cpc.util.exception
 from cpc.dataflow.vtype import instanceType
 from cpc.network.node import Nodes, getSelfNode
@@ -645,7 +647,7 @@ class SCStatus(ProjectServerCommand):
         for node in thisNode.nodes.nodes.itervalues():
             if not topology.exists(node.getId()):
                 #connect to correct node
-                clnt = ClientMessage(node.host, node.https_port, conf=conf)
+                clnt = ClientMessage(node.host, node.verified_https_port, conf=conf)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)
                 processedResponse = ProcessedResponse(rawresp)
