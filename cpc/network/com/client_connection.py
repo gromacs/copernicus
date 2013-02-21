@@ -70,7 +70,7 @@ class ClientConnectionBase(object):
             req.headers['originating-client']=socket.getfqdn()
 
         #attempt to get cookie
-        if not req.headers.has_key('cookie'):
+        if not req.headers.has_key('cookie') and self.cookieHandler is not None:
             cookie = self.cookieHandler.getCookie()
             if cookie is not None:
                 req.headers['cookie'] = cookie
@@ -87,7 +87,7 @@ class ClientConnectionBase(object):
         else:
             headers=response.getheaders()
             cookie = response.getheader('set-cookie', None)
-            if cookie is not None:
+            if cookie is not None and self.cookieHandler is not None:
                 self.cookieHandler.setCookie(cookie)
             for (key,val) in headers:
                 log.log(cpc.util.log.TRACE,"Got header '%s'='%s'"%(key,val))
@@ -129,7 +129,7 @@ class VerifiedClientConnection(ClientConnectionBase):
         self.httpsConnectionPool = VerifiedHTTPSConnectionPool()
         self.connected=False
         self.conf = conf
-        self.cookieHandler = CookieHandler(conf)
+        self.cookieHandler = None # We disallow this for now
 
     def connect(self,host,port):
 

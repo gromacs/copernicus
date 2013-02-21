@@ -48,9 +48,9 @@ class ClientBase(object):
         self.host = host
         self.port = port
         self.conf = conf
-                
+        self.use_verified_https = None
 
-    def putRequest(self, req, use_verified_https=True):
+    def putRequest(self, req, use_verified_https=None):
         self.connect(use_verified_https)
         try:
             ret=self.conn.sendRequest(req,"PUT")
@@ -60,7 +60,7 @@ class ClientBase(object):
             raise ClientError(e)
         return ret
 
-    def postRequest(self, req, use_verified_https=True):
+    def postRequest(self, req, use_verified_https=None):
         self.connect(use_verified_https)
         try:
             ret=self.conn.sendRequest(req)
@@ -73,10 +73,23 @@ class ClientBase(object):
     def closeClient(self):
         self.conn.conn.close()
 
-    #FIXME private method
-    def connect(self, use_verified_https=True):
+    # the order in which we determine whether to use verified https is
+    # 1, overrides lower priorities : argument use_verified_https
+    # 2, if self.use.verified_https is set
+    # default to true
+    def connect(self, use_verified_https=None):
+        if use_verified_https is not None:
+            use_verified = use_verified_https
+        else:
+            try:
+                if self.use_verified_https is not None:
+                    use_verified = self.use_verified_https
+                else:
+                    use_verified = True
+            except AttributeError:
+                use_verified = True
         try:
-            if use_verified_https:
+            if use_verified:
                 log.log(cpc.util.log.TRACE,"Connecting using verified HTTPS")
                 self.conn=client_connection.VerifiedClientConnection(self.conf)
             else:
