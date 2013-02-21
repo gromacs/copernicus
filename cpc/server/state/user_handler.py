@@ -18,6 +18,8 @@
 
 import cpc.util.exception
 import hashlib
+import logging
+log=logging.getLogger('cpc.server.state.user_handler')
 
 class UserError(cpc.util.CpcError):
     pass
@@ -72,7 +74,7 @@ class User(object):
         self.syncUser()
 
     def isSuperuser(self):
-        return self.level_obj == UserLevel.SUPERUSER
+        return self.level_obj.level == UserLevel.SUPERUSER
 
     def getUsername(self):
         return self.name

@@ -551,15 +551,12 @@ class SCStatus(ProjectServerCommand):
         user = self.getUser(request)
         explicit_project=self.getProject(request, serverState, only_explicit=True)
         if explicit_project is not None:
-            log.warning("not none!")
             projects = [explicit_project.getName()]
         else:
             if user.isSuperuser():
                 projects = lst=serverState.getProjectList().list()
-                log.warning("superuser!")
             else:
                 projects = UserHandler().getProjectListForUser(user)
-                log.warning("from db!")
         ret_prj_dict = {}
 
         for prj_str in projects:
@@ -647,7 +644,8 @@ class SCStatus(ProjectServerCommand):
         for node in thisNode.nodes.nodes.itervalues():
             if not topology.exists(node.getId()):
                 #connect to correct node
-                clnt = ClientMessage(node.host, node.verified_https_port, conf=conf)
+                clnt = ClientMessage(node.host, node.verified_https_port,
+                                     conf=conf, use_verified_https=True)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)
                 processedResponse = ProcessedResponse(rawresp)

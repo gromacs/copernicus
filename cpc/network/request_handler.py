@@ -316,4 +316,5 @@ class verified_handler(handler_base):
         self.log=logging.getLogger('crs.server.request_handler_verified')
     def _handleSession(self, request):
         handler_base._handleSession(self,request)
-        request.session['user'] = User(0, 'root', UserLevel.SUPERUSER)
+        if 'user' not in request.session:
+            request.session['user'] = User(1, 'root', UserLevel.SUPERUSER)

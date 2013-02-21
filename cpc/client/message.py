@@ -173,7 +173,7 @@ class ClientMessage(ClientBase):
             fields.append(input2)
         
         msg = ServerRequest.prepareRequest(fields,[])
-        response = self.postRequest(msg)               
+        response = self.postRequest(msg, self.use_verified_https)
         return response
 
     #port is what port the request should be sent to not what port to communicate with later on
