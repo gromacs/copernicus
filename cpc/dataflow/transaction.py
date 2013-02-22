@@ -55,7 +55,7 @@ class SetValue(object):
         self.itemList=vtype.parseItemList(itemName)
         item=project.getClosestSubValue(self.itemList)
         if not isinstance(item, active_value.ActiveValue):
-            raise SetError("Value of '%s' cannot be set"%itemname)
+            raise SetError("Value of '%s' cannot be set"%itemName)
         #self.activeInstance=item.owner
         self.closestVal=item
         #self.activeInstance=activeInstance

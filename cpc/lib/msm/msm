@@ -420,6 +420,17 @@ if inp.testing():
 # prepare the output data
 out=inp.getFunctionOutput()
 
+nthreads=os.environ.get('CPC_NUM_THREADS')
+if nthreads is not None:
+    try:
+        # try converting it to an int
+        nthreads=int(nthreads)
+        if nthreads > 0:
+            os.environ['OMP_NUM_THREADS']=str(nthreads)
+            sys.stderr.write("Limiting number of threads to: %d\n"%nthreads)
+    except ValueError:
+        pass
+
 msm(inp, out)
 
 out.writeXML(sys.stdout)
