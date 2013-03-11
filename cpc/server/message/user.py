@@ -1,7 +1,7 @@
 from cpc.server.state.user_handler import UserLevel, UserHandler, UserError
 import cpc.server.message
 from cpc.util.version import __version__
-from server_command import ServerCommand
+from server_command import ServerCommand, ServerCommandError
 
 class SCLogin(ServerCommand):
     """Logs in a user"""

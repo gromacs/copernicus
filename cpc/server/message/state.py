@@ -29,7 +29,8 @@ from cpc.util.version import __version__
 
 from server_command import ServerCommand
 from server_command import ServerCommandError
-
+from cpc.server.state.user_handler import UserLevel, UserHandler, UserError
+from cpc.dataflow.lib import getModulesList
 log = logging.getLogger('cpc.server.message.state')
 
 class SCStop(ServerCommand):
@@ -109,6 +110,12 @@ class SCListServerItems(ServerCommand):
         elif toList == "heartbeats":
             heartbeats = serverState.getRunningCmdList().toJSON() #.list()
             retstr = heartbeats
+        elif toList == "users":
+            retstr = UserHandler().getUsersAsList()
+        elif toList == "modules":
+            retstr = getModulesList()
+
+
         else:
             raise ServerCommandError("Unknown item to list: '%s'" % toList)
         response.add(retstr)
