@@ -144,7 +144,7 @@ class HttpMethodParser(object):
                     log.log(cpc.util.log.TRACE,"line is "+line)
                     params[name] = line  
                     
-            msgStream.readline()    ## we will have a trailin CRLF that we just want to get rid of                     
+                msgStream.readline()    ## we will have a trailin CRLF that we just want to get rid of
             
             if(ServerRequest.isFile(headers['Content-Disposition'])):
                 readBytes = 0

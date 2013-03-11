@@ -49,8 +49,8 @@ class TaskExecThreads(object):
         self.tw=None
         nc=conf.getServerCores()
         if nc>0:
-            log.debug("Setting max. nr. of OpenMP cores to %d"%nc)
-            os.environ['OMP_NUM_THREADS']=str(nc)
+            log.debug("Setting CPC_NUM_THREADS (max. #cores) to %d"%nc)
+            os.environ['CPC_NUM_THREADS']=str(nc)
 
     def pause(self):
         """Pause all task exec threads. Returns when they have

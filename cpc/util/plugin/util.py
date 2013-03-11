@@ -39,7 +39,7 @@ def testCommand(command):
         (stdout, stderr)=proc.communicate()
         success= (proc.returncode == 0)
         if not success:
-            raise cpc.util.CpcError("Couldn't run %s: %s"%(sp[0],stderr))
+            raise cpc.util.CpcError("Couldn't run %s: %s"%(sp[0],stdout))
     except OSError as e:
         raise cpc.util.CpcError("Couldn't run %s: %s"%(sp[0], str(e)))
     return success
