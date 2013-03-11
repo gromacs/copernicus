@@ -299,8 +299,7 @@ class Project(object):
                 elif (tp.isSubtype(vtype.arrayType) or 
                       tp.isSubtype(vtype.dictType)):
                     mem=tp.getMembers()
-                    subi=dict()
-                    subi.type=mem.getName()
+                    subi={"type" : mem.getName()}
                     ret["subitems"]=[ subi ]
             elif isinstance(item, active_inst.ActiveInstance):
                 ret["type"]="instance"
