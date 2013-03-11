@@ -258,6 +258,14 @@ class Project(object):
                 ret["name"]=pathname
                 if tp is not None:
                     ret["typename"]=tp.getName()
+                    baseType=tp.getBaseType()
+                    ret["base-type"]=baseType.getName()
+                    if (baseType == vtype.arrayType or 
+                        baseType == vtype.dictType):
+                        members = tp.getMembers()
+                        ret["member-type"] = members.getName()
+                        ret["member-base-type"] = members.getBaseType().\
+                                  getName()
                 else:
                     ret["typename"]="Not found"
                 if tp.isSubtype(vtype.recordType):
@@ -268,7 +276,15 @@ class Project(object):
                         subi=dict()
                         subi["name"]=key
                         subi["type"]=mem.type.getName()
-
+                        # base type info
+                        baseType=mem.type.getBaseType()
+                        subi["base-type"]=baseType.getName()
+                        if (baseType == vtype.arrayType or 
+                            baseType == vtype.dictType):
+                            members = mem.type.getMembers()
+                            subi["member-type"] = members.getName()
+                            subi["member-base-type"] = members.getBaseType().\
+                                      getName()
                         optstr=""
                         conststr=""
                         if mem.isOptional():
