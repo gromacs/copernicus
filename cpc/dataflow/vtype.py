@@ -204,6 +204,11 @@ class Type(description.Describable):
             ret=ret.parent
         return ret.name
 
+    def jsonDescribe(self):
+        """Get a description of a type in a JSON-serializable format."""
+        return { "name" : self.name,
+                 "base-type" : self.getBaseTypeName() }
+
     def containsBasetype(self, basetype):
         """Check whether the type or one of its members contains a subtype
            of basetype."""
@@ -325,6 +330,10 @@ class RecordMember(description.Describable):
         """Return whether all sub-items of this item must be non-None"""
         return self.complete
 
+    def jsonDescribe(self):
+        """Return a json-serializable description of the record member."""
+        return self.type.jsonDescribe()
+
 
 class RecordType(Type):
     """Base class describing a named list with fixed membership."""
@@ -337,6 +346,20 @@ class RecordType(Type):
         if self.parent.isSubtype(recordType) and self.parent.hasMembers():
             return True
         return len(self.recordMembers) > 0
+    def iterMembers(self):
+        """Generate an iterable list of tuples: (key, member)"""
+        if self.parent.isSubtype(recordType) and self.parent.hasMembers():
+            for (key, item) in self.parent.iterMembers():
+                yield (key, item)
+        for (key, item) in self.recordMembers.iteritems():
+            yield (key, item)
+    def iterMemberKeys(self):
+        """Generate an iterable list of the names of members"""
+        if self.parent.isSubtype(recordType) and self.parent.hasMembers():
+            for key in self.parent.iterMemberKeys():
+                yield key
+        for key in self.recordMembers.iterkeys():
+            yield key
     def getMemberKeys(self):
         """Get a list with the member keys of the record."""
         if self.parent.isSubtype(recordType) and self.parent.hasMembers():
@@ -389,6 +412,16 @@ class RecordType(Type):
     def setMemberDesc(self, name, desc):
         """Get a specific member description."""
         self.recordMembers[name].desc=desc
+
+    def jsonDescribe(self):
+        """Get a description of a type in a JSON-serializable format."""
+        ret = { "name" : self.name,
+                "base-type" : self.getBaseTypeName() }
+        mems={}
+        for (key, item) in self.iterMembers():
+            mems[key] = item.jsonDescribe()
+        ret["members"]=mems
+        return ret
 
     def writePartsXML(self, outf, indent=0):
         """Write the xml of the constituent parts of the type for compound
@@ -454,6 +487,12 @@ class ArrayType(Type):
     def setMembers(self, type):
         """Set the type of the array's members"""
         self.memberType=type
+    def jsonDescribe(self):
+        """Get a description of a type in a JSON-serializable format."""
+        ret = { "name" : self.name,
+                "base-type" : self.getBaseTypeName() }
+        ret["members"]=self.memberType.jsonDescribe()
+        return ret
     def writePartsXML(self, outf, indent=0):
         """Write the xml of the constituent parts of the type for compound
             types."""
@@ -503,6 +542,12 @@ class DictType(Type):
     def setMembers(self, type):
         """Set the type of the dict's members"""
         self.memberType=type
+    def jsonDescribe(self):
+        """Get a description of a type in a JSON-serializable format."""
+        ret = { "name" : self.name,
+                "base-type" : self.getBaseTypeName() }
+        ret["members"]=self.memberType.jsonDescribe()
+        return ret
     def writePartsXML(self, outf, indent=0):
         """Write the xml of the constituent parts of the type for compound
             types."""

@@ -262,17 +262,27 @@ class CmdLine(object):
              co.write("%s %s:\n"%(list['type'].title(), list['name']))
         if 'fn_name' in list:
             co.write("Instance of: %s\n"%list['fn_name'])
-        if 'typename' in list:
+        if 'value-type' in list and 'name' in list['value-type']:
+            co.write("Type: %s\n"%list['value-type']['name'])
+        elif 'typename' in list:
             co.write("Type: %s\n"%list['typename'])
         if 'state' in list:
             co.write("State: %s\n"%(list['state'].encode("utf-8")))
         if 'subitems' in list:
             co.write('Sub-items:\n')
             for item in list['subitems']:
+                # get the type name
+                if 'value-type' in item and 'name' in item['value-type']:
+                    typename=item["value-type"]["name"]
+                elif 'typename' in item:
+                    typename=item["typename"]
+                elif 'type' in item:
+                    typename=item["type"]
+                # print the subitem value + type
                 if "name" in item:
-                    co.write('    %s: %s'% (item["name"], item["type"])) 
+                    co.write('    %s: %s'% (item["name"], typename))
                 else:
-                    co.write('    %s'%(item["type"]))
+                    co.write('    %s'%(typename))
                 if "optional" in item:
                     co.write(", optional")
                 if "const" in item:
