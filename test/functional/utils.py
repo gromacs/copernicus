@@ -81,6 +81,7 @@ def stop_server():
             p = subprocess.check_call(["./cpcc", "stop-server"],
                 stdout=null, stderr=null)
     except subprocess.CalledProcessError:
+        print "Hard stopped server"
         #hard stop
         ensure_no_running_servers_or_workers()
 
@@ -162,10 +163,14 @@ def retry_client_command(command, expectstdout, iterations=5, sleep=3):
 
 def login_client(username='root', password='root'):
     cmd_line = './cpcc login -stdin %s'%username
-    args = shlex.split(cmd_line)
-    p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                     stderr=subprocess.PIPE)
-    (stdout, stderr) = p.communicate(input='%s\n'%password)
+    for i in range(3):
+        time.sleep(1) # we need to give the server some time to load
+        args = shlex.split(cmd_line)
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+        (stdout, stderr) = p.communicate(input='%s\n'%password)
+        if p.returncode == 0:
+            break
     assert p.returncode == 0,\
     "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 

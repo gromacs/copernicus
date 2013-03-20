@@ -35,14 +35,12 @@ class TestLifeCycle():
         #terminating
         setup_server(heartbeat='120')
         start_server()
-        time.sleep(1) #let's cut it some slack
         login_client()
         #load mdrun example project
         run_mdrun_example()
         #time.sleep(3)
 
         #verify the command is queued
-        #run_client_command(command='q', expectstdout='mdrun.1')
         retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
         #fire up the worker
         w = Worker()
@@ -60,4 +58,91 @@ class TestLifeCycle():
 
         #check that nothing went wrong
         w.checkForExceptions()
+        teardown_server()
+
+    def testHardKill(self):
+        """
+        Verifies that commands are put back on hard worker kill
+        """
+        #short heartbeat
+        setup_server(heartbeat='2')
+        start_server()
+        time.sleep(1) #let's cut it some slack
+        login_client()
+        #load mdrun example project
+        run_mdrun_example()
+
+        retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
+        #fire up the worker
+        w = Worker()
+        w.startWorker()
+        w.waitForOutput(expectedOutput='Got 1 commands.')
+
+        w.waitForOutput(expectedOutput='Run thread with cmd')
+        time.sleep(1)
+
+        #gracefully stop the worker
+        w.shutdownHard()
+        #ensure that the command is back into the queue
+        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+
+        #check that nothing went wrong
+        w.checkForExceptions()
+        teardown_server()
+
+    def testRestartServer(self):
+        """
+        Verifies commands are put back on queue on server restart
+        """
+        setup_server(heartbeat='120')
+        start_server()
+        login_client()
+        #load mdrun example project
+        run_mdrun_example()
+        #time.sleep(3)
+
+        #verify the command is queued
+        retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
+
+        #soft stop server and start server
+        stop_server()
+        time.sleep(1) #let's cut it some slack
+        start_server()
+
+        login_client()
+        #ensure that the command is back into the queue
+        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+
+        teardown_server()
+
+    def testQueueIntactAfterRestart(self):
+        """
+        Makes sure items in queue remain there after restart
+        """
+        #short heartbeat
+        setup_server(heartbeat='120')
+        start_server()
+        time.sleep(1) #let's cut it some slack
+        login_client()
+        #load mdrun example project
+        run_mdrun_example()
+
+        retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
+        #fire up the worker
+        w = Worker()
+        w.startWorker()
+        w.waitForOutput(expectedOutput='Got 1 commands.')
+
+        w.waitForOutput(expectedOutput='Run thread with cmd')
+        stop_server()
+        time.sleep(0.2)
+        w.shutdownHard()
+        time.sleep(1) #let's cut it some slack
+        start_server()
+
+        login_client()
+
+        #ensure that the command is back into the queue
+        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+
         teardown_server()

@@ -85,3 +85,32 @@ class TestClientTest():
         run_client_command("start test")
         run_client_command("save test")
         run_client_command("load test.tar.gz test2")
+
+    def test_status_one_project(self):
+        """
+        Tests status command with one functioning project
+        """
+        login_client()
+        run_mdrun_example()
+        run_client_command("s", expectstdout="2 in state 'active'")
+
+    def test_status_one_faulty_project(self):
+        """
+        Tests status command with one faulty project
+        """
+        login_client()
+        run_mdrun_example()
+        #break mdrun
+        run_client_command("set-file grompp:in.conf examples/mdrun-test/grompp.mdp")
+        retry_client_command("s", expectstdout="1 in state 'error'", iterations=15, sleep=1)
+
+    def test_get_error(self):
+        """
+        Tests get error command
+        """
+        login_client()
+        run_mdrun_example()
+        #break mdrun
+        run_client_command("set-file grompp:in.conf examples/mdrun-test/grompp.mdp")
+        retry_client_command("s", expectstdout="1 in state 'error'", iterations=15, sleep=1)
+        run_client_command("get grompp.msg.error", expectstdout='File input/output error')
