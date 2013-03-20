@@ -33,14 +33,14 @@ PROJ_DIR = "/tmp/cpc-proj"
 def setup_server(heartbeat='20'):
     ensure_no_running_servers_or_workers()
     clear_dirs()
-    p = subprocess.Popen(["./cpc-server", "setup", "-stdin", PROJ_DIR],
-                         stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, close_fds=True)
-    (stdout, stderr) = p.communicate(input='root\n')
-    assert p.returncode == 0
+
+
     with open(os.devnull, "w") as null:
-        p = subprocess.check_call(["./cpc-server", "setup", PROJ_DIR],
-            stdout=null, stderr=null)
+        p = subprocess.Popen(["./cpc-server", "setup", "-stdin", PROJ_DIR],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, close_fds=True)
+        (stdout, stderr) = p.communicate(input='root\n')
+        assert p.returncode == 0
         p = subprocess.check_call(["./cpc-server", "config", "server_fqdn",
                                    "127.0.0.1"], stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
