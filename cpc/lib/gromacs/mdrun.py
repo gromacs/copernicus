@@ -499,7 +499,6 @@ def mdrun(inp):
         args.extend(cmdlineOpts)
         # for the new neighbor search scheme in Gromacs 4.6, set this env 
         # variable
-        cenv={ 'GMX_VERLET_SCHEME': '1' }
         if lastcpt is not None:
             shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
         # any expected output files.
@@ -515,7 +514,7 @@ def mdrun(inp):
         log.debug("Expected output files: %s"%outputFiles)
         cmd=cpc.command.Command(newdirname, "gromacs/mdrun",args,
                                 minVersion=cpc.command.Version("4.5"),
-                                addPriority=prio, env=cenv, 
+                                addPriority=prio,
                                 outputFiles=outputFiles)
         if inp.hasInput("resources") and inp.getInput("resources") is not None:
             #log.debug("resources is %s"%(inp.getInput("resources")))

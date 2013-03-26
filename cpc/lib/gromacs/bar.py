@@ -147,6 +147,7 @@ def g_bar(inp):
     detailedStart=re.compile(r".*lam_A[ ]*lam_B")
     finalStart=re.compile(r"Final results in kJ/mol")
     lambdaReg=re.compile(r".*lambda.*")
+    pointReg=re.compile(r".*point.*")
     totalReg=re.compile(r".*total.*")
     results=[] # the array of detailed results in kT
     phases=[ "start", "detailed_results", "final" ]
@@ -182,7 +183,8 @@ def g_bar(inp):
         elif phase == 2:
             spl=line.split()
             #log.debug("phase 2 line: %s, %s"%(line, spl))
-            if len(spl) >= 8 and lambdaReg.match(spl[0]):
+            if len(spl) >= 8 and (lambdaReg.match(spl[0]) or
+                                  pointReg.match(spl[0])):
                 dG=float(spl[5])
                 dG_err=float(spl[7])
                 results[i].setdG(dG, dG_err)
