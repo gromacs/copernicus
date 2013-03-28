@@ -32,7 +32,7 @@ import shutil
 import logging
 import cpc.server.state.database as database
 import cpc.util.exception
-from cpc.util.conf.conf_base import Conf
+from cpc.util.conf.conf_base import Conf, ConfError
 
 log=logging.getLogger('cpc.util.conf.server_conf')
 
@@ -77,7 +77,6 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
     setupCA(openssl,cf,forceReset)
     openssl.setupServer()
     cf.setRunDir(rundir)
-
     #setup database
     try:
         database.setupDatabase(rootpass)
@@ -109,15 +108,16 @@ class ServerConf(conf_base.Conf):
         conf_base.Conf.__init__(self, name='server.conf', 
                                 confSubdirName="server",
                                 userSpecifiedPath=confdir)
-
         self.initDefaults()
-        self.have_conf_file = self._tryRead()
+        try:
+            self.have_conf_file = self._tryRead()
+        except ConfError:
+            pass# this is OK
         
         '''
         Constructor
         '''
     def initDefaults(self):
-        
         conf_base.Conf.initDefaults(self)
         server_host = ''
         self.defaultVerifiedHTTPSPort = Conf.getDefaultVerifiedHttpsPort()
@@ -227,8 +227,6 @@ class ServerConf(conf_base.Conf):
         else:
             os.environ['PYTHONPATH'] = self.execBasedir
 
-        
-        
     def setServerHost(self,serverAddress):        
         return self.set('server_host',serverAddress)                
     def setClientHost(self,address):        

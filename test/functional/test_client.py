@@ -21,6 +21,7 @@ from test.functional.utils import *
 class TestClientTest():
 
     def setUp(self):
+        purge_client_config()
         setup_server()
         start_server()
 
@@ -114,3 +115,41 @@ class TestClientTest():
         run_client_command("set-file grompp:in.conf examples/mdrun-test/grompp.mdp")
         retry_client_command("s", expectstdout="1 in state 'error'", iterations=15, sleep=1)
         run_client_command("get grompp.msg.error", expectstdout='File input/output error')
+
+    def test_add_server(self):
+        """
+        Tests the add-server command
+        """
+        purge_client_config()
+        try:
+            login_client()
+            assert False,"Login passed with no client conf"
+        except AssertionError:
+            pass #should fail
+
+        run_client_command("add-server localhost")
+        login_client()
+
+        run_client_command("add-server localhost",returnZero=False,
+            expectstderr="A server with name localhost already exist")
+
+    def test_use_server(self):
+        """
+        Tests the use-server command
+        """
+        run_client_command("add-server -n failserver failhost")
+        try:
+            login_client()
+            assert False,"Login passed with invalid server"
+        except AssertionError:
+            pass #should fail
+        run_client_command("use-server localhost")
+        login_client()
+
+    def test_use_bundle(self):
+        """
+        Test connection using bundle, bypassing login procedure
+        """
+        purge_client_config()
+        generate_bundle()
+        run_client_command("-c %s/.copernicus/client.cnx users"%getHome())

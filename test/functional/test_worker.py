@@ -23,6 +23,7 @@ class TestWorker():
 
     def setUp(self):
         setup_server()
+        generate_bundle()
         start_server()
 
     def tearDown(self):

@@ -34,6 +34,7 @@ class TestLifeCycle():
         #long hearbeat, we want the worker to signal to the server that it's
         #terminating
         setup_server(heartbeat='120')
+        generate_bundle()
         start_server()
         login_client()
         #load mdrun example project
@@ -66,6 +67,7 @@ class TestLifeCycle():
         """
         #short heartbeat
         setup_server(heartbeat='2')
+        generate_bundle()
         start_server()
         time.sleep(1) #let's cut it some slack
         login_client()
@@ -121,6 +123,7 @@ class TestLifeCycle():
         """
         #short heartbeat
         setup_server(heartbeat='120')
+        generate_bundle()
         start_server()
         time.sleep(1) #let's cut it some slack
         login_client()

@@ -28,6 +28,7 @@ from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.util import json_serializer
 from cpc.util.conf.connection_bundle import ConnectionBundle
+from cpc.util.conf.client_conf import ClientConf
 
 from cpc.network.node_connect_request import NodeConnectRequest
 
@@ -45,17 +46,20 @@ class ClientMessage(ClientBase):
         @input String port : the port to connect to
         @input Conf conf
         '''
+
         self.host = host
         self.port = port
         self.conf = conf
-        self.use_verified_https = use_verified_https #the client runs on unverified https
+        self.use_verified_https = use_verified_https
         if self.conf is None: 
-            self.conf = ConnectionBundle()
+            self.conf = ClientConf()
         if self.host is None:
             self.host = self.conf.getClientHost()
         if self.port is None:
-            self.port = self.conf.getClientUnverifiedHTTPSPort()
-
+            if use_verified_https:
+                self.port = self.conf.getClientVerifiedHTTPSPort()
+            else:
+                self.port = self.conf.getClientUnverifiedHTTPSPort()
 
     #NOTE should not be able to perform with a post or put request 
     def stopRequest(self): 

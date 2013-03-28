@@ -682,3 +682,19 @@ class CmdLine(object):
                 else:
                     co.write("      none\n")
         return co.getvalue()
+
+    ##
+    # Local command formaters
+    ##
+
+    @staticmethod
+    def listServer(serv_dict):
+        """ Format server list, expects a dict with servers """
+        print "Servers:"
+        for (key, val) in serv_dict.iteritems():
+            def_str = ' (default)' if 'default' in val else ''
+            print "%s%s:"%(key,def_str)
+            print "   host: %s"%val['client_host']
+            print "   port: %s"%val['client_unverified_https_port']
+            print
+

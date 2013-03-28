@@ -35,7 +35,8 @@ import cpc.util.ca_conf_template
 
 class ConfError(cpc.util.exception.CpcError):
     pass
-
+class NoConfError(ConfError):
+    pass
 
 class InputError(CpcError):
     def __init__(self, exc):
@@ -140,11 +141,9 @@ class Conf:
         """Get an existing singleton, or read basic configuration stuff"""
         if self.exists():
             return
-
         # initialize for the first time:
         self.conf = dict()
         self.hostname = socket.getfqdn()
-
         self._add('hostname', self.hostname, 'hostname', userSettable=True)
 
         # find the location of the configuration file and associated paths
@@ -167,7 +166,7 @@ class Conf:
         # chances of a deadlock
         self.lock = threading.RLock()
         # and read in the actual values from the configuration file.        
-        #self.have_conf_file = self.tryRead() 
+        #self.have_conf_file = self.tryRead()
 
     def exists(self):
         """Check for and initialize pre-existing singleton object."""
@@ -222,7 +221,7 @@ class Conf:
             if confSubdirName is None:
                 # in this case, userSpecifiedPath must be a file
                 if not os.path.isfile(userSpecifiedPath):
-                    raise ConfError(
+                    raise NoConfError(
                         "File %s does not exist" % userSpecifiedPath)
                 filename = userSpecifiedPath
                 base_dir = os.path.dirname(userSpecifiedPath)
@@ -246,7 +245,7 @@ class Conf:
                     filename = filenameToTest
                     break
         if filename is None:
-            raise ConfError("Configuration file not found")
+            raise NoConfError("Configuration file not found")
 
         self._add('conf_file', filename, 'The configuration file name')
         self._add('base_dir', base_dir,
@@ -335,31 +334,37 @@ class Conf:
 
     def _tryRead(self):
         try:
-            confname = self.getFile('conf_file')
-            f = open(confname, 'r')
-            str = f.read()
             try:
-                #print str
-                nconf = json.loads(str,
-                    object_hook=cpc.util.json_serializer.fromJson)
-                # merge items
-                for (key, val) in nconf.iteritems():
-                    if self.conf.has_key(key):
-                        self.conf[key].set(val)
-                        # if it doesn't exist as a key, we ignore it.
-            except Exception as e:
-                raise ConfError("Couldn't load %s: %s" % (confname, str(e)))
+                confname = self.getFile('conf_file')
+                f = open(confname, 'r')
+                str = f.read()
+            except KeyError as e:
+                # as the methods purpose is attempting to read a file, the case
+                # where there is no file is not an error, but just a failed attempt
+                return False
+
+            nconf = json.loads(str,
+                object_hook=cpc.util.json_serializer.fromJson)
+            # merge items
+            for (key, val) in nconf.iteritems():
+                if self.conf.has_key(key):
+                    self.conf[key].set(val)
+                    # if it doesn't exist as a key, we ignore it.
             return True
-        except:
-            # there was no configuration file.
-            # at least try to make the directory
-            try:
-                dirname = os.path.dirname(confname)
-                os.makedirs(dirname)
-                os.chmod(dirname, stat.S_IRWXU)
-            except:
-                pass
-            return False
+        except ValueError as e:
+            raise ConfError("Couldn't parse %s: %s" % (confname, e))
+        except Exception as e:
+            raise ConfError("Error reading conf: %s"%e)
+        # except:
+        #     # there was no configuration file.
+        #     # at least try to make the directory
+        #     try:
+        #         dirname = os.path.dirname(confname)
+        #         os.makedirs(dirname)
+        #         os.chmod(dirname, stat.S_IRWXU)
+        #     except:
+        #         pass
+        #     return False
 
     def write(self):
         """ write all conf settings that have non-default values to file."""
@@ -380,7 +385,6 @@ class Conf:
         # construct a dict with only the values that have changed from 
         # the default values
         conf = dict()
-
         for cf in self.conf.itervalues():
             if cf.hasSetValue():
                 conf[cf.name] = cf.get()
