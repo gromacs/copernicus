@@ -225,25 +225,6 @@ class OpenSSL(object):
          
     #@input String certfile
     def addCa(self,certfile):
-        #tempFile = "tempChainFile"
-        #shutil.copyfile(self.conf.getCaChainFile(),tempFile)
-       
         file = open(self.conf.getCaChainFile(),"a")
-                 
         file.write(certfile)
-       
-        #temp = open(tempFile,"r")
-       
-        #file.write(temp.read())
-       
-        #temp.close()
         file.close()
-        
-        #os.remove(tempFile)
-       
-       
-   
-       
-                    
-    
-        

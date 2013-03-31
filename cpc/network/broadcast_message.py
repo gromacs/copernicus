@@ -22,6 +22,7 @@ Created on May 25, 2011
 
 @author: iman
 '''
+
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.server_request import ServerRequest
@@ -30,10 +31,40 @@ from cpc.util.conf.server_conf import ServerConf
 from cpc.util import json_serializer
 from cpc.network.node import Node
 import json
+import logging
 #messages that are broadcasted to all nodes
+log=logging.getLogger('cpc.network.broadcast_message')
 class BroadcastMessage(ServerToServerMessage):
 
-    
+
+    def __init__(self):
+        self.conf = ServerConf()
+
+    def updateConnectionParameters(self):
+        cmdstring="connection-parameter-update"
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+
+        #prepare the connection params
+        conf = ServerConf()
+        connectionParams = dict()
+        connectionParams['serverId'] = conf.getServerId()
+        connectionParams['hostname'] = conf.getHostName()
+        connectionParams['fqdn'] = conf.getFqdn()
+        connectionParams['server_unverified_https_port'] = conf\
+        .getServerUnverifiedHTTPSPort()
+        connectionParams['server_verified_https_port'] = conf\
+        .getServerVerifiedHTTPSPort()
+
+
+        input2 = Input('connectionParams',
+            json.dumps(connectionParams,default = json_serializer.toJson,
+                indent=4))  # a json structure that needs to be dumped
+        fields.append(input2)
+        log.info("updating")
+        self.broadcastToNeighboursOnly(fields,[])
+
     def updateNetworkTopology(self):
         topology = ServerToServerMessage.getNetworkTopology()
         
@@ -54,16 +85,25 @@ class BroadcastMessage(ServerToServerMessage):
         topology = ServerToServerMessage.getNetworkTopology()   
         
         #we dont want to broadcast to ourself
-        node = Node(ServerConf().getHostName(),
-               ServerConf().getServerUnverifiedHTTPSPort(),
-               ServerConf().getServerVerifiedHTTPSPort(),
-               ServerConf.getHostName())
+        node = Node.getSelfNode(ServerConf())
+
         
         topology.removeNode(node.getId())     
         for node in topology.nodes.itervalues():
-            self.initialize(node.host,node.verified_https_port) 
-            headers['end-node'] = node.host
-            headers['end-node-port'] = node.verified_https_port                     
-            msg = ServerRequest.prepareRequest(fields,[],headers)   
-            resp  = self.putRequest(msg)
-            print ProcessedResponse(resp).pprint()
+            self._sendMessage(node,fields,files,headers)
+
+
+    def broadcastToNeighboursOnly(self,fields,files = [],headers=dict()):
+        conf = ServerConf()
+        for node in conf.getNodes().nodes.itervalues():
+            self._sendMessage(node,fields,files,headers)
+
+
+    def _sendMessage(self,node,fields,files = [],headers=dict()):
+        self.initialize(node.server_id)
+        headers['end-node'] = node.hostname
+        headers['end-node-port'] = node.verified_https_port
+        msg = ServerRequest.prepareRequest(fields,[],headers)
+        resp  = self.putRequest(msg, disable_cookies=True)
+        #print ProcessedResponse(resp).pprint()
+

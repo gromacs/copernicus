@@ -46,7 +46,6 @@ class ProcessedResponse(object):
     def pprint(self,renderMethod = None):
         for item in self.resp:                                     
             if item['status'] == 'OK':
-                
                 if renderMethod!=None:                    
                     sys.stdout.write(renderMethod(item))
                     sys.stdout.write("\n")
@@ -68,7 +67,10 @@ class ProcessedResponse(object):
 
 
         return True
-        
+
+    def getMessage(self):
+        return self.resp[0]['message']        
+
     def getData(self):  
         return self.resp[0]['data']
 

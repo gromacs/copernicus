@@ -24,20 +24,19 @@
 
 import sys
 import copy
+import subprocess
+from getpass import getpass
 
 import cpc.util
 from cpc.util import cmd_line_utils
-from cpc.util.conf.connection_bundle import ConnectionBundle
 from cpc.network.com.client_response import ResponseError
-from cpc.util.conf.client_conf import ClientConf
 from cpc.util.conf.conf_base import Conf
 from cpc.client.view.cmdline import CmdLine
-from cpc.network.com.client_base import ClientError
+from cpc.util.exception import ClientError
 from cpc.client import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util.version import __version__
-import subprocess
-from getpass import getpass
+
 
 def print_usage():
     print "Usage: cpcc [global-options] <command> [command-options]"
@@ -94,17 +93,15 @@ def print_usage():
     print ""
     print "Server control commands"    
     print "       cpcc stop-server"
-    print "       cpcc trust host        port"
-    print "       cpcc trust-all"  
-    print "       cpcc add-node host     [http_port] [https_port]"
-    print "       cpcc remove-node       host port"
-    print "       cpcc list-nodes" 
-    print "       cpcc list-sent-node-requests"
-    print "       cpcc list-node-requests"
+    print "       cpcc trust             -all |server-id"
+    print "       cpcc connect-server    host [unverified_https_port]"
+    print "       cpcc revoke            server-id"
+    print "       cpcc list-servers"
     print "       cpcc node-pri          priority host [port]"
-    print "       cpcc network-topology"
+    print "       cpcc network"
     print "       cpcc readconf"
     print "       cpcc server-info"
+    print "       cpcc ping [server-id]"
     print ""
     print "Project Save and Load commands "
     print "       cpcc save      projectname [project-tar]"
@@ -232,11 +229,11 @@ try:
 
     # handle remote commands
     if cmd == "login":
-        user=getArg(args, 1, "username")
-        if user == '-stdin':
+        if "-stdin" in args:
             user = getArg(args, 2, "username")
             password = raw_input()
         else:
+            user=getArg(args, 1, "username")
             password = getpass()
         #password=getArg(args, 2, "password")
         ProcessedResponse(clnt.loginRequest(user, password)).pprint()
@@ -460,55 +457,36 @@ try:
         dst=getArg(pargs, 2, "connection destination")
         ProcessedResponse(clnt.projectConnectRequest(project, 
                                                      src, dst)).pprint()
-    
-    elif cmd == "trust":  
-        host = getArg(args,1, "hostname")
-        port = getArg(args,2,'port')
-        clnt= ClientMessage(conf=conf,use_verified_https=use_verified_https)
-        ProcessedResponse(clnt.grantNodeConnection(host, port)).pprint()
-    
-    elif cmd == "trust-all":  
+    elif cmd == "trust":
+        if ("-all" in args):
+            ProcessedResponse(clnt.grantAllNodeConnections()).\
+            pprint(CmdLine.grantNodeConnectRequests)
+        else:
+            serverId = getArg(args,1, "server-id")
+            ProcessedResponse(clnt.grantNodeConnection(serverId)).pprint(CmdLine.grantNodeConnectRequests)
 
-        ProcessedResponse(clnt.grantAllNodeConnections()).\
-                  pprint(CmdLine.grantAllNodeConnectRequests)
-    
-    elif cmd == "add-node":
+    elif cmd == "connect-server":
         host = getArg(args,1,"hostname")
         unverified_https_port = None
         verified_https_port = None        
         if len(args)>2:
             unverified_https_port = str(getArg(args,2,'unverified_https_port'))
-        
-        if len(args)>3:
-            verified_https_port = str(getArg(args,3,'verified_https_port'))
         else:
             unverified_https_port = Conf.getDefaultUnverifiedHttpsPort()
-        ProcessedResponse(clnt.addNode(host, unverified_https_port,verified_https_port)).\
-                  pprint(CmdLine.addNodeRequest)
+                  
+        ProcessedResponse(clnt.addNode(host, unverified_https_port)).\
+        pprint(CmdLine.addNodeRequest)
 
-    elif cmd == 'list-nodes':
-        ProcessedResponse(clnt.listNodes()).pprint(CmdLine.listNodes)    
+    elif cmd == 'list-server':
+        ProcessedResponse(clnt.listServers()).pprint(CmdLine.listServers)
     
-    elif cmd == 'list-sent-node-requests':
-        ProcessedResponse(clnt.listSentNodeConnectionRequests()).\
-                  pprint(CmdLine.listSentNodeConnectRequests)    
-    
-    elif cmd == 'list-node-requests':
-        ProcessedResponse(clnt.listNodeConnectionRequests()).\
-                  pprint(CmdLine.listNodeConnectRequests)
-        
-    elif cmd == "remove-node":        
-        if(cf.removeNode(getArg(1, "hostname"),getArg(2,'port'))):
-            print("removed node %s:%s:"%(args[1],args[2]))
-            nodes = cf.getNodes()     
-                        
-            strs = []
-            for node in nodes.nodes.itervalues():
-                strs.append("%s:%s "%(node.host,node.port))
-            
-            print ("available nodes:"+ ','.join(strs)) 
-        ProcessedResponse(clnt.readConfRequest()).pprint()
-        
+    elif cmd == "revoke":
+        print "WARNING: The revoke command has security issues and a revoked"
+        print "server is not to be considered revoked from a security perspective"
+        print "---"
+        serverId = getArg(args,1,"server Id")
+        ProcessedResponse(clnt.revokeNode(serverId)).pprint()
+
     elif cmd == "change-node-priority" or cmd == "set-pri":
         if len(args) >= 3:
             priority = getArg(args,1,"priority")
@@ -520,7 +498,7 @@ try:
         ProcessedResponse(clnt.changeNodePriority(host,priority,port)).\
                   pprint(CmdLine.listNodes)
             
-    elif cmd == "network-topology":
+    elif cmd == "network":
         ProcessedResponse(clnt.networkTopology()).\
                   pprint(CmdLine.networkTopology)
         
@@ -547,6 +525,15 @@ try:
 
     elif cmd == "server-info":
         ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)
+
+    elif cmd == "ping":
+        serverId = None  #will ping the server the client is connected to
+
+        if(len(args)>1):
+            serverId = getArg(args,1,"serverId")
+
+        ProcessedResponse(clnt.pingServer(serverId)).pprint()
+
 
     elif cmd == "save-state":
         ProcessedResponse(clnt.saveStateRequest()).pprint()

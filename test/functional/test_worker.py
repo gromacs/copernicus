@@ -22,6 +22,8 @@ import time
 class TestWorker():
 
     def setUp(self):
+        ensure_no_running_servers_or_workers()
+        clear_dirs()
         setup_server()
         generate_bundle()
         start_server()

@@ -54,23 +54,31 @@ class RawServerMessage(ClientBase):
         self.keychain = self.conf.getCaChainFile()
  
 
-    #This is a HTTP message
-    def addNodeRequest(self,key,host):
+    def sendAddNodeRequest(self,host):
+        """
+
+        """
         conf = ServerConf()
-        cmdstring ='add-node-request'
+        cmdstring ='connnect-server-request'
         fields = []
         input=Input('cmd',cmdstring)
-        
-        nodeConnectRequest = NodeConnectRequest(conf.getHostName()
+
+        inf = open(conf.getCACertFile(), "r")
+        key = inf.read()
+
+        nodeConnectRequest = NodeConnectRequest(conf.getServerId()
                                                 ,conf.getServerUnverifiedHTTPSPort()
                                                 ,conf.getServerVerifiedHTTPSPort()
                                                 ,key
+                                                ,conf.getFqdn()
                                                 ,conf.getHostName())
+
+
 
         input2=Input('nodeConnectRequest',
                      json.dumps(nodeConnectRequest,
                                 default=json_serializer.toJson,
-                                indent=4))                
+                                indent=4))
         input3=Input('unqalifiedDomainName',host)
         fields.append(input)
         fields.append(input2)
@@ -83,17 +91,25 @@ class RawServerMessage(ClientBase):
                                   disable_cookies=True)
         return response 
 
-    #This is a HTTP message
     def addNodeAccepted(self):
         conf = ServerConf()
-        node = Node(conf.getHostName(),
+
+        inf = open(conf.getCACertFile(), "r")
+        key = inf.read()
+        #only sending fqdn the requesting should already know the unqualified
+        # hostname
+        node = NodeConnectRequest(conf.getServerId(),
                     conf.getServerUnverifiedHTTPSPort(),
                     conf.getServerVerifiedHTTPSPort(),
-                    conf.getHostName())
+                    key,
+                    conf.getFqdn(),
+                    None)
         cmdstring ='node-connection-accepted'
         fields = []
         input=Input('cmd',cmdstring)
-        input2=Input('acceptedNode',
+
+
+        input2=Input('connectRequest',
                      json.dumps(node,default=json_serializer.toJson,indent=4))
         
         

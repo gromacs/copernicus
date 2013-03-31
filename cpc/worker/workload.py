@@ -211,7 +211,6 @@ class WorkLoad(object):
             tff.seek(0)
             shutil.rmtree(self.rundir, ignore_errors=True)
             # and send it back 
-            # TODO: find out where the original request came from.
             clnt= WorkerMessage()
             # the cmddir, taskID and projectID together define a unique command.
             clnt.commandFinishedRequest(self.cmd.id, self.originatingServer, 

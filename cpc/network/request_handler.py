@@ -127,28 +127,18 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         conf = ServerConf()
         self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
         self.log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
-        
-        if self.headers.has_key('end-node') and \
+        if self.headers.has_key('server-id') and \
             ServerToServerMessage.connectToSelf(self.headers)==False:
 
-            # if the request contains an endnode we just delegate the
-            # message forward
+            endNodeServerId = self.headers['server-id']
 
-            endNode=None
-            if self.headers.has_key('end-node'):
-                endNode=self.headers['end-node']
+            self.log.log(cpc.util.log.TRACE,"Trying to reach end node %s"%(
+                endNodeServerId))
 
-            #endNodePort = None
-            #if self.headers.has_key('end-node-port'):
-            #    endNodePort=self.headers['end-node-port']
-
-            self.log.log(cpc.util.log.TRACE,"Trying to reach end node %s"%(endNode))
-
-            server_msg = ServerToServerMessage(endNode)
+            server_msg = ServerToServerMessage(endNodeServerId)
             server_msg.connect()
             retresp = server_msg.delegateMessage(self.headers.dict,
                                                  self.rfile)
-            #TODO send back the response with the headers received
             self.log.log(cpc.util.log.TRACE,"Done. Delegating back reply message of length %d."%
                       len(retresp.message))
             self.send_response(200)
@@ -276,6 +266,8 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header("content-length", len(rets))
         if 'originating-server' not in retmsg.headers:
             self.send_header("originating-server", conf.getHostName())
+        if 'server-id' not in retmsg.headers:
+            self.send_header("server-id", conf.getServerId())
 
         if self.set_cookie is not None:
             self.send_header('Set-Cookie', self.set_cookie)
@@ -304,7 +296,7 @@ class unverified_handler(handler_base):
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('crs.server.request_handler_unverified')
+        self.log=logging.getLogger('cpc.server.request_handler_unverified')
 
 class verified_handler(handler_base):
     """
@@ -313,7 +305,7 @@ class verified_handler(handler_base):
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('crs.server.request_handler_verified')
+        self.log=logging.getLogger('cpc.server.request_handler_verified')
     def _handleSession(self, request):
         handler_base._handleSession(self,request)
         if 'user' not in request.session:

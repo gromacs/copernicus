@@ -17,25 +17,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import httplib
 import mmap
 import logging
 import socket
-import cpc.util
 import os
+
+import cpc.util
+import cpc.util.log
 from cpc.network.com.client_response import ClientResponse
 from cpc.util.conf.client_conf import ClientConf
 from cpc.network.https_connection_pool import *
-import cpc.util.log
+from cpc.util.exception import ClientError
 
 log=logging.getLogger('cpc.client')
-
-
-class ClientError(cpc.util.CpcError):
-    def __init__(self, exc):
-        self.str=exc.__str__()
-#    def __str__(self):
-#        return self.desc
 
 class CookieHandler(object):
     """Keeps cookies for the client. Loads and stores in a file"""
@@ -78,11 +72,13 @@ class ClientConnectionBase(object):
             if cookie is not None:
                 req.headers['cookie'] = cookie
 
+
         self.conn.request(method, "/copernicus",req.msg,req.headers)
-                
+
         response=self.conn.getresponse()
 
-        if response.status!=200:       
+        if response.status!=200:
+
             errorStr = "ERROR: %d: %s"%(response.status, response.reason)
             resp_mmap = mmap.mmap(-1, int(len(errorStr)), mmap.ACCESS_WRITE)      
             resp_mmap.write(errorStr)
@@ -149,7 +145,6 @@ class VerifiedClientConnection(ClientConnectionBase):
                                                                privateKey,
                                                                keyChain,
                                                                cert)
-
         self.conn.connect()
         self.connected=True
 

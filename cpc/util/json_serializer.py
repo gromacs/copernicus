@@ -34,27 +34,29 @@ def toJson(obj):
     #if clause before checking if object is NODE !!!    
     if isinstance(obj,NodeConnectRequest):
         return {'class' : 'NodeConnectRequest',
-                 'host' : obj.host,
+                 'server_id' : obj.server_id,
                  'unverified_https_port' : obj.unverified_https_port,
                  'verified_https_port' : obj.verified_https_port,
                  'key'  : obj.key,
-                 'qualified_name':obj.qualified_name
+                 'qualified_name':obj.qualified_name,
+                 'hostname':obj.hostname
                }
     
     if isinstance(obj,Node):
         return {'class' : 'Node',
-                 'host' : obj.host,                 
+                 'server_id' : obj.server_id,
                  'unverified_https_port' : obj.unverified_https_port,
                  'verified_https_port' : obj.verified_https_port,
                  'nodes':obj.nodes,
                  'priority':obj.priority,
                  'workerStates':obj.workerStates,
-                 'qualified_name':obj.qualified_name
+                 'qualified_name':obj.qualified_name,
+                 'hostname':obj.hostname
                }
     
     if isinstance(obj,WorkerState):
         return {'class' : 'WorkerState',
-                 'host' : obj.host,                 
+                 'server_id' : obj.server_id,
                  'workerId' : obj.workerId,
                  'id':obj.id,
                  'state':obj.state
@@ -67,10 +69,11 @@ def toJson(obj):
 def fromJson(jsonObj):
     if 'class' in jsonObj:        
         if jsonObj['class'] == 'Node':
-            node = Node(jsonObj['host'],
+            node = Node(jsonObj['server_id'],
                         int(jsonObj['unverified_https_port']),
                         int(jsonObj['verified_https_port']),
-                        jsonObj['qualified_name'])            
+                        jsonObj['qualified_name'],
+                        jsonObj['hostname'])
             if "nodes" in jsonObj:
                 node.nodes = jsonObj['nodes'] 
             if "priority" in jsonObj:
@@ -89,10 +92,10 @@ def fromJson(jsonObj):
             return nodes
         
         if jsonObj['class'] == 'NodeConnectRequest':
-            return NodeConnectRequest(jsonObj['host'],
+            return NodeConnectRequest(jsonObj['server_id'],
                                       jsonObj['unverified_https_port'],
                                       jsonObj['verified_https_port'], 
                                       jsonObj['key'],
-                                      jsonObj['qualified_name'])
-        
+                                      jsonObj['qualified_name'],
+                                      jsonObj['hostname'])
     return jsonObj

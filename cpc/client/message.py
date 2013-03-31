@@ -51,7 +51,10 @@ class ClientMessage(ClientBase):
         self.port = port
         self.conf = conf
         self.use_verified_https = use_verified_https
-        if self.conf is None: 
+        if self.conf is None:
+            #FIXME THIS IS WRONG AND TOOK HOURS TO FIND OUT WHY
+            #APPERANTLY WE CANNOT INITIATE A CLIENTCONF WITHOUT SPECYFYING A
+            # BUNDLE OF SOME SORT AS IS DONE IN cpcc
             self.conf = ClientConf()
         if self.host is None:
             self.host = self.conf.getClientHost()
@@ -139,17 +142,18 @@ class ClientMessage(ClientBase):
 
     # @param endNode is the endNode we want to reach
     # @param endNodePort
-    def testServerRequest(self,endNode=None,endNodePort=None):
-        cmdstring='test-server'
+    def pingServer(self,serverId):
+        cmdstring='ping'
         fields = []
         input = Input('cmd', cmdstring)
         fields.append(input)
         fields.append(Input('version', "1"))
         headers = dict()
-        if endNode != None:
-            headers['end-node'] = endNode
-            headers['end-node-port'] = endNodePort      
-        msg = ServerRequest.prepareRequest(fields,[],headers)        
+        if serverId!= None:
+            headers['server-id'] = serverId
+#            headers['end-node'] = endNode
+#            headers['end-node-port'] = endNodePort
+        msg = ServerRequest.prepareRequest(fields,[],headers)
         response= self.putRequest(msg)
         return response
 
@@ -175,75 +179,62 @@ class ClientMessage(ClientBase):
             input2 = Input('topology',
                      json.dumps(topology,default = json_serializer.toJson,indent=4))  # a json structure that needs to be dumped
             fields.append(input2)
-        
         msg = ServerRequest.prepareRequest(fields,[])
         response = self.postRequest(msg)
         return response
 
     #port is what port the request should be sent to not what port to communicate with later on
-    def addNode(self,host,unverified_https_port,verified_https_port=None):
-        #sends an add node request to the server 
-        cmdstring = "add-node"
+    def addNode(self,host,unverified_https_port):
+        #sends an add node request to the server
+        cmdstring = "connnect-server"
         fields = []
-                
+
         input = Input('cmd', cmdstring)
         fields.append(input)
         fields.append(Input('version', "1"))
-        
+
         input2 = Input('host',host)
         input3 = Input('unverified_https_port',unverified_https_port)
-        if(verified_https_port !=None):
-            fields.append(Input('verified_https_port',verified_https_port))
-          
-        fields.append(input)    
+
+        fields.append(input)
         fields.append(input2)
         fields.append(input3)
         msg = ServerRequest.prepareRequest(fields, [])
         response = self.postRequest(msg)
         return response
-    
-    
+
     #shows all the nodes connected to the current server
-    def listNodes(self):        
-        cmdString = "list-nodes"
+    def listServers(self):
+        cmdString = "list-servers"
         fields  = []
         input = Input('cmd',cmdString)
         fields.append(input)
         fields.append(Input('version', "1"))
         msg = ServerRequest.prepareRequest(fields,[])
         return self.postRequest(msg)
-    
-    
-    def listSentNodeConnectionRequests(self):
-        cmdString = "list-sent-node-connection-requests"
+
+
+    def revokeNode(self,serverId):
+        cmdString = "revoke-node"
         fields  = []
         input = Input('cmd',cmdString)
         fields.append(input)
         fields.append(Input('version', "1"))
+        fields.append(Input('serverId',serverId))
         msg = ServerRequest.prepareRequest(fields,[])
         return self.postRequest(msg)
-    # lists all connect requests
-    def listNodeConnectionRequests(self):
-        cmdString = "list-node-connection-requests"
-        fields  = []
-        input = Input('cmd',cmdString)
-        fields.append(input)
-        fields.append(Input('version', "1"))
-        msg = ServerRequest.prepareRequest(fields,[])
-        return self.postRequest(msg)
-    
+
+
     #accepts a connect request for a node
-    def grantNodeConnection(self,host,port):
+    def grantNodeConnection(self,serverId):
         cmdString = "grant-node-connection"
         input = Input('cmd',cmdString)
         fields = []
         fields.append(input)    
         fields.append(Input('version', "1"))
-        fields.append(Input('host',host))
-        fields.append(Input('port',port))             
-        
+        fields.append(Input('serverId',serverId))
+
         msg = ServerRequest.prepareRequest(fields,[])
-        
         return self.postRequest(msg)
         
     def grantAllNodeConnections(self):
@@ -283,7 +274,7 @@ class ClientMessage(ClientBase):
         typeInput = Input('type',name)
         fields.append(input)     
         fields.append(Input('version', "1"))
-        fields.append(typeInput)     
+        fields.append(typeInput)
         response= self.postRequest(ServerRequest.prepareRequest(fields, []))
         return response
 
@@ -612,31 +603,6 @@ class ClientMessage(ClientBase):
         fields.append(Input('cmd', cmdstring))
         fields.append(Input('version', "1"))
         response= self.putRequest(ServerRequest.prepareRequest(fields, []))
-        return response
-    
-    def addClientRequest(self,host,port):
-        cmdstring = "add-client-request"
-        fields = []
-        files = []
-        fields.append(Input('cmd', cmdstring))
-        fields.append(Input('version', "1"))
-        inf=open(self.conf.getCACertFile(), "r")
-        key = inf.read()   
-        
-        nodeConnectRequest = NodeConnectRequest(self.conf.getHostName()
-                                                ,self.conf.getClientHTTPPort()
-                                                ,self.conf.getClientVerifiedHTTPSPort()
-                                                ,key
-                                                ,self.conf.getHostName())
-        input2=Input('clientConnectRequest',
-                     json.dumps(nodeConnectRequest,
-                                default=json_serializer.toJson,
-                                indent=4))
-
-        fields.append(input2)
-        
-        response= self.putRequest(ServerRequest.prepareRequest(fields, files))
-                  
         return response
 
     def projectSaveRequest(self, project):

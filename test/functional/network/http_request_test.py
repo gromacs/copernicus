@@ -64,7 +64,7 @@ class HTTPRequestTest(unittest.TestCase):
         #verifty 
         
         client = ClientMessage()
-        ProcessedResponse(client.testServerRequest()).pprint()
+        ProcessedResponse(client.pingServer()).pprint()
         client.closeClient()
              
     

@@ -22,6 +22,8 @@ class TestClientTest():
 
     def setUp(self):
         purge_client_config()
+        ensure_no_running_servers_or_workers()
+        clear_dirs()
         setup_server()
         start_server()
 
@@ -32,9 +34,9 @@ class TestClientTest():
         """
         Sets up and tears down a server and login
         """
-        run_client_command("q", returnZero=False)
+        run_client_command("server-info", returnZero=False)
         login_client()
-        run_client_command("q")
+        run_client_command("server-info",expectstdout="Server id\s*:\s*(.*)")
 
     def test_project_start(self):
         """
@@ -152,4 +154,4 @@ class TestClientTest():
         """
         purge_client_config()
         generate_bundle()
-        run_client_command("-c %s/.copernicus/client.cnx users"%getHome())
+        run_client_command("users",useCnx=True)

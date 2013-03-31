@@ -34,6 +34,7 @@ import remoteassets
 from cpc.util.worker_state import WorkerState
 from cpc.server.state.session import SessionHandler
 import os
+from cpc.network.broadcast_message import BroadcastMessage
 log=logging.getLogger('cpc.server.state')
 
 class ServerState:
@@ -62,6 +63,8 @@ class ServerState:
         log.debug("Starting state save thread.")
         self.stateSaveThread=None
 
+        self.updateThread = None
+
 
     def startExecThreads(self):
         """Start the exec threads."""
@@ -73,6 +76,15 @@ class ServerState:
         self.stateSaveThread.daemon=True
         self.stateSaveThread.start()
         self.runningCmdList.startHeartbeatThread()
+
+
+    #sends updated connection parameters to neighbouring servers
+    def startUpdateThread(self):
+        self.updateThread=threading.Thread(target=syncUpdatedConnectionParams,
+            args=(self.conf, ))
+        self.updateThread.daemon=True
+        self.updateThread.start()
+
     def doQuit(self):
         """set the quit state to true"""
         with self.quitlock:
@@ -192,4 +204,14 @@ def stateSaveLoop(serverState, conf):
         if not serverState.getQuit():
             log.debug("Saving server state.")
             serverState.write()
+
+#sends updated connection params to neigbouring nodes
+def syncUpdatedConnectionParams(conf):
+    if(conf.getDoBroadcastConnectionParams()):
+        log.debug("starting broadcast")
+        message = BroadcastMessage()
+        message.updateConnectionParameters()
+        conf.setDoBroadcastConnectionParams(False)
+
+
 

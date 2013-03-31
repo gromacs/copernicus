@@ -496,14 +496,20 @@ class CmdLine(object):
         info = message['data']
         co = StringIO()
         co.write("    Server hostname: %s \n"%info['fqdn'])
-        co.write("    Server version:  %s"%(info['version']))
+        co.write("    Server version:  %s\n"%(info['version']))
+        co.write("    Server id     :  %s"%(info['serverId']))
         return co.getvalue()
     
     @staticmethod   
     def addNodeRequest(message):
-        nodeConnectRequest = message['data']        
+        response = message['data']
         co = StringIO()
-        co.write("Node connect request sent to %s:%s "%(nodeConnectRequest.host,nodeConnectRequest.verified_https_port))
+        nodeConnectRequest = response['nodeConnectRequest']
+
+        co.write("Connection request sent to %s %s "%(nodeConnectRequest
+                                                         .hostname,
+                                                      nodeConnectRequest
+                                                      .unverified_https_port))
         return co.getvalue()
     
     @staticmethod
@@ -528,46 +534,72 @@ class CmdLine(object):
     
     @staticmethod
     def listNodes(message):
-        nodes = message['data']
+        response = message['data']
+        nodes = response['connections']
+
+        sentRequests = response['sent_connect_requests']
+        receivedRequests = response['received_connect_requests']
         co = StringIO()
-        co.write("Connected nodes:\n")              
-        for node in nodes:
-            co.write("%s %s\n"%(node.priority,node.getId()))
+
+        if len(sentRequests.nodes.keys())>0:
+            co.write("Sent connection requests\n")
+            co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
+            for node in sentRequests.nodes.itervalues():
+                co.write("%-20s %-10s %s\n"%(node.qualified_name,
+                                             node.unverified_https_port,node.server_id))
+
+
+        if len(receivedRequests.nodes.keys())>0:
+            co.write("Received connection requests\n")
+            co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
+            for node in receivedRequests.nodes.itervalues():
+                co.write("%-20s %-10s %s\n"%(node.qualified_name,
+                                             node.unverified_https_port,node.server_id))
+
+        if len(nodes)>0:
+            co.write("Connected nodes:\n")
+            co.write("%-10s %-20s %-10s %s\n"%("Priority","Hostname","Port",
+                                          "Server Id") )
+            for node in nodes:
+                co.write("%-10s %-20s %-10s %s\n"%(node.priority,
+                                                   node.qualified_name,node.verified_https_port,
+                                                   node.getId()) )
         
         return co.getvalue()
     
     @staticmethod
-    def grantAllNodeConnectRequests(message):
+    def grantNodeConnectRequests(message):
+        print message['message']
         nodes = message['data']
         connected=nodes['connected']
        # notConnected = nodes['notConnected']
         
         co = StringIO()
         co.write("Following nodes are now trusted:\n")
+        co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
         for node in connected:
-            co.write("%s\n"%node)
-        
-#        if len(notConnected) >0:
-#            co.write("Following nodes was not trusted:\n")    
-#            for node in notConnected:
-#                co.write("%s %s\n"%(node.host,node.verified_https_port))
-        return co.getvalue() 
-    
+            co.write("%-20s %-10s %s\n"%(node.qualified_name,
+                                         node.unverified_https_port,node.server_id))
+
+        return co.getvalue()
+
+
     @staticmethod
     def networkTopology(message):
         topology = message['data']
-        
         co = StringIO()
-        co.write("graph topology{\n")
-        for node in topology.nodes.itervalues():                                    
-            for neighbour in node.nodes.nodes.itervalues():
-                co.write('\"%s\"--\"%s\"\n'%(node.host,neighbour.host)) 
-            for worker in node.workerStates.itervalues():                
-                co.write('\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host)
-                co.write('\"%s\"--\"worker_%s\"\n'%(node.host,worker.host))                    
-                #co.write("worker %s status:%s\n"%(worker.host,worker.status))
-        
-        co.write("}")    
+        if len(topology.nodes.keys())>1:
+            co.write("\ngraph topology{\n")
+            for node in topology.nodes.itervalues():
+                for neighbour in node.nodes.nodes.itervalues():
+                    co.write('\"%s\"--\"%s\"\n'%(node.hostname,
+                                                 neighbour.hostname))
+                for worker in node.workerStates.itervalues():
+                    co.write('\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host)
+                    co.write('\"%s\"--\"worker_%s\"\n'%(node.host,worker.host))
+                    #co.write("worker %s status:%s\n"%(worker.host,worker.status))
+
+            co.write("}")
         return co.getvalue()
     @staticmethod     
     def getTopologyGraphString(message):

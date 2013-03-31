@@ -31,6 +31,7 @@ from cpc.server.state.server_state import ServerState
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.log
 
+
 import cpc.server.message
 
 # Default daemon parameters.
@@ -167,7 +168,6 @@ def serverLoop(conf, serverState):
 
     serveUnverifiedHTTPS(serverState)
 
-    
 def shutdownServer(self):
     log.info("shutdown complete")
     #self.httpd.shutdown
@@ -240,7 +240,10 @@ def runServer(logLevel=None,doFork=True):
 
         # now start the server
         serverState.startExecThreads()
+        serverState.startUpdateThread()
+
         serverLoop(conf, serverState)
+
     return
 
 

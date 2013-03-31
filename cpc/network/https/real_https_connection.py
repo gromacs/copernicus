@@ -15,6 +15,7 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
     #def __init__(self,host,port,privateKeyFile,caFile,certFile): needed for verification of client
     def __init__(self,host,port,privateKeyFile,caFile,certFile):
         httplib.HTTPConnection.__init__(self, host)
+        #self.set_debuglevel(10)
         self.host = host
         self.port = int(port)
         self.privateKeyFile = privateKeyFile
@@ -41,10 +42,10 @@ class UnverifiedHttpsConnection(httplib.HTTPConnection):
     Provides an HTTPS connection with no certificate verification
     '''
 
-
     #def __init__(self,host,port,privateKeyFile,caFile,certFile): needed for verification of client
     def __init__(self,host,port):
         httplib.HTTPConnection.__init__(self, host)
+        #self.set_debuglevel(10)
         self.host = host
         self.port = int(port)
 

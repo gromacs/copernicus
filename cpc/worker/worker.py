@@ -378,12 +378,15 @@ class Worker(object):
         workloads=[]
         log.debug("Response type=%s"%resp.getType())
         if resp.getType() == "application/x-tar":
-            if resp.headers.has_key('originating-server'):
-                origServer=resp.headers['originating-server']
-            elif resp.headers.has_key('Originating-Server'):
-                origServer=resp.headers['Originating-Server']
+            if resp.headers.has_key('server-id'):
+                origServer=resp.headers['server-id']
             else:
-                raise WorkerError("Originating server not found")
+                raise WorkerError("No server-id not found in header, "
+                                  "The worker will not now where this "
+                                  "workload is coming from")
+
+
+
             log.debug("Originating server: %s"%origServer)
             rundir=os.path.join(self.mainDir, "%d"%self.iteration)
             log.debug("run directory: %s"%rundir)

@@ -24,7 +24,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.server_conf import ServerConf, ServerIdNotFoundException
 from cpc.util.version import __version__
 
 from server_command import ServerCommand
@@ -57,17 +57,14 @@ class SCSaveState(ServerCommand):
         log.info("Save-state request received")
 
 
-class SCTestServer(ServerCommand):
+class SCPingServer(ServerCommand):
     """Test server command"""
 
     def __init__(self):
-        ServerCommand.__init__(self, "test-server")
+        ServerCommand.__init__(self, "ping")
 
     def run(self, serverState, request, response):
-        conf = ServerConf()
-        response.add('Server: %s, version:   %s' % (conf.getHostName(),
-                                                    __version__))
-        log.info("Server version %s" % __version__)
+        response.add("OK")
 
 
 class SCServerInfo(ServerCommand):
@@ -78,8 +75,15 @@ class SCServerInfo(ServerCommand):
         conf = ServerConf()
 
         info = dict()
-        info['fqdn'] = conf.getHostName()
+        info['fqdn'] = conf.getFqdn()
         info['version'] = __version__
+
+        try:
+            conf.getServerId()
+            info['serverId'] = conf.getServerId()
+        except ServerIdNotFoundException as e:
+            print "not found"
+            info['serverId'] = "ERROR: %s"%e.str
         response.add("",info)
 
 class SCListServerItems(ServerCommand):

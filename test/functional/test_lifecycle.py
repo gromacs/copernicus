@@ -22,10 +22,13 @@ import time
 class TestLifeCycle():
 
     def setUp(self):
-        pass
+        ensure_no_running_servers_or_workers()
+        clear_dirs()
+        self.iterations = 10
 
     def tearDown(self):
         pass
+
 
     def testGracefulKill(self):
         """
@@ -34,12 +37,12 @@ class TestLifeCycle():
         #long hearbeat, we want the worker to signal to the server that it's
         #terminating
         setup_server(heartbeat='120')
+        setLogToTrace("_default")
         generate_bundle()
         start_server()
         login_client()
         #load mdrun example project
         run_mdrun_example()
-        #time.sleep(3)
 
         #verify the command is queued
         retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
@@ -54,8 +57,10 @@ class TestLifeCycle():
         #gracefully stop the worker
         w.shutdownGracefully()
         w.waitForOutput(expectedOutput='Received shutdown signal')
+        w.waitForOutput(expectedOutput='sending command finished for cmd ')
         #ensure that the command is back into the queue
-        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+        retry_client_command(command='q', expectstdout='Queued',
+            iterations=self.iterations)
 
         #check that nothing went wrong
         w.checkForExceptions()
@@ -67,6 +72,7 @@ class TestLifeCycle():
         """
         #short heartbeat
         setup_server(heartbeat='2')
+        setLogToTrace("_default")
         generate_bundle()
         start_server()
         time.sleep(1) #let's cut it some slack
@@ -86,7 +92,8 @@ class TestLifeCycle():
         #gracefully stop the worker
         w.shutdownHard()
         #ensure that the command is back into the queue
-        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+        retry_client_command(command='q', expectstdout='Queued',
+            iterations=self.iterations)
 
         #check that nothing went wrong
         w.checkForExceptions()
@@ -97,6 +104,7 @@ class TestLifeCycle():
         Verifies commands are put back on queue on server restart
         """
         setup_server(heartbeat='120')
+        setLogToTrace("_default")
         start_server()
         login_client()
         #load mdrun example project
@@ -104,16 +112,18 @@ class TestLifeCycle():
         #time.sleep(3)
 
         #verify the command is queued
-        retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
+        retry_client_command(command='q', expectstdout='mdrun.1',
+            iterations=self.iterations)
 
         #soft stop server and start server
         stop_server()
-        time.sleep(1) #let's cut it some slack
+        time.sleep(3) #let's cut it some slack
         start_server()
 
         login_client()
         #ensure that the command is back into the queue
-        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+        retry_client_command(command='q', expectstdout='Queued',
+            iterations=self.iterations)
 
         teardown_server()
 
@@ -123,6 +133,7 @@ class TestLifeCycle():
         """
         #short heartbeat
         setup_server(heartbeat='120')
+        setLogToTrace("_default")
         generate_bundle()
         start_server()
         time.sleep(1) #let's cut it some slack
@@ -138,7 +149,7 @@ class TestLifeCycle():
 
         w.waitForOutput(expectedOutput='Run thread with cmd')
         stop_server()
-        time.sleep(0.2)
+        time.sleep(3)
         w.shutdownHard()
         time.sleep(1) #let's cut it some slack
         start_server()
@@ -146,6 +157,7 @@ class TestLifeCycle():
         login_client()
 
         #ensure that the command is back into the queue
-        retry_client_command(command='q', expectstdout='Queued', iterations=10)
+        retry_client_command(command='q', expectstdout='Queued',
+            iterations=self.iterations)
 
         teardown_server()

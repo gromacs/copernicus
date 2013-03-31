@@ -82,6 +82,12 @@ class ClientConf(Conf):
         self.conf = {}
         self.lock = threading.RLock()
         self.initDefaults()
+
+        """Since this class completely bypasses the parent class
+        constructor it needs to initiate parameters used in the parent
+        class, Thats why self.broadCastOnUpdateList is created.
+          """
+        self.broadCastOnUpdateList = []
         confDir=findAndCreateGlobalDir()
         confFile = os.path.join(confDir,"clientconfig.cfg")
         outf=open(os.path.join(confFile), 'w')

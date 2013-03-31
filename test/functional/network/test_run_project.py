@@ -16,29 +16,23 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-from cpc.network.server_to_server_message import ServerToServerMessage
-
 '''
 Created on Feb 1, 2011
 
 @author: iman
 '''
-from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.connection_bundle import ConnectionBundle
-from cpc.client.message import ClientMessage
-from cpc.network.com.client_response import ProcessedResponse
-from cpc.network.broadcast_message import BroadcastMessage
 import unittest
 import time
 import subprocess
 import os
 from genericpath import isdir
 import shutil
-from cpc.util.openssl import OpenSSL
 from socket import gethostname
-from cpc.network.com.input import Input
-from cpc.network.com.file_input import FileInput
-from cpc.network.server_request import ServerRequest
+
+from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
+from cpc.util.openssl import OpenSSL
+
 #from cpc.server.message import Message
 
 
@@ -86,7 +80,7 @@ class TestRunProject(unittest.TestCase):
         time.sleep(2)
         
         #connect node 0 to node 1
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',hostname,str(node1HttpPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',hostname,str(node1HttpPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown
         subprocess.call(args)
 
         args = ['../../../../cpc-server','-c',self.serverConfs[1],'trust',hostname,str(node0HttpsPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown

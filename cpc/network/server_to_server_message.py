@@ -31,7 +31,7 @@ from cpc.util.conf.server_conf import  ServerConf
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.com.client_base import ClientBase
 from cpc.network.node import Nodes
-from cpc.network.node import getSelfNode
+from cpc.network.node import Node
 from cpc.network.cache import Cache
 log=logging.getLogger('cpc.server.server_to_server')
 
@@ -46,23 +46,24 @@ class ServerToServerMessage(ClientBase):
     #checks the network topology and finds out what node to connect to 
     #To reach the endnode. from then on it works like ClientBase
     #    
-    def __init__(self, endNode):
+    def __init__(self, endNodeId):
         self.conf = ServerConf()    
-        self.initialize(endNode)
+        self.initialize(endNodeId)
         """Connect to a server opening a connection"""
         
     #@param String endNodeHostName
     #figures out what node to connect to in order to reach the end node
-    def initialize(self,endNodeHostName):                         
-        
-        topology=self.getNetworkTopology()       
+    def initialize(self,endNodeId):
+        topology=self.getNetworkTopology()
         # this is myself:
-        startNode = getSelfNode(self.conf)
+        startNode = Node.getSelfNode(self.conf)
 
-         
-        key = endNodeHostName
-        self.endNode = topology.nodes.get(key)
-
+        self.endNode = topology.nodes.get(endNodeId)
+        log.log(cpc.util.log.TRACE,"Finding route between %s(%s %s) and%s(%s "
+                                   "%s"")"%(startNode.server_id,startNode.hostname,
+                                    startNode.verified_https_port,
+                                    self.endNode.server_id,
+                                    self.endNode.hostname,self.endNode.verified_https_port))
         route = Nodes.findRoute(startNode, self.endNode,topology)
 
         #FIXME not sure if this is needed anymore?
@@ -73,7 +74,7 @@ class ServerToServerMessage(ClientBase):
             self.hostNode = route[1]   #route[0] is the current host
             #TODO caching mechanism  
           
-        self.host = self.hostNode.host
+        self.host = self.hostNode.hostname
         self.port = self.hostNode.verified_https_port
         log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%
                 (self.host,self.port))
@@ -104,26 +105,33 @@ class ServerToServerMessage(ClientBase):
     @staticmethod
     def connectToSelf(headers):
         conf = ServerConf()
-        if headers['end-node']==conf.getHostName():
-            if headers.has_key('end-node-port'):
-                if headers['end-node-port'] == str(conf.getServerVerifiedHTTPSPort()) \
-                     or headers['end-node-port'] == str(conf.getServerUnverifiedHTTPSPort()):
-                    return True 
-                else:
-                    return False
+        if headers['server-id']==conf.getServerId():
             return True
-        return False
+        else:
+            return False
     
     @staticmethod
     def getNetworkTopology():
         cacheKey = 'network-topology'
         topology = Cache().get(cacheKey)
         if topology==False:
-            sconf = ServerConf()
-            client = ClientMessage(port=sconf.getServerVerifiedHTTPSPort(),
-                                   conf=sconf, use_verified_https=True) # can we do this without creating a call to self?
-            response = client.networkTopology()
-            topology = ProcessedResponse(response).getData()
+            conf = ServerConf()
+            topology = Nodes()
+
+            thisNode = Node.getSelfNode(conf)
+            thisNode.nodes = conf.getNodes()
+            topology.addNode(thisNode)
+
+            for node in thisNode.nodes.nodes.itervalues():
+                if topology.exists(node.getId()) == False:
+                    #connect to correct node
+
+                    clnt = ClientMessage(node.hostname, node.verified_https_port,
+                        conf=conf, use_verified_https=True)
+                    #send along the current topology
+                    rawresp = clnt.networkTopology(topology)
+                    processedResponse = ProcessedResponse(rawresp)
+                    topology = processedResponse.getData()
             Cache().add(cacheKey,topology)
         return topology
 

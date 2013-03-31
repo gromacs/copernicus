@@ -26,36 +26,46 @@ import shutil
 import shlex
 import Queue
 import time
+import re
 
 from cpc.server.state.user_handler import *
+from cpc.util.conf.conf_base import Conf
+
 PROJ_DIR = "/tmp/cpc-proj"
 
-def setup_server(heartbeat='20', addServer=True):
-    ensure_no_running_servers_or_workers()
-    clear_dirs()
+def getcnxFilePath(name="_default"):
+    home = os.path.expanduser("~")
+    fileName = "%s/.copernicus/%s/client.cnx"%(home,name)
+    return fileName
 
+def setup_server(heartbeat='20' ,name='_default',addServer=True):
 
     with open(os.devnull, "w") as null:
-        p = subprocess.Popen(["./cpc-server", "setup", "-stdin", PROJ_DIR],
+        p = subprocess.Popen(["./cpc-server", "setup","-servername",name,
+                              "-stdin",
+                              PROJ_DIR],
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, close_fds=True)
         (stdout, stderr) = p.communicate(input='root\n')
         assert p.returncode == 0
-        p = subprocess.check_call(["./cpc-server", "config", "server_fqdn",
-                                   "127.0.0.1"], stdout=null, stderr=null)
-        p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
+        p = subprocess.check_call(["./cpc-server","-c",name,
+                                   "config", "hostname",
+                                   "localhost"], stdout=null, stderr=null)
+        p = subprocess.check_call(["./cpc-server","-c",name,
+                                   "config", "server_fqdn",
+                                   "localhost"], stdout=null, stderr=null)
+        p = subprocess.check_call(["./cpc-server","-c",name,
+                                   "config", "heartbeat_time",
                                    heartbeat], stdout=null, stderr=null)
-    #generate_bundle()
     if addServer:
         cmd_line = './cpcc add-server localhost'
         args = shlex.split(cmd_line)
         p = subprocess.check_call(args)
 
 
-def generate_bundle():
+def generate_bundle(name="_default"):
     #generate bundle
-    home = os.path.expanduser("~")
-    cmd_line = './cpc-server bundle -o %s/.copernicus/client.cnx' % home
+    cmd_line = './cpc-server -c %s bundle -o %s' %(name,getcnxFilePath(name))
     args = shlex.split(cmd_line)
     try:
         with open(os.devnull, "w") as null:
@@ -73,8 +83,34 @@ def purge_client_config():
     with open(os.devnull, "w") as null:
         subprocess.call(args, stderr=null) 
 
-def start_server():
-    cmd_line = './cpc-server start'
+def configureServerPorts(name,unverifiedHTTPS,verifiedHTTPS):
+
+    #set unverified https
+    run_server_command("config server_unverified_https_port "
+                       "%s"%unverifiedHTTPS,name)
+
+    run_server_command("config server_verified_https_port "
+                       "%s"%verifiedHTTPS,name)
+
+def setLogToTrace(name):
+    run_server_command("config mode trace ",name)
+
+def create_and_start_server(name="_default",unverifiedPort=None,
+                            verifiedPort=None):
+
+        if (unverifiedPort==None):
+            unverifiedPort = Conf.getDefaultUnverifiedHttpsPort()
+        if (verifiedPort==None):
+            verifiedPort = Conf.getDefaultVerifiedHttpsPort()
+        setup_server(name=name,addServer=False)
+        configureServerPorts(name,unverifiedPort,verifiedPort)
+        setLogToTrace(name)
+        generate_bundle(name)
+        start_server(name)
+
+
+def start_server(name="_default"):
+    cmd_line = './cpc-server -c %s start'%name
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -84,17 +120,15 @@ def start_server():
     "Failed to start server. stderr:%s\nstdout%s" % (stderr, stdout)
 
 
-def stop_server():
+def stop_server(name="_default",useCnx=False):
     #soft stop
     try:
-        with open(os.devnull, "w") as null:
-            p = subprocess.check_call(["./cpcc", "stop-server"],
-                stdout=null, stderr=null)
-    except subprocess.CalledProcessError:
-        print "Hard stopped server"
+        run_client_command("stop-server",expectstdout="Quitting",
+            useCnx=useCnx,name=name)
+    except AssertionError as a:
+        print "Hard stopped server due to error %s "%a.__str__()
         #hard stop
         ensure_no_running_servers_or_workers()
-
 
 def ensure_no_running_servers_or_workers():
     try:
@@ -141,9 +175,10 @@ def teardown_server():
 def getHome():
     return os.path.expanduser("~")
 
-def run_client_command(command, returnZero=True, expectstdout=None,
-    expectstderr=None):
-    cmd_line = './cpcc %s' % command
+def run_server_command(command,name="_default",returnZero=True,\
+                                                        expectstdout=None
+                                                        ,expectstderr=None):
+    cmd_line = './cpc-server -c %s %s' %(name,command)
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE)
@@ -151,20 +186,54 @@ def run_client_command(command, returnZero=True, expectstdout=None,
     (stdout, stderr) = p.communicate()
     if returnZero:
         assert p.returncode == 0,\
-        "Client returned nonzero when expecting zero."\
+        "Server returned nonzero when expecting zero."\
         " Command: \"%s\"\nstderr: %s\nstdout: %s" % (command, stderr, stdout)
     else:
         assert p.returncode != 0,\
-        "Client returned zero when expecting nonzero."\
+        "Server returned zero when expecting nonzero."\
         " Command: \"%s\"\nstderr: %s\nstdout %s" % (command, stderr, stdout)
 
     if expectstdout is not None:
-        assert expectstdout in stdout,\
-        "Expected '%s' in stdout, but got '%s'" % (expectstdout, stdout)
+        assert re.search(expectstdout,stdout,re.MULTILINE)!=None,\
+        "Expected '%s' in stdout, but got '%s'"%(expectstdout, stdout)
 
     if expectstderr is not None:
         assert expectstderr in stderr,\
         "Expected '%s' in stderr, but got '%s'" % (expectstderr, stderr)
+
+
+
+def run_client_command(command,name="_default", returnZero=True, \
+                                                       expectstdout=None,
+                                                       expectstderr=None,
+                                                       useCnx=False):
+    if useCnx:
+        cnxFlag = "-c %s"%(getcnxFilePath(name))
+        cmd_line = './cpcc %s %s' %(cnxFlag,command)
+    else:
+        cmd_line = './cpcc %s' %(command)
+    args = cmd_line.split(" ")
+    p = subprocess.Popen(args, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    (stdout, stderr) = p.communicate()
+    if returnZero:
+        assert p.returncode == 0,\
+        "Client returned nonzero when expecting zero."\
+        " Command: \"%s\"\nstderr: %s\nstdout: %s" % (cmd_line, stderr, stdout)
+    else:
+        assert p.returncode != 0,\
+        "Client returned zero when expecting nonzero."\
+        " Command: \"%s\"\nstderr: %s\nstdout %s" % (cmd_line, stderr, stdout)
+
+    if expectstdout is not None:
+        assert re.search(expectstdout,stdout,re.MULTILINE)!=None,\
+        "Expected '%s' in stdout, but got \n'%s'"%(expectstdout, stdout)
+
+    if expectstderr is not None:
+        assert re.search(expectstderr,stderr,re.MULTILINE)!=None,\
+        "Expected '%s' in stderr, but got \n'%s'"%(expectstderr, stderr)
+
 
 
 def retry_client_command(command, expectstdout, iterations=5, sleep=3):
@@ -172,15 +241,22 @@ def retry_client_command(command, expectstdout, iterations=5, sleep=3):
         try:
             run_client_command(command, expectstdout=expectstdout)
             return
-        except AssertionError:
-            pass #we swallow this for now
+        except AssertionError as a:
+            print a.message
         time.sleep(sleep)
     assert False,\
-    "Attempted to read '%s' from server, but gave up after %d attempts" % (
-        expectstdout, iterations)
+    "Attempted to read '%s' from server,but gave up after %d " \
+    "attempts" \
+    % (expectstdout, iterations)
 
-def login_client(username='root', password='root'):
-    cmd_line = './cpcc login -stdin %s'%username
+def login_client(username='root', password='root',name="_default",
+                 useCnx=False):
+    cnxFlag = ""
+    if useCnx:
+        cnxFlag = "-c %s"%(getcnxFilePath(name))
+
+    cmd_line = './cpcc %s login -stdin %s'%(cnxFlag,username)
+
     for i in range(3):
         time.sleep(1) # we need to give the server some time to load
         args = shlex.split(cmd_line)
@@ -190,7 +266,7 @@ def login_client(username='root', password='root'):
         if p.returncode == 0:
             break
     assert p.returncode == 0,\
-    "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
+        "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 
 class Worker(object):
     def __init__(self):

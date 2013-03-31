@@ -24,14 +24,23 @@ Created on May 25, 2011
 '''
 
 from cpc.network.node import Node
-
+import logging
+log=logging.getLogger('cpc.network.node_connect_request')
 class NodeConnectRequest(Node):
     '''
     classdocs
     '''
 
 
-    def __init__(self,host,unverified_https_port,verified_https_port,key,qualified_name):
-        Node.__init__(self,host,unverified_https_port,verified_https_port,qualified_name)
+    def __init__(self,server_id
+                 ,unverified_https_port,
+                 verified_https_port
+                 ,key
+                 ,qualified_name,hostname):
+
+        Node.__init__(self,server_id
+            ,unverified_https_port
+            ,verified_https_port
+            ,qualified_name,hostname)
         self.key = key  #the public key of the server
             

@@ -110,7 +110,7 @@ class TestNetwork(unittest.TestCase):
         time.sleep(2)
         
         #connect node 0 to node 1
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',hostname,str(node1HttpPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',hostname,str(node1HttpPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown
         subprocess.call(args)
 
         args = ['../../../../cpc-server','-c',self.serverConfs[1],'trust',hostname,str(node0HttpsPort)]  #doing cpc.server.server.forkAndRun(cf, debug ) directly here will will for some strange reason mess up things when shutting down, the process wont shutdown
@@ -194,16 +194,16 @@ class TestNetwork(unittest.TestCase):
         #send message from node 0 to 2 http
         conf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         client = ClientMessage()                  
-        response = ProcessedResponse(client.testServerRequest(self.hostname,self.node2HttpsPort))
+        response = ProcessedResponse(client.pingServer(self.hostname,self.node2HttpsPort))
         print response.pprint()
         
         #send message from node 0 to 4 https
-        response = ProcessedResponse(client.testServerRequest(self.hostname,self.node4HttpsPort))
+        response = ProcessedResponse(client.pingServer(self.hostname,self.node4HttpsPort))
         print response.pprint()
         
         #send message from node 0 to 4 http
         #this throws an exception since we should not route with http
-        response = ProcessedResponse(client.testServerRequest(self.hostname,self.node4Port))
+        response = ProcessedResponse(client.pingServer(self.hostname,self.node4Port))
         print response.pprint()
         
     
@@ -290,23 +290,23 @@ class TestNetwork(unittest.TestCase):
         time.sleep(2)
 
         #connect node 0 to node 1
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',self.hostname,str(self.node1Port)] 
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',self.hostname,str(self.node1Port)]
         subprocess.call(args) 
         
         #connect node 0 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
         
         #connect node 1 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[1],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[1],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args)
          
         #connect node 3 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[3],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[3],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
         
         #connect node 4 to node 2        
-        args = ['../../../../cpc-server','-c',self.serverConfs[4],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[4],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
 
         #node1 accepts node 0

@@ -59,7 +59,6 @@ class ServerCommandList(object):
         cmd=request.getCmd()
         if cmd in self.cmds:
             user_str = 'Anonymous'
-
             #check user level
             required_level = self.cmds[cmd][1]
             if required_level > UserLevel.ANONYMOUS:
@@ -96,7 +95,7 @@ scSecureList.add(user.SCDemoteUser(), UserLevel.SUPERUSER)
 # state commands
 scSecureList.add(state.SCStop())
 scSecureList.add(state.SCSaveState())
-scSecureList.add(state.SCTestServer())
+scSecureList.add(state.SCPingServer())
 scSecureList.add(state.SCListServerItems())
 scSecureList.add(state.SCReadConf())
 scSecureList.add(state.SCServerInfo())
@@ -114,13 +113,14 @@ scSecureList.add(worker.SCDeadWorkerFetch())
 # overlay network topology
 scSecureList.add(network.ScAddNode())
 scSecureList.add(network.ScListNodes())
-scSecureList.add(network.ScListNodeConnectionRequests())
-scSecureList.add(network.ScListSentNodeConnectionRequests())
+scSecureList.add(network.ScRevokeNode())
 scSecureList.add(network.ScGrantNodeConnection()) 
 scSecureList.add(network.ScGrantAllNodeConnections())    
 scSecureList.add(network.ScChangeNodePriority()) 
 scSecureList.add(network.SCNetworkTopology())
 scSecureList.add(network.SCNetworkTopologyUpdate())
+scSecureList.add(network.SCConnectionParamUpdate())
+
 # asset tracking
 scSecureList.add(tracking.SCPullAsset())
 scSecureList.add(tracking.SCClearAsset())

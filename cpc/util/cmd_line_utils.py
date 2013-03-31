@@ -27,7 +27,7 @@ import sys
 from cpc.util.conf.conf_base import Conf
 from cpc.util.conf.conf_base import NoConfError, ConfError
 import cpc.util.conf.server_conf
-from cpc.network.com.client_base import ClientError
+from cpc.util.exception import ClientError
 from cpc.util.conf.client_conf import ClientConf, NoServerError
 
 class ConfError(cpc.util.exception.CpcError):

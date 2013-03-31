@@ -59,18 +59,22 @@ class VerifiedHTTPSConnectionPool(object):
         #check if we have a queue instantiated for that host
         with self.listlock:
             if key not in self.pool:
-                log.log(cpc.util.log.TRACE,"instantiating connection pool for host:%s:%s"%(host,port))
+                log.log(cpc.util.log.TRACE,"instantiating verified https "
+                                           "connection pool for host:%s:%s"%(host,port))
                 q =  Queue()
                 self.pool[key] = q
             else: 
                 q= self.pool[key]
         try:
             connection = q.get(False)
-            log.log(cpc.util.log.TRACE,"got a connection from pool form host:%s:%s"%(host,port))
+            log.log(cpc.util.log.TRACE,"got a connection from pool for "
+                                       "host:%s:%s"%(host,port))
             #do we need to check if the connection dropped here?
             
         except Empty:
-            log.log(cpc.util.log.TRACE,"no connections in pool for host:%s:%s creating a new one"%(host,port))
+            log.log(cpc.util.log.TRACE,"no connections in verified https "
+                                       "connection pool for host:%s:%s "
+                                       "creating a new one"%(host,port))
 #
             connection = VerifiedHttpsConnection(host,port,privateKeyFile,keyChain,cert)
         return connection
@@ -109,7 +113,8 @@ class UnverifiedHTTPSConnectionPool(object):
         #check if we have a queue instantiated for that host
         with self.listlock:
             if key not in self.pool:
-                log.log(cpc.util.log.TRACE,"instantiating connection pool for host:%s:%s"%(host,port))
+                log.log(cpc.util.log.TRACE,"instantiating unverified https "
+                                           "connection pool for host:%s:%s"%(host,port))
                 q =  Queue()
                 self.pool[key] = q
             else:
@@ -120,7 +125,9 @@ class UnverifiedHTTPSConnectionPool(object):
             #do we need to check if the connection dropped here?
 
         except Empty:
-            log.log(cpc.util.log.TRACE,"no connections in pool for host:%s:%s creating a new one"%(host,port))
+            log.log(cpc.util.log.TRACE,"no connections in unverified https "
+                                       "connection pool for host:%s:%s "
+                                       "creating a new one"%(host,port))
             #
             connection = UnverifiedHttpsConnection(host,port)
         return connection

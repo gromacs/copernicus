@@ -23,6 +23,7 @@ Created on Apr 11, 2011
 @author: iman
 '''
 import socket
+import uuid
 
 from cpc.network.node import Nodes
 import conf_base
@@ -35,6 +36,9 @@ import cpc.util.exception
 from cpc.util.conf.conf_base import Conf, ConfError
 
 log=logging.getLogger('cpc.util.conf.server_conf')
+
+class ServerIdNotFoundException(cpc.util.exception.CpcError):
+    pass
 
 class SetupError(cpc.util.exception.CpcError):
     pass
@@ -77,6 +81,15 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
     setupCA(openssl,cf,forceReset)
     openssl.setupServer()
     cf.setRunDir(rundir)
+
+
+    #write a server id
+    idFile = open(cf.getServerIdFileName(),"w")
+    idFile.write(str(uuid.uuid1()))
+    idFile.close()
+    #make file read only so that nobody accidentally rewrites a server id
+    os.chmod(cf.getServerIdFileName(),0400)
+
     #setup database
     try:
         database.setupDatabase(rootpass)
@@ -112,11 +125,21 @@ class ServerConf(conf_base.Conf):
         try:
             self.have_conf_file = self._tryRead()
         except ConfError:
-            pass# this is OK
-        
-        '''
-        Constructor
-        '''
+            pass# this is OK, during setup we only have an empty conf file so
+            # we will get a JSON parse error that we can safely ignore
+
+        #config values that should be broadcasted to neigboring nodes upon
+        # server restart. if any of these params are changed we set a flag in
+        # the conf
+        # The method server_state. The thread ServerState.startUpdateThread
+        # checks this flag and broadcasts the new parameters to neighboring
+        # nodes
+        self.broadCastOnUpdateList = ['server_unverified_https_port'
+                                      ,'server_verified_https_port'
+                                      ,'server_fqdn'
+                                      ,'hostname']
+
+
     def initDefaults(self):
         conf_base.Conf.initDefaults(self)
         server_host = ''
@@ -144,7 +167,8 @@ class ServerConf(conf_base.Conf):
         
         self._add( 'nodes', Nodes(), 
                   "List of nodes connected to this server", False)
-      
+
+        self._add('revoked_nodes',Nodes(),"List of revoked nodes",False)
         self._add('node_connect_requests',Nodes(),
                   "List of nodes requesting to connect to this server",False)
       
@@ -201,9 +225,6 @@ class ServerConf(conf_base.Conf):
         self._add('web_root', 'web',
                   "The directory where html,js and css files are located")
 
-        self._add('client_host', 'localhost',
-            "For when the server needs to connect to self ", True)  #FIXME this will be obsolete once server to server messages does not connect to self
-        
         # assets
         self._add('local_assets_dir', "local_assets",
                   "Directory containing local assets such as command output files",
@@ -214,7 +235,13 @@ class ServerConf(conf_base.Conf):
         self._add('server_cores', -1,
                   "Number of cores to use on the server (for OpenMP tasks).",
                   userSettable=True, validation='\d+')
-        
+
+
+        self._add('do_broadcast_connection_params', False,
+            "If connection parameters should be sent to neighbour nodes on restart",
+            userSettable=False)
+
+
         dn=os.path.dirname(sys.argv[0])
         self.execBasedir = ''
         if dn != "":
@@ -227,9 +254,15 @@ class ServerConf(conf_base.Conf):
         else:
             os.environ['PYTHONPATH'] = self.execBasedir
 
-    def setServerHost(self,serverAddress):        
-        return self.set('server_host',serverAddress)                
-    def setClientHost(self,address):        
+    def setDoBroadcastConnectionParams(self,doBroadCast):
+        return self.set('do_broadcast_connection_params',doBroadCast)
+
+    def setServerHost(self,serverAddress):
+        self.set('server_host',serverAddress)
+        self.setDoBroadcastConnectionParams(True)
+        return
+
+    def setClientHost(self,address):
         return self.set('client_host',address)
                     
 
@@ -245,7 +278,29 @@ class ServerConf(conf_base.Conf):
         self.set('node_connect_requests',nodes)
         return True
 
-    
+
+    def removeNodeConnectRequest(self,id):
+        with self.lock:
+            nodes=self.conf['node_connect_requests'].get()
+            nodes.removeNode(id)
+            self.conf['node_connect_requests'].set(nodes)
+            self._writeLocked()
+        return True
+
+    def removeSentNodeConnectRequest(self,id):
+        with self.lock:
+            nodes=self.conf['sent_node_connect_requests'].get()
+            nodes.removeNode(id)
+            self.conf['sent_node_connect_requests'].set(nodes)
+            self._writeLocked()
+        return True
+
+    def addRevokedNode(self,node):
+        nodes = self.conf['revoked_nodes'].get()
+        nodes.addNode(node)
+        self.set('revoked_nodes',nodes)
+        return True
+
     def addNode(self,node):        
         """adds a server to the list of servers that this server can connect 
            to."""    
@@ -260,8 +315,7 @@ class ServerConf(conf_base.Conf):
     def removeNode(self,id):
         with self.lock:
             nodes=self.conf['nodes'].get()
-            node = nodes.get(id)        
-            nodes.removeNode(node.get(id))        
+            nodes.removeNode(id)
             self.conf['nodes'].set(nodes)
             self._writeLocked()
         return True
@@ -346,8 +400,7 @@ class ServerConf(conf_base.Conf):
         with self.lock:
             return int(self.conf['server_unverified_https_port'].get())
 
-    def getHostName(self):
-        #return self.hostname
+    def getFqdn(self):
         with self.lock:
             return self.conf['server_fqdn'].get()
 
@@ -412,4 +465,22 @@ class ServerConf(conf_base.Conf):
     
     def getLocalAssetsDir(self):
         return self.getFile('local_assets_dir')
+
+
+    def getServerIdFileName(self):
+        return os.path.join(self.getConfDir(),"server.id")
+
+    def getServerId(self):
+        try:
+            f = open(self.getServerIdFileName(),"r")
+            id = f.readline()
+            f.close()
+            return id
+        except IOError as e:
+            raise ServerIdNotFoundException("Was not able to read the server "
+                                            "id from %s\n please verify that "
+                                            "this file exists"%self.getServerIdFileName())
+
     
+    def getDoBroadcastConnectionParams(self):
+        return self.conf['do_broadcast_connection_params'].get()

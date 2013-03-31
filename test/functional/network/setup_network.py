@@ -84,23 +84,23 @@ class TestNetworkSetup(unittest.TestCase):
         time.sleep(2)
 
         #connect node 0 to node 1
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',self.hostname,str(self.node1Port)] 
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',self.hostname,str(self.node1Port)]
         subprocess.call(args) 
         
         #connect node 0 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[0],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[0],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
         
         #connect node 1 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[1],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[1],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args)
          
         #connect node 3 to node 2
-        args = ['../../../../cpc-server','-c',self.serverConfs[3],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[3],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
         
         #connect node 4 to node 2        
-        args = ['../../../../cpc-server','-c',self.serverConfs[4],'add-node',self.hostname,str(self.node2Port)]
+        args = ['../../../../cpc-server','-c',self.serverConfs[4],'connnect-server',self.hostname,str(self.node2Port)]
         subprocess.call(args) 
 
 #        #node1 accepts node 0

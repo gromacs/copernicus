@@ -30,9 +30,23 @@ Created on Mar 10, 2011
 '''
 log=logging.getLogger('cpc.network.com.client_base')
 
-class ClientError(CpcError):
-    def __init__(self, exc):
-        self.str=exc.__str__()
+class ClientConnectionError(CpcError):
+    def __init__(self, exc,host,port):
+        self.host = host
+        self.port = port
+        #check the
+        self.exceptionStr = exc.__str__()
+#        self.str = exc.__str__()
+        self.str="%s \n %s"%(self.exceptionStr,self.explainError())
+    def explainError(self):
+        return "\nThis usually means that a connection could not be " \
+               "established, In this case a connection to %s on port %s " \
+               "failed. Possible causes are: \n1. The hostname does not " \
+               "exist.\n2. The specified port number is wrong \n3. The " \
+               "remote host is not accepting a connection from you \n" \
+               "4. The remote host is down." \
+               %(self.host,self.port)
+
 
 class ClientBase(object):
     '''
@@ -53,11 +67,12 @@ class ClientBase(object):
     def putRequest(self, req, use_verified_https=None, disable_cookies=False):
         self.connect(use_verified_https, disable_cookies)
         try:
+
             ret=self.conn.sendRequest(req,"PUT")
         except httplib.HTTPException as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)
         except socket.error as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)
         return ret
 
     def postRequest(self, req, use_verified_https=None, disable_cookies=False):
@@ -65,9 +80,9 @@ class ClientBase(object):
         try:
             ret=self.conn.sendRequest(req)
         except httplib.HTTPException as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)
         except socket.error as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)
         return ret
 
     def closeClient(self):
@@ -99,6 +114,6 @@ class ClientBase(object):
                             self.conf, disable_cookies)
             self.conn.connect(self.host,self.port)
         except httplib.HTTPException as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)
         except socket.error as e:
-            raise ClientError(e)
+            raise ClientConnectionError(e,self.host,self.port)

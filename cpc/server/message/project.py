@@ -37,7 +37,7 @@ from cpc.client.message import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 import cpc.util.exception
 from cpc.dataflow.vtype import instanceType
-from cpc.network.node import Nodes, getSelfNode
+from cpc.network.node import Nodes,Node
 
 
 log=logging.getLogger('cpc.server.projectcmd')
@@ -637,7 +637,7 @@ class SCStatus(ProjectServerCommand):
         # TODO Caching
         conf = ServerConf()
         topology = Nodes()
-        thisNode = getSelfNode(conf)
+        thisNode = Node.getSelfNode(conf)
         thisNode.nodes = conf.getNodes()
         thisNode.workerStates = serverState.getWorkerStates()
         topology.addNode(thisNode)

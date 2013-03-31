@@ -45,7 +45,7 @@ from cpc.network.node import Nodes,Node
 from cpc.server.message.server_message import ServerMessage
 from cpc.server.tracking.tracker import Tracker
 from server_command import ServerCommand
-from cpc.network.node import getSelfNode
+from cpc.network.node import Node
 
 import cpc.command.heartbeat
 
@@ -100,7 +100,7 @@ class WorkerReadyBase(ServerCommand):
             # If the originating server property has not been set,  the
             # request hasn't been forwarded, therefore we are the originating 
             # server
-            selfNode=getSelfNode(conf)
+            selfNode=Node.getSelfNode(conf)
             originatingServer = selfNode.getId()
             # we only store worker state in the server the worker connects to
             serverState.setWorkerState("idle",workerData,
@@ -148,7 +148,7 @@ class WorkerReadyBase(ServerCommand):
                 topology = json.loads(request.getParam('topology')
                                       ,object_hook = json_serializer.fromJson)
             
-            thisNode = getSelfNode(conf)
+            thisNode = Node.getSelfNode(conf)
             thisNode.nodes = conf.getNodes()
             topology.addNode(thisNode)
       
@@ -219,7 +219,7 @@ class CommandFinishedBase(ServerCommand):
         #self.lock = threading.Lock()
         cmdID=request.getParam('cmd_id')
 
-        selfNode=getSelfNode(serverState.conf)
+        selfNode=Node.getSelfNode(serverState.conf)
         selfName = selfNode.getId()
 
         # get the source server if set. If not set, it means that this server
@@ -357,9 +357,8 @@ class SCWorkerHeartbeat(ServerCommand):
         if iteration=="final":
             workerDataList.remove(workerDir)
         # get my own name to compare
-        selfNode=getSelfNode(serverState.conf)
-        selfName = selfNode.getId() #ServerConf().getHostName() 
-        #selfName = serverState.conf.getHostName()
+        selfNode= Node.getSelfNode(serverState.conf)
+        selfName = selfNode.getId()
         # now iterate over the destinations, and send them their heartbeat
         # items.
         # Once we have many workers, this would be a place to pool heartbeat

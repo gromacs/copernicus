@@ -149,6 +149,10 @@ class Conf:
         # find the location of the configuration file and associated paths
         self.findLocation(name, confSubdirName, userSpecifiedPath)
 
+        #conf parameters that needs to be shared with neighbouring nodes
+        #if these are changed we will set a flag so that our server broadcasts
+        #these parameters during startup, This will be used in ServerConf
+        self.broadCastOnUpdateList = []
 
 
         #FIXME generalize layered solution 
@@ -445,6 +449,8 @@ class Conf:
         with self.lock:
             try:
                 self.conf[name].set(value)
+                if(name in self.broadCastOnUpdateList):
+                    self.conf["do_broadcast_connection_params"].set(True)
                 self._writeLocked()
             except KeyError:
                 raise InputError("The config parameter %s do not exist" %
@@ -479,7 +485,7 @@ class Conf:
         return self.get('conf_dir')
 
     def getHostName(self):
-        return self.hostname
+        return self.get('hostname')
 
     def getCaDir(self):
         return self.getFile('ca_dir')

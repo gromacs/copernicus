@@ -34,7 +34,7 @@ import cpc.util
 import cpc.util.log
 import cpc.server.tracking
 import cpc.util.conf.conf_base
-from cpc.network.com.client_base import ClientError
+from cpc.util.exception import ClientError
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
 from cpc.util import cmd_line_utils
@@ -103,7 +103,9 @@ try:
     if cmd == "help":
         print_usage()
     elif cmd == "version":
+        cf = ServerConf(confdir=servername)
         print("Server version:  %s"%__version__)
+        print("Server id: %s"%cf.getServerId())
         sys.exit(0)
     elif cmd == "start":
         cf = ServerConf(confdir=servername)

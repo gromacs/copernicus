@@ -21,8 +21,8 @@ import re
 import cpc.util
 import urllib
 from cpc.network.http.messaging import Messaging
-
-
+import logging
+log=logging.getLogger('cpc.network.sever_request')
 
 class ServerRequest(object):
     """Server request object; contains all the fields as 'fields' (strings) or
@@ -157,7 +157,7 @@ class ServerRequest(object):
         headers['Content-Length'] = len(msg)
         headers['User-agent'] = 'copernicus-cmd-client'
         content = msg
-        req = ServerRequest(headers,content)    
+        req = ServerRequest(headers,content)
         return req
    
     @staticmethod

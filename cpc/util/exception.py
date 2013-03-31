@@ -38,3 +38,6 @@ class CpcXMLError(CpcError):
         else:
             self.str = msg
 
+class ClientError(CpcError):
+    def __init__(self, exc):
+        self.str=exc.__str__()

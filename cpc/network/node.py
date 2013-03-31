@@ -46,14 +46,22 @@ class Nodes(object):
         key = id
         if key in self.nodes:
             del self.nodes[key]
-     
+
+    def hostnameOrFQDNExists(self,hostname):
+        for node in self.nodes.itervalues():
+            if node.hostname==hostname or node.qualified_name == hostname:
+                return True
+
+        return False
+
     def exists(self,id):
         key = id
         if key in self.nodes:
             return True
         else:
             return False
-        
+
+    #TODO duplicate function of exists, REMOVE
     def existsWithId(self,id):
         key = id
         if key in self.nodes:
@@ -98,8 +106,6 @@ class Nodes(object):
     @staticmethod
     def findRoute(start,end,topology):
         # Dijkstras algorithm , we might need to change this once we need prioority based routing
-        #log.log(cpc.util.log.TRACE,"finding route %s %s"%(start,end))
-        #log.log(cpc.util.log.TRACE,"topology is %s"%topology)
 
         distances = dict()
         previous = dict()  #key is a node values is a node visited prior
@@ -120,7 +126,7 @@ class Nodes(object):
             topology.removeNode(currentNode.getId())
             
             # if we have found the end node
-            if currentNode.getId() == end.getId():  
+            if currentNode.getId() == end.getId():
                 route = []
                 n = end
                 while n.getId() in previous:                    
@@ -149,31 +155,54 @@ class Nodes(object):
         return []  #no route found
         
     
-#small object used in config context
 class Node(object):
 
-    def __init__(self,host,unverified_https_port,verified_https_port,qualified_name):
-        self.host = host #this name is what we use to connect to the node
-        self.qualified_name = qualified_name  # this name is the unique fully qualified domain name of the server
+    def __init__(self,server_id,unverified_https_port,verified_https_port,
+                 qualified_name,hostname):
+        """
+        Node objects hold information about how to connect to each trusted
+        server,
+        Each server holds a collection of node objects for all servers that
+        it trusts.
+
+
+        inputs:
+         server_id:String               The unique server id
+         unverified_https_port:String   The client connection port
+         verified_https_port:String     The server connection port
+         qualified_name:String          qualified_name: the address of the
+                                        node as known by itself.
+         hostname:String                The address to this node as known by
+                                        the server holding the node object.
+                                        This is adress we primarily try to
+                                        connect to
+        """
+
+        self.server_id = server_id
+        # node
+        self.qualified_name = qualified_name
         self.unverified_https_port = unverified_https_port
         self.verified_https_port = verified_https_port
+        self.hostname = hostname
         self.priority = None
+
         self.nodes = Nodes()
         self.workerStates = dict()  #workers connected to this node
         
     def getId(self):
-        #return '%s:%s'%(self.qualified_name,self.verified_https_port)
-        return '%s'%(self.qualified_name)
+        return self.server_id
 
 
-def getSelfNode(conf):
-    """Return the 'self' node."""
-    global selfNode, selfNodeLock
-    with selfNodeLock:
-        if selfNode is None:
-            selfNode=Node(conf.getHostName(),
-                          conf.getServerUnverifiedHTTPSPort(),
-                          conf.getServerVerifiedHTTPSPort(),
-                          conf.getHostName())
-    return selfNode
+    @staticmethod
+    def getSelfNode(conf):
+        """Return the 'self' node."""
+        global selfNode, selfNodeLock
+        with selfNodeLock:
+            if selfNode is None:
+                selfNode=Node(conf.getServerId(),
+                              conf.getServerUnverifiedHTTPSPort(),
+                              conf.getServerVerifiedHTTPSPort(),
+                              conf.getFqdn(),
+                              conf.getHostName())
+        return selfNode
 
