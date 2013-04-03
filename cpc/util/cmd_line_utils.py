@@ -82,7 +82,7 @@ def addServer(name, host, port):
 
 
 def useServer(name):
-    ClientConf().setServer(name)
+    ClientConf().setDefaultServer(name)
 
 def listServer():
     return ClientConf().getServers()

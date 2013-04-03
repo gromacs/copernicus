@@ -24,6 +24,7 @@ import socket
 import cpc.util
 import os
 from cpc.network.com.client_response import ClientResponse
+from cpc.util.conf.client_conf import ClientConf
 from cpc.network.https_connection_pool import *
 import cpc.util.log
 
@@ -44,15 +45,17 @@ class CookieHandler(object):
         self.cookiepath = os.path.join(conf.getGlobalDir(), 'clientcookies.dat')
 
     def getCookie(self):
-        if os.path.isfile(self.cookiepath):
-            with open(self.cookiepath, 'r') as f:
-                return f.read()
+        return ClientConf().getCookie()
+        #if os.path.isfile(self.cookiepath):
+        #    with open(self.cookiepath, 'r') as f:
+        #        return f.read()
 
 
     def setCookie(self, cookie):
-        with open(self.cookiepath, 'w') as f:
-            f.write(cookie)
-        os.chmod(self.cookiepath, 0600)
+        ClientConf().setCookie(cookie)
+        #with open(self.cookiepath, 'w') as f:
+        #    f.write(cookie)
+        #os.chmod(self.cookiepath, 0600)
 
 
 class ClientConnectionBase(object):

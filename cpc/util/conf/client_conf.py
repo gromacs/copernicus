@@ -50,7 +50,7 @@ class ClientConf(Conf):
             self.lock = threading.RLock()
             self.initDefaults()
             self._tryRead()
-            #self._loadDefaultServer();
+            self._loadDefaultServer();
         except NoConfError as e:
             self._initClientConf()
 
@@ -62,16 +62,10 @@ class ClientConf(Conf):
         try:
             default_server_str = self.get("default_server")
             if default_server_str is None:
-                raise NoServerError("No default server")
+                return
             servers = self.get("servers")
             default_server = servers[default_server_str]
-            self._add('client_host', None,
-                 "Hostname for the client to connect to",
-                 userSettable=False, writable=False)
 
-            self._add('client_unverified_https_port', None,
-                 "Port number for the client to connect to unverified https",
-                 userSettable=False, writable=None)
             self.conf["client_host"].set(default_server['client_host'])
             self.conf["client_unverified_https_port"].set(
                 default_server['client_unverified_https_port'])
@@ -99,25 +93,27 @@ class ClientConf(Conf):
     #overrrides method in ConfBase
     def initDefaults(self):
         self._add('default_server', None,
-            "The default server the client uses",userSettable=True, writable=True)
+            "Default server the client uses",userSettable=True, writable=True)
         self._add('servers', dict(),
             "Server library",userSettable=True, writable=True)
-
+        self._add('client_host', None,
+             "Hostname for the client to connect to",
+             userSettable=False, writable=False)
+        self._add('client_unverified_https_port', None,
+             "Port number for the client to connect to unverified https",
+             userSettable=False, writable=None)
 
     def getClientHost(self):
-        try:
-            return self.get('client_host')
-        except KeyError:
-            self._loadDefaultServer()
-            return self.get('client_host')
-
+        host = self.get('client_host')
+        if host is None:
+            raise NoServerError("No default server")
+        return host
 
     def getClientUnverifiedHTTPSPort(self):
-        try:
-            return int(self.get('client_unverified_https_port'))
-        except KeyError:
-            self._loadDefaultServer()
-            return int(self.get('client_unverified_https_port'))
+        port = self.get('client_unverified_https_port')
+        if port is None:
+            raise NoServerError("No default server")
+        return int(port)
 
     def addServer(self, name, host, port):
         servers = self.get('servers')
@@ -129,12 +125,14 @@ class ClientConf(Conf):
         }
         self.set('servers', servers)
         self.set('default_server', name)
+        self._loadDefaultServer()
 
-    def setServer(self, name):
+    def setDefaultServer(self, name):
         servers = self.get('servers')
         if name not in servers:
             raise ConfError("No server named %s added"%name)
         self.set('default_server', name)
+        self._loadDefaultServer()
 
 
     def getServers(self):
@@ -144,4 +142,38 @@ class ClientConf(Conf):
             servers[def_server]['default'] = True
         return servers
 
+    def getCookie(self):
+        """
+        Returns the cookie for the current (default) server
+        """
+        def_srv = self._getDefaultServer()
+        if 'cookie' in def_srv:
+            return def_srv['cookie']
+        return None
 
+    def setCookie(self, cookie):
+        """
+        Sets the cookie for the current (default) server
+        """
+        def_srv_str = self.get("default_server")
+        if def_srv_str is None:
+            raise ConfError("No default server")
+        self._updateServer(def_srv_str, 'cookie', cookie)
+
+    def _getDefaultServer(self):
+        """
+        Returns a the default server as a dict, safe to modify
+        Throws ConfError if no such server
+        """
+        def_srv_str = self.get("default_server")
+        if def_srv_str is None:
+            raise ConfError("No default server")
+        return copy.copy(self.get("servers")[def_srv_str])
+
+    def _updateServer(self, name, key, val):
+        servers = self.get('servers')
+        if name not in servers:
+            raise ConfError("No server named %s added"%name)
+        servers[name][key] = val
+        self.set('servers', servers)
+        self._loadDefaultServer()   
