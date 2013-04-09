@@ -24,7 +24,7 @@ Created on Feb 1, 2011
 @author: iman
 '''
 from cpc.util.conf.server_conf import ServerConf
-from cpc.util.conf.client_conf import ClientConf
+from cpc.util.conf.connection_bundle import ConnectionBundle
 from cpc.client.message import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.broadcast_message import BroadcastMessage
@@ -128,7 +128,7 @@ class TestNetwork(unittest.TestCase):
                 
         
         #do a network topology call        
-        conf = ClientConf(confdir=self.serverConfs[0],reload=True)        
+        conf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         client = ClientMessage()        
         topology =ProcessedResponse(client.networkTopology()).getData()
          
@@ -139,7 +139,7 @@ class TestNetwork(unittest.TestCase):
     #Checks the returned topology structure and ensures that each node has correct neighbors 
     def testNetworkTopology(self):        
         self.create5NodeNetwork()           
-        conf = ClientConf(confdir=self.serverConfs[0],reload=True)        
+        conf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         client = ClientMessage()        
         topology =ProcessedResponse(client.networkTopology()).getData()
         
@@ -192,7 +192,7 @@ class TestNetwork(unittest.TestCase):
         self.create5NodeNetwork()
         
         #send message from node 0 to 2 http
-        conf = ClientConf(confdir=self.serverConfs[0],reload=True)        
+        conf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         client = ClientMessage()                  
         response = ProcessedResponse(client.testServerRequest(self.hostname,self.node2HttpsPort))
         print response.pprint()
@@ -214,7 +214,7 @@ class TestNetwork(unittest.TestCase):
         self.create5NodeNetwork()
         
         #this way we initialize the configs for a specific server which lets us test method calls as as specific server 
-        clientConf = ClientConf(confdir=self.serverConfs[0],reload=True)
+        clientConf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         serverConf = ServerConf(confdir=self.serverConfs[0],reload=True)
         
         broadCastMessage = BroadcastMessage()
@@ -222,7 +222,7 @@ class TestNetwork(unittest.TestCase):
         broadCastMessage.updateNetworkTopology()
                         
         
-        clientConf = ClientConf(confdir=self.serverConfs[1],reload=True)
+        clientConf = ConnectionBundle(confdir=self.serverConfs[1],reload=True)
         serverConf = ServerConf(confdir=self.serverConfs[1],reload=True)
     
         #this should be brought from the cache(check in the logs)
@@ -233,7 +233,7 @@ class TestNetwork(unittest.TestCase):
         self.create5NodeNetwork()
         
         #this way we initialize the configs for a specific server which lets us test method calls as as specific server 
-        clientConf = ClientConf(confdir=self.serverConfs[0],reload=True)
+        clientConf = ConnectionBundle(confdir=self.serverConfs[0],reload=True)
         serverConf = ServerConf(confdir=self.serverConfs[0],reload=True)
         
         #building a test server request
@@ -318,19 +318,19 @@ class TestNetwork(unittest.TestCase):
         subprocess.call(args)
     
     def createConfFolders(self,num):
-        https_port = 13807
-        http_port = 14807
+        verified_https_port = 13807
+        unverified_https_port = 14807
         for i in range(num):            
             self.createConfFolder(i)
             server_conf = ServerConf(confdir=self.serverConfs[i],reload=True)
-            server_conf.set('server_https_port',str(https_port))
-            server_conf.set('server_http_port',str(http_port))
+            server_conf.set('server_https_port',str(verified_https_port))
+            server_conf.set('server_unverified_https_port',str(unverified_https_port))
             server_conf.set('mode',"debug")
-            client_conf  = ClientConf(confdir=self.serverConfs[i],reload=True)
-            client_conf.set('client_http_port',str(http_port))
-            client_conf.set('client_https_port',str(https_port))
-            http_port +=1
-            https_port +=1
+            client_conf  = ConnectionBundle(confdir=self.serverConfs[i],reload=True)
+            client_conf.set('client_unverified_https_port',str(unverified_https_port))
+            client_conf.set('client_https_port',str(verified_https_port))
+            unverified_https_port +=1
+            verified_https_port +=1
     
     def createConfFolder(self,name):
         path = os.path.join(os.environ["HOME"], ".cpc/test",str(name))

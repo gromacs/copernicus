@@ -31,10 +31,11 @@ import state
 import network
 import worker
 import project
+import user
 import tracking 
 import cpc.network.server_response
 import cpc.util
-
+from cpc.server.state.user_handler import UserLevel
 
 log=logging.getLogger('cpc.server.request_parser')
 
@@ -48,29 +49,58 @@ class ServerCommandList(object):
     def __init__(self):
         self.cmds=dict()
 
-    def add(self, cmd):
+    def add(self, cmd, userlevel=UserLevel.REGULAR_USER):
         """Add a single server command to the list."""
         name=cmd.getRequestString()
-        self.cmds[name]=cmd
+        self.cmds[name]=(cmd, userlevel)
 
     def getServerCommand(self, request):
         """Get the server command based on a request's command."""
         cmd=request.getCmd()
-        if cmd not in self.cmds:
+        if cmd in self.cmds:
+            user_str = 'Anonymous'
+
+            #check user level
+            required_level = self.cmds[cmd][1]
+            if required_level > UserLevel.ANONYMOUS:
+                #it requires at least auth
+                if 'user' not in request.session:
+                    log.info('Unauthorized user requested command "%s"'%cmd)
+                    raise cpc.util.CpcError("This command requires login")
+
+                #match command requirement against user level
+                user_obj = request.session['user']
+                user_str = user_obj.getUsername()
+                if required_level > user_obj.getUserlevel():
+                    log.info("user '%s' requested command '%s', which is above"
+                    "its user level"%(user_str, cmd))
+                    raise cpc.util.CpcError(
+                        "You don't have access to this command")
+            log.info('[%s] Request: %s'%(user_str, cmd))
+            return self.cmds[cmd]
+        else:
             raise ServerCommandError("Unknown command %s"%cmd)
 
-        log.info('Request: %s'%cmd)
-        return self.cmds[cmd]
 
-# these are the server commands that the secure server may run:
 scSecureList=ServerCommandList()
+
+# Various commands with non default access level, for easy overview
+scSecureList.add(user.SCLogin(), UserLevel.ANONYMOUS)
+scSecureList.add(network.ScAddNodeRequest(), UserLevel.ANONYMOUS)
+scSecureList.add(network.ScAddNodeAccepted(), UserLevel.ANONYMOUS)
+scSecureList.add(user.SCAddUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCDeleteUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCPromoteUser(), UserLevel.SUPERUSER)
+scSecureList.add(user.SCDemoteUser(), UserLevel.SUPERUSER)
+
+# state commands
 scSecureList.add(state.SCStop())
 scSecureList.add(state.SCSaveState())
 scSecureList.add(state.SCTestServer())
 scSecureList.add(state.SCListServerItems())
 scSecureList.add(state.SCReadConf())
 scSecureList.add(state.SCServerInfo())
-scSecureList.add(state.SCStatus())
+
 # worker workload requests
 scSecureList.add(worker.SCWorkerReady())  
 scSecureList.add(worker.SCWorkerReadyForwarded())  
@@ -83,8 +113,7 @@ scSecureList.add(worker.SCHeartbeatForwarded())
 scSecureList.add(worker.SCDeadWorkerFetch())
 # overlay network topology
 scSecureList.add(network.ScAddNode())
-scSecureList.add(network.ScAddNodeRequest())
-scSecureList.add(network.ScListNodes())   
+scSecureList.add(network.ScListNodes())
 scSecureList.add(network.ScListNodeConnectionRequests())
 scSecureList.add(network.ScListSentNodeConnectionRequests())
 scSecureList.add(network.ScGrantNodeConnection()) 
@@ -99,6 +128,8 @@ scSecureList.add(tracking.SCClearAsset())
 scSecureList.add(project.SCProjects())
 scSecureList.add(project.SCProjectStart())
 scSecureList.add(project.SCProjectDelete())
+
+scSecureList.add(project.SCProjectGrantAccess())
 scSecureList.add(project.SCProjectSave())
 scSecureList.add(project.SCProjectLoad())
 scSecureList.add(project.SCProjectGetDefault())
@@ -120,10 +151,5 @@ scSecureList.add(project.SCProjectTransact())
 scSecureList.add(project.SCProjectCommit())
 scSecureList.add(project.SCProjectRollback())
 scSecureList.add(project.SCProjectLog())
-
-# these are the server commands that may be run by the unencrypted HTTP server
-scInsecureList=ServerCommandList()
-scInsecureList.add(network.ScAddNodeRequest())
-scInsecureList.add(network.ScAddNodeAccepted())
-
+scSecureList.add(project.SCStatus())
 

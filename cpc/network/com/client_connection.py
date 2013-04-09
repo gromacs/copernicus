@@ -24,7 +24,8 @@ import socket
 import cpc.util
 import os
 from cpc.network.com.client_response import ClientResponse
-from cpc.network.https_connection_pool import HTTPSConnectionPool
+from cpc.util.conf.client_conf import ClientConf
+from cpc.network.https_connection_pool import *
 import cpc.util.log
 
 log=logging.getLogger('cpc.client')
@@ -44,46 +45,26 @@ class CookieHandler(object):
         self.cookiepath = os.path.join(conf.getGlobalDir(), 'clientcookies.dat')
 
     def getCookie(self):
-        if os.path.isfile(self.cookiepath):
-            with open(self.cookiepath, 'r') as f:
-                return f.read()
+        return ClientConf().getCookie()
+        #if os.path.isfile(self.cookiepath):
+        #    with open(self.cookiepath, 'r') as f:
+        #        return f.read()
 
 
     def setCookie(self, cookie):
-        with open(self.cookiepath, 'w') as f:
-            f.write(cookie)
-        os.chmod(self.cookiepath, 0600)
+        ClientConf().setCookie(cookie)
+        #with open(self.cookiepath, 'w') as f:
+        #    f.write(cookie)
+        #os.chmod(self.cookiepath, 0600)
 
-class ClientConnection:
-    def __init__(self, conf):
-        """Connect as a client to a server, or spawn one if neccesary"""
-        self.connected=False
-        self.httpsConnectionPool = HTTPSConnectionPool()
-        self.conf = conf
-        self.cookieHandler = CookieHandler(conf)
 
-    def connect(self,host,port,https=True):
-        self.host = host
-        self.port = port
-        privateKey = self.conf.getPrivateKey()
-        keyChain = self.conf.getCaChainFile()
-        cert = self.conf.getCertFile()
+class ClientConnectionBase(object):
+    """
+    Base class for client connections, must be extended.
+    """
 
-        if https:   
-            log.log(cpc.util.log.TRACE,"Connecting HTTPS to host %s, port %s"%(self.host,self.port))
-            self.conn = self.httpsConnectionPool.getConnection(self.host,
-                                                self.port,
-                                                privateKey,
-                                                keyChain,
-                                                cert)
-            
-                                                      
-        else:
-            log.log(cpc.util.log.TRACE,"Connecting HTTP to host %s, port %s"%(host,port))
-            self.conn = httplib.HTTPConnection(self.host,self.port)
-            
-        self.conn.connect()
-        self.connected=True
+    def connect(self,host,port):
+        raise NotImplementedError("Not implemented by subclass")
         
 
     def sendRequest(self,req,method="POST"):
@@ -92,7 +73,7 @@ class ClientConnection:
             req.headers['originating-client']=socket.getfqdn()
 
         #attempt to get cookie
-        if not req.headers.has_key('cookie'):
+        if not req.headers.has_key('cookie') and self.cookieHandler is not None:
             cookie = self.cookieHandler.getCookie()
             if cookie is not None:
                 req.headers['cookie'] = cookie
@@ -109,7 +90,7 @@ class ClientConnection:
         else:
             headers=response.getheaders()
             cookie = response.getheader('set-cookie', None)
-            if cookie is not None:
+            if cookie is not None and self.cookieHandler is not None:
                 self.cookieHandler.setCookie(cookie)
             for (key,val) in headers:
                 log.log(cpc.util.log.TRACE,"Got header '%s'='%s'"%(key,val))
@@ -139,7 +120,58 @@ class ClientConnection:
             self.httpsConnectionPool.putConnection(self.conn,self.host,self.port)
                               
         return ClientResponse(resp_mmap,headers)
-   
-    
-   
 
+
+
+
+class VerifiedClientConnection(ClientConnectionBase):
+    """
+    HTTPS connections are verified both client and server side
+    """
+    def __init__(self, conf):
+        self.httpsConnectionPool = VerifiedHTTPSConnectionPool()
+        self.connected=False
+        self.conf = conf
+        self.cookieHandler = None # We disallow this for now
+
+    def connect(self,host,port):
+
+        self.host = host
+        self.port = port
+        privateKey = self.conf.getPrivateKey()
+        keyChain = self.conf.getCaChainFile()
+        cert = self.conf.getCertFile()
+
+        log.log(cpc.util.log.TRACE,"Connecting VerHTTPS to host %s, port %s"%(
+            self.host,self.port))
+        self.conn = self.httpsConnectionPool.getConnection(self.host,
+                                                               self.port,
+                                                               privateKey,
+                                                               keyChain,
+                                                               cert)
+
+        self.conn.connect()
+        self.connected=True
+
+class UnverifiedClientConnection(ClientConnectionBase):
+    """
+    HTTPS connections are unverified, meaning no server side or client side
+    verification is performed.
+    """
+    def __init__(self, conf):
+        self.httpsConnectionPool = UnverifiedHTTPSConnectionPool()
+        self.connected=False
+        self.conf = conf
+        self.cookieHandler = CookieHandler(conf)
+
+    def connect(self,host,port):
+
+        self.host = host
+        self.port = port
+
+        log.log(cpc.util.log.TRACE,"Connecting UnverHTTPS to host %s, port %s"%(
+            self.host,self.port))
+        self.conn = self.httpsConnectionPool.getConnection(self.host,
+                                                               self.port)
+        self.conn.connect()
+        self.connected=True

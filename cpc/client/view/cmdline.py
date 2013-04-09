@@ -155,6 +155,15 @@ class CmdLine(object):
         return co.getvalue()
 
     @staticmethod
+    def listUsers(messageStr):
+        list=messageStr['message']
+        co=StringIO()
+        co.write("Users:\n")
+        for user in list:
+            co.write('%s (%s)\n'%(user['user'], user['level']))
+        return co.getvalue()
+
+    @staticmethod
     def countValues(val):
         """Count the minimum number of characters of a value description."""
         if isinstance(val, list):
@@ -494,7 +503,7 @@ class CmdLine(object):
     def addNodeRequest(message):
         nodeConnectRequest = message['data']        
         co = StringIO()
-        co.write("Node connect request sent to %s:%s "%(nodeConnectRequest.host,nodeConnectRequest.https_port))
+        co.write("Node connect request sent to %s:%s "%(nodeConnectRequest.host,nodeConnectRequest.verified_https_port))
         return co.getvalue()
     
     @staticmethod
@@ -541,7 +550,7 @@ class CmdLine(object):
 #        if len(notConnected) >0:
 #            co.write("Following nodes was not trusted:\n")    
 #            for node in notConnected:
-#                co.write("%s %s\n"%(node.host,node.https_port))
+#                co.write("%s %s\n"%(node.host,node.verified_https_port))
         return co.getvalue() 
     
     @staticmethod
@@ -575,6 +584,15 @@ class CmdLine(object):
         
         str+="}"    
         return str
+
+    @staticmethod
+    def listModules(message):
+        co = StringIO()
+        co.write("Available modules:\n")
+        for module in message['message']:
+            co.write("%s\n"%module)
+
+        return co.getvalue()
 
     @staticmethod
     def status(message):
@@ -664,3 +682,19 @@ class CmdLine(object):
                 else:
                     co.write("      none\n")
         return co.getvalue()
+
+    ##
+    # Local command formaters
+    ##
+
+    @staticmethod
+    def listServer(serv_dict):
+        """ Format server list, expects a dict with servers """
+        print "Servers:"
+        for (key, val) in serv_dict.iteritems():
+            def_str = ' (default)' if 'default' in val else ''
+            print "%s%s:"%(key,def_str)
+            print "   host: %s"%val['client_host']
+            print "   port: %s"%val['client_unverified_https_port']
+            print
+

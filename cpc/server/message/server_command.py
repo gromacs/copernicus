@@ -17,8 +17,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+import copy
 import logging
-
+from cpc.network.node_connect_request import NodeConnectRequest
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -54,5 +55,4 @@ class ServerCommand(object):
     def getRequestString(self):
         """Get the request command string associated with the command."""
         return self.name
-
 

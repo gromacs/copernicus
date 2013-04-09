@@ -57,8 +57,8 @@ class ServerTest(unittest.TestCase):
         self.assertNotEquals(bundleData['client_https_port'],None)
         self.assertNotEquals(bundleData['client_https_port'],'')
 
-        self.assertNotEquals(bundleData['client_http_port'],None)
-        self.assertNotEquals(bundleData['client_http_port'],'')
+        self.assertNotEquals(bundleData['client_unverified_https_port'],None)
+        self.assertNotEquals(bundleData['client_unverified_https_port'],'')
 
         self.assertNotEquals(bundleData['ca_cert'],None)
         self.assertNotEquals(bundleData['ca_cert'],'')

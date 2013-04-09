@@ -38,9 +38,8 @@ from cpc.network.com.client_base import ClientError
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.conf.server_conf import initiateServerSetup
 from cpc.util import cmd_line_utils
+from getpass import getpass
 from cpc.util.version import __version__
-
-
 def print_usage():
     print "Usage: cpc-server start [-d]"
     print "       cpc-server config-list"
@@ -130,6 +129,7 @@ try:
         forceReset = False
         hostConfDir = False
         altDir = False
+        rootpass = None
         args.pop(0)
         i = 0
         while i < len(args):
@@ -141,6 +141,8 @@ try:
                     print "cannot use -host in combination with -servername "
                     sys.exit(1)
                 hostConfDir = True
+            elif arg == '-stdin':
+                rootpass = raw_input("Please enter password for root account:")
             elif arg == '-servername':
                 if(hostConfDir):
                     print "cannot use -servername in combination with -host"
@@ -158,8 +160,10 @@ try:
         if rundir is None:
             raise ClientError(
                 "Missing run directory: the base directory for project output")
-
-        initiateServerSetup(rundir, forceReset, hostConfDir, altHostName)
+        if rootpass is None:
+            rootpass = getpass("Please enter password for root account:")
+        initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
+                            altHostName)
 
         sys.exit(0)
 

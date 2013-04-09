@@ -44,11 +44,11 @@ class WorkerMessage(ClientBase):
         if self.host == None:
             self.host = self.conf.getClientHost()
         if self.port == None:
-            self.port = self.conf.getClientHTTPSPort()
+            self.port = self.conf.getClientVerifiedHTTPSPort()
         
-            
+        self.use_verified_https=True
         self.privateKey = self.conf.getPrivateKey()
-        self.keychain = self.conf.getCaChainFile()    
+        self.keychain = self.conf.getCaChainFile()
 
     def workerRequest(self, workerID, archdata):
         cmdstring='worker-ready'
@@ -58,8 +58,8 @@ class WorkerMessage(ClientBase):
         fields.append(Input('worker', archdata))
         fields.append(Input('worker-id', workerID))
         headers = dict()
-        response=self.putRequest(ServerRequest.prepareRequest(fields, [], 
-                                                              headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields, [],
+                                                               headers))
         return response
     
     def commandFinishedRequest(self, cmdID, origServer, returncode, cputime, 
@@ -80,8 +80,8 @@ class WorkerMessage(ClientBase):
         # because there's active relaying, but for now this simplifies things
         headers['end-node'] = origServer
         log.debug("sending command finished for cmd id %s"%cmdID)
-        response=self.putRequest(ServerRequest.prepareRequest(fields, 
-                                                              files, headers))
+        response= self.putRequest(ServerRequest.prepareRequest(fields,
+                                                               files, headers))
         return response
     
     def workerHeartbeatRequest(self, workerID, workerDir, first, last, changed,
@@ -102,34 +102,5 @@ class WorkerMessage(ClientBase):
         fields.append(Input('worker_dir', workerDir))
         fields.append(Input('iteration', iteration))
         fields.append(Input('heartbeat_items', heartbeatItemsXML))
-        response=self.putRequest(ServerRequest.prepareRequest(fields,[])) 
+        response= self.putRequest(ServerRequest.prepareRequest(fields, []))
         return response
-    
-#    #FIXME duplicate in client/message.py
-#    def addClientRequest(self,host,port):                
-#        cmdstring = "add-client-request"
-#        fields = []
-#        files = []
-#        fields.append(Input('cmd', cmdstring))
-#        
-#        
-#        inf=open(self.conf.getCACertFile(), "r")
-#        key = inf.read()   
-#        
-#        nodeConnectRequest = NodeConnectRequest(self.conf.getHostName()
-#                                                ,self.conf.getClientHTTPPort()
-#                                                ,self.conf.getClientHTTPSPort()
-#                                                ,key,self.conf.getHostName())
-#
-#        input2=Input('clientConnectRequest',
-#                     json.dumps(nodeConnectRequest,
-#                                default=json_serializer.toJson,
-#                                indent=4))
-#
-#        fields.append(input2)
-#        
-#        response=self.putRequest(ServerRequest.prepareRequest(fields,files),
-#                                 https=False)
-#                  
-#        return response          
-#    

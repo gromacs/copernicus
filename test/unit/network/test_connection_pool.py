@@ -23,13 +23,13 @@ Created on Jun 15, 2011
 @author: iman
 '''
 import unittest
-from  cpc.network.https_connection_pool import HTTPSConnectionPool
+from  cpc.network.https_connection_pool import VerifiedHTTPSConnectionPool
 class TestConnectionPool(unittest.TestCase):
 
 
     def testGetConnection(self):
         
-        connectionPool = HTTPSConnectionPool()
+        connectionPool = VerifiedHTTPSConnectionPool()
         connection = connectionPool.getConnection("localhost", "80", None, None)
         
         self.assertTrue("HTTPSConnectionPool",type(connection).__name__)
@@ -37,7 +37,7 @@ class TestConnectionPool(unittest.TestCase):
         pass         
     
     def testPutBackConnection(self):
-        connectionPool = HTTPSConnectionPool()
+        connectionPool = VerifiedHTTPSConnectionPool()
         connection = connectionPool.getConnection("localhost", "80", None, None)
 
         connectionPool.putConnection(connection)

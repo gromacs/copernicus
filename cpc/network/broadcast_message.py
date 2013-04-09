@@ -55,15 +55,15 @@ class BroadcastMessage(ServerToServerMessage):
         
         #we dont want to broadcast to ourself
         node = Node(ServerConf().getHostName(),
-               ServerConf().getServerHTTPPort(),
-               ServerConf().getServerHTTPSPort(),
+               ServerConf().getServerUnverifiedHTTPSPort(),
+               ServerConf().getServerVerifiedHTTPSPort(),
                ServerConf.getHostName())
         
         topology.removeNode(node.getId())     
         for node in topology.nodes.itervalues():
-            self.initialize(node.host,node.https_port) 
+            self.initialize(node.host,node.verified_https_port) 
             headers['end-node'] = node.host
-            headers['end-node-port'] = node.https_port                     
+            headers['end-node-port'] = node.verified_https_port                     
             msg = ServerRequest.prepareRequest(fields,[],headers)   
             resp  = self.putRequest(msg)
             print ProcessedResponse(resp).pprint()

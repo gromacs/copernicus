@@ -24,6 +24,7 @@ import mmap
 import cpc.util.log
 
 from cpc.client.message import ClientMessage
+from cpc.network.com.client_connection import VerifiedClientConnection
 from cpc.util.exception import CpcError
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.server_conf import  ServerConf
@@ -57,13 +58,10 @@ class ServerToServerMessage(ClientBase):
         topology=self.getNetworkTopology()       
         # this is myself:
         startNode = getSelfNode(self.conf)
-        #Node(self.conf.getHostName(),
-        #     self.conf.getServerHTTPPort(),
-        #     self.conf.getServerHTTPSPort(),
-        #     self.conf.getHostName())
+
          
         key = endNodeHostName
-        self.endNode = topology.nodes.get(key);
+        self.endNode = topology.nodes.get(key)
 
         route = Nodes.findRoute(startNode, self.endNode,topology)
 
@@ -76,7 +74,7 @@ class ServerToServerMessage(ClientBase):
             #TODO caching mechanism  
           
         self.host = self.hostNode.host
-        self.port = self.hostNode.https_port
+        self.port = self.hostNode.verified_https_port
         log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s:%s"%
                 (self.host,self.port))
 
@@ -105,11 +103,11 @@ class ServerToServerMessage(ClientBase):
      
     @staticmethod
     def connectToSelf(headers):
-        conf = ServerConf();
+        conf = ServerConf()
         if headers['end-node']==conf.getHostName():
             if headers.has_key('end-node-port'):
-                if headers['end-node-port'] == str(conf.getServerHTTPSPort()) \
-                     or headers['end-node-port'] == str(conf.getServerHTTPPort()):
+                if headers['end-node-port'] == str(conf.getServerVerifiedHTTPSPort()) \
+                     or headers['end-node-port'] == str(conf.getServerUnverifiedHTTPSPort()):
                     return True 
                 else:
                     return False
@@ -121,40 +119,12 @@ class ServerToServerMessage(ClientBase):
         cacheKey = 'network-topology'
         topology = Cache().get(cacheKey)
         if topology==False:
-            client = ClientMessage(conf=ServerConf()) # can we do this without creating a call to self?
-            response = client.networkTopology()  
+            sconf = ServerConf()
+            client = ClientMessage(port=sconf.getServerVerifiedHTTPSPort(),
+                                   conf=sconf, use_verified_https=True) # can we do this without creating a call to self?
+            response = client.networkTopology()
             topology = ProcessedResponse(response).getData()
             Cache().add(cacheKey,topology)
         return topology
-      
-#THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE
-#FIXME messages should not be located here
-#    def pullAssetRequest(self, cmdID, assetType):
-#        cmdstring='pull-asset' 
-#        fields = []
-#        fields.append(Input('cmd', cmdstring))
-#        fields.append(Input('cmd_id', cmdID))
-#        fields.append(Input('asset_type', assetType))
-#        headers = dict()
-#        headers['end-node'] = self.host
-#        headers['end-node-port'] = self.port
-#        
-#        self.connect()
-#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-#        return response
-#    
-#    def clearAssetRequest(self, cmdID):
-#        cmdstring='clear-asset' 
-#        fields = []
-#        fields.append(Input('cmd', cmdstring))
-#        fields.append(Input('cmd_id', cmdID))
-#        headers = dict()
-#        headers['end-node'] = self.host
-#        headers['end-node-port'] = self.port
-#        self.connect()
-#        response=self.putRequest(ServerRequest.prepareRequest(fields, [], headers))
-#        return response
 
-#END -- THE FOLLOWING FUNCTIONS MIGHT NOT WORK ANYMORE      
-    
 

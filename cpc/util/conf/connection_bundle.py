@@ -38,6 +38,7 @@ class ConnectionBundle(Conf):
     CN_ID = "worker"  #used to distinguish common names in certs
 
 
+
     def __init__(self, userSpecifiedPath=None, create=False,
                  fqdn=socket.getfqdn()):
         # check whether the object is already initialized
@@ -52,8 +53,9 @@ class ConnectionBundle(Conf):
             self.conf = dict()
 
         self.client_host = fqdn
-        #self.client_https_port = '13807'
-        #self.client_http_port = '14807'
+        #TODO use same default as server?
+        self.client_verified_https_port = Conf.getDefaultVerifiedHttpsPort()
+        self.client_unverified_https_port = Conf.getDefaultUnverifiedHttpsPort()
         self.privateKey = ''
         self.publicKey = ''
         self.cert = ''
@@ -105,13 +107,13 @@ class ConnectionBundle(Conf):
     #overrrides method in ConfBase
     def initDefaults(self):
         self._add('client_host', self.client_host,
-            "Hostname for the client to connect to", True)
-        self._add('client_http_port', Conf.getDefaultHttpPort(),
-            "Port number for the client to connect to http",
-            True, None, '\d+')
-        self._add('client_https_port', Conf.getDefaultHttpsPort(),
-            "Port number for the client to connect to https",
-            True, None, '\d+')
+                  "Hostname for the client to connect to", True)
+        self._add('client_verified_https_port', Conf.getDefaultVerifiedHttpsPort(),
+                  "Port number for the client to connect to verified https",
+                  True,None,'\d+')
+        self._add('client_unverified_https_port', Conf.getDefaultUnverifiedHttpsPort(),
+                  "Port number for the client to connect to unverified https",
+                  True,None,'\d+')
 
         self._add('private_key', '',
             "Port number for the client to connect to https", True, None)
@@ -150,11 +152,11 @@ class ConnectionBundle(Conf):
     def getClientHost(self):
         return self.get('client_host')
 
-    def getClientHTTPSPort(self):
-        return int(self.get('client_https_port'))
+    def getClientVerifiedHTTPSPort(self):
+        return int(self.get('client_verified_https_port'))
 
-    def getClientHTTPPort(self):
-        return int(self.get('client_http_port'))
+    def getClientUnverifiedHTTPSPort(self):
+        return int(self.get('client_unverified_https_port'))
 
     def getPrivateKey(self):
         return self.tempfiles['private_key'].name
@@ -172,12 +174,11 @@ class ConnectionBundle(Conf):
         ''' The fully qualified domain name of the client  '''
         return socket.getfqdn()
 
-    def setClientHTTPSPort(self, httpsPort):
-        self.conf["client_https_port"].set("%s" % httpsPort)
+    def setClientVerifiedHTTPSPort(self, httpsPort):
+        self.conf["client_verified_https_port"].set("%s" % httpsPort)
 
-    def setClientHTTPPort(self, httpPort):
-        self.conf["client_http_port"].set("%s" % httpPort)
-
+    def setClientUnverifiedHTTPSPort(self, httpsPort):
+        self.conf["client_unverified_https_port"].set("%s" % httpsPort)
 
     def setPrivateKey(self, privateKey):
         '''

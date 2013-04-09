@@ -26,12 +26,17 @@ import logging
 from Queue import Queue,Empty
 import threading
 import cpc.util.log
-from cpc.network.https.real_https_connection import RealHttpsConnection
+from cpc.network.https.real_https_connection import *
 #Singleton
 log=logging.getLogger('cpc.server.https_connection_pool')
 
 
-class HTTPSConnectionPool(object):
+class VerifiedHTTPSConnectionPool(object):
+    """
+    Singleton that keeps a pool of https connections that does verification.
+    Thea idea is that connections to a given host/port, once, established,
+    can be reused
+    """
     __shared_state = {}    
     def __init__(self):
         self.__dict__ = self.__shared_state
@@ -67,7 +72,7 @@ class HTTPSConnectionPool(object):
         except Empty:
             log.log(cpc.util.log.TRACE,"no connections in pool for host:%s:%s creating a new one"%(host,port))
 #
-            connection = RealHttpsConnection(host,port,privateKeyFile,keyChain,cert)          
+            connection = VerifiedHttpsConnection(host,port,privateKeyFile,keyChain,cert)
         return connection
     
     def putConnection(self,connection,host,port):
@@ -75,4 +80,53 @@ class HTTPSConnectionPool(object):
         with self.listlock:
             self.pool[key].put(connection,False)
             log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))
-        
+
+class UnverifiedHTTPSConnectionPool(object):
+    """
+    Singleton that keeps a pool of https connections that does NO verification.
+    Thea idea is that connections to a given host/port, once, established,
+    can be reused
+    """
+    __shared_state = {}
+    def __init__(self):
+        self.__dict__ = self.__shared_state
+
+        if len(self.__shared_state)>0:
+            return
+
+        log.log(cpc.util.log.TRACE,"instantiation of connectionPool")
+        self.pool = {}
+        self.listlock=threading.Lock()
+
+    #tries to see if there exists a connection for the host, if not it creates one and returns it
+
+    def getKey(self,host,port):
+        return "%s:%s"%(host,port)
+
+
+    def getConnection(self,host,port):
+        key = self.getKey(host, port)
+        #check if we have a queue instantiated for that host
+        with self.listlock:
+            if key not in self.pool:
+                log.log(cpc.util.log.TRACE,"instantiating connection pool for host:%s:%s"%(host,port))
+                q =  Queue()
+                self.pool[key] = q
+            else:
+                q= self.pool[key]
+        try:
+            connection = q.get(False)
+            log.log(cpc.util.log.TRACE,"got a connection from pool form host:%s:%s"%(host,port))
+            #do we need to check if the connection dropped here?
+
+        except Empty:
+            log.log(cpc.util.log.TRACE,"no connections in pool for host:%s:%s creating a new one"%(host,port))
+            #
+            connection = UnverifiedHttpsConnection(host,port)
+        return connection
+
+    def putConnection(self,connection,host,port):
+        key = self.getKey(host, port)
+        with self.listlock:
+            self.pool[key].put(connection,False)
+            log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))

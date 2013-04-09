@@ -27,19 +27,29 @@ import shlex
 import Queue
 import time
 
+from cpc.server.state.user_handler import *
 PROJ_DIR = "/tmp/cpc-proj"
 
-def setup_server(heartbeat='20'):
+def setup_server(heartbeat='20', addServer=True):
     ensure_no_running_servers_or_workers()
     clear_dirs()
+
+
     with open(os.devnull, "w") as null:
-        p = subprocess.check_call(["./cpc-server", "setup", PROJ_DIR],
-            stdout=null, stderr=null)
+        p = subprocess.Popen(["./cpc-server", "setup", "-stdin", PROJ_DIR],
+                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, close_fds=True)
+        (stdout, stderr) = p.communicate(input='root\n')
+        assert p.returncode == 0
         p = subprocess.check_call(["./cpc-server", "config", "server_fqdn",
                                    "127.0.0.1"], stdout=null, stderr=null)
         p = subprocess.check_call(["./cpc-server", "config", "heartbeat_time",
                                    heartbeat], stdout=null, stderr=null)
-    generate_bundle()
+    #generate_bundle()
+    if addServer:
+        cmd_line = './cpcc add-server localhost'
+        args = shlex.split(cmd_line)
+        p = subprocess.check_call(args)
 
 
 def generate_bundle():
@@ -56,6 +66,12 @@ def generate_bundle():
         sys.stderr.write("Failed to write bundle: %s\n" % str(e))
         assert False #NOT OK
 
+def purge_client_config():
+    home = os.path.expanduser("~")
+    cmd_line = 'rm %s/.copernicus/clientconfig.cfg' % home
+    args = shlex.split(cmd_line)
+    with open(os.devnull, "w") as null:
+        subprocess.call(args, stderr=null) 
 
 def start_server():
     cmd_line = './cpc-server start'
@@ -75,6 +91,7 @@ def stop_server():
             p = subprocess.check_call(["./cpcc", "stop-server"],
                 stdout=null, stderr=null)
     except subprocess.CalledProcessError:
+        print "Hard stopped server"
         #hard stop
         ensure_no_running_servers_or_workers()
 
@@ -101,7 +118,10 @@ def run_mdrun_example(projname='mdrun'):
         assert False,\
         "Failed to setup mdrun example. stdout:\n%s\n\stderr:%s\n\n" % (
             stdout, stderr)
+    time.sleep(3) #we need to give the server some time to handle the project
 
+def add_user(user, password, userlevel=UserLevel.REGULAR_USER):
+    UserHandler().addUser(user, password, userlevel)
 
 def clear_dirs():
     home = os.path.expanduser("~")
@@ -110,7 +130,7 @@ def clear_dirs():
     except Exception as e:
         pass #OK
     try:
-        shutil.rmtree("%s/.copernicus" % home)
+        shutil.rmtree("%s/.copernicus"%home)
     except Exception as e:
         pass #OK
 
@@ -118,15 +138,11 @@ def clear_dirs():
 def teardown_server():
     stop_server()
 
+def getHome():
+    return os.path.expanduser("~")
 
-def with_server(f):
-    setup_server()
-    start_server()
-    f()
-    teardown_server()
-
-
-def run_client_command(command, returnZero=True, expectstdout=None):
+def run_client_command(command, returnZero=True, expectstdout=None,
+    expectstderr=None):
     cmd_line = './cpcc %s' % command
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
@@ -146,6 +162,10 @@ def run_client_command(command, returnZero=True, expectstdout=None):
         assert expectstdout in stdout,\
         "Expected '%s' in stdout, but got '%s'" % (expectstdout, stdout)
 
+    if expectstderr is not None:
+        assert expectstderr in stderr,\
+        "Expected '%s' in stderr, but got '%s'" % (expectstderr, stderr)
+
 
 def retry_client_command(command, expectstdout, iterations=5, sleep=3):
     for attempt in xrange(iterations):
@@ -159,6 +179,18 @@ def retry_client_command(command, expectstdout, iterations=5, sleep=3):
     "Attempted to read '%s' from server, but gave up after %d attempts" % (
         expectstdout, iterations)
 
+def login_client(username='root', password='root'):
+    cmd_line = './cpcc login -stdin %s'%username
+    for i in range(3):
+        time.sleep(1) # we need to give the server some time to load
+        args = shlex.split(cmd_line)
+        p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+        (stdout, stderr) = p.communicate(input='%s\n'%password)
+        if p.returncode == 0:
+            break
+    assert p.returncode == 0,\
+    "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 
 class Worker(object):
     def __init__(self):

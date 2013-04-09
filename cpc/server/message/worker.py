@@ -148,11 +148,8 @@ class WorkerReadyBase(ServerCommand):
                 topology = json.loads(request.getParam('topology')
                                       ,object_hook = json_serializer.fromJson)
             
-            thisNode = Node(conf.getHostName(),
-                            conf.getServerHTTPPort(),
-                            conf.getServerHTTPSPort(),
-                            conf.getHostName())                                
-            thisNode.nodes = conf.getNodes()      
+            thisNode = getSelfNode(conf)
+            thisNode.nodes = conf.getNodes()
             topology.addNode(thisNode)
       
             hasJob =False # temporary flag that should be removed

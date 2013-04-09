@@ -29,7 +29,7 @@ from server_command import ServerCommand
 from cpc.util.conf.server_conf import ServerConf
 from cpc.client.message import ClientMessage
 from cpc.network.com.client_response import ProcessedResponse
-from cpc.network.node import Node
+from cpc.network.node import Node, getSelfNode
 from cpc.network.node import Nodes
 from cpc.util import json_serializer
 from cpc.util.openssl import OpenSSL
@@ -54,9 +54,7 @@ class SCNetworkTopology(ServerCommand):
             topology = json.loads(request.getParam('topology'),
                 object_hook=json_serializer.fromJson)
 
-        thisNode = Node(conf.getHostName(), conf.getServerHTTPPort(),
-            conf.getServerHTTPSPort(),
-            conf.getHostName())
+        thisNode = getSelfNode(conf)
         thisNode.nodes = conf.getNodes()
         thisNode.workerStates = serverState.getWorkerStates()
         topology.addNode(thisNode)
@@ -64,7 +62,8 @@ class SCNetworkTopology(ServerCommand):
         for node in thisNode.nodes.nodes.itervalues():
             if topology.exists(node.getId()) == False:
                 #connect to correct node
-                clnt = ClientMessage(node.host, node.https_port, conf=conf)
+                clnt = ClientMessage(node.host, node.verified_https_port,
+                                     conf=conf, use_verified_https=True)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)
                 processedResponse = ProcessedResponse(rawresp)
@@ -97,22 +96,22 @@ class ScAddNode(ServerCommand):
         conf = ServerConf()
         host = request.getParam('host')
 
-        http_port = request.getParam('http_port')
+        unverified_https_port = request.getParam('unverified_https_port')
 
         inf = open(conf.getCACertFile(), "r")
         key = inf.read()
 
-        serv = RawServerMessage(host, http_port)
+        serv = RawServerMessage(host, unverified_https_port)
         resp = ProcessedResponse(serv.addNodeRequest(key, host))
 
         nodeConnectRequest = resp.getData()
 
-        if(request.hasParam('https_port')):
-            https_port = request.getParam('https_port')
-            nodeConnectRequest.https_port = int(https_port)
+        if(request.hasParam('verified_https_port')):
+            verified_https_port = request.getParam('verified_https_port')
+            nodeConnectRequest.verified_https_port = int(verified_https_port)
 
-        nodeConnectRequest.http_port = int(
-            http_port)  #http port should always be sent from client
+        nodeConnectRequest.unverified_https_port = int(
+            unverified_https_port)  #http port should always be sent from client
         conf.addSentNodeConnectRequest(nodeConnectRequest)
         response.add('', nodeConnectRequest)
         log.info("Added node %s" % host)
@@ -120,7 +119,7 @@ class ScAddNode(ServerCommand):
 
 #receives add node connect request from a server
 #this is a message sent from a server not a client!!
-#HTTP message
+#Unver HTTPS message
 class ScAddNodeRequest(ServerCommand):
     def __init__(self):
         ServerCommand.__init__(self, "add-node-request")
@@ -136,8 +135,8 @@ class ScAddNodeRequest(ServerCommand):
         conf.addNodeConnectRequest(nodeConnectRequest)
         inf = open(conf.getCACertFile(), "r")
         nodeConnect = NodeConnectRequest(unqalifiedDomainName,
-            conf.getServerHTTPPort(),
-            conf.getServerHTTPSPort()
+            conf.getServerUnverifiedHTTPSPort(),
+            conf.getServerVerifiedHTTPSPort()
             , inf.read()
             , conf.getHostName())
 
@@ -152,13 +151,13 @@ class ScGrantNodeConnection(ServerCommand):
 
     def run(self, serverState, request, response):
         host = request.getParam('host')
-        https_port = request.getParam('port')
+        verified_https_port = request.getParam('port')
         conf = ServerConf()
 
-        nodeKey = "%s:%s" % (host, https_port)
+        nodeKey = "%s:%s" % (host, verified_https_port)
         if self.grant(nodeKey):
             response.add('Connection to node %s:%s established' %
-                         (host, https_port))
+                         (host, verified_https_port))
             #recalculate the network topology and broadcast it
             Cache().remove("network-topology")
             topology = ServerToServerMessage.getNetworkTopology()
@@ -178,12 +177,12 @@ class ScGrantNodeConnection(ServerCommand):
             nodeToAdd = nodes.get(key) #this returns a nodeConnectRequest object
 
             serv = RawServerMessage(nodeToAdd.host,
-                nodeToAdd.http_port) #trying to connect to https port here
+                nodeToAdd.unverified_https_port) #trying to connect to https port here
             resp = serv.addNodeAccepted()   #sending a message saying what node accepted the request 
             #TODO analyze the response, if it is an error of some sort do not continue
             conf.addNode(Node(nodeToAdd.host,
-                nodeToAdd.http_port,
-                nodeToAdd.https_port,
+                nodeToAdd.unverified_https_port,
+                nodeToAdd.verified_https_port,
                 nodeToAdd.qualified_name))
 
             #trust the key
@@ -213,11 +212,11 @@ class ScGrantAllNodeConnections(ServerCommand):
             ScGrantNodeConnection.grant(nodeConnectRequest.getId())
         #
         #            if ScGrantNodeConnection.grant(nodeConnectRequest.host,
-        #                                           nodeConnectRequest.https_port) == False:
+        #                                           nodeConnectRequest.verified_https_port) == False:
         #
         #                notConnected.append(Node(nodeConnectRequest.host,
-        #                                         nodeConnectRequest.http_port,
-        #                                         nodeConnectRequest.https_port))
+        #                                         nodeConnectRequest.unverified_https_port,
+        #                                         nodeConnectRequest.verified_https_port))
         #
 
         ret = {}
@@ -249,8 +248,8 @@ class ScAddNodeAccepted(ServerCommand):
         if(nodes.exists(node.getId())):
             nodeToAdd = nodes.get(node.getId())
             conf.addNode(Node(nodeToAdd.host,
-                nodeToAdd.http_port,
-                nodeToAdd.https_port,
+                nodeToAdd.unverified_https_port,
+                nodeToAdd.verified_https_port,
                 nodeToAdd.qualified_name))
             #conf.addNode(nodeToAdd)
             openssl = OpenSSL(conf)
@@ -259,12 +258,12 @@ class ScAddNodeAccepted(ServerCommand):
             conf.set('sent_node_connect_requests', nodes)
             # need to send back a status in the data notifying ok 
             response.add('Connection to node %s:%s established' %
-                         (nodeToAdd.host, nodeToAdd.https_port))
+                         (nodeToAdd.host, nodeToAdd.verified_https_port))
 
             #add it to the node list         
         else:
             response.add('No previous node request sent for host %s:%s' %
-                         (node.host, node.https_port))
+                         (node.host, node.verified_https_port))
         log.info("Node connection accepted")
 
 

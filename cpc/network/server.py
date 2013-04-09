@@ -27,7 +27,7 @@ import logging
 
 from threading import Thread
 import request_handler
-import cpc.server.state
+from cpc.server.state.server_state import ServerState
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.log
 
@@ -49,17 +49,28 @@ log=logging.getLogger('cpc.server')
 
 class Error(Exception):
     pass
+class HTTPServer__base(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
+    """
+    Provides some common methods for the HTTPx servers
+    """
+    def getState(self):
+        return self.serverState
+
+    def getSCList(self):
+        """Get the server command list."""
+        return cpc.server.message.scSecureList
 
 
-"""The server class: waits for incoming connecctions and acts on them"""
-""" this is an HTTPS server """
-class SecureServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
+class VerifiedSecureServer(HTTPServer__base):
+    """
+    This server provides both client and server side verification
+    """
     def __init__(self, handler_class, conf, serverState):
         self.conf=conf
         self.serverState=serverState
         
         BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(), 
-                                                  conf.getServerHTTPSPort()), 
+                                                  conf.getServerVerifiedHTTPSPort()),
                                            handler_class)
         
         #https part              
@@ -78,58 +89,71 @@ class SecureServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
             self.server_activate()
 
         except Exception:
-            print "HTTPS port %s already taken"%conf.getServerHTTPSPort()
+            print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
             serverState.doQuit()
 
 
-    def getState(self):
-        return self.serverState
 
-    def getSCList(self):
-        """Get the server command list."""
-        return cpc.server.message.scSecureList
-
-
-""" this is an HTTP server """
-class HTTPServer(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
-    def __init__(self,handler_class,conf,serverState):
-        self.serverState = serverState
-        self.conf = conf
+class UnverifiedSecureServer(HTTPServer__base):
+    """
+    This server provides no verification as of now, but is scheduled to provide
+    server side verification
+    """
+    def __init__(self, handler_class, conf, serverState):
+        self.conf=conf
+        self.serverState=serverState
 
         BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
-                                                      conf.getServerHTTPPort()),
-                                               handler_class)
+                                           conf.getServerUnverifiedHTTPSPort()),
+                                           handler_class)
 
-    def getState(self):
-        return self.serverState
+        #https part
+        fpem = conf.getPrivateKey()
+        fcert = conf.getCertFile()
+        ca = conf.getCaChainFile()
+        sock = socket.socket(self.address_family,self.socket_type)
 
-    def getSCList(self):
-        """Get the server command list."""
-        return cpc.server.message.scInsecureList
+        try:
+            self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
+                                           cert_reqs = ssl.CERT_NONE,
+                                           ssl_version=ssl.PROTOCOL_SSLv23,
+                                           ca_certs=ca
+            )
+            self.server_bind()
+            self.server_activate()
 
-def serveHTTP(serverState):
-    try:
-        httpserver = HTTPServer(request_handler.handler,ServerConf(),serverState)
-        sa2 = httpserver.socket.getsockname()
-        log.info("Serving HTTP on %s port %s..."%(sa2[0], sa2[1]))
-        httpserver.serve_forever()
-    except Exception:
-        print "HTTP port %s already taken"%ServerConf().getServerHTTPPort()
-        serverState.doQuit()
+        except Exception:
+            print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
+            serverState.doQuit()
+
    
 
-def serveHTTPS(serverState):
+def serveVerifiedHTTPS(serverState):
     try:
-        httpd = SecureServer(request_handler.handler, ServerConf(), serverState)
+        httpd = VerifiedSecureServer(request_handler.verified_handler, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
-        log.info("Serving HTTPS on %s port %s..."%(sa[0], sa[1]))
+        log.info("Serving verified HTTPS on %s port %s..."%(sa[0], sa[1]))
         httpd.serve_forever();
 
     except KeyboardInterrupt:
         print "Interrupted"
         serverState.doQuit()
     except Exception:
-        print "HTTPS port %s already taken"%ServerConf().getServerHTTPSPort()
+        print "HTTPS port %s already taken"%ServerConf().getServerVerifiedHTTPSPort()
+        serverState.doQuit()
+
+def serveUnverifiedHTTPS(serverState):
+    try:
+        httpd = UnverifiedSecureServer(request_handler.unverified_handler, ServerConf(), serverState)
+        sa = httpd.socket.getsockname()
+        log.info("Serving unverified HTTPS on %s port %s..."%(sa[0], sa[1]))
+        httpd.serve_forever()
+
+    except KeyboardInterrupt:
+        print "Interrupted"
+        serverState.doQuit()
+    except Exception:
+        print "HTTPS port %s already taken"%ServerConf().getServerUnverifiedHTTPSPort()
         serverState.doQuit()
 
 
@@ -137,17 +161,16 @@ def serveHTTPS(serverState):
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
     cpc.util.log.initServerLog(ServerConf().getMode())
-    th=Thread(target = serveHTTP,args=[serverState])
-    th.daemon=True
-    th.start()
+    th2=Thread(target = serveVerifiedHTTPS,args=[serverState])
+    th2.daemon=True
+    th2.start()
 
-
-    serveHTTPS(serverState)
+    serveUnverifiedHTTPS(serverState)
 
     
 def shutdownServer(self):
     log.info("shutdown complete")
-    self.httpd.shutdown
+    #self.httpd.shutdown
 
 
 def runServer(logLevel=None,doFork=True):
@@ -161,7 +184,7 @@ def runServer(logLevel=None,doFork=True):
     conf.setMode(logLevel)
 
     # initialize the server state before forking.
-    serverState = cpc.server.state.ServerState(conf)
+    serverState = ServerState(conf)
     serverState.read()
 
     pid=0

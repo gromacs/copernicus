@@ -25,9 +25,10 @@ import socket
 import sys
 
 from cpc.util.conf.conf_base import Conf
-import cpc.util.conf.conf_base
+from cpc.util.conf.conf_base import NoConfError, ConfError
 import cpc.util.conf.server_conf
 from cpc.network.com.client_base import ClientError
+from cpc.util.conf.client_conf import ClientConf, NoServerError
 
 class ConfError(cpc.util.exception.CpcError):
     pass
@@ -58,12 +59,33 @@ def initiateConnectionBundle(conffile):
     try:
         cf = ConnectionBundle(conffile)
         return cf
-    except cpc.util.conf.conf_base.ConfError:
+    except ConfError:
         print "Could not find a connection bundle \nPlease specify one with " \
               "with the -c flag or supply the file with the name\nclient.cnx" \
               " in your configuration folder "
-        sys.exit(0)
+        sys.exit(1)
 
+def getClientConf():
+    try:
+        cfg = ClientConf()
+        #make sure there is configured server
+        cfg.getClientUnverifiedHTTPSPort()
+        cfg.getClientHost()
+    except (NoConfError, NoServerError):
+        raise ClientError("No servers."\
+            " Use cpcc add-server to add one.")
+    except cpc.util.conf.conf_base.ConfError as e:
+        raise ClientError(e)     
+
+def addServer(name, host, port):
+    ClientConf().addServer(name, host,port)
+
+
+def useServer(name):
+    ClientConf().setDefaultServer(name)
+
+def listServer():
+    return ClientConf().getServers()
 
 def initiateWorkerSetup():
     '''
@@ -72,8 +94,7 @@ def initiateWorkerSetup():
        @return ConnectionBundle
     '''
 
-    configName = socket.getfqdn()
-    openssl = cpc.util.openssl.OpenSSL(cn=configName)
+    openssl = cpc.util.openssl.OpenSSL()
     connectionBundle = openssl.setupClient()
     return connectionBundle
 

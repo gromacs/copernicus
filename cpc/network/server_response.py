@@ -22,7 +22,7 @@ import mmap
 from cpc.util import json_serializer
 class ServerResponse(object):
     '''
-    data structure for the command server response format. 
+    data structure for the command ser ver response format.
     '''
 
     def __init__(self):
@@ -47,7 +47,15 @@ class ServerResponse(object):
             self.reps.append(r)
 
     def setFile(self, file,contentTypeStr):
-        self.headers['Content-Type'] = contentTypeStr
+        """
+        The contentTypeStr is a tuple when sent from request_handler (using
+        guess_type from mimetypes) and a bare string when called from commands,
+        so we check the type.
+        """
+        if isinstance(contentTypeStr, basestring):
+            self.headers['Content-Type'] = contentTypeStr
+        else:
+            self.headers['Content-Type'] = contentTypeStr[0]
         self.file=file
 
     def clearAll(self):

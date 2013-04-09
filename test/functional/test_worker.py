@@ -23,6 +23,7 @@ class TestWorker():
 
     def setUp(self):
         setup_server()
+        generate_bundle()
         start_server()
 
     def tearDown(self):
@@ -34,7 +35,6 @@ class TestWorker():
         """
         w = Worker()
         w.startWorker()
-        time.sleep(4)
         w.waitForOutput(expectedOutput='Got 0 commands.')
         w.shutdownGracefully()
         w.waitForOutput(expectedOutput='Received shutdown signal.')
