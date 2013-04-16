@@ -76,8 +76,11 @@ class RawServerMessage(ClientBase):
         fields.append(input2)
         fields.append(input3)
         fields.append(Input('version', "1"))
+        # this goes over unverified https, and we don't want the server to use
+        # cookies
         response= self.putRequest(ServerRequest.prepareRequest(fields),
-                                  use_verified_https=False)
+                                  use_verified_https=False,
+                                  disable_cookies=True)
         return response 
 
     #This is a HTTP message
@@ -97,9 +100,12 @@ class RawServerMessage(ClientBase):
         fields.append(input)
         fields.append(input2)
         fields.append(Input('version', "1"))
-        
+
+        # this goes over unverified https, and we don't want the server to use
+        # cookies 
         response= self.putRequest(ServerRequest.prepareRequest(fields),
-                                  use_verified_https=False)
+                                  use_verified_https=False,
+                                  disable_cookies=True)
         return response 
 
 class ServerMessage(ServerToServerMessage):

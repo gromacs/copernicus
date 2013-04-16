@@ -50,8 +50,8 @@ class ClientBase(object):
         self.conf = conf
         self.use_verified_https = None
 
-    def putRequest(self, req, use_verified_https=None):
-        self.connect(use_verified_https)
+    def putRequest(self, req, use_verified_https=None, disable_cookies=False):
+        self.connect(use_verified_https, disable_cookies)
         try:
             ret=self.conn.sendRequest(req,"PUT")
         except httplib.HTTPException as e:
@@ -60,8 +60,8 @@ class ClientBase(object):
             raise ClientError(e)
         return ret
 
-    def postRequest(self, req, use_verified_https=None):
-        self.connect(use_verified_https)
+    def postRequest(self, req, use_verified_https=None, disable_cookies=False):
+        self.connect(use_verified_https, disable_cookies)
         try:
             ret=self.conn.sendRequest(req)
         except httplib.HTTPException as e:
@@ -77,7 +77,7 @@ class ClientBase(object):
     # 1, overrides lower priorities : argument use_verified_https
     # 2, if self.use.verified_https is set
     # default to true
-    def connect(self, use_verified_https=None):
+    def connect(self, use_verified_https=None, disable_cookies=False):
         if use_verified_https is not None:
             use_verified = use_verified_https
         else:
@@ -91,11 +91,12 @@ class ClientBase(object):
         try:
             if use_verified:
                 log.log(cpc.util.log.TRACE,"Connecting using verified HTTPS")
-                self.conn=client_connection.VerifiedClientConnection(self.conf)
+                self.conn=client_connection.VerifiedClientConnection(self.conf,
+                    disable_cookies)
             else:
                 log.log(cpc.util.log.TRACE,"Connecting using unverified HTTPS")
                 self.conn=client_connection.UnverifiedClientConnection(
-                            self.conf)
+                            self.conf, disable_cookies)
             self.conn.connect(self.host,self.port)
         except httplib.HTTPException as e:
             raise ClientError(e)

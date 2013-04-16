@@ -128,7 +128,7 @@ class VerifiedClientConnection(ClientConnectionBase):
     """
     HTTPS connections are verified both client and server side
     """
-    def __init__(self, conf):
+    def __init__(self, conf, disable_cookies=False):
         self.httpsConnectionPool = VerifiedHTTPSConnectionPool()
         self.connected=False
         self.conf = conf
@@ -158,12 +158,14 @@ class UnverifiedClientConnection(ClientConnectionBase):
     HTTPS connections are unverified, meaning no server side or client side
     verification is performed.
     """
-    def __init__(self, conf):
+    def __init__(self, conf, disable_cookies=False):
         self.httpsConnectionPool = UnverifiedHTTPSConnectionPool()
         self.connected=False
         self.conf = conf
-        self.cookieHandler = CookieHandler(conf)
-
+        if not disable_cookies:
+            self.cookieHandler = CookieHandler(conf)
+        else:
+            self.cookieHandler = None
     def connect(self,host,port):
 
         self.host = host
