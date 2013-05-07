@@ -73,10 +73,15 @@ class partialRes(object):
             val=res[0]
             err=res[1]
             sys.stderr.write('%g +/- %g\n'%(val, err))
-            # add the weighted value
-            sumVal += val/(err*err)
-            # and keep track of the sum of weights
-            sumInvErr += 1/(err*err)
+            try:
+                # add the weighted value
+                sumVal += val/(err*err)
+                # and keep track of the sum of weights
+                sumInvErr += 1/(err*err)
+            except ZeroDivisionError:
+                sumVal += val/0.00000001
+                sumInvErr += 1/0.00000001
+
         if len(self.res)>0:
             self.mean=sumVal/sumInvErr
             self.err=math.sqrt(1/sumInvErr)
