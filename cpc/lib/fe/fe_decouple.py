@@ -255,7 +255,7 @@ def decouple(inp, out, relaxation_time, mult):
                 addIteration("q", nruns_q, inp, out)
                 nruns_q += 1
             if changed_lj and res_lj.getErr() > precision/2:
-                sys.stderr.write('Adding another q iteration\n')
+                sys.stderr.write('Adding another lj iteration\n')
                 addIteration("lj", nruns_lj, inp, out)
                 nruns_lj += 1
         else:
