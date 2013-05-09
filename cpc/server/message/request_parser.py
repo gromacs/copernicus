@@ -55,7 +55,14 @@ class ServerCommandList(object):
         self.cmds[name]=(cmd, userlevel)
 
     def getServerCommand(self, request):
-        """Get the server command based on a request's command."""
+
+        """Get the server command based on a request's command.
+           inputs:
+            request:ServerRequest
+
+            returns:
+                ServerCommand
+        """
         cmd=request.getCmd()
         if cmd in self.cmds:
             user_str = 'Anonymous'
@@ -118,6 +125,7 @@ scSecureList.add(network.ScGrantNodeConnection())
 scSecureList.add(network.ScGrantAllNodeConnections())    
 scSecureList.add(network.ScChangeNodePriority()) 
 scSecureList.add(network.SCNetworkTopology())
+scSecureList.add(network.SCNetworkTopologyClient())
 scSecureList.add(network.SCNetworkTopologyUpdate())
 scSecureList.add(network.SCConnectionParamUpdate())
 

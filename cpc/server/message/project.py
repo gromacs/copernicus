@@ -20,6 +20,7 @@
 import logging
 import os
 import tarfile
+from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.util.conf.server_conf import ServerConf
 
 try:
@@ -585,7 +586,8 @@ class SCStatus(ProjectServerCommand):
             return
 
         # handle network
-        topology = self._getTopology(serverState)
+        #topology = self._getTopology(serverState)
+        topology = ServerToServerMessage.getNetworkTopology()
         num_workers = 0
         num_servers = 0
         num_local_workers = len(serverState.getWorkerStates())
@@ -632,19 +634,20 @@ class SCStatus(ProjectServerCommand):
                     self._traverseInstance(child_obj,state_count, queue, 
                                            err_list, warn_list)
 
+    #TODO remove
     def _getTopology(self, serverState):
         """ Fetches topology information about the network """
         # TODO Caching
         conf = ServerConf()
         topology = Nodes()
         thisNode = Node.getSelfNode(conf)
-        thisNode.nodes = conf.getNodes()
+        thisNode.setNodes(conf.getNodes())
         thisNode.workerStates = serverState.getWorkerStates()
         topology.addNode(thisNode)
         for node in thisNode.nodes.nodes.itervalues():
             if not topology.exists(node.getId()):
                 #connect to correct node
-                clnt = ClientMessage(node.host, node.verified_https_port,
+                clnt = ClientMessage(node.getHostname(), node.getVerifiedHttpsPort(),
                                      conf=conf, use_verified_https=True)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)

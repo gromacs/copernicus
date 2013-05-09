@@ -36,7 +36,7 @@ class TestWorker():
         Verifies that a worker connects to the server
         """
         w = Worker()
-        w.startWorker()
+        w.startThread()
         w.waitForOutput(expectedOutput='Got 0 commands.')
         w.shutdownGracefully()
         w.waitForOutput(expectedOutput='Received shutdown signal.')

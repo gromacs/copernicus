@@ -135,6 +135,11 @@ class ServerRequest(object):
    
     @staticmethod
     def prepareRequest(fields=[], files=[],headers = None):
+        """
+        Prepares the HTTP request
+        returns:
+         ServerRequest
+        """
         if headers is None:
             headers = {}
         

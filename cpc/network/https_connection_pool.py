@@ -25,79 +25,24 @@ Created on Jul 18, 2011
 import logging
 from Queue import Queue,Empty
 import threading
+from cpc.util.conf.server_conf import ServerConf
+
 import cpc.util.log
 from cpc.network.https.real_https_connection import *
 #Singleton
 log=logging.getLogger('cpc.server.https_connection_pool')
 
+class ConnectionPoolEmptyError(CpcError):
+    def __init__(self, exc):
+        self.str = exc.__str__()
 
-class VerifiedHTTPSConnectionPool(object):
-    """
-    Singleton that keeps a pool of https connections that does verification.
-    Thea idea is that connections to a given host/port, once, established,
-    can be reused
-    """
-    __shared_state = {}    
+
+#the only thing that differs between ServerConnectionPool and VerifiedHTTPSConnectionPool
+#is that ServerConnectionPool is using server-id as keys
+
+class ConnectionPool(object):
+
     def __init__(self):
-        self.__dict__ = self.__shared_state
-        
-        if len(self.__shared_state)>0:
-            return
-        
-        log.log(cpc.util.log.TRACE,"instantiation of connectionPool")
-        self.pool = {}        
-        self.listlock=threading.Lock()
-        
-    #tries to see if there exists a connection for the host, if not it creates one and returns it
-    
-    def getKey(self,host,port):
-        return "%s:%s"%(host,port)
-        
-          
-    def getConnection(self,host,port,privateKeyFile,keyChain,cert):
-        key = self.getKey(host, port)
-        #check if we have a queue instantiated for that host
-        with self.listlock:
-            if key not in self.pool:
-                log.log(cpc.util.log.TRACE,"instantiating verified https "
-                                           "connection pool for host:%s:%s"%(host,port))
-                q =  Queue()
-                self.pool[key] = q
-            else: 
-                q= self.pool[key]
-        try:
-            connection = q.get(False)
-            log.log(cpc.util.log.TRACE,"got a connection from pool for "
-                                       "host:%s:%s"%(host,port))
-            #do we need to check if the connection dropped here?
-            
-        except Empty:
-            log.log(cpc.util.log.TRACE,"no connections in verified https "
-                                       "connection pool for host:%s:%s "
-                                       "creating a new one"%(host,port))
-#
-            connection = VerifiedHttpsConnection(host,port,privateKeyFile,keyChain,cert)
-        return connection
-    
-    def putConnection(self,connection,host,port):
-        key = self.getKey(host, port)
-        with self.listlock:
-            self.pool[key].put(connection,False)
-            log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))
-
-class UnverifiedHTTPSConnectionPool(object):
-    """
-    Singleton that keeps a pool of https connections that does NO verification.
-    Thea idea is that connections to a given host/port, once, established,
-    can be reused
-    """
-    __shared_state = {}
-    def __init__(self):
-        self.__dict__ = self.__shared_state
-
-        if len(self.__shared_state)>0:
-            return
-
         log.log(cpc.util.log.TRACE,"instantiation of connectionPool")
         self.pool = {}
         self.listlock=threading.Lock()
@@ -109,31 +54,106 @@ class UnverifiedHTTPSConnectionPool(object):
 
 
     def getConnection(self,host,port):
-        key = self.getKey(host, port)
+
         #check if we have a queue instantiated for that host
         with self.listlock:
-            if key not in self.pool:
-                log.log(cpc.util.log.TRACE,"instantiating unverified https "
-                                           "connection pool for host:%s:%s"%(host,port))
-                q =  Queue()
-                self.pool[key] = q
-            else:
-                q= self.pool[key]
+            q = self.getOrCreateQueue(host,port)
         try:
-            connection = q.get(False)
-            log.log(cpc.util.log.TRACE,"got a connection from pool form host:%s:%s"%(host,port))
-            #do we need to check if the connection dropped here?
+            #we wait to until we get hold of a connection,
+            # if we do not get a connection after timeout then all available
+            # connections must have died.
+            connection = q.get(block=True,timeout=15)
+            log.log(cpc.util.log.TRACE,"Got a connection from pool for "
+                                       "host:%s:%s"%(host,port))
 
-        except Empty:
-            log.log(cpc.util.log.TRACE,"no connections in unverified https "
-                                       "connection pool for host:%s:%s "
-                                       "creating a new one"%(host,port))
-            #
-            connection = UnverifiedHttpsConnection(host,port)
+        except Empty as e:
+            log.log(cpc.util.log.TRACE,"No connections available in pool for "
+                                       "host:%s:%s"%(host,port))
+            raise ConnectionPoolEmptyError(e)
+
         return connection
 
+    def getAllConnections(self,host,port):
+        connections = []
+        #check if we have a queue instantiated for that host
+        with self.listlock:
+            q = self.getOrCreateQueue(host,port)
+
+            #we try yo get all available connections from the pool
+            while not q.empty():
+                connections.append(q.get())
+
+            if len(connections)==0:
+                log.log(cpc.util.log.TRACE,"No connections available in pool for "
+                                       "host:%s:%s"%(host,port))
+                raise ConnectionPoolEmptyError("No connections available in pool for "
+                                           "host:%s:%s"%(host,port))
+
+            return connections
+
+
+
     def putConnection(self,connection,host,port):
+        #create a queue in case we dont have one
+        self.getOrCreateQueue(host,port)
         key = self.getKey(host, port)
         with self.listlock:
             self.pool[key].put(connection,False)
             log.log(cpc.util.log.TRACE,"put back connection in pool for host:%s:%s"%(host,port))
+
+
+    def getOrCreateQueue(self,host,port):
+        key = self.getKey(host, port)
+        if key not in self.pool:
+            log.log(cpc.util.log.TRACE,"Instantiating verified https "
+                                       "connection pool for host:%s:%s"%(host,port))
+            q =  Queue()
+            self.pool[key] = q
+        else:
+            q= self.pool[key]
+
+        return q
+
+class ServerConnectionPool(ConnectionPool):
+    """
+    Singleton that keeps a pool of https connections that does verification.
+    Thea idea is that connections to a given host/port, once, established,
+    can be reused.
+    Only writable sockets are stored here
+    """
+    __shared_state = {}
+    def __init__(self):
+        self.__dict__ = self.__shared_state
+
+        if len(self.__shared_state)>0:
+            return
+
+        ConnectionPool.__init__(self)
+        log.log(cpc.util.log.TRACE,"instantiation of Server connection pool")
+
+
+    #tries to see if there exists a connection for the host, if not it creates one and returns it
+
+    def getConnection(self,node):
+        return ConnectionPool.getConnection(self,node.getHostname()
+                                            ,node.getVerifiedHttpsPort())
+
+
+    def getAllConnections(self,node):
+        return ConnectionPool.getAllConnections(self,node.getHostname()
+            ,node.getVerifiedHttpsPort())
+
+    def putConnection(self,connection,node):
+        after_idle_sec = 1
+        interval_sec = 3
+        max_fails = 5
+
+        #TODO do a getpeername
+        #TODO update the socket contents with getpeername
+        #TODO set sockets keep alives
+         #connection.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+#        connection.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, after_idle_sec)
+#        connection.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
+#        connection.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
+        ConnectionPool.putConnection(self,connection,node.getHostname(),
+           node.getVerifiedHttpsPort())

@@ -40,6 +40,8 @@ class BroadcastMessage(ServerToServerMessage):
     def __init__(self):
         self.conf = ServerConf()
 
+
+    @PendingDeprecationWarning
     def updateConnectionParameters(self):
         cmdstring="connection-parameter-update"
         fields = []
@@ -100,10 +102,15 @@ class BroadcastMessage(ServerToServerMessage):
 
 
     def _sendMessage(self,node,fields,files = [],headers=dict()):
-        self.initialize(node.server_id)
-        headers['end-node'] = node.hostname
-        headers['end-node-port'] = node.verified_https_port
+        self.node = node
+
+        #TODO find nicer way to do this
+        #a bit backwards to initialize the parent object here.
+        ServerToServerMessage.__init__(self,node.getId())
+        #self.initialize(node.server_id)
+        headers['end-node'] = node.getHostname()
+        headers['end-node-port'] = node.getVerifiedHttpsPort()
         msg = ServerRequest.prepareRequest(fields,[],headers)
-        resp  = self.putRequest(msg, disable_cookies=True)
+        resp  = self.putRequest(msg)
         #print ProcessedResponse(resp).pprint()
 

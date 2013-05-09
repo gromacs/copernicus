@@ -18,23 +18,29 @@
 import shutil
 import tarfile
 import tempfile
-
 import threading
 import time
-from cpc.util.conf.server_conf import ServerConf
+import logging
+import os
 
+from cpc.network.com.server_connection import ServerConnectionError
+from cpc.network.https_connection_pool import ServerConnectionPool, ConnectionPoolEmptyError
+from cpc.network.node import Node
+from cpc.network.server_to_server_message import ServerToServerMessage
+from cpc.server.message.direct_message import PersistentServerMessage
+from cpc.server.message.server_message import ServerMessage
+from cpc.util.conf.server_conf import ServerConf
 import projectlist
 import cpc.server.queue
 import heartbeat
-import logging
 import cpc.server.queue
 import cpc.util.plugin
 import localassets
 import remoteassets
 from cpc.util.worker_state import WorkerState
 from cpc.server.state.session import SessionHandler
-import os
 from cpc.network.broadcast_message import BroadcastMessage
+
 log=logging.getLogger('cpc.server.state')
 
 class ServerState:
@@ -62,8 +68,12 @@ class ServerState:
         self.workerStates = dict()
         log.debug("Starting state save thread.")
         self.stateSaveThread=None
-
         self.updateThread = None
+        self.keepAliveThread = None
+        self.reestablishConnectionThread = None
+
+        self.readableSocketLock = threading.Lock()
+        self.readableSockets = []
 
 
     def startExecThreads(self):
@@ -78,12 +88,26 @@ class ServerState:
         self.runningCmdList.startHeartbeatThread()
 
 
-    #sends updated connection parameters to neighbouring servers
-    def startUpdateThread(self):
-        self.updateThread=threading.Thread(target=syncUpdatedConnectionParams,
-            args=(self.conf, ))
-        self.updateThread.daemon=True
-        self.updateThread.start()
+    def startConnectServerThread(self):
+        self.connectServerThread=threading.Thread(
+                                            target=establishConnections,
+                                            args=(self,)
+                                            ,name="ConnectServerThread")
+        self.connectServerThread.daemon=True
+        self.connectServerThread.start()
+
+    def startKeepAliveThread(self):
+         self.keepAliveThread=threading.Thread(target=sendKeepAlive,
+                                                 args=(self.conf, )
+                                                ,name="KeepAliveThread")
+         self.keepAliveThread.daemon=True
+         self.keepAliveThread.start()
+
+    def startReestablishConnectionThread(self):
+        self.reestablishConnectionThread=threading.Thread(target=reestablishConnections,
+            args=(self, ),name="reestablishConnectionThread")
+        self.reestablishConnectionThread.daemon=True
+        self.reestablishConnectionThread.start()
 
     def doQuit(self):
         """set the quit state to true"""
@@ -93,7 +117,7 @@ class ServerState:
             self.quit=True
 
     def getQuit(self):
-        """Set the quit state"""
+        """get the quit state"""
         with self.quitlock:
             ret=self.quit
         return ret
@@ -196,7 +220,16 @@ class ServerState:
             self.workerStates[workerState.id].setState(state)
         else:
             self.workerStates[workerState.id] = workerState
-        
+
+
+    def addReadableSocket(self,socket):
+        with self.readableSocketLock:
+            self.readableSockets.append(socket)
+
+    def removeReadableSocket(self,socket):
+        with self.readableSocketLock:
+            self.readableSockets.remove(socket)
+
 def stateSaveLoop(serverState, conf):
     """Function for the state saving thread."""
     while True:
@@ -205,13 +238,158 @@ def stateSaveLoop(serverState, conf):
             log.debug("Saving server state.")
             serverState.write()
 
-#sends updated connection params to neigbouring nodes
-def syncUpdatedConnectionParams(conf):
-    if(conf.getDoBroadcastConnectionParams()):
-        log.debug("starting broadcast")
-        message = BroadcastMessage()
-        message.updateConnectionParameters()
-        conf.setDoBroadcastConnectionParams(False)
+
+def establishConnections(serverState):
+    establishInboundConnections(serverState)
+    establishOutBoundConnections()
+    serverState.startKeepAliveThread()
+    serverState.startReestablishConnectionThread()
 
 
+def establishOutboundConnection(node):
+    conf = ServerConf()
 
+    for i in range(0, conf.getNumPersistentConnections()):
+        try:
+            #This will make a regular call, the connection pool will take
+            # care of the rest
+            message = PersistentServerMessage(node, conf)
+            resp = message.persistOutgoingConnection()
+            node.addOutboundConnection()
+
+        except ServerConnectionError as e:
+            #The node is not reachable at this moment,
+            # no need to throw an exception since we are marking the node
+            # as unreachable in ServerConnection
+            break
+
+    if node.isConnectedOutbound():
+        log.log(cpc.util.log.TRACE,"Established outgoing "
+                                   "connections to server "
+                                   "%s"%node.toString())
+
+    else:
+        log.log(cpc.util.log.TRACE,"Could not establish outgoing "
+                                   "connections to %s"%node.toString())
+def establishOutBoundConnections():
+    conf = ServerConf()
+
+    log.log(cpc.util.log.TRACE,"Starting to establish outgoing connections")
+
+    for node in conf.getNodes().nodes.itervalues():
+        establishOutboundConnection(node)
+
+    log.log(cpc.util.log.TRACE,"Finished establishing outgoing "
+                               "connections")
+
+
+def establishInboundConnection(node, serverState):
+    conf=ServerConf()
+
+    for i in range(0, conf.getNumPersistentConnections()):
+        try:
+            message = PersistentServerMessage(node, conf)
+            socket = message.persistIncomingConnection()
+            serverState.addReadableSocket(socket)
+            node.addInboundConnection()
+
+
+        except ServerConnectionError as e:
+            #The node is not reachable at this moment,
+            # no need to throw an exception since we are marking the node
+            # as unreachable ins ServerConnectionHandler
+            break
+
+    if node.isConnectedInbound():
+        log.log(cpc.util.log.TRACE, "Established inbound "
+                                "connections to server "
+                                "%s" % node.toString())
+    else:
+        log.log(cpc.util.log.TRACE, "Could not establish inbound "
+                                "connections to server "
+                                "%s" % node.toString())
+
+
+def establishInboundConnections(serverState):
+    """
+    for each node that is not connected
+    try to establish an inbound connection
+    """
+    conf = ServerConf()
+    log.log(cpc.util.log.TRACE,"Starting to establish incoming connections")
+    for node in conf.getNodes().nodes.itervalues():
+        establishInboundConnection(node, serverState)
+
+    log.log(cpc.util.log.TRACE,"Finished establishing incoming "
+                                   "connections")
+
+
+def sendKeepAlive(conf):
+    """
+        Sends a message for each connected node in order to keep the
+        connection alive
+    """
+    log.log(cpc.util.log.TRACE,"Starting keep alive thread")
+
+    #first get the network topology. by doing this we know that the network
+    # topology is fetched and resides in the cache.
+    #since we are later on fetching all connections from the connection pool
+    # there will be no connection left to do this call thus we must be sure
+    # that its already cached.
+    ServerToServerMessage.getNetworkTopology()
+
+    while True:
+        log.log(cpc.util.log.TRACE,"Starting to send keep alive")
+        sentRequests = 0
+        for node in conf.getNodes().nodes.itervalues():
+            if node.isConnectedOutbound():
+                try:
+                    connections = ServerConnectionPool().getAllConnections(node)
+
+                    for conn in connections:
+                        try:
+                            message = ServerMessage(node.getId())
+                            message.conn = conn
+                            message.pingServer(node.getId())
+                            log.log(cpc.util.log.TRACE,"keepAlive sent to %s"%node
+                            .toString())
+
+                        except ServerConnectionError:
+                            log.error("Connection to %s is broken"%node.toString())
+
+                    sentRequests+=1
+
+                except ConnectionPoolEmptyError:
+                    #this just mean that no connections are available in the
+                    # pool i.e they are used and communicated on thus we do
+                    # not need to send keep alive messages on them
+                    continue
+
+        keepAliveInterval = conf.getKeepAliveInterval()
+        log.log(cpc.util.log.TRACE,"sent keep alive to %s nodes "
+                                   "will resend in %s seconds"%(sentRequests,
+                                                         keepAliveInterval))
+        time.sleep(keepAliveInterval)
+
+
+def reestablishConnections(serverState):
+    '''
+    Tries to periodically check for nodes that have gone down and reestablish
+     connections to them
+    '''
+    log.log(cpc.util.log.TRACE,"Starting reestablish connection thread")
+    conf = ServerConf()
+    while True:
+        for node in conf.getNodes().nodes.itervalues():
+            if not node.isConnected():
+                establishInboundConnection(node,serverState)
+                establishOutboundConnection(node)
+
+            if not node.isConnected():
+                log.log(cpc.util.log.TRACE,("Tried to reestablish a "
+                                            "connection"
+                                            " to %s but failed "%node.toString()))
+
+
+        reconnectInterval = conf.getReconnectInterval()
+        time.sleep(reconnectInterval)

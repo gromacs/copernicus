@@ -35,23 +35,23 @@ def toJson(obj):
     if isinstance(obj,NodeConnectRequest):
         return {'class' : 'NodeConnectRequest',
                  'server_id' : obj.server_id,
-                 'unverified_https_port' : obj.unverified_https_port,
-                 'verified_https_port' : obj.verified_https_port,
+                 'unverified_https_port' : obj.getUnverifiedHttpsPort(),
+                 'verified_https_port' : obj.getVerifiedHttpsPort(),
                  'key'  : obj.key,
-                 'qualified_name':obj.qualified_name,
-                 'hostname':obj.hostname
+                 'qualified_name':obj.getQualifiedName(),
+                 'hostname':obj.getHostname()
                }
     
     if isinstance(obj,Node):
         return {'class' : 'Node',
                  'server_id' : obj.server_id,
-                 'unverified_https_port' : obj.unverified_https_port,
-                 'verified_https_port' : obj.verified_https_port,
-                 'nodes':obj.nodes,
-                 'priority':obj.priority,
+                 'unverified_https_port' : obj.getUnverifiedHttpsPort(),
+                 'verified_https_port' : obj.getVerifiedHttpsPort(),
+                 'nodes':obj.getNodes(),
+                 'priority':obj.getPriority(),
                  'workerStates':obj.workerStates,
-                 'qualified_name':obj.qualified_name,
-                 'hostname':obj.hostname
+                 'qualified_name':obj.getQualifiedName(),
+                 'hostname':obj.getHostname()
                }
     
     if isinstance(obj,WorkerState):
@@ -75,9 +75,9 @@ def fromJson(jsonObj):
                         jsonObj['qualified_name'],
                         jsonObj['hostname'])
             if "nodes" in jsonObj:
-                node.nodes = jsonObj['nodes'] 
+                node.setNodes(jsonObj['nodes'])
             if "priority" in jsonObj:
-                node.priority = jsonObj['priority']
+                node.setPriority(jsonObj['priority'])
             if "workerStates" in jsonObj:
                 node.workerStates = jsonObj['workerStates']
             return node

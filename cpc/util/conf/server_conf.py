@@ -128,17 +128,6 @@ class ServerConf(conf_base.Conf):
             pass# this is OK, during setup we only have an empty conf file so
             # we will get a JSON parse error that we can safely ignore
 
-        #config values that should be broadcasted to neigboring nodes upon
-        # server restart. if any of these params are changed we set a flag in
-        # the conf
-        # The method server_state. The thread ServerState.startUpdateThread
-        # checks this flag and broadcasts the new parameters to neighboring
-        # nodes
-        self.broadCastOnUpdateList = ['server_unverified_https_port'
-                                      ,'server_verified_https_port'
-                                      ,'server_fqdn'
-                                      ,'hostname']
-
 
     def initDefaults(self):
         conf_base.Conf.initDefaults(self)
@@ -237,9 +226,19 @@ class ServerConf(conf_base.Conf):
                   userSettable=True, validation='\d+')
 
 
-        self._add('do_broadcast_connection_params', False,
-            "If connection parameters should be sent to neighbour nodes on restart",
-            userSettable=False)
+        self._add('num_persistent_connections',5,
+            "Number of persistent connection to establish for each trusted "
+            "server",
+            userSettable=True)
+
+        self._add('keep_alive_interval',60,
+            "Keep alive interval of server connections,value is in minutes"
+            ,userSettable=True)
+
+        self._add('reconnect_interval',300,
+            "Interval between trying to reestablish failed connections ,"
+            "value is in seconds"
+            ,userSettable=True)
 
 
         dn=os.path.dirname(sys.argv[0])
@@ -254,12 +253,9 @@ class ServerConf(conf_base.Conf):
         else:
             os.environ['PYTHONPATH'] = self.execBasedir
 
-    def setDoBroadcastConnectionParams(self,doBroadCast):
-        return self.set('do_broadcast_connection_params',doBroadCast)
 
     def setServerHost(self,serverAddress):
         self.set('server_host',serverAddress)
-        self.setDoBroadcastConnectionParams(True)
         return
 
     def setClientHost(self,address):
@@ -481,6 +477,11 @@ class ServerConf(conf_base.Conf):
                                             "id from %s\n please verify that "
                                             "this file exists"%self.getServerIdFileName())
 
-    
-    def getDoBroadcastConnectionParams(self):
-        return self.conf['do_broadcast_connection_params'].get()
+    def getKeepAliveInterval(self):
+        return int(self.conf['keep_alive_interval'].get())
+
+    def getReconnectInterval(self):
+        return int(self.conf['reconnect_interval'].get())
+
+    def getNumPersistentConnections(self):
+        return self.conf['num_persistent_connections'].get()

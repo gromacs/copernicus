@@ -18,20 +18,18 @@
 
 
 import socket
-
 import os
 import BaseHTTPServer
-import SocketServer
 import ssl
 import logging
-
 from threading import Thread
+import traceback
+
+from cpc.network.copernicus_server import HTTPServer__base, CopernicusServer
 import request_handler
 from cpc.server.state.server_state import ServerState
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.log
-
-
 import cpc.server.message
 
 # Default daemon parameters.
@@ -50,30 +48,18 @@ log=logging.getLogger('cpc.server')
 
 class Error(Exception):
     pass
-class HTTPServer__base(SocketServer.ThreadingMixIn,BaseHTTPServer.HTTPServer):
-    """
-    Provides some common methods for the HTTPx servers
-    """
-    def getState(self):
-        return self.serverState
-
-    def getSCList(self):
-        """Get the server command list."""
-        return cpc.server.message.scSecureList
 
 
-class VerifiedSecureServer(HTTPServer__base):
+class VerifiedSecureServer(CopernicusServer):
     """
     This server provides both client and server side verification
     """
     def __init__(self, handler_class, conf, serverState):
         self.conf=conf
-        self.serverState=serverState
-        
-        BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(), 
-                                                  conf.getServerVerifiedHTTPSPort()),
-                                           handler_class)
-        
+        #self.serverState=serverState
+
+        CopernicusServer.__init__(self,handler_class,conf,serverState)
+
         #https part              
         fpem = conf.getPrivateKey()                    
         fcert = conf.getCertFile()
@@ -89,7 +75,10 @@ class VerifiedSecureServer(HTTPServer__base):
             self.server_bind()
             self.server_activate()
 
-        except Exception:
+        except Exception as e:
+            #FIXME this is not always true server can not start due to other
+            # reasons
+            traceback.print_exc()
             print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
             serverState.doQuit()
 
@@ -118,12 +107,13 @@ class UnverifiedSecureServer(HTTPServer__base):
             self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
                                            cert_reqs = ssl.CERT_NONE,
                                            ssl_version=ssl.PROTOCOL_SSLv23,
-                                           ca_certs=ca
-            )
+                                           ca_certs=ca)
             self.server_bind()
             self.server_activate()
 
         except Exception:
+            #FIXME this is not always true server can not start due to other
+            # reasons
             print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
             serverState.doQuit()
 
@@ -139,7 +129,9 @@ def serveVerifiedHTTPS(serverState):
     except KeyboardInterrupt:
         print "Interrupted"
         serverState.doQuit()
-    except Exception:
+    except Exception as e:
+        #TODO better error handling of server errors during startup
+        traceback.print_exc()
         print "HTTPS port %s already taken"%ServerConf().getServerVerifiedHTTPSPort()
         serverState.doQuit()
 
@@ -154,6 +146,7 @@ def serveUnverifiedHTTPS(serverState):
         print "Interrupted"
         serverState.doQuit()
     except Exception:
+        #TODO better error handling of server errors during startup
         print "HTTPS port %s already taken"%ServerConf().getServerUnverifiedHTTPSPort()
         serverState.doQuit()
 
@@ -240,8 +233,6 @@ def runServer(logLevel=None,doFork=True):
 
         # now start the server
         serverState.startExecThreads()
-        serverState.startUpdateThread()
-
         serverLoop(conf, serverState)
 
     return

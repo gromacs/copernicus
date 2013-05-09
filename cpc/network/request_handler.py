@@ -29,6 +29,8 @@ import mimetypes
 import re
 import traceback
 import sys
+from cpc.server.message.direct_message import PersistentServerMessage
+
 
 try:
     from cStringIO import StringIO
@@ -58,7 +60,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
     def setup(self):
-        self.log=logging.getLogger('crs.server.request_handler_base')
+        self.log=logging.getLogger('cpc.server.request_handler_base')
         self.application_root = "/copernicus"
         self.connection = self.request
         self.responseCode = 200
@@ -66,7 +68,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         self.regexp = '^%s[/?]?'%self.application_root  #checks if a request is referring to application root
         self.rfile = socket._fileobject(self.request, "rb", self.rbufsize)
         self.wfile = socket._fileobject(self.request, "wb", self.wbufsize)
-
+        self.request.revertSocket = False
 
 
     def isApplicationRoot(self):
@@ -89,7 +91,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         #take the input and put it into a request object
 
         else:
-            if self.path == "/":
+            if self.path == "/" :
                 self.path += "index.html"
             else:
                 self.path = self.path.split('?', 1)[0]#strip trailing '?...'
@@ -100,7 +102,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.responseCode = 404
                 resourcePath = webDir+'/404.html'
 
-            response = ServerResponse()    #FIXME content type and rendering is not general here
+            response = ServerResponse()
             file = open(resourcePath,'rb')
             response.setFile(file, mimetypes.guess_type(resourcePath))
 
@@ -110,6 +112,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
     #with POST we only serve commands, post messages can also handle multipart messages
     def do_POST(self):
         self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
+        self.log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
         #can handle single part and multipart messages
         #take the input and put it into a request object
         #process the message
@@ -121,12 +124,38 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
             self.processMessage() #this is not a valid command i.e we did not find the resource
 
 
+        if self.server.getState().getQuit():
+            self.log.info("shutting down")
+            self.server.shutdown()
+
 
     #PUT messages reserved for server to server messages, put supports message delegation
     def do_PUT(self):
         conf = ServerConf()
         self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
         self.log.log(cpc.util.log.TRACE,"Headers are: '%s'\n"%self.headers)
+
+        if self.headers.has_key('persistent-connection'):
+            if not self.headers.has_key('originating-server-id'):
+                raise Exception("No originating server id found in request")
+
+            self.originatingServerId = self.headers['originating-server-id']
+            self.request.serverId = self.originatingServerId
+            direction = self.headers['persistent-connection']
+            if( direction == PersistentServerMessage.INBOUND_CONNECTION ):
+                self.log.log(cpc.util.log.TRACE,"Got request to persist "
+                                                "incoming connections")
+
+                node = ServerConf().getNodes().get(self.originatingServerId)
+                node.addInboundConnection()
+
+            if( direction == PersistentServerMessage.OUTBOUND_CONNECTION ):
+                self.log.log(cpc.util.log.TRACE,"Got request to persist "
+                                                "outgoing connections")
+
+                self.request.revertSocket = True
+
+        #Checks if the message should be forwarded to another node
         if self.headers.has_key('server-id') and \
             ServerToServerMessage.connectToSelf(self.headers)==False:
 
@@ -139,33 +168,37 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
             server_msg.connect()
             retresp = server_msg.delegateMessage(self.headers.dict,
                                                  self.rfile)
-            self.log.log(cpc.util.log.TRACE,"Done. Delegating back reply message of length %d."%
-                      len(retresp.message))
+            self.log.log(cpc.util.log.TRACE,"Done. Delegating back reply "
+                                            "message  of length %d."%
+                                            len(retresp.message))
             self.send_response(200)
             # the content-length is in the message.
             self.send_header("content-length", len(retresp.message))
             for (key, val) in retresp.headers.iteritems():
                 kl=key.lower()
                 if kl!="content-length" and kl!="server" and kl!="date":
-                    self.log.log(cpc.util.log.TRACE,"Sending header '%s'='%s'"%(kl,val))
+                    self.log.log(cpc.util.log.TRACE,
+                        "Sending header '%s'='%s'"%(kl,val))
                     self.send_header(key,val)
+
+            self.send_header("Connection",  "keep-alive")
             self.end_headers()
             retresp.message.seek(0)
             self.wfile.write(retresp.message.read(len(retresp.message)))
-            #retmmap.close()
 
         else:
             if(self.isApplicationRoot()):
-                request = HttpMethodParser.parsePOST(self.headers.dict,self.rfile) # put message format should be handled exaclty as POST
-                self.processMessage(request)
+                # put message format should be handled exaclty as POST
+                request = HttpMethodParser.parsePOST(self.headers.dict,self.rfile)
+
+                self.processMessage(request,closeConnection=False,
+                    revertSocket=self.request.revertSocket
+                )
 
             else:
-                self.processMessage()
+                self.processMessage(closeConnection=False,
+                    revertSocket=self.request.revertSocket)
 
-
-            if self.server.getState().getQuit():
-                self.log.info("shutting down")
-                self.server.shutdown()
 
     def _generateCookie(self):
         #TODO Evaluate randomness of algorithm
@@ -210,7 +243,8 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
         request.session = session
 
-    def processMessage(self,request = None):
+    def processMessage(self,request = None,closeConnection=True,
+                       revertSocket=False):
         try:
             if request:
                 serverCmd=None
@@ -239,7 +273,8 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
                 # now send the response and call the finish() function on the 
                 # command
-                self._sendResponse(response)
+                self._sendResponse(response,closeConnection=closeConnection,
+                    revertSocket=revertSocket)
                 if doFinish and serverCmd is not None:
                     serverCmd[0].finish(serverState, request)
             else:
@@ -257,7 +292,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
             errmsg="Server exception: %s"%(fo.getvalue())
             self.log.error(errmsg)
 
-    def _sendResponse(self,retmsg):
+    def _sendResponse(self,retmsg,closeConnection=True,revertSocket=False):
         conf = ServerConf()
         rets = retmsg.render()
         self.log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
@@ -274,7 +309,18 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         for key,value in retmsg.headers.iteritems():
             self.send_header(key, value)
 
-        self.send_header("Connection",  "close")
+        #if the server should be reverted we need to return a keep-alive but
+        # also get out of the request handling loop
+        if(revertSocket):
+            self.send_header("Connection",  "keep-alive")
+            #this takes us out of the request handling loop
+            self.close_connection = 1
+        elif closeConnection:
+            self.send_header("Connection",  "close")
+
+        #this is for keeping inbound connections alive
+        else:
+            self.send_header("Connection",  "keep-alive")
         self.end_headers()
         if isinstance(rets, mmap.mmap):
             # we need this because strings don't support reads, and

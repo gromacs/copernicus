@@ -477,7 +477,7 @@ try:
         ProcessedResponse(clnt.addNode(host, unverified_https_port)).\
         pprint(CmdLine.addNodeRequest)
 
-    elif cmd == 'list-server':
+    elif cmd == 'list-servers':
         ProcessedResponse(clnt.listServers()).pprint(CmdLine.listServers)
     
     elif cmd == "revoke":

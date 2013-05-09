@@ -53,7 +53,6 @@ class ConnectionBundle(Conf):
             self.conf = dict()
 
         self.client_host = fqdn
-        #TODO use same default as server?
         self.client_verified_https_port = Conf.getDefaultVerifiedHttpsPort()
         self.client_unverified_https_port = Conf.getDefaultUnverifiedHttpsPort()
         self.privateKey = ''

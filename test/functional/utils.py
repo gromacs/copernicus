@@ -27,9 +27,11 @@ import shlex
 import Queue
 import time
 import re
+import json
 
 from cpc.server.state.user_handler import *
 from cpc.util.conf.conf_base import Conf
+from cpc.util import json_serializer
 
 PROJ_DIR = "/tmp/cpc-proj"
 
@@ -37,6 +39,42 @@ def getcnxFilePath(name="_default"):
     home = os.path.expanduser("~")
     fileName = "%s/.copernicus/%s/client.cnx"%(home,name)
     return fileName
+
+def getServerDir(name="_default"):
+    home = os.path.expanduser("~")
+    dir = "%s/.copernicus/%s/server"%(home,name)
+    return dir
+
+def getConf(server):
+
+    """ helper function, conf file of
+    the server """
+    home = os.path.expanduser("~")
+    confFile = open("%s/.copernicus/%s/server/server.conf" % (home,
+                                                              server), "r")
+    confDict = json.loads(confFile.read(), object_hook=json_serializer
+    .fromJson)
+    return confDict
+
+
+def writeConf(server,confDict):
+    home = os.path.expanduser("~")
+    confFile = open("%s/.copernicus/%s/server/server.conf" % (home,
+                                                              server), "w")
+
+
+    confFile.write(json.dumps(confDict,default=cpc.util.json_serializer.toJson,
+                    indent=4))
+    confFile.close()
+
+
+
+def getConnectedNodesFromConf(server):
+
+    """ helper function, gets the connected nodes from the conf file of
+    the server """
+    confDict = getConf(server)
+    return confDict['nodes']
 
 def setup_server(heartbeat='20' ,name='_default',addServer=True):
 
@@ -104,10 +142,34 @@ def create_and_start_server(name="_default",unverifiedPort=None,
             verifiedPort = Conf.getDefaultVerifiedHttpsPort()
         setup_server(name=name,addServer=False)
         configureServerPorts(name,unverifiedPort,verifiedPort)
+        run_server_command("config keep_alive_interval "
+                           "%s"%3,name)  #every 3 seconds
+        run_server_command("config reconnect_interval "
+                           "%s"%3,name)  #every 3 seconds
+
+
         setLogToTrace(name)
         generate_bundle(name)
         start_server(name)
 
+def createServers(servers):
+    """
+    Creates and starts multiple servers
+    inputs:
+        servers:array<String>  an array of servernames,
+        the names correspond to names of conf folders that will be created
+    returns:
+        (unverifiedHttpsPorts:array(int),verifiedHttpsPorts:array<int>)
+    """
+    unverifiedHttpsPorts = range(14807,14807+len(servers))
+    verifiedHttpsPorts = range(13807,13807+len(servers))
+
+    for i in range(0,len(servers)):
+        create_and_start_server(servers[i],
+            unverifiedPort=unverifiedHttpsPorts[i],
+            verifiedPort=verifiedHttpsPorts[i])
+
+    return (unverifiedHttpsPorts,verifiedHttpsPorts)
 
 def start_server(name="_default"):
     cmd_line = './cpc-server -c %s start'%name
@@ -140,6 +202,24 @@ def ensure_no_running_servers_or_workers():
     except subprocess.CalledProcessError:
         pass #we swallow this
 
+
+def stopAndFlush():
+    """
+     does a hard stop on all running worker and server processed
+     flushes the project dir,
+     flushes the .copernicus dir
+    """
+    ensure_no_running_servers_or_workers()
+    home = os.path.expanduser("~")
+    try:
+        shutil.rmtree(PROJ_DIR)
+    except Exception as e:
+        pass #OK
+    try:
+        #TODO not nice if you are developing and running a project at the same time!
+        shutil.rmtree("%s/.copernicus"%home)
+    except Exception as e:
+        pass #OK
 
 def run_mdrun_example(projname='mdrun'):
     cmd_line = 'examples/mdrun-test/rungmxtest %s' % projname
@@ -268,39 +348,39 @@ def login_client(username='root', password='root',name="_default",
     assert p.returncode == 0,\
         "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 
-class Worker(object):
+
+
+class MonitorBase():
     def __init__(self):
         self.process = None
         self.thread = None
         self.lastline = None
         self.exception = None
         self.eguard = ExceptionCatcher()
+        self.cmd_line = ""
+        self.readStderr = False
 
-    def startWorker(self):
-        def workerThread():
-            cmd_line = './cpc-worker -d smp'
-            args = shlex.split(cmd_line)
-            self.process = subprocess.Popen(args, stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE, preexec_fn=os.setsid)
 
-        self.thread = threading.Thread(
-            target=self.eguard.wrap_function, args=(workerThread,))
-        self.thread.start()
+    def startThread(self):
+        raise NotImplementedError("Child class needs to implement this "
+                                  "function")
 
     def checkForExceptions(self):
         self.eguard.check()
 
     def shutdownGracefully(self):
         os.killpg(self.process.pid, signal.SIGINT)
-        #self.process.send_signal(signal.SIGINT)
 
     def shutdownHard(self):
         self.process.terminate() #SIGTERM
 
-    def waitForOutput(self, expectedOutput, timeout=15):
+    def waitForOutput(self, expectedOutput, timeout=10):
         def waiterThread():
             while True:
-                line = self.process.stderr.readline()
+                if(self.readStderr):
+                    line = self.process.stderr.readline()
+                else:
+                    line = self.process.stdout.readline()
                 if line == '':
                     assert False,\
                     "Reach EOF while waiting for '%s', last line"\
@@ -310,10 +390,6 @@ class Worker(object):
                 self.lastline = line
 
 
-        #busy wait for in order to avoid race where waitForOutput is called
-        #after startWorker(). Will deadlock if startWorker never is called.
-        while self.process is None:
-            pass
         waitThread = threading.Thread(
             target=self.eguard.wrap_function, args=(waiterThread,))
         waitThread.start()
@@ -325,11 +401,56 @@ class Worker(object):
             waitThread.join()
             self.thread.join()
             assert False,\
-            "Expected worker to output '%s', but timed out waiting for it,"\
+            "Expected  output '%s', but timed out waiting for it,"\
             "last line outputed was '%s'" % (expectedOutput, self.lastline)
 
             #we got the expected output
 
+
+class Worker(MonitorBase):
+    def __init__(self):
+        MonitorBase.__init__(self)
+        self.cmd_line = './cpc-worker -d smp'
+        self.readStderr = True
+
+
+    def startThread(self):
+        def programThread():
+            args = shlex.split(self.cmd_line)
+            self.process = subprocess.Popen(args, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, preexec_fn=os.setsid)
+
+        self.thread = threading.Thread(
+            target=self.eguard.wrap_function, args=(programThread,))
+        self.thread.start()
+
+        #busy wait for in order to avoid race where waitForOutput is called
+        while self.process is None:
+            pass
+
+
+
+
+class ServerLogChecker(MonitorBase):
+    def __init__(self,name="_default"):
+        MonitorBase.__init__(self)
+        logFile = "%s/log/server.log"%getServerDir(name)
+        self.cmd_line = "tail -f %s"%logFile
+
+    def startThread(self):
+        def programThread():
+            args = shlex.split(self.cmd_line)
+            self.process = subprocess.Popen(args, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, preexec_fn=os.setsid)
+
+
+        self.thread = threading.Thread(
+            target=self.eguard.wrap_function, args=(programThread,))
+        self.thread.start()
+
+        #busy wait for in order to avoid race where waitForOutput is called
+        while self.process is None:
+            pass
 
 class ExceptionCatcher(object):
     """

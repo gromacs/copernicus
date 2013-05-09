@@ -48,7 +48,7 @@ class TestLifeCycle():
         retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
         #fire up the worker
         w = Worker()
-        w.startWorker()
+        w.startThread()
         w.waitForOutput(expectedOutput='Got 1 commands.')
 
         w.waitForOutput(expectedOutput='Run thread with cmd')
@@ -83,7 +83,7 @@ class TestLifeCycle():
         retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
         #fire up the worker
         w = Worker()
-        w.startWorker()
+        w.startThread()
         w.waitForOutput(expectedOutput='Got 1 commands.')
 
         w.waitForOutput(expectedOutput='Run thread with cmd')
@@ -144,7 +144,7 @@ class TestLifeCycle():
         retry_client_command(command='q', expectstdout='mdrun.1', iterations=30)
         #fire up the worker
         w = Worker()
-        w.startWorker()
+        w.startThread()
         w.waitForOutput(expectedOutput='Got 1 commands.')
 
         w.waitForOutput(expectedOutput='Run thread with cmd')

@@ -172,7 +172,7 @@ class WorkerReadyBase(ServerCommand):
                         hasJob=True
                         # we need to rewrap the message 
                         
-                        #FIXME stupid intermediary step because the mmap form 
+                        #TODO stupid intermediary step because the mmap form
                         # clientresponse is prematurely closed
                         tmp = tempfile.TemporaryFile('w+b')
                         

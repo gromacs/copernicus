@@ -24,50 +24,12 @@ import unittest
 
 class ServerToServerConnectionTest(unittest.TestCase):
     def setUp(self):
-        ensure_no_running_servers_or_workers()
-        home = os.path.expanduser("~")
-        try:
-            shutil.rmtree(PROJ_DIR)
-        except Exception as e:
-            pass #OK
-        try:
-            shutil.rmtree("%s/.copernicus"%home)
-        except Exception as e:
-            pass #OK
+        stopAndFlush()
 
 
     def tearDown(self):
         for server in self.servers:
             stop_server(server)
-
-
-    def createServers(self):
-        self.unverifiedHttpsPorts = range(14807,14807+len(self.servers))
-        self.verifiedHttpsPorts = range(13807,13807+len(self.servers))
-
-        for i in range(0,len(self.servers)):
-            create_and_start_server(self.servers[i],
-                                    unverifiedPort=self.unverifiedHttpsPorts[i],
-                                    verifiedPort=self.verifiedHttpsPorts[i])
-
-    def getConnectedNodesFromConf(self,server):
-
-        """ helper function, gets the connected nodes from the conf file of
-        the server """
-        confDict = self.getConf(server)
-        return confDict['nodes']
-
-    def getConf(self,server):
-
-        """ helper function, gets the connected nodes from the conf file of
-        the server """
-        home = os.path.expanduser("~")
-        confFile = open("%s/.copernicus/%s/server/server.conf" % (home,
-                                                                  server), "r")
-        confDict = json.loads(confFile.read(), object_hook=json_serializer
-        .fromJson)
-        return confDict
-
 
 
     def TestSendServerConnectionRequest(self):
@@ -78,11 +40,12 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #send a connect request from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],expectstdout="Connection request sent "
                                               "to %s"%serverAndPort,useCnx=True)
 
@@ -96,7 +59,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
                                          self.unverifiedHttpsPorts[1]),useCnx=True)
 
         #TODO server2 should get the hostname from the socket but we will wait with this
-        #until persistant sockets has been implemented
+        #until persistent sockets has been implemented
         """assert that server 2 has a connection request from server 2 in its
          networks list here we do expect to see the fqdn of the host since
          since we actually got it"""
@@ -108,12 +71,13 @@ class ServerToServerConnectionTest(unittest.TestCase):
     def TestSendServerConnectionRequestToNonExistingHost(self):
         "Tries to send a connection request to a non existing server"
         self.servers = ['test_server_1']
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #startup 1 server
         #send a connect request to a nonexisting host
         nonExistingHost = "smurf.cpc.se"
-        run_client_command("connect-node %s"%nonExistingHost,
+        run_client_command("connect-server %s"%nonExistingHost,
             name=self.servers[0],expectstderr="[Errno 8]",
             returnZero=False,useCnx=True)
 
@@ -125,31 +89,34 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #send a connect request from server 1 to server 2
         wrongPort = 9999
         serverAndPort = "%s %s"%("localhost",wrongPort)
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],expectstderr="[Errno 8]",
             returnZero=False,useCnx=True)
 
 
     def TestSendAndAcceptConnectionRequest(self):
-        """ Start 2 servers, send connection request from Server 1 to Server
-        2. Server2 accepts the connection request
+        """ Start 2 servers, send connection request from Server 1 to Server2.
+            Server2 accepts the connection request
         """
 
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
-        #send a connect request from server 1 to server 2
+
+    #send a connect request from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
-        confDict = self.getConf(self.servers[1])
+        confDict = getConf(self.servers[1])
         serverToTrust =  confDict['node_connect_requests'].nodes.keys()[0]
 
         #server 2 accepts the request
@@ -161,7 +128,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="0(\s)*localhost(\s)*13807\s*.*",useCnx=True)
 
         #read the conf json, get the connected nodes assert we only have one
-        nodes = self.getConnectedNodesFromConf(self.servers[1])
+        nodes = getConnectedNodesFromConf(self.servers[1])
         nodeIds = nodes.nodes.keys()
         assert len(nodeIds) == 1
 
@@ -176,7 +143,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="0(\s)*localhost(\s)*13808\s*.*",useCnx=True)
 
         #do a test request from server 1 to server 2
-        nodes = self.getConnectedNodesFromConf(self.servers[0])
+        nodes = getConnectedNodesFromConf(self.servers[0])
         nodeIds = nodes.nodes.keys()
         assert len(nodeIds) == 1
         run_client_command("ping %s"%nodeIds[0],name=self.servers[0],
@@ -187,14 +154,15 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #send a connect request from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
-        confDict = self.getConf(self.servers[1])
+        confDict = getConf(self.servers[1])
         serverIdToRevoke = confDict['node_connect_requests'].nodes.keys()[0]
 
 
@@ -224,11 +192,13 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
-        #send a 2 connect requests from server 1 to server 2
+
+    #send a 2 connect requests from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
         #server 2 accepts the request
@@ -237,7 +207,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
 
         #server 2 revokes
-        confDict = self.getConf(self.servers[1])
+        confDict = getConf(self.servers[1])
         serverIdToRevoke = confDict['nodes'].nodes.keys()[0]
 
 
@@ -255,11 +225,12 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #send a 2 connect requests from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
 
@@ -270,7 +241,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
         #resend a connect request from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],expectstderr="localhost is already trusted",
             useCnx=True,returnZero=False)
 
@@ -280,33 +251,36 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
-        #send a 2 connect requests from server 1 to server 2
+
+    #send a 2 connect requests from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
         #send connect requests twice from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,name=self.servers[0],useCnx=True)
+        run_client_command("connect-server %s"%serverAndPort,name=self.servers[0],useCnx=True)
 
         #ensure that we only have one connect request in the config list
-        confDict = self.getConf(self.servers[0])
+        confDict = getConf(self.servers[0])
         assert len(confDict['sent_node_connect_requests'].nodes.keys()) == 1
 
-        confDict = self.getConf(self.servers[1])
+        confDict = getConf(self.servers[1])
         assert len(confDict['node_connect_requests'].nodes.keys()) == 1
 
     def Test2ConnectedServersOneChangesConnectionParameters(self):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.createServers()
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
 
         #send a connect requests from server 1 to server 2
         serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
-        run_client_command("connect-node %s"%serverAndPort,
+        run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
         #server 2 accepts the request
@@ -314,15 +288,14 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="localhost(\s)*14807\s*.*",useCnx=True)
 
         #CHANGE CONNECTION PARAMS OF SERVER 1
-        stop_server(self.servers[0],useCnx=True)
+        ensure_no_running_servers_or_workers()
         configureServerPorts(self.servers[0],15008,15009)
-        confDict = self.getConf(self.servers[0])
-        assert confDict['do_broadcast_connection_params'] == True
-        start_server(self.servers[0])
 
-        time.sleep(3)
+        start_server(self.servers[1])
+        #when server 1 starts it should send connection params to server 2
+        start_server(self.servers[0])
         # get the server id of server 1
-        confDict = self.getConf(self.servers[1])
+        confDict = getConf(self.servers[1])
         server1Id = confDict['nodes'].nodes.keys()[0]
 
         #server 2 should still be able o ping server 1
@@ -331,3 +304,51 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
 
 
+    def testConnectionsEstablishedAfterTrust(self):
+        """
+        Connections are established after servers has trusted each other
+        """
+
+        self.servers = ['test_server_1','test_server_2']
+
+        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+            self.servers)
+
+        #send a connect requests from server 1 to server 2
+        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        run_client_command("connect-server %s"%serverAndPort,
+            name=self.servers[0],useCnx=True)
+
+
+        #start the logcheckers before we do trust
+
+        self.server1LogChecker = ServerLogChecker(name=self.servers[0])
+        self.server1LogChecker.startThread()
+
+        self.server2LogChecker = ServerLogChecker(name=self.servers[1])
+        self.server2LogChecker.startThread()
+
+
+        #server 2 accepts the request
+        run_client_command("trust -all",name=self.servers[1],
+            expectstdout="localhost(\s)*14807\s*.*",useCnx=True)
+
+
+        self.server2Nodes = getConnectedNodesFromConf(self.servers[1]).nodes
+        self.server1Node =  self.server2Nodes.values()[0]
+
+        self.server1Nodes = getConnectedNodesFromConf(self.servers[0]).nodes
+        self.server2Node =  self.server1Nodes.values()[0]
+
+
+        #server 2 should have sent a request to establish inbound connections
+        self.server2LogChecker.waitForOutput("Established inbound "
+                                             "connections to server "
+                                             "%s"%self.server1Node.toString())
+
+        self.server2LogChecker.shutdownGracefully()
+
+        #server 2 should have sent a request to establish outbound connections
+        self.server2LogChecker.waitForOutput("Established outgoing "
+                                             "connections to server "
+                                             "%s"%self.server1Node.toString())

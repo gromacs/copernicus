@@ -25,10 +25,12 @@ from cpc.util import json_serializer
 class ResponseError(cpc.util.CpcError):
     pass
 
-#FIXME way to command line specific
 class ProcessedResponse(object):
     def __init__(self, response): 
-        '''@input response:ClientResponse'''       
+        """
+            inputs:
+                response:ClientResponse
+        """
         if response.content_type == "text/json":
             try:                 
                 str = response.message.read(len(response.message))

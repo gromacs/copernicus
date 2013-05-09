@@ -4,30 +4,72 @@ Created on Sep 20, 2011
 @author: iman
 '''
 import httplib
+import logging
 import socket
 import ssl
+from array import array
+from cpc.util import CpcError
+
+log=logging.getLogger('cpc.network.https.real_https_connection')
+class VerifiedHttpsInstanceCreationException(CpcError):
+    def __init__(self, str):
+        self.str = str
+
+
 class VerifiedHttpsConnection(httplib.HTTPConnection):
     '''
     Provides an HTTPS connection with certificate verification
     '''
+    def __init__(self,host,port,privateKeyFile=None,caFile=None,certFile=None,
+                 socket=None):
 
 
-    #def __init__(self,host,port,privateKeyFile,caFile,certFile): needed for verification of client
-    def __init__(self,host,port,privateKeyFile,caFile,certFile):
-        httplib.HTTPConnection.__init__(self, host)
-        #self.set_debuglevel(10)
+        """
+           Creates the object, one has to either provide privateKeyFile,
+           caFile and certFile or pass in an already created SSLSocket object.
+           the latter is for the case where we have an established connection
+           that we want to wrap as a VerifiedHttpsConnection
+
+           inputs:
+            host:String             hostname of the destination
+            port:String             the verified HTTPS port to connect to
+            privateKeyFile:String   path to our private key,
+                                    used to verify local side
+            caFile:String           path local certificate authority file
+                                    used to verify local side
+            certFile:String         path to our certificate chain file
+                                    used to verify the host we want to
+                                    connect to
+
+            socket:SSLSocket        a socket we want to wrap as a
+                                    VerifiedHttpsConnection
+        """
+        httplib.HTTPConnection.__init__(self, host,int(port))
+        self.auto_open = False
+        if(socket==None):
+            if(privateKeyFile==None or caFile==None or certFile==None):
+                raise VerifiedHttpsInstanceCreationException("Cannot create "
+                    "instance of VerifiedHttpsConnection, "
+                    "either provide a ready made SSLsocket or  "
+                    "privateKeyfile,certFile and caFile")
+
+            else:
+                self.privateKeyFile = privateKeyFile
+                self.caFile = caFile
+                self.certFile = certFile
+
+
+        else:
+            self.sock = socket
+        self.set_debuglevel(10)
         self.host = host
-        self.port = int(port)
-        self.privateKeyFile = privateKeyFile
-        self.caFile = caFile
-        self.certFile = certFile
-        
-    
+        self.connected = False
+
+
     def connect(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         #create an ssl context and load certificate verify locations
-       # print open(self.caFile,'r').read()
         self.sock = ssl.wrap_socket(sock,
                                     self.privateKeyFile,
                                     self.certFile,
@@ -35,7 +77,7 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
                                     ssl_version=ssl.PROTOCOL_SSLv23,
                                     ca_certs=self.caFile)
         self.sock.connect((self.host,self.port))
-
+        self.connected = True
 
 class UnverifiedHttpsConnection(httplib.HTTPConnection):
     '''
@@ -54,7 +96,6 @@ class UnverifiedHttpsConnection(httplib.HTTPConnection):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         #create an ssl context and load certificate verify locations
-        # print open(self.caFile,'r').read()
         self.sock = ssl.wrap_socket(sock,
                                     cert_reqs = ssl.CERT_NONE,
                                     ssl_version=ssl.PROTOCOL_SSLv23)

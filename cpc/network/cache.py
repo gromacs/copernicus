@@ -22,10 +22,13 @@ Created on Jul 18, 2011
 
 @author: iman
 '''
+import json
 import logging
 import copy
 #Singleton
 #A simple cache that stores objects infinitely
+import threading
+from cpc.util import json_serializer
 import cpc.util.log
 
 log=logging.getLogger('cpc.server.cache')
@@ -38,38 +41,78 @@ class Cache(object):
         
         if len(self.__shared_state)>0:
             return
-        
+
+        self.cacheLock = threading.Lock()
         log.log(cpc.util.log.TRACE,"instantiation of cache")
         self.cache = {}        
         
     def cleanAll(self):
-        self.cache={}
-        log.log(cpc.util.log.TRACE,'cleaning all objects from cache')
+        with self.cacheLock:
+            self.cache={}
+            log.log(cpc.util.log.TRACE,'cleaning all objects from cache')
+
     #removes a specific cached instance
-    def remove(self,key): 
-        if key in self.cache:  
-            log.log(cpc.util.log.TRACE,'removing object %s from cache'%key)
-            del(self.cache[key])
+    def remove(self,key):
+        with self.cacheLock:
+            if key in self.cache:
+                log.log(cpc.util.log.TRACE,'removing object %s from cache'%key)
+                del(self.cache[key])
     
     def getCache(self):
-        return self.cache
+        with self.cacheLock:
+            return self.cache
     
-    def add(self,key,value):  
-        cacheVal = copy.deepcopy(value)
-        log.log(cpc.util.log.TRACE,'adding object %s to cache'%key)
-        self.cache[key] = cacheVal
-    def get(self,key): 
-        val = False
-        if key in self.cache:
-            val = self.cache[key]
-        if val == False:
-            log.log(cpc.util.log.TRACE,'did not find object %s in cache'%key)
-        else:
-            log.log(cpc.util.log.TRACE,'getting object %s from cache'%key)
-        return copy.deepcopy(val)
+    def add(self,key,value):
+        with self.cacheLock:
+            log.log(cpc.util.log.TRACE,'adding object %s to cache'%key)
+            self.cache[key] = value
+    def get(self,key):
+        """
+        returns: the cacheobject if it exists, False otherwise
+        """
+        with self.cacheLock:
+            val = False
+            if key in self.cache:
+                val = self.cache[key]
+            if val == False:
+                log.log(cpc.util.log.TRACE,'did not find object %s in cache'%key)
+            else:
+                log.log(cpc.util.log.TRACE,'getting object %s from cache'%key)
+            return val
     def size(self):
-        return len(self.cache)
-    
-  
-        
-        
+        with self.cacheLock:
+            return len(self.cache)
+
+
+class NetworkTopologyCache(Cache):
+    def __init__(self):
+        Cache.__init__(self)
+        self.cacheKey = "network-topology"
+
+
+    def add(self,value):
+        """
+        inputs:
+            value:Nodes
+        """
+        jsonStr = json.dumps(value,default = json_serializer.toJson,
+            indent=4)
+        Cache.add(self,self.cacheKey,jsonStr)
+
+    def get(self):
+        """
+        returns:
+            Nodes
+        """
+        jsonStr = Cache.get(self,self.cacheKey)
+        if jsonStr:
+            topology = json.loads(jsonStr,
+                object_hook=json_serializer.fromJson)
+            return topology
+        else:
+            return False
+
+    def remove(self):
+        Cache.remove(self,self.cacheKey)
+
+

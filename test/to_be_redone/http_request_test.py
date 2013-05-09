@@ -32,8 +32,6 @@ import os
 from genericpath import isdir
 import shutil
 from cpc.util.openssl import OpenSSL
-#TODO make runnable from command line
-
 
 #NOT a unit test this is a regression test using the unit testing framework
 class HTTPRequestTest(unittest.TestCase):

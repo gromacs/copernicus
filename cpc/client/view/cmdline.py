@@ -495,9 +495,13 @@ class CmdLine(object):
     def serverInfo(message):
         info = message['data']
         co = StringIO()
-        co.write("    Server hostname: %s \n"%info['fqdn'])
-        co.write("    Server version:  %s\n"%(info['version']))
-        co.write("    Server id     :  %s"%(info['serverId']))
+        co.write("    Server hostname:        %s \n"%info['fqdn'])
+        co.write("    Server version:         %s\n"%(info['version']))
+        co.write("    Server id     :         %s\n"%(info['serverId']))
+        co.write("    Verified HTTPS port:    %s\n"%(info[
+                                                   'verified_https_port']))
+        co.write("    Unverified HTTPS port:  %s"%(info[
+                                                      'unverified_https_port']))
         return co.getvalue()
     
     @staticmethod   
@@ -507,33 +511,14 @@ class CmdLine(object):
         nodeConnectRequest = response['nodeConnectRequest']
 
         co.write("Connection request sent to %s %s "%(nodeConnectRequest
-                                                         .hostname,
+                                                         .getHostname(),
                                                       nodeConnectRequest
-                                                      .unverified_https_port))
+                                                      .getUnverifiedHttpsPort()))
         return co.getvalue()
-    
+
+
     @staticmethod
-    def listSentNodeConnectRequests(message):
-        nodes = message['data']
-        co = StringIO()
-        co.write("Sent connection requests to:\n")
-        for node in nodes.nodes.itervalues():
-            co.write("%s\n"%node.getId())
-        
-        return co.getvalue()
-        
-    @staticmethod
-    def listNodeConnectRequests(message):
-        nodes = message['data']
-        co = StringIO()
-        co.write("Connection requests received from:\n")
-        for node in nodes.nodes.itervalues():
-            co.write("%s\n"%node.getId())
-        
-        return co.getvalue()
-    
-    @staticmethod
-    def listNodes(message):
+    def listServers(message):
         response = message['data']
         nodes = response['connections']
 
@@ -545,24 +530,24 @@ class CmdLine(object):
             co.write("Sent connection requests\n")
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in sentRequests.nodes.itervalues():
-                co.write("%-20s %-10s %s\n"%(node.qualified_name,
-                                             node.unverified_https_port,node.server_id))
+                co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
+                                             node.getUnverifiedHttpsPort(),node.server_id))
 
 
         if len(receivedRequests.nodes.keys())>0:
             co.write("Received connection requests\n")
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in receivedRequests.nodes.itervalues():
-                co.write("%-20s %-10s %s\n"%(node.qualified_name,
-                                             node.unverified_https_port,node.server_id))
+                co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
+                                             node.getUnverifiedHttpsPort(),node.server_id))
 
         if len(nodes)>0:
             co.write("Connected nodes:\n")
             co.write("%-10s %-20s %-10s %s\n"%("Priority","Hostname","Port",
                                           "Server Id") )
             for node in nodes:
-                co.write("%-10s %-20s %-10s %s\n"%(node.priority,
-                                                   node.qualified_name,node.verified_https_port,
+                co.write("%-10s %-20s %-10s %s\n"%(node.getPriority(),
+                                                   node.getQualifiedName(),node.getVerifiedHttpsPort(),
                                                    node.getId()) )
         
         return co.getvalue()
@@ -578,8 +563,8 @@ class CmdLine(object):
         co.write("Following nodes are now trusted:\n")
         co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
         for node in connected:
-            co.write("%-20s %-10s %s\n"%(node.qualified_name,
-                                         node.unverified_https_port,node.server_id))
+            co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
+                                         node.getUnverifiedHttpsPort(),node.server_id))
 
         return co.getvalue()
 
@@ -591,9 +576,9 @@ class CmdLine(object):
         if len(topology.nodes.keys())>1:
             co.write("\ngraph topology{\n")
             for node in topology.nodes.itervalues():
-                for neighbour in node.nodes.nodes.itervalues():
-                    co.write('\"%s\"--\"%s\"\n'%(node.hostname,
-                                                 neighbour.hostname))
+                for neighbour in node.getNodes().nodes.itervalues():
+                    co.write('\"%s\"--\"%s\"\n'%(node.getHostname(),
+                                                 neighbour.getHostname()))
                 for worker in node.workerStates.itervalues():
                     co.write('\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host)
                     co.write('\"%s\"--\"worker_%s\"\n'%(node.host,worker.host))
@@ -607,8 +592,8 @@ class CmdLine(object):
         topology = message['data']
         str+="graph topology{\n"
         for node in topology.nodes.itervalues():                                    
-            for neighbour in node.nodes.nodes.itervalues():
-                str+='\"%s\"--\"%s\"\n'%(node.host,neighbour.host) 
+            for neighbour in node.getNodes().nodes.itervalues():
+                str+='\"%s\"--\"%s\"\n'%(node.getHostname(),neighbour.getHostname)
             for worker in node.workerStates.itervalues():                
                 str+='\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host
                 str+='\"%s\"--\"worker_%s\"\n'%(node.host,worker.host)                    

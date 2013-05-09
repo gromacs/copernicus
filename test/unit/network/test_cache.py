@@ -30,8 +30,6 @@ import copy
 from cpc.network.node import Nodes
 from cpc.network.node import Node
 
-#NOTE this unit test i not fully finished since we need to create mock objects in order to really verify that a method is called or picked up from cache
-#for now it provides a simple isolated way to run the cache and step through the code in order to verify that everything goes well
 class TestCache(unittest.TestCase):
 
 

@@ -144,7 +144,7 @@ class OpenSSL(object):
         args = [ "openssl", "req", "-outform", "PEM", "-new", "-key", \
                 privateKeyFile,
                 "-config",certReqConfigFile,
-                "-out",self.conf.getCertRequestFile() ] #FIXME the certRequest file should just be a tem
+                "-out",self.conf.getCertRequestFile() ]
         subprocess.call(args)
         
         args = ["openssl", "ca", "-in",

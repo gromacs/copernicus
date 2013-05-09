@@ -49,7 +49,7 @@ class TestNode(unittest.TestCase):
         route = Nodes.findRoute(start,end,topology)
         
         #for node in route:
-            #print "%s %s"%(node.host,node.verified_https_port)
+            #print "%s %s"%(node.host,node.getVerifiedHttpsPort())
         
         self.assertEquals(route[0].verified_https_port,13807)
         self.assertEquals(route[len(route)-1].verified_https_port,13811)
@@ -100,11 +100,11 @@ class TestNode(unittest.TestCase):
         node4 = Node("host4",13807,14807)
         node5 = Node("host5",13807,14807)
     
-        node4.priority = 1
-        node5.priority = 2        
-        node3.priority = 3
-        node1.priority = 4
-        node2.priority = 5
+        node4.getPriority() = 1
+        node5.getPriority() = 2
+        node3.getPriority() = 3
+        node1.getPriority() = 4
+        node2.getPriority() = 5
         #these priorities will actually be ignored since addnode will give a node the least priority
         
         nodes = Nodes()
@@ -213,9 +213,9 @@ class TestNode(unittest.TestCase):
         self.assertEquals("host2",nodesList[1].host)
         self.assertEquals("host3",nodesList[2].host)
         
-        self.assertEquals(0,nodesList[0].priority)
-        self.assertEquals(1,nodesList[1].priority)
-        self.assertEquals(2,nodesList[2].priority)
+        self.assertEquals(0,nodesList[0].getPriority())
+        self.assertEquals(1,nodesList[1].getPriority())
+        self.assertEquals(2,nodesList[2].getPriority())
         
         #this should ensure that node is getting the last priority
         

@@ -101,7 +101,7 @@ class HttpMethodParser(object):
             for k,v in parsedDict.iteritems():
                 params[k] = v[0]
 
-            request = ServerRequest(headers,None,params)   #FIXME Right now we are assuming messages cannot be that big
+            request = ServerRequest(headers,None,params)
 
         return request
     
