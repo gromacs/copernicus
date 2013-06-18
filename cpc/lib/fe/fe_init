@@ -88,7 +88,7 @@ def fe_init(inp, out):
                                        'value' : 
                                         inp.getInputValue('molecule_name')}))
         valarray.append(RecordValue( { 'name' : StringValue('sc-alpha'),
-                                       'value' : StringValue('1.0') } ))
+                                       'value' : StringValue('0.5') } ))
         valarray.append(RecordValue( { 'name' : StringValue('sc-power'),
                                        'value' : StringValue('1.0') } ))
         valarray.append(RecordValue( { 'name' : StringValue('sc-sigma'),
