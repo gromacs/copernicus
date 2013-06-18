@@ -459,6 +459,7 @@ class SCProjectLoad(ProjectServerCommand):
                 tar = tarfile.open(fileobj=projectBundle,mode="r")
                 tar.extractall(path=extractPath)
                 tar.close()
+                del(tar)
                 serverState.readProjectState(projectName)
                 gc.collect()
 

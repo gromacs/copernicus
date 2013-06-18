@@ -49,6 +49,8 @@ def extractSafely(destdir, filename=None, fileobj=None):
         raise TarfileError("%s: %s"%(destdir, e.strerror))
     except tarfile.TarError:
         raise TarfileError("Couldnt read tar.gz file")
+    finally:
+        del(tf)
 
 
 def backupFile(filename, Nmax=4):

@@ -134,6 +134,7 @@ class WorkerReadyBase(ServerCommand):
                 tf.add(cmddir, arcname=arcdir, recursive=True)
                 # set the state of the command.
             tf.close()
+            del(tf)
             tff.seek(0)
             # now send it back
             response.setFile(tff,'application/x-tar')
@@ -445,6 +446,7 @@ class SCDeadWorkerFetch(ServerCommand):
                 tf=tarfile.open(fileobj=tff, mode="w:gz")
                 tf.add(runDir, arcname=".", recursive=True)
                 tf.close()
+                del(tf)
                 tff.seek(0)
                 response.setFile(tff,'application/x-tar')
                 request.setFlag('remove', True)

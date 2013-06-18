@@ -184,6 +184,7 @@ class ServerState:
                 tf=tarfile.open(fileobj=tff, mode="w:gz")
                 tf.add(projectFolder, arcname=".", recursive=True)
                 tf.close()
+                del(tf)
                 tff.seek(0)
                 os.remove(stateBackupFile)
                 self.taskExecThreads.cont()

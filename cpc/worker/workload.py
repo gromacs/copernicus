@@ -208,6 +208,7 @@ class WorkLoad(object):
                     if os.path.exists(fname):
                         tf.add(fname, arcname=name, recursive=False)
             tf.close()
+            del(tf)
             tff.seek(0)
             shutil.rmtree(self.rundir, ignore_errors=True)
             # and send it back 
