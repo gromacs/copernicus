@@ -87,12 +87,8 @@ class Project(object):
         # the file list
         self.fileList=value.FileList(basedir) 
         # create the active network (the top-level network)
-        affectedInputAIs=set()
         self.network=active_network.ActiveNetwork(self, None, self.queue, 
-                                                 "", self.updateLock) 
-        if len(affectedInputAIs)!=0:
-            raise ProjectError("Top-level active network has initial elements!")
-        
+                                                 "", self.updateLock)        
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", "", self.network)
         # create a list of function definitions
