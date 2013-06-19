@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+import subprocess
+import re
+import sys
+
+def try_report_command(outf):
+    try:
+        np = subprocess.Popen(['sleep'], stdin=None, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+
+        programExists = False
+        for line in np.stdout:
+            if (re.match(r"DONE", line, re.IGNORECASE)):
+                programExists = True
+
+        np.communicate(None)
+        if np.returncode == 0:
+            outf.write('<executable name="benchmark/sleep" platform="smp" '
+                       'arch="" version="0.1">\n')
+
+            outf.write('<run in_path="yes" cmdline="sleep $ARGS"/>\n')
+            outf.write('</executable>\n')
+
+        return programExists
+
+    except OSError:
+        return False
+
+sys.stdout.write('<?xml version="1.0"?>\n')
+sys.stdout.write('<executable-list>\n')
+try_report_command(sys.stdout)
+sys.stdout.write('</executable-list>\n')
+

@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+
+#simply tests how many connections a server can handle
+from multiprocessing import pool
+import shlex
+import subprocess
+from multiprocessing import Pool
+import sys
+import copy
+import time
+import os
+
+
+def sendRequest(i):
+    home = os.path.expanduser("~")
+    cmd_line = "cpcc -c %s/.copernicus/client.cnx q"%home
+    args = shlex.split(cmd_line)
+#    p = subprocess.(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+#        stderr=subprocess.PIPE)
+#    (stdout, stderr) = p.communicate()
+
+    p =subprocess.call(args)
+    if(p!=0):
+        print "error occured at request %s"%i
+        return (i,False)
+
+    return (i,True)
+
+cmd_args = copy.copy(sys.argv)
+
+
+#do login
+#cmd_line = 'cpcc login -stdin root'
+#args = shlex.split(cmd_line)
+#p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+#    stderr=subprocess.PIPE)
+#(stdout, stderr) = p.communicate(input='root\n')
+#assert p.returncode == 0,\
+#"Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
+
+#remove the 2 first args as they are irrelevangt
+cmd_args.pop(0)
+#cmd_args.pop()
+if (len(cmd_args)!=2):
+    print "Usage: bench_connections "
+
+numPool = int(cmd_args[1])
+numConnections = int(cmd_args[0])
+
+
+
+p= Pool(numPool)
+
+
+startTime = int(time.time())
+results = p.map(sendRequest,range(0,numConnections))
+endTime = int(time.time())
+spentTime=endTime-startTime
+averageTimePerRequest = float(spentTime)/float(numConnections)
+
+failed = [x for x in results if x[1]==False]
+correct = [x for x in results if x[1]==True]
+
+print "Total time                   %s"%spentTime
+print "AverageTime                  %s"%averageTimePerRequest
+print "Total connections            %s"%numConnections
+print "Total successful connections %s"%len(correct)
+print "Total failed connections     %s"%len(failed)
+print "CSV			    			%s,%s"%(numConnections,averageTimePerRequest)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
