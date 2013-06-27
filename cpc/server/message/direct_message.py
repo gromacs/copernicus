@@ -32,8 +32,18 @@ class DirectServerMessage(ServerConnection):
         response = self.putRequest(msg)
         return response
 
-
-
+    def pingServer(self,serverId):
+        cmdstring='ping'
+        fields = []
+        input = Input('cmd', cmdstring)
+        fields.append(input)
+        fields.append(Input('version', "1"))
+        headers = dict()
+        if serverId!= None:
+            headers['server-id'] = serverId
+        msg = ServerRequest.prepareRequest(fields,[],headers)
+        response= self.putRequest(msg)
+        return response
 
 class PersistentServerMessage(ServerConnection):
     """

@@ -29,6 +29,7 @@ from cpc.network.node import Node
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.server.message.direct_message import PersistentServerMessage
 from cpc.server.message.server_message import ServerMessage
+from cpc.server.message.direct_message import DirectServerMessage
 from cpc.util.conf.server_conf import ServerConf
 import projectlist
 import cpc.server.queue
@@ -348,7 +349,7 @@ def sendKeepAlive(conf):
 
                     for conn in connections:
                         try:
-                            message = ServerMessage(node.getId())
+                            message = DirectServerMessage(node,conf)
                             message.conn = conn
                             message.pingServer(node.getId())
                             log.log(cpc.util.log.TRACE,"keepAlive sent to %s"%node
