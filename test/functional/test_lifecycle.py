@@ -24,7 +24,7 @@ class TestLifeCycle():
     def setUp(self):
         ensure_no_running_servers_or_workers()
         clear_dirs()
-        self.iterations = 10
+        self.iterations = 15
 
     def tearDown(self):
         pass
