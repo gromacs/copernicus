@@ -48,6 +48,8 @@ import iterate
 class MdrunError(cpc.util.CpcError):
     pass
 
+class GromacsError(cpc.util.CpcError):
+    pass
 
 def extractConf(tprFile, confFile):
     """Extract a configuration to confFile from tprFile."""
