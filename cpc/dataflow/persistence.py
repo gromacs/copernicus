@@ -19,13 +19,14 @@
 
 
 import json
+import os
 
 class Persistence(object):
     def __init__(self, filename):
         """Initialize a controller persistence object based on a filename."""
-        self.filename=filename
+        self.filename=os.path.abspath(filename)
         try:
-            fp=open(filename,"r")
+            fp=open(self.filename,"r")
             self.dict=json.load(fp)
             fp.close()
         except IOError:
