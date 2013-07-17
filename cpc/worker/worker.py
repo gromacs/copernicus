@@ -378,10 +378,11 @@ class Worker(object):
         workloads=[]
         log.debug("Response type=%s"%resp.getType())
         if resp.getType() == "application/x-tar":
-            if resp.headers.has_key('server-id'):
-                origServer=resp.headers['server-id']
+            if resp.headers.has_key('originating-server-id'):
+                origServer=resp.headers['originating-server-id']
             else:
-                raise WorkerError("No server-id not found in header, "
+                raise WorkerError("No originating-server-id not found in "
+                                  "header, "
                                   "The worker will not now where this "
                                   "workload is coming from")
 

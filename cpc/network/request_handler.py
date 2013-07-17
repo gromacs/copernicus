@@ -299,10 +299,8 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
         self.send_response(self.responseCode)
         self.send_header("content-length", len(rets))
-        if 'originating-server' not in retmsg.headers:
-            self.send_header("originating-server", conf.getHostName())
-        if 'server-id' not in retmsg.headers:
-            self.send_header("server-id", conf.getServerId())
+        if 'originating-server-id' not in retmsg.headers:
+            self.send_header("originating-server-id", conf.getServerId())
 
         if self.set_cookie is not None:
             self.send_header('Set-Cookie', self.set_cookie)

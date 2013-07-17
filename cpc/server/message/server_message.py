@@ -68,7 +68,7 @@ class ServerMessage(ServerToServerMessage):
                 indent=4))
         fields.append(topologyInput)
         headers = dict()
-        headers['originating-server'] = originatingServer
+        headers['originating-server-id'] = originatingServer
         if originatingClient is not None:
             headers['originating-client'] = originatingClient
         response= self.putRequest(ServerRequest.prepareRequest(fields, [],

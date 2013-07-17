@@ -76,9 +76,9 @@ class WorkerMessage(ClientBase):
         jobTarFileobj.seek(0)
         files = [FileInput('run_data','cmd.tar.gz',jobTarFileobj)]
         headers = dict()
-        # NOTE we directly forward to the originating server. We don't have to
+        # TODO we directly forward to the originating server. We don't have to
         # because there's active relaying, but for now this simplifies things
-        headers['end-node'] = origServer
+        headers['server-id'] = origServer
         log.debug("sending command finished for cmd id %s"%cmdID)
         response= self.putRequest(ServerRequest.prepareRequest(fields,
                                                                files, headers))

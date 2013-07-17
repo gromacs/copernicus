@@ -85,9 +85,9 @@ class ServerToServerMessage(ServerConnection):
     def delegateMessage(self,headers,messageStream):
         """Delegate the message to another server. Reads the message we get
            and requests a response from another client."""
-        if not (headers.has_key('originating-server') or 
-                headers.has_key('Originating-Server') ):
-            headers['originating-server'] = ServerConf().getHostName()
+
+        if not (headers.has_key('originating-server-id')):
+            headers['originating-server-id'] = ServerConf().getServerId()
         length = long(headers['content-length'])
         tmp = tempfile.TemporaryFile('w+b')
         tmp.write(messageStream.read(length))

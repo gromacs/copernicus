@@ -88,8 +88,8 @@ class WorkerReadyBase(ServerCommand):
         heartbeatInterval=None
         # check whether there is an originating server. If not, we're it
         if self.forwarded:
-            if 'originating-server' in request.headers:
-                originatingServer = request.headers['originating-server']
+            if 'originating-server-id' in request.headers:
+                originatingServer = request.headers['originating-server-id']
             # check the expected heartbeat time.
             log.debug("Forwarded message")
             if request.hasParam('heartbeat-interval'): 
@@ -169,7 +169,8 @@ class WorkerReadyBase(ServerCommand):
 
                         log.log(cpc.util.log.TRACE,
                                 'got work from %s'%
-                                (clientResponse.headers['originating-server']))
+                                (clientResponse.headers[
+                                     'originating-server-id']))
                         hasJob=True
                         # we need to rewrap the message 
                         
@@ -186,8 +187,9 @@ class WorkerReadyBase(ServerCommand):
                         #    print "%s:%s"%(key,clientResponse.headers[key])
                                                     
                         response.setFile(tmp,'application/x-tar')
-                        response.headers['originating-server']=\
-                                  clientResponse.headers['originating-server']
+                        response.headers['originating-server-id']=\
+                                  clientResponse.headers[
+                                      'originating-server-id']
                     #OPTIMIZE leads to a lot of folding and unfolding of 
                     #packages 
             if not hasJob:           
