@@ -125,6 +125,9 @@
             <field type="file" id="edr">
                 <desc>energy+measurements output file</desc>
             </field>
+            <field type="file" id="log">
+                <desc>The md.log output with performance data</desc>
+            </field>
         </outputs>
         <controller function="cpc.lib.gromacs.mdrun" 
                     import="cpc.lib.gromacs" 
@@ -623,6 +626,9 @@
             <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
             </field>
+            <field type="log_array" id="log">
+                <desc>The md.log output with performance data</desc>
+            </field>
         </outputs>
         <controller function="cpc.lib.gromacs.mdrun_multi"
                     import="cpc.lib.gromacs"
@@ -684,6 +690,9 @@
             </field>
             <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
+            </field>
+            <field type="log_array" id="log">
+                <desc>The md.log output with performance data</desc>
             </field>
         </outputs>
         <controller function="cpc.lib.gromacs.grompp_mdrun_multi"

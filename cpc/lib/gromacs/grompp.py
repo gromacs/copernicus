@@ -288,7 +288,7 @@ def mdrun_multi(inp):
                                                "persistent.dat"))
 
     inputs = ['tpr','priority','cmdline_options','resources']
-    outputs = [ 'conf', 'xtc', 'trr', 'edr' ]
+    outputs = [ 'conf', 'xtc', 'trr', 'edr', 'log' ]
     running=0
     if(pers.get("running")):
         running=pers.get("running")
@@ -317,7 +317,7 @@ def grompp_mdrun_multi(inp):
     mdrun_inputs = [ 'priority', 'cmdline_options', 'resources']
     inputs = grompp_inputs + mdrun_inputs
     grompp_outputs = [ 'tpr' ]
-    mdrun_outputs = [ 'conf', 'xtc', 'trr', 'edr' ]
+    mdrun_outputs = [ 'conf', 'xtc', 'trr', 'edr', 'log' ]
     outputs = grompp_outputs + mdrun_outputs
     running=0
     if(pers.get("running")):

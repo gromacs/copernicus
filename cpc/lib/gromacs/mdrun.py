@@ -350,8 +350,6 @@ def extractData(confout, outDir, persDir, fo):
     outf.write("%s\n"%time.strftime("%a, %d %b %Y %H:%M:%S"))
     outf.write("%f\n"%time.time())
     outf.close()
-    #outputs['stdout'] = Value(stdoutname, 
-    #                          inp.function.getOutput('trr').getType())
     fo.setOut('stdout', FileValue(stdoutname))
     # do the stderr
     stderro = glob.glob(os.path.join(persDir, "run_???", "stderr"))
@@ -362,8 +360,18 @@ def extractData(confout, outDir, persDir, fo):
         outf.write(inf.read())
         inf.close()
     outf.close()
-    
     fo.setOut('stderr', FileValue(stderrname))
+    # and do md.log
+    logo = glob.glob(os.path.join(persDir, "run_???", "md.part*.log"))
+    logname=os.path.join(outDir, "md.log")
+    outf=open(logname,"w")
+    for infile in logo:
+        inf=open(infile, "r")
+        outf.write(inf.read())
+        inf.close()
+    outf.close()
+    fo.setOut('log', FileValue(logname))
+
     log.debug("Returning without command.")
     log.debug("fo.cmds=%s"%str(fo.cmds))
 
@@ -512,6 +520,7 @@ def mdrun(inp):
                       "dhdl.part%04d.xvg"%newFileNr, 
                       "pullx.part%04d.xvg"%newFileNr, 
                       "pullf.part%04d.xvg"%newFileNr, 
+                      "md.part%04d.log"%newFileNr,
                       "state.cpt", "state_prev.cpt" ]
         log.debug("Expected output files: %s"%outputFiles)
         cmd=cpc.command.Command(newdirname, "gromacs/mdrun",args,
