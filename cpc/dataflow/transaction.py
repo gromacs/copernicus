@@ -268,7 +268,10 @@ class Transaction(run.FunctionRunOutput):
             traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
                                       sys.exc_info()[2], file=fo)
             errmsg="Transaction error: %s"%(fo.getvalue())
-            self.activeInstance.markError(errmsg)
+            if self.activeInstance is not None:
+                self.activeInstance.markError(errmsg)
+            else:
+                log.error(errmsg)
         finally:
             if locked:
                 if affectedOutputAIs is None:
