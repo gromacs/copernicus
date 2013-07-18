@@ -41,8 +41,10 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                 outf.write(
                     '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
                     (name, version))
-                outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
-                           (cmd, opts))
+                if re.match(r"4.6",version):
+                  outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s -ntomp 1" />\n'%(cmd, opts))
+                else: 
+                  outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%(cmd, opts))
                 outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
                 outf.write('</executable>\n')
 

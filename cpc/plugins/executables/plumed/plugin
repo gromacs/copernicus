@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+
+import subprocess
+import re
+import sys
+import os
+def try_report_command(outf, name, cmd, opts="", isMdrun=False):
+    # try and report on a gromacs command. Assumes the '-version' flag
+    # works
+    MPI=False
+    threadMPI=False
+    OpenMP=False
+    GPU=False
+    PLUMED=False
+    version=None
+
+    try:
+        if isMdrun:
+            plumedinfo=subprocess.Popen([cmd, "-h"], stdin=None, 
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            for line in plumedinfo.stdout:
+                if (re.match(r"-plumed", line)):
+                  PLUMED=True
+        
+        if PLUMED:      
+          np=subprocess.Popen([cmd, "-version"], stdin=None, 
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+          for line in np.stdout:
+              if (re.match(r"Version:", line, re.IGNORECASE) or
+                  re.match(r"Gromacs version:", line, re.IGNORECASE)):
+                  version=re.sub(r'([0-9]\.[0-9.]+).*', r'\1', line.split()[-1])
+              elif re.match(r"Parallellization", line): # 4.5
+                  par=line.split()[-1]
+                  if par == "thread_mpi":
+                      threadMPI=True
+              elif re.match(r"MPI Library", line, re.IGNORECASE): # 4.6
+                  if re.match(r".*thread_mpi", line, re.IGNORECASE):
+                      threadMPI=True
+                  elif line.split()[-1] == "MPI":
+                      MPI=True
+              elif re.match(r"GPU", line, re.IGNORECASE):
+                  if line.split()[-1] != "disabled":
+                      GPU=True
+              elif re.match(r"OpenMP", line, re.IGNORECASE):
+                  if line.split()[-1] != "disabled":
+                      OpenMP=True
+          np.communicate(None)
+          if np.returncode == 0:
+              if MPI:
+                  outf.write(
+                      '<executable name="plumed/%s" platform="mpi" arch="" version="%s">\n'%
+                      (name, version))
+                  if re.match(r"4.6",version):
+                    outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s -ntomp 1" />\n'%
+                               (cmd, opts))
+                  else:
+                    outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%
+                               (cmd, opts))
+
+                  outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
+                  outf.write('</executable>\n')
+
+              elif threadMPI:
+                  outf.write(
+                      '<executable name="plumed/%s" platform="smp" arch="" version="%s">\n'%
+                      (name, version))
+                  if isMdrun:
+                      nopts="%s -nt $NCORES"%(opts)
+                  else:
+                      nopts=opts
+                  outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
+                             (cmd, nopts))
+                  outf.write('</executable>\n')
+          
+
+          return True
+    except OSError:
+          return False
+
+
+sys.stdout.write('<?xml version="1.0"?>\n')
+sys.stdout.write('<executable-list>\n')
+try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_plumed", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_mpi_plumed", "-cpt 10 -maxh 1", True)
+try_report_command(sys.stdout, "mdrun", "mdrun_plumed_mpi", "-cpt 10 -maxh 1", True)
+sys.stdout.write('</executable-list>\n')
