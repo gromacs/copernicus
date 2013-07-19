@@ -33,6 +33,8 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                   par=line.split()[-1]
                   if par == "thread_mpi":
                       threadMPI=True
+                  else:
+                      MPI=True
               elif re.match(r"MPI Library", line, re.IGNORECASE): # 4.6
                   if re.match(r".*thread_mpi", line, re.IGNORECASE):
                       threadMPI=True
