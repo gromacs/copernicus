@@ -342,7 +342,7 @@ class ClientMessage(ClientBase):
         return response
 
     def projectDeleteRequest(self, project, deleteDir):
-        """Start a new empty project """
+        """Delete a project and optionally also its directory """
         cmdstring="project-delete"
         fields = []
         fields.append(Input('cmd', cmdstring))
