@@ -20,6 +20,8 @@
 import logging
 import os
 import tarfile
+import gc
+
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.util.conf.server_conf import ServerConf
 
@@ -106,6 +108,7 @@ class SCProjectStart(ProjectServerCommand):
         UserHandler().addUserToProject(user, name)
         response.add("Project created: %s"%name)
         log.info("Started new project %s"%(name))
+        gc.collect()
 
 class SCProjectDelete(ProjectServerCommand):
     """Delete a project."""
@@ -122,6 +125,8 @@ class SCProjectDelete(ProjectServerCommand):
         if ( ( 'default_project_name' in request.session ) and 
              ( name == request.session['default_project_name'] ) ):
             request.session['default_project_name'] = None
+        del prj
+        gc.collect()
         response.add("Project deleted: %s%s."%(name, msg))
         log.info("Deleted project %s"%(name))
 
@@ -246,6 +251,7 @@ class SCProjectList(ProjectServerCommand):
         lst=prj.getNamedItemList(item)
         response.add(lst)
         log.info("Project list on %s: %s"%(prj.getName(), item))
+        gc.collect()
 
 class SCProjectDebug(ProjectServerCommand):
     """Debug named items in a project - implementation dependent."""
@@ -432,6 +438,7 @@ class SCProjectSave(ProjectServerCommand):
 
         else:
             response.add("No project specified for save",status="ERROR")
+        gc.collect()
 
 
 class SCProjectLoad(ProjectServerCommand):
@@ -453,6 +460,7 @@ class SCProjectLoad(ProjectServerCommand):
                 tar.extractall(path=extractPath)
                 tar.close()
                 serverState.readProjectState(projectName)
+                gc.collect()
 
             except:
                 response.add("No project file provided",status="ERROR")
