@@ -227,6 +227,9 @@ def copyConnection(conn, dstNetwork):
 class Connection(object):
     """Describes a link between a instance output and a instance input, or
        an input's initial value (if the connection has no source instance)."""
+    __slots__=['srcInstance', 'srcIO', 'srcItemList', 'dstInstance', 'dstIO',
+               'dstItemList', 'initialValue', 'implicit', 'srcExternal',
+               'dstExternal', 'srcAcp', 'dstAcp']
     def __init__(self, 
                  srcInstance, srcIO, srcItemList, 
                  dstInstance, dstIO, dstItemList, 

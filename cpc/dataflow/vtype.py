@@ -99,6 +99,8 @@ def itemListStr(items):
 
 class Type(description.Describable):
     """The class describing a data type."""
+    __slots__=['name', 'parent', 'compound', 'lib', 'implicit',
+               'builtin', 'simpleLiteral']
     def __init__(self, name, parent, lib=None):
         """Initializes an empty type
 

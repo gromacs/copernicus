@@ -35,6 +35,10 @@ class InstanceError(apperror.ApplicationError):
 class Instance(object):
     """The class describing a function instance in a function network. 
        An instance is a connected function in a network.  """
+    __slots__=['name', 'function', 'fullFnName', 'inputConns', 'outputConns',
+               'subnetInputConns', 'subnetOutputConns', 'implicit',
+               'inputs', 'outputs', 'subnetInputs', 'subnetOutputs',
+               'lib']
     def __init__(self, name, func, fullFnName, lib=None):
         """Initializes the instance with no inputs or outputs
 

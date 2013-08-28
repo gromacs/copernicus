@@ -49,6 +49,7 @@ class ActiveValue(value.Value):
        Values are trees with dicts/lists of members; the top level is usually
        a <instance>:in or <instance>:out. ActiveValue trees have listeners:
        active connection points that connect values together."""
+    __slots__=['seqNr', 'listener']
     def __init__(self, val, tp, parent=None, owner=None, selfName=None, seqNr=0,
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references

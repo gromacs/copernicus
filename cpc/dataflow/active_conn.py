@@ -59,6 +59,8 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
        ActiveConnection objects. Can serve as input or output
        point, with active instance or further connection points associated
        with it."""
+    __slots__=['value', 'directDests', 'activeInstance', 'sourceValue',
+               'sourceAcp', 'directSource', 'direction', 'listeners']
     def __init__(self, val, activeInstance, direction):
         """Initialize an active connection point with an any active instance 
            and downstream connections.

@@ -78,6 +78,8 @@ def interpretLiteral(literal, destType, sourceType=None, fileList=None):
 class ValueBase(object):
     """The basic interface for a value-like object."""
 
+    __slots__=[]
+
     def getSubValue(self, itemList):
         """Get a specific subvalue through a list of subitems, or return None 
            if not found.
@@ -127,6 +129,9 @@ class ValueBase(object):
 class Value(ValueBase):
     """The class describing a data value. Value classes hold function input 
        and output data, and are used to transmit external i/o data."""
+    __slots__=['type', 'basetype', 'createObject', 'parent', 'owner',
+               'fileValue', 'fileList', 'updated', 'selfName', 'seqNr',
+               'sourceTag', 'value']
     def __init__(self, value, tp, parent=None, owner=None, selfName=None, 
                  createObject=None, fileList=None, sourceTag=None):
         """Initializes an new value, with no references

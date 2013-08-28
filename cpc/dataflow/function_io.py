@@ -53,6 +53,7 @@ subnetOutputs = IODir(keywords.SubOut, False, True)
 class IOType(vtype.RecordType):
     """The list type specific for instance inputs/outputs/subnetinputs/...
        """
+    __slots__=['direction']
     def __init__(self, direction, instName, parentType):
         """Initialize based on direction and name."""
         self.direction=direction

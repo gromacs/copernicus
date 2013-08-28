@@ -65,6 +65,13 @@ class ActiveInstance(value.ValueBase):
        being active at the same time causes those instances to exist multiple
        times)."""
     
+    __slots__=['instance', 'function', 'name', 'project', 'runSeqNr', 'cputime',
+               'runLock', 'activeNetwork', 'inputVal', 'outputVal', 'subnetInputVal',
+               'subnetOutputVal', 'stagedInputVal', 'stagedSubnetInputVal',
+               'inputAcps', 'outputAcps', 'subnetInputAcps', 'subnetOutputAcps',
+               'baseDir', 'persDir', 'msg', 'outputDirNr', 'genTasks', 'updated',
+               'inputLock', 'outputLock', 'lock', 'state', 'tasks', 'subnet',
+               'inputListeners', 'lastUpdateAI', 'lastUpdateSource', 'lastUpdateSeqNr']
     # The initial state: will not run, until activated.
     held=ActiveInstanceState("held")
     # The active state where it's waiting for inputs to complete

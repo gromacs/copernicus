@@ -30,6 +30,7 @@ import apperror
 
 
 class Describable(object):
+    __slots__=['desc']
     """An object with a description."""
     def __init__(self):
         self.desc=None
@@ -39,6 +40,7 @@ class Describable(object):
         return self.desc
 
 class Description(object):
+    __slots__=['desc']
     """A description of a function or an input/output type."""
     def __init__(self, desc):
         """Initialize with a description string. Normally, this would only
