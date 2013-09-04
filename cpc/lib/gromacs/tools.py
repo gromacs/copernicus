@@ -251,7 +251,7 @@ def pdb2gmx(inp):
     #how do we handle itp output files?
     itpfiles=glob.glob(os.path.join(inp.getOutputDir(),'*.itp'))
     fo.setOut('include',itpfiles)
-    for i in range(len(itpfiles)):
+    for i in xrange(len(itpfiles)):
         fo.setOut('include[%d]'%(i),itpfiles[i])
     return fo
  

@@ -55,8 +55,8 @@ class CmdQueue(object):
     def __init__(self):
         self.data = [] 
         # this is a list of deques with the highest priority queue first. 
-        self.queue = [ deque() for x in range(CmdQueue.PRIO_LOW_BOUND-1, 
-                                              CmdQueue.PRIO_HIGH_BOUND)]
+        self.queue = [ deque() for x in xrange(CmdQueue.PRIO_LOW_BOUND-1, 
+                                               CmdQueue.PRIO_HIGH_BOUND)]
         # TODO: finer grained locks. For now we have a single global lock.
         self.lock=Lock()
         # The set of items popped from the queue that were inactive.
@@ -117,7 +117,7 @@ class CmdQueue(object):
                 raise QueueError("Tried to remove item from wrong queue.")
             #for dq in self.queue:
             n=len(dq)
-            for i in range(n):
+            for i in xrange(n):
                 if dq[0] == cmd:
                     nremoved+=1
                     dq[0].setQueue(None, None)
@@ -163,7 +163,7 @@ class CmdQueue(object):
             for dq in self.queue:
                 n=len(dq)
                 nback=0
-                for i in range(n):
+                for i in xrange(n):
                     if dq[0].active:
                         cont, doPop=fn(parm, dq[0])
                         if doPop:
@@ -217,7 +217,7 @@ class CmdQueue(object):
         """Purge a single queue from a project."""
         n=len(queue)
         nremoved=0
-        for i in range(n):
+        for i in xrange(n):
             if queue[0].task.project == project: 
                 nremoved+=1
                 queue[0].setQueue(None, None)

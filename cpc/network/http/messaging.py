@@ -58,7 +58,7 @@ class Messaging:
         
 
         elemCount = len(L)
-        for i in range(elemCount):
+        for i in xrange(elemCount):
             file.write(L[i])
             if i!= elemCount-1:
                 file.write(CRLF)

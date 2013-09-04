@@ -53,7 +53,7 @@ class path_point:
 
 def piecewiseLinearInterpolation(x, xpoints, ypoints):
     # first seek out the right interval
-    for i in range(1, len(xpoints)-1):
+    for i in xrange(1, len(xpoints)-1):
         if xpoints[i] >= x:
             break
     # then do a linear interpolation
@@ -70,7 +70,7 @@ class path:
         """Get the values from the inp object."""
         self.res=[]
         # read in the results
-        for i in range(len(inp.getInput('bar_values'))):
+        for i in xrange(len(inp.getInput('bar_values'))):
             la=inp.getInput('bar_values[%d].lambda_A'%i)
             lb=inp.getInput('bar_values[%d].lambda_B'%i)
             stddev=inp.getInput('bar_values[%d].stdev.value'%i)
@@ -105,7 +105,7 @@ class path:
         lambdas=[ self.res[0].lambda_a ]
         stddevs = [ 0 ]
         stddev_sum=0.
-        for i in range(Norig):
+        for i in xrange(Norig):
             stddev_sum += self.res[i].stddev
             lambdas.append( self.res[i].lambda_b )
             stddevs.append(stddev_sum)
@@ -116,7 +116,7 @@ class path:
         # now generate the points
         newLambdas=[]
         newLambdas.append( self.res[0].lambda_a )
-        for i in range(Nintervals-1):
+        for i in xrange(Nintervals-1):
             newTarget=(float(i+1)/float(Nintervals)) * stddev_sum
             lam=piecewiseLinearInterpolation(newTarget, stddevs, lambdas) 
             newLambdas.append(lam)
@@ -142,7 +142,7 @@ def calc_path(inp, out):
     p=path(inp)
     newLambdas=p.makeLambdaSpacing(spacing)
     #pers.write()
-    for i in range(len(newLambdas)):
+    for i in xrange(len(newLambdas)):
         out.setOut('lambdas[%d]'%i, FloatValue( newLambdas[i] ) )
     return out
 

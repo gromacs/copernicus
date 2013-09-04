@@ -184,7 +184,7 @@ class Instance(object):
                 if same:
                     iconnSub=iconn.getDstItemList()
                     connSub=conn.getDstItemList()
-                    for i in range(min(len(iconnSub), len( connSub))):
+                    for i in xrange(min(len(iconnSub), len( connSub))):
                         if iconnSub[i] != connSub[i]:
                             same=False
                             break
@@ -206,7 +206,7 @@ class Instance(object):
                 if same:
                     iconnSub=iconn.getDstItemList()
                     connSub=conn.getDstItemList()
-                    for i in range(min(len(iconnSub), len( connSub))):
+                    for i in xrange(min(len(iconnSub), len( connSub))):
                         if iconnSub[i] != connSub[i]:
                             same=False
                             break

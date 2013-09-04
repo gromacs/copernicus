@@ -62,7 +62,7 @@ def fe_iteration(inp, out):
     fe_path=inp.getInput('path.lambdas')
     #nlambdas=len(fe_path)
     path_lambdas=[]
-    for i in range(len(fe_path)):
+    for i in xrange(len(fe_path)):
         path_lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
 
     # by default, the lambdas are the same as the path lambdas
@@ -71,7 +71,7 @@ def fe_iteration(inp, out):
     lambdas_in=inp.getInput('lambdas')
     if (lambdas_in is not None) and (len(lambdas_in) > 0):
         lambdas=[]
-        for i in range(len(lambdas_in)):
+        for i in xrange(len(lambdas_in)):
             lambdas.append(inp.getInput('lambdas[%d]'%i))
 
     calc_path=pers.get('calc_path')
@@ -131,7 +131,7 @@ def fe_iteration(inp, out):
                                       'value' : StringValue(foreignLambdas)}))
             settings_array.append(ArrayValue(mdp))
             i+=1
-        for i in range(mdruns, len(lambdas)):
+        for i in xrange(mdruns, len(lambdas)):
             lam=lambdas[i]
             #sys.stderr.write("lambda %d: %g\n"%(i, lam))
             lami=findClosest(path_lambdas, lam)
@@ -159,7 +159,7 @@ def fe_iteration(inp, out):
         N=len(inp.getSubnetInput('new_lambdas'))
         newLambdas=[]
         new_lambda_values=N
-        for i in range(N):
+        for i in xrange(N):
             lam=inp.getSubnetInput('new_lambdas[%d]'%i)
             #newLambdas.append(lam)
             #lami=findClosest(path_lambdas, lam)
@@ -171,7 +171,7 @@ def fe_iteration(inp, out):
         confs=0
     if calc_path is not None:
         if new_lambda_values > 0 and new_lambda_values != confs:
-            for i in range(new_lambda_values):
+            for i in xrange(new_lambda_values):
                 if pers.get('conf_%d'%i) is None:
                     lami=findClosest(path_lambdas, 
                                      inp.getSubnetInput('new_lambdas[%d]'%i))
@@ -187,7 +187,7 @@ def fe_iteration(inp, out):
             lnInConfs=len(inp.getSubnetInput('confs'))
             sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
             #lnInConfs=len(self.getOutput('confs'))
-            for i in range(lnInConfs):
+            for i in xrange(lnInConfs):
                 inConf=inp.getSubnetInput('confs[%d]'%i)
                 sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
                 if inConf is not None:

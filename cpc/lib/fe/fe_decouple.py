@@ -50,7 +50,7 @@ class partialRes(object):
         dgArray=inp.getSubnetInput(name) 
         if dgArray is not None: 
             # we ignore 0 because that's equilibration
-            for i in range(1, len(dgArray)):
+            for i in xrange(1, len(dgArray)):
                 #sys.stderr.write('%s[%d]\n'%(name, i))
                 subval=inp.getSubnetInput('%s[%d]'%(name,i))
                 if subval is not None:

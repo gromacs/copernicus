@@ -451,7 +451,7 @@ class Worker(object):
             joinTo=joinableWorkloads[0]
             joinableWorkloads.remove(joinTo)
             join=[]
-            for i in range(len(joinableWorkloads)):
+            for i in xrange(len(joinableWorkloads)):
                 if joinTo.canJoin(joinableWorkloads[i]):
                     log.debug("Joining command %s and %s"%
                               (joinTo.cmd.id, joinableWorkloads[i].cmd.id))

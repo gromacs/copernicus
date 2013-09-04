@@ -42,7 +42,7 @@ class TaskExecThreads(object):
         self.taskQueue=taskQueue
         self.cmdQueue=cmdQueue
         self.threads=[]
-        for i in range(N):
+        for i in xrange(N):
             te=TaskExecThread(taskQueue, cmdQueue)
             self.threads.append(te)
         self.lock=threading.Lock()

@@ -263,7 +263,7 @@ def grompp_multi(inp):
         running=pers.get("running")
     it=iterate.iterations(inp, inputs, outputs, pers)
     out=inp.getFunctionOutput()
-    for i in range(running, it.getN()):
+    for i in xrange(running, it.getN()):
         instName="grompp_%d"%i
         out.addInstance(instName, "grompp")
         it.connect(out, i, instName)
@@ -294,7 +294,7 @@ def mdrun_multi(inp):
         running=pers.get("running")
     it=iterate.iterations(inp, inputs, outputs, pers)
     out=inp.getFunctionOutput()
-    for i in range(running, it.getN()):
+    for i in xrange(running, it.getN()):
         instName="mdrun_%d"%i
         out.addInstance(instName, "mdrun")
         it.connect(out, i, instName)
@@ -324,7 +324,7 @@ def grompp_mdrun_multi(inp):
         running=pers.get("running")
     it=iterate.iterations(inp, inputs, outputs, pers)
     out=inp.getFunctionOutput()
-    for i in range(running, it.getN()):
+    for i in xrange(running, it.getN()):
         gromppInstName="grompp_%d"%i
         mdrunInstName="mdrun_%d"%i
         out.addInstance(gromppInstName, "grompp")

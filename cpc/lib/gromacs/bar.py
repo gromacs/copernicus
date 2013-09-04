@@ -128,7 +128,7 @@ def g_bar(inp):
     histoutname=os.path.join(outDir, "histogram.xvg")
     #item=inp.getInput('item')
     cmdline=["g_bar", "-g"]
-    for i in range(nedrfiles):
+    for i in xrange(nedrfiles):
         edrfile=inp.getInput('edr[%d]'%i)
         if edrfile is None:
             # there is an incomplete set of inputs. Return immediately

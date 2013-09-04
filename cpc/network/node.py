@@ -91,7 +91,7 @@ class Nodes(object):
             else:
                 list.insert(priority,node)
 
-            for i in range(len(list)):
+            for i in xrange(len(list)):
 
                 list[i].setPriority(i)
                 self.nodes[list[i].getId()] = list[i]

@@ -224,7 +224,7 @@ def msm(inp, out):
         start_sim=num_sim
 
         confs=inp.getInput("confs")
-        for i in range(start_sim):
+        for i in xrange(start_sim):
             conf=confs[i % len(confs)].value
             spawnNewSim(inp, out, i, conf, 0, True, "initial")
         #out.setOut('run_num', IntValue(num_sim))
@@ -317,7 +317,7 @@ def msm(inp, out):
         clust_in=inp.getSubnetInput('msm_out')
         if clust_in is not None and len(clust_in)>0:
             last=None
-            for i in range(len(clust_in)):
+            for i in xrange(len(clust_in)):
                 if clust_in[i].isUpdated():
                     last=i
             if last is not None:
@@ -375,7 +375,7 @@ def msm(inp, out):
                         Nnew_sims=len(startConfs)
                         # the priority is 2 * the cluster_gen:
                         priority=2*(last+1)
-                        for i in range(Nnew_sims):
+                        for i in xrange(Nnew_sims):
                             # now start new sims
                             conf=inp.getSubnetInput('%s.sim_start_conf[%d]'%
                                                     (lastnm, i))

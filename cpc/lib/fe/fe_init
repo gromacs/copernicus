@@ -204,7 +204,7 @@ def fe_init(inp, out):
         out.addConnection('self:ext_in.b', 'self:ext_out.path.b')
         out.addConnection('self:ext_in.molecule_name', 
                           'self:ext_out.path.molecule_name')
-        for i in range(npoints_init):
+        for i in xrange(npoints_init):
             lam=float(i)/float(npoints_init-1)
             out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
         mdrun=npoints_init
@@ -228,7 +228,7 @@ def fe_init(inp, out):
         if proc.returncode != 0:
             raise FEError("ERROR: trjconv returned %s, %s"%(stdout, stderr))
         # extract the frames.
-        for i in range(npoints_init-1):
+        for i in xrange(npoints_init-1):
             confname=os.path.join(inp.getOutputDir(), "lambda%d.gro"%i)
             if not os.path.exists(confname):
                 raise FEError("ERROR: trjconv failed to deliver: %s"%

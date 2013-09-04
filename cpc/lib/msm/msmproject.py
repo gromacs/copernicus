@@ -345,7 +345,7 @@ class MSMProject(object):
         # Set a flag to indicate if we have written the maxstate.pdb-file
         have_maxstate=0
         
-        for i in range(NumStates):
+        for i in xrange(NumStates):
             traj_num    = RandomConfs[i][0][0]
             frame_nr    = RandomConfs[i][0][1]
             lh5name     = Proj.GetTrajFilename(traj_num)            
@@ -379,7 +379,7 @@ class MSMProject(object):
         # newRuns. If we're later assigning macrosates, we'll overwrite them
         # with adaptive sampling configurations
         self.newRuns=[]
-        for j in range(self.num_to_start*self.num_macro):
+        for j in xrange(self.num_to_start*self.num_macro):
             # pick a cluster at random:
             i=random.random()*int(NumStates)
             traj_num    = RandomConfs[i][0][0]
@@ -494,7 +494,7 @@ class MSMProject(object):
         self.macroConfs=[]
         for k,v in StartStates.items():
             num_started = 0
-            for i in range(NumStates):
+            for i in xrange(NumStates):
                 if i==k:
                     trajnum  = RandomConfs[i][0][0]
                     frame_nr = RandomConfs[i][0][1]
