@@ -61,7 +61,6 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
 
         else:
             self.sock = socket
-        self.set_debuglevel(10)
         self.host = host
         self.connected = False
 

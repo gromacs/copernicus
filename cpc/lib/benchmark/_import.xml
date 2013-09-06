@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+<cpc>
+    <!--
+    These module consists of two functions: sleep and result collector.
+    Sleep sends a job that sleeps for a set amount of time on the worker side.
+
+    result collector calculates the total and average time it takes for a full
+    set of jobs to complete.
+    -->
+
+    <type id="timings" base="record">
+        <desc>Start and end timstamps</desc>
+        <field type="int" id="start_timestamp">
+            <desc>Unix timestamp for when the job starts. Is set
+                in the initial phase before a job is put on the
+                queue </desc>
+        </field>
+        <field type="int" id="end_timestamp">
+            <desc>Unix timestamp for when the job ended. Is set
+                once a command has been returned from a worker
+                called </desc>
+        </field>
+        <field type="int" id="roundtrip_time">
+            <desc>end_timestamp-start_timestamp</desc>
+        </field>
+    </type>
+
+    <type id="timings_array" base="array" member-type="timings" />
+
+
+    <function id="sleep" type="python-extended">
+        <desc>Sends a job that will sleep for t seconds on the worker
+            side. Used to simulate computing time</desc>
+        <inputs>
+            <field type="int" id="sleep_time" >
+                <desc>Sleep time in seconds</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="timings" id="exec_time" >
+                <desc>Start and end timings for the whole roundtrip</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.benchmark.sleep"
+                    import="cpc.lib.benchmark"
+                    persistent_dir="true" />
+    </function>
+
+
+    <function id="result_collector" type="python-extended">
+        <desc>Collects results</desc>
+        <inputs>
+            <field type="int" id="num_samples" >
+                <desc>number of expected samples to average over</desc>
+            </field>
+            <field type="timings_array" id="sleep_time_array" >
+                <desc>Sleep time in seconds</desc>
+            </field>./
+        </inputs>
+        <outputs>
+            <field type="int" id="start_time" >
+                <desc>average roundtrip time</desc>
+            </field>
+            <field type="int" id="end_time" >
+                <desc>average roundtrip time</desc>
+            </field>
+            <field type="int" id="total_time" >
+                <desc>total time taken</desc>
+            </field>
+            <field type="float" id="average_time" >
+                <desc>average roundtrip time</desc>
+            </field>
+            <field type="string" id="csv_result" >
+                <desc>Returns results in csv format,
+                    format is: NUM_JOBS,AVERAGE_TIME</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.benchmark.collectResults"
+                    import="cpc.lib.benchmark"
+                    persistent_dir="true" />
+    </function>
+
+
+</cpc>
+
