@@ -26,6 +26,7 @@ import sys
 import copy
 import subprocess
 from getpass import getpass
+import textwrap
 
 import cpc.util
 from cpc.util import cmd_line_utils
@@ -117,6 +118,8 @@ def print_usage():
 args=copy.copy(sys.argv)
 
 if len(args)<2:
+    cmd_line_utils.printLogo()
+    cmd_line_utils.printAuthors()
     print_usage()
 
 # remove the 0th argument
@@ -261,6 +264,8 @@ try:
         resp = clnt.listRequest("users")
         ProcessedResponse(resp).pprint(renderMethod)
     elif cmd == "version":
+        cmd_line_utils.printLogo()
+        cmd_line_utils.printAuthors()
         print("Client version:  %s"%__version__)
         print("\nConnecting to server for version information:")
         ProcessedResponse(clnt.serverInfo()).pprint(CmdLine.serverInfo)

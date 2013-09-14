@@ -101,8 +101,12 @@ cmd = args[0]
 
 try:
     if cmd == "help":
+        cmd_line_utils.printLogo()
+        cmd_line_utils.printAuthors()
         print_usage()
     elif cmd == "version":
+        cmd_line_utils.printLogo()
+        cmd_line_utils.printAuthors()
         cf = ServerConf(confdir=servername)
         print("Server version:  %s"%__version__)
         print("Server id: %s"%cf.getServerId())

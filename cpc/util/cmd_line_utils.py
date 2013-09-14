@@ -20,9 +20,8 @@
 '''Very simple functions used by the command line tools'''
 from cpc.util.conf.connection_bundle import ConnectionBundle
 import cpc.util.openssl
-#from socket import gethostname
-import socket
 import sys
+import textwrap
 
 from cpc.util.conf.conf_base import Conf
 from cpc.util.conf.conf_base import NoConfError, ConfError
@@ -106,4 +105,41 @@ def getArg(arglist, argnr, name):
     except IndexError:
         raise ClientError("Missing argument: %s" % name)
     return ret
-    
+
+
+terminalWidth = 80
+def printLogo():
+    logo =  """
+   ___                                  _
+  / __\ ___   _ __    ___  _ __  _ __  (_)  ___  _   _  ___
+ / /   / _ \ | '_ \  / _ \| '__|| '_ \ | | / __|| | | |/ __|
+/ /___| (_) || |_) ||  __/| |   | | | || || (__ | |_| |\__
+\____/ \___/ | .__/  \___||_|   |_| |_||_| \___| \__,_||___/
+             |_|"""
+
+    lines = logo.splitlines()
+    for line in lines:
+        print "          %s"%line
+
+def printAuthors():
+    developers = ["Magnus Lundborg", "Patrik Falkman","Grant Rotskoff","Per Larsson"]
+    authors = ["Sander Pronk","Iman Pouya","Erik Lindahl"]
+
+    contributorsTxt = "Contributions from: %s"%", ".join(developers)
+    authorsTxt =  ", ".join(authors)
+
+    wrapper = textwrap.TextWrapper(width=terminalWidth)
+    lines = wrapper.wrap(contributorsTxt)
+
+    print "\n"
+    for line in lines:
+        print line.center(terminalWidth)
+
+    print "\n"
+
+    for line in wrapper.wrap(authorsTxt):
+        print line.center(terminalWidth)
+
+
+    print "\n\n"
+

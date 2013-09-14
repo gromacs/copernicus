@@ -130,30 +130,26 @@ def getArg(argnr, name):
         raise ClientError("Missing argument: %s"%name)
     return ret
 
-# now parse command and execute it.
-#clnt=cpc.client(cf, args)
-
 cmd=args[0]
-
-#cf= cmd_line_utils.initiateConnectionBundle(bundleFile)
-cf= ConnectionBundle(bundleFile)
-
 cpc.util.log.initClientLog(debug)
 
 try:
     if cmd == "help":
+        cmd_line_utils.printLogo()
+        cmd_line_utils.printAuthors()
         print_usage()
     elif cmd == "version":
-         print("Worker version:  %s"%__version__)
+        cmd_line_utils.printLogo()
+        cmd_line_utils.printAuthors()
+        print("Worker version:  %s"%__version__)
+
     else:
+        cf= ConnectionBundle(bundleFile)
         type=getArg(0, "Worker type")
         restargs=[]
         for i in range(1, len(args)):
             restargs.append(args[i])
         worker=cpc.worker.Worker(cf, opts, type, restargs, workdir, quitMinutes)
-        #def shutdownHandler(signum,frame):
-        #  worker.shutdown()
-        #signal.signal(signal.SIGINT,shutdownHandler)
         worker.run()
         worker.cleanup()
 except ClientError as e:
