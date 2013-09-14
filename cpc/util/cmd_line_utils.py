@@ -55,10 +55,11 @@ def printSortedConfigListValues(configs):
 
 def initiateConnectionBundle(conffile):
     cf = None
+
     try:
         cf = ConnectionBundle(conffile)
         return cf
-    except ConfError:
+    except NoConfError:
         print "Could not find a connection bundle \nPlease specify one with " \
               "with the -c flag or supply the file with the name\nclient.cnx" \
               " in your configuration folder "

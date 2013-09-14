@@ -144,7 +144,7 @@ try:
         print("Worker version:  %s"%__version__)
 
     else:
-        cf= ConnectionBundle(bundleFile)
+        cf= cmd_line_utils.initiateConnectionBundle(bundleFile)
         type=getArg(0, "Worker type")
         restargs=[]
         for i in range(1, len(args)):
