@@ -18,6 +18,9 @@
 
 
 '''Very simple functions used by the command line tools'''
+import os
+import shutil
+from cpc.util.conf import conf_base, server_conf
 from cpc.util.conf.connection_bundle import ConnectionBundle
 import cpc.util.openssl
 import sys
@@ -108,6 +111,7 @@ def getArg(arglist, argnr, name):
     return ret
 
 
+
 terminalWidth = 80
 def printLogo():
     logo =  """
@@ -143,4 +147,27 @@ def printAuthors():
 
 
     print "\n\n"
+
+def checkServerConfExistAndAskToRemove(hostConfDir,altDirName=None):
+    '''
+    This method checks if a server conf exists and asks if the user wants to wipe it and continue.
+    if Y the folder will be wiped and the setup flow will proceed
+    if N the setup flow will be aborted
+
+    returns: boolean
+    '''
+    dirname = server_conf.resolveSetupConfBaseDir(altDirName)
+    confDir=cpc.util.conf.conf_base.findAndCreateGlobalDir()
+
+    # now if a host-specific directory already exists, we use that
+    confDir = server_conf.resolveSetupConfDir(confDir, dirname, hostConfDir,altDirName=altDirName)
+
+    if os.path.exists(confDir):
+        answer = raw_input("A configuration already exists in %s. Overwrite? (y/N)? "%confDir)
+        if(answer.lower() == 'y'):
+            return True
+
+        else:  # answer = n
+            print("Server setup aborted")
+            exit(0)
 

@@ -24,16 +24,16 @@ Created on Apr 11, 2011
 '''
 import socket
 import uuid
-
-from cpc.network.node import Nodes
-import conf_base
 import os
 import sys
 import shutil
 import logging
-import cpc.server.state.database as database
+
+from cpc.network.node import Nodes
+import conf_base
 import cpc.util.exception
 from cpc.util.conf.conf_base import Conf, ConfError
+
 
 log=logging.getLogger('cpc.util.conf.server_conf')
 
@@ -44,32 +44,41 @@ class SetupError(cpc.util.exception.CpcError):
     pass
 
 
-def initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
-                        altDirName=None):
-                        #configName =None,confDir=None,forceReset=False):
+def resolveSetupConfDir(confDir, dirname, hostConfDir,altDirName=None):
     '''
-       @input configName String  
+    resolves the confdir to write to when performing a server setup
     '''
-
-    dirname = altDirName or socket.getfqdn()
-
-    confDir=cpc.util.conf.conf_base.findAndCreateGlobalDir()
-
-    # now if a host-specific directory already exists, we use that
     if os.path.exists(os.path.join(confDir, dirname)):
-       hostConfDir=True 
-
+        hostConfDir = True
     if hostConfDir or altDirName:
         confDir = os.path.join(confDir, dirname)
     else:
         confDir = os.path.join(confDir, conf_base.Conf.default_dir)
+    return confDir
+
+def resolveSetupConfBaseDir(altDirName = None):
+    dirname = altDirName or socket.getfqdn()
+    return dirname
+
+def initiateServerSetup(rundir, forceReset, hostConfDir,
+                        altDirName=None):
+
+    dirname = resolveSetupConfBaseDir(altDirName)
+    confDir=cpc.util.conf.conf_base.findAndCreateGlobalDir()
+
+    # now if a host-specific directory already exists, we use that
+    confDir = resolveSetupConfDir(confDir, dirname, hostConfDir,altDirName=altDirName)
 
     checkDir = os.path.join(confDir,"server")
     confFile = os.path.join(checkDir,"server.conf")
+
+    #Checks for conf files and option to reset kept here even though the function cmd_line_utils.checkServerConfExistAndAskToRemove
+    #Is handling the same thing. In a case where we do not have user interaction it should still be this functions responsibility to check if server confs exist
     if forceReset and os.path.exists(checkDir):
+        print "Overwriting configuration in %s"%confDir
         shutil.rmtree(checkDir)
     elif os.path.exists(checkDir) or os.path.exists(confFile):
-        raise SetupError("A configuration already exists in %s\nTo overwrite it, use the -force option"%
+        raise SetupError("A configuration already exists in %s"%
                         (confDir))
 
     os.makedirs(checkDir)
@@ -90,19 +99,14 @@ def initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
     #make file read only so that nobody accidentally rewrites a server id
     os.chmod(cf.getServerIdFileName(),0400)
 
-    #setup database
-    try:
-        database.setupDatabase(rootpass)
-    except Exception as e:
-        raise SetupError("Failed to initialize database: %s"%e)
+
 
 def setupCA(openssl, conf, forceReset=False):
     checkDir = conf.getCADir()
     if forceReset and os.path.exists(checkDir):
         shutil.rmtree(checkDir)
     elif os.path.exists(checkDir)== True:
-        raise SetupError("A CA already exists in %s\nTo overwrite it, use 'cpc-server setup -force %s"%
-                        (checkDir, rundir))
+        raise SetupError("A CA already exists in: %s"%checkDir)
     openssl.setupCA()
 
 

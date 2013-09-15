@@ -26,20 +26,23 @@ import sys
 import copy
 import os
 import shutil
+from getpass import getpass
 
 import cpc.client
 import cpc.network.server
+from cpc.server.state import database
 import cpc.worker
 import cpc.util
 import cpc.util.log
 import cpc.server.tracking
 import cpc.util.conf.conf_base
 from cpc.util.exception import ClientError
-from cpc.util.conf.server_conf import ServerConf
+from cpc.util.conf.server_conf import ServerConf, SetupError
 from cpc.util.conf.server_conf import initiateServerSetup
 from cpc.util import cmd_line_utils
-from getpass import getpass
 from cpc.util.version import __version__
+
+
 def print_usage():
     print "Usage: cpc-server start [-d]"
     print "       cpc-server config-list"
@@ -148,7 +151,7 @@ try:
                     sys.exit(1)
                 hostConfDir = True
             elif arg == '-stdin':
-                rootpass = raw_input("Please enter password for root account:")
+                rootpass = raw_input("Please enter password for the root copernicus account:")
             elif arg == '-servername':
                 if(hostConfDir):
                     print "cannot use -servername in combination with -host"
@@ -166,10 +169,31 @@ try:
         if rundir is None:
             raise ClientError(
                 "Missing run directory: the base directory for project output")
-        if rootpass is None:
-            rootpass = getpass("Please enter password for root account:")
-        initiateServerSetup(rundir, forceReset, hostConfDir, rootpass,
+
+        if(not forceReset):
+            forceReset = cmd_line_utils.checkServerConfExistAndAskToRemove(hostConfDir,altHostName)
+
+        initiateServerSetup(rundir, forceReset, hostConfDir,
                             altHostName)
+        if rootpass is None:
+            #setup database
+            rootpass = getpass("\nPlease enter password for the root copernicus account:")
+        try:
+            database.setupDatabase(rootpass)
+        except Exception as e:
+            raise SetupError("Failed to initialize database: %s"%e)
+            sys.exit(1)
+
+
+
+        #direct invocation of method not feasible since a conf object is a singleton,
+        # client conf and server conf cannot be instantiated at the same time
+        cmd = "cpcc add-server localhost %s"%ServerConf().getServerUnverifiedHTTPSPort()
+        os.system(cmd)
+
+        print "\nInstallation succeeded.\nYou can now start the server with cpc-server start"
+        print "After starting the the server you can login to the server using the copernicus root user (cpcc login root)"
+
 
         sys.exit(0)
 
