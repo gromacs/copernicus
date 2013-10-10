@@ -1,22 +1,22 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This file is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
 # License as published by the Free Software Foundation; either
 # version 2.1 of the License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # Lesser General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Lesser General Public
 # License along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301   
-# USA 
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
+# USA
 
 import logging
 import os
@@ -52,14 +52,14 @@ def readInput(inputFile=sys.stdin, name="stdin"):
 
 class FunctionRunInput(object):
     """Class describing the inputs of a function.
-       
+
         Its readable member variables are:
         inputs (a Value object, or None)
         subnetInputs (a Value object, or None)
         cmd (a Command that has just finished, or None)
         outputDir (a string holding the output directory, or None)
         persistentDir (a string holding the persistent directory, or None)"""
-    def __init__(self, inputs=None, subnetInputs=None, 
+    def __init__(self, inputs=None, subnetInputs=None,
                  outputs=None, subnetOutputs=None,
                  outputDir=None, persistentDir=None, cmd=None,
                  fn=None, activeInstance=None, project=None):
@@ -151,7 +151,7 @@ class FunctionRunInput(object):
         if retv is None:
             return False
         return retv.isUpdated()
- 
+
     # outputs
     def hasOutput(self, itemname):
         """Check whether a particular output exists"""
@@ -215,7 +215,7 @@ class FunctionRunInput(object):
         if retv is None:
             return False
         return retv.isUpdated()
- 
+
 
     def getBaseDir(self):
         """Get the project's basedir."""
@@ -225,17 +225,27 @@ class FunctionRunInput(object):
         """Get the persistence directory"""
         if self.persistentDir is None:
             return None
-        if not os.path.isabs(self.persistentDir): 
+        if not os.path.isabs(self.persistentDir):
             return os.path.join(self.baseDir, self.persistentDir)
         else:
             return self.persistentDir
 
+    def getParentPersistentDir(self):
+        """Get a good guess of the persistent directory of the
+           parent instance. Can be very risky since we do not know
+           if there is a parent instance or what its persistence
+           directory is called."""
+        if self.persistentDir is None:
+            return None
+        persdir = os.path.join(self.getPersistentDir(), '..', '..', '_persistence')
+        if os.path.isdir(persdir):
+            return persdir
 
     def getOutputDir(self):
         """Get the output directory"""
         if self.outputDir is None:
             return None
-        if not os.path.isabs(self.outputDir): 
+        if not os.path.isabs(self.outputDir):
             return os.path.join(self.baseDir, self.outputDir)
         else:
             return self.outputDir
@@ -251,15 +261,15 @@ class FunctionRunInput(object):
         self.project=project
         if self.project is not None:
             self.baseDir=project.getBasedir()
-            if ( self.persistentDir is not None and 
-                 os.path.isabs(self.persistentDir)) : 
+            if ( self.persistentDir is not None and
+                 os.path.isabs(self.persistentDir)) :
                 self.persistentDir=os.path.relpath(self.persistentDir,
                                                    self.baseDir)
-            if ( self.outputDir is not None and 
-                 os.path.isabs(self.outputDir)) : 
+            if ( self.outputDir is not None and
+                 os.path.isabs(self.outputDir)) :
                 self.outputDir=os.path.relpath(self.outputDir,
                                                self.baseDir)
- 
+
     def destroy(self):
         """Destroy all file object refs associated with this task."""
         if self.inputs is not None:
@@ -327,7 +337,7 @@ class FunctionRunInput(object):
 
 class FunctionRunOutput(object):
     """A class holding the output of a function's run method.
-       
+
        Its readable and directly manipulable member variables are:
        - outputs (a list of OutputItem objects)
        - subnetOutputs (a list of OutputItem objects)
@@ -357,13 +367,13 @@ class FunctionRunOutput(object):
 
     def setOut(self, ioitem, outval):
         """Add a specified output value.
-            ioitem = the full output specifier 
+            ioitem = the full output specifier
             outval = an OutValue (OutValue object) """
         if not isinstance(outval, value.Value):
             raise FunctionRunError(
                         "Output value for '%s' is not a Value object."%
                         (ioitem))
-        oi=OutputItem(ioitem, outval) 
+        oi=OutputItem(ioitem, outval)
         self.outputs.append( oi )
         return oi
         #self.outputs.append( OutputItem(ioitem, outval) )
@@ -376,7 +386,7 @@ class FunctionRunOutput(object):
             raise FunctionRunError(
                         "Subnet output value for '%s' is not a Value object."%
                         (ioitem))
-        oi=OutputItem(ioitem, outval) 
+        oi=OutputItem(ioitem, outval)
         self.subnetOutputs.append( oi )
         return oi
         #self.subnetOutputs.append( OutputItem(ioitem, outval) )
@@ -489,7 +499,7 @@ class FunctionRunOutput(object):
         outf.write('%s</function-output>\n'%indstr)
 
 class NewInstance(object):
-    """A class describing a new instance for a function's subnet, as an 
+    """A class describing a new instance for a function's subnet, as an
        output of a function."""
     def __init__(self, instanceName, functionName):
         self.name=instanceName
@@ -503,12 +513,12 @@ class NewInstance(object):
         outf.write('Function instance of %s, named %s\n'%
                    (self.functionName, self.instanceName))
 
- 
+
 class NewConnection(object):
     """A class describing a new connection, as an output of a function."""
     def __init__(self, srcStr, dstStr, val=None):
         """Initialize based on srouce and destination strings, in the form
-           of 
+           of
            instance_name:in/out/sub_in/sub_out.itemname[subItemname]
            that can be parsed with connection.splitIOName()
 
@@ -534,10 +544,10 @@ class NewConnection(object):
                        (indstr, self.srcStr, self.dstStr))
         else:
             outf.write('%s<connection value="%s" type="%s" dst="%s" />\n'%
-                       (indstr, self.val.value, self.val.getType().getName(), 
+                       (indstr, self.val.value, self.val.getType().getName(),
                         self.dstStr))
 
-       
+
 
 class IOReaderError(apperror.ApplicationXMLError):
     def __init__(self, msg, reader):
@@ -631,7 +641,7 @@ class RecordValue(value.Value):
 
 
 class IOReader(xml.sax.handler.ContentHandler):
-    """XML reader for external commands. Parses input and output generated by 
+    """XML reader for external commands. Parses input and output generated by
        ExternalFunction.run()."""
     # Section numbers
     none=0
@@ -660,7 +670,7 @@ class IOReader(xml.sax.handler.ContentHandler):
         self.loc=None
         if self.inp is None:
             if self.out is None:
-                raise IOReaderError("IOReader is neither input nor output", 
+                raise IOReaderError("IOReader is neither input nor output",
                                     self)
             self.isInput=False
         else:
@@ -771,7 +781,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                 # read it in as a value
                 val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
-                                                      allowUnknownTypes=True), 
+                                                      allowUnknownTypes=True),
                                     name)
 
         elif name == "subnet-outputs":
@@ -782,11 +792,11 @@ class IOReader(xml.sax.handler.ContentHandler):
                 # read it in as a value
                 val=value.Value(None, vtype.recordType)
                 self.setValueReader(value.ValueReader(self.filename, val,
-                                                      allowUnknownTypes=True), 
+                                                      allowUnknownTypes=True),
                                     name)
         elif name == "new-instances":
             if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-instances tag", 
+                raise IOReaderError("Misplaced new-instances tag",
                                        self)
             self.section=IOReader.newInstances
         elif name == "new-connections":
@@ -794,7 +804,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                 raise IOReaderError("Misplaced new-connections tag", self)
             self.section=IOReader.newConnections
         elif name == "commands":
-            if (self.section != IOReader.none): 
+            if (self.section != IOReader.none):
                 raise IOReaderError("Misplaced commands tag", self)
             self.section=IOReader.cmd
             cancel=cpc.util.getBooleanAttribute(attrs,"cancel_prev")
@@ -811,7 +821,7 @@ class IOReader(xml.sax.handler.ContentHandler):
             self.valueName=id=attrs.getValue("id")
             # TODO: handle compound types
             #val=value.Value(None, vtype.valueType)
-            self.setValueReader(value.ValueReader(self.filename, None, 
+            self.setValueReader(value.ValueReader(self.filename, None,
                                                   implicitTopItem=False,
                                                   allowUnknownTypes=True), name)
         elif name == "instance":
@@ -839,7 +849,7 @@ class IOReader(xml.sax.handler.ContentHandler):
                 if not attrs.has_key('type'):
                     raise IOReaderError("connection has no type", self)
                 tpname=attrs.getValue('type')
-                if ( (tpname not in vtype.basicTypes) or 
+                if ( (tpname not in vtype.basicTypes) or
                      vtype.basicTypes[tpname].isCompound() ):
                     raise IOReaderError(
                                 "Value connection with non-basic type %s"%
@@ -875,10 +885,10 @@ class IOReader(xml.sax.handler.ContentHandler):
                 else:
                     if name == "value":
                         if self.section==IOReader.outputs:
-                            self.out.setOut(self.valueName, 
+                            self.out.setOut(self.valueName,
                                             self.valueReader.value)
                         elif self.section==IOReader.subnetOutputs:
-                            self.out.setSubOut(self.valueName, 
+                            self.out.setSubOut(self.valueName,
                                                self.valueReader.value)
                         else:
                             raise IOReaderError("Wrong section for value",self)
@@ -898,11 +908,11 @@ class IOReader(xml.sax.handler.ContentHandler):
                     self.out.cmds=commands
             else:
                 self.cmdReader.endElement(name)
-        elif (name == "inputs" or 
-              name == "outputs" or 
-              name == "subnet-inputs" or 
+        elif (name == "inputs" or
+              name == "outputs" or
+              name == "subnet-inputs" or
               name == "subnet-outputs" or
-              name == "new-instances" or 
+              name == "new-instances" or
               name == "new-connections" or
               name == "env"):
             self.section=IOReader.none
