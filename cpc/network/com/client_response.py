@@ -71,13 +71,13 @@ class ProcessedResponse(object):
         return True
 
     def getMessage(self):
-        return self.resp[0]['message']        
+        return self.resp[0].get('message')
 
-    def getData(self):  
-        return self.resp[0]['data']
+    def getData(self):
+        return self.resp[0].get('data')
 
     def getStatus(self):
-        return self.resp[0]['status']
+        return self.resp[0].get('status')
 
 class ClientResponse(object):
     """Client's response object. Unpacks the json string and can print it."""
