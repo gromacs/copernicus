@@ -19,6 +19,5 @@
 
 #__all__=[]
 
-from request_parser import * 
-from message import * 
+from request_parser import *
 

@@ -20,8 +20,7 @@
 import logging.handlers
 import os
 import platform
-from cpc.util.conf.server_conf import ServerConf
-from cpc.util.log.format.colorformat import ColoredFormatter 
+from cpc.util.log.format.colorformat import ColoredFormatter
 from cpc.util.log.format import colorformat
 # maximum log file size
 MAXFILESIZE=16*1024*1024
@@ -65,10 +64,9 @@ def initClientLog(debug=False):
     #initErrorLog()
 
 
-def initServerLog(log_mode=None):
+def initServerLog(conf,log_mode=None):
     """Initialize a server log. This log outputs to the server log file 
        (usually ~/.copernicus/<hostname>/log/server.log)."""
-    conf=ServerConf()
     logger=logging.getLogger('')
     if log_mode == MODE_TRACE:
         logger.setLevel(TRACE)
@@ -89,7 +87,7 @@ def initServerLog(log_mode=None):
     fformatter=logging.Formatter(fileFormat)
     fhandler.setFormatter(fformatter)
     logger.addHandler(fhandler)
-    initErrorLog()
+    initErrorLog(conf)
 
 
 def initServerLogToStdout(log_mode=None):
@@ -112,9 +110,8 @@ def initServerLogToStdout(log_mode=None):
     #streamhandler.setFormatter(soformatter)
 
 
-def initErrorLog():
+def initErrorLog(conf):
     """Initialize the error log. Should log all errors, client or server."""
-    conf=ServerConf()
     logger=logging.getLogger('')
     # make the dirs etc.
     logDir=conf.getLogDir()

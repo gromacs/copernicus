@@ -154,7 +154,7 @@ def serveUnverifiedHTTPS(serverState):
 #starts an http server in a thread.
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
-    cpc.util.log.initServerLog(ServerConf().getMode())
+    cpc.util.log.initServerLog(conf,log_mode=ServerConf().getMode())
     th2=Thread(target = serveVerifiedHTTPS,args=[serverState])
     th2.daemon=True
     th2.start()

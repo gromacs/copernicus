@@ -46,7 +46,7 @@ def getServerDir(name="test_server"):
     dir = "%s/.copernicus/%s/server"%(home,name)
     return dir
 
-def getConf(server):
+def getConf(server="test_server"):
 
     """ helper function, conf file of
     the server """
@@ -97,10 +97,9 @@ def setup_server(heartbeat='20' ,name='test_server',addServer=True):
         p = subprocess.check_call(["./cpc-server","-c",name,
                                    "config", "heartbeat_time",
                                    heartbeat], stdout=null, stderr=null)
+        #should no longer be needed
     if addServer:
-        cmd_line = './cpcc add-server localhost'
-        args = shlex.split(cmd_line)
-        p = subprocess.check_call(args)
+        run_client_command('add-server localhost')
 
 
 def generate_bundle(name="test_server"):

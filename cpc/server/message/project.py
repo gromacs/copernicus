@@ -24,6 +24,7 @@ import gc
 
 from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.util.conf.server_conf import ServerConf
+from cpc.util.worker_state_handler import WorkerStateHandler
 
 try:
     from cStringIO import StringIO
@@ -596,9 +597,11 @@ class SCStatus(ProjectServerCommand):
 
         # handle network
         topology = ServerToServerMessage.getNetworkTopology()
+
         numWorkers = 0
         numServers = 0
-        numLocalWorkers = len(serverState.getWorkerStates())
+
+        numLocalWorkers =len(WorkerStateHandler.getConnectedWorkers(serverState.workerStates))
 
         numNotConnectedLocalServers = 0
         numLocalServers = 0

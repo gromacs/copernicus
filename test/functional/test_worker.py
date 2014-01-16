@@ -18,7 +18,7 @@
 
 
 from test.functional.utils import *
-import time
+
 class TestWorker():
 
     def setUp(self):

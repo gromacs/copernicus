@@ -41,11 +41,12 @@ from cpc.command.worker_matcher import CommandWorkerMatcher
 
 from cpc.network.com.client_response import ProcessedResponse
 from cpc.util import json_serializer
-from cpc.network.node import Nodes,Node
+from cpc.network.node import Nodes
 from cpc.server.message.server_message import ServerMessage
 from cpc.server.tracking.tracker import Tracker
 from server_command import ServerCommand
 from cpc.network.node import Node
+from cpc.util.worker_state import WorkerStatus
 
 import cpc.command.heartbeat
 
@@ -103,7 +104,7 @@ class WorkerReadyBase(ServerCommand):
             selfNode=Node.getSelfNode(conf)
             originatingServer = selfNode.getId()
             # we only store worker state in the server the worker connects to
-            serverState.setWorkerState("idle",workerData,
+            serverState.setWorkerState(WorkerStatus.WORKER_STATUS_CONNECTED,workerID,
                                        request.headers['originating-client'])
         if heartbeatInterval is None:
             heartbeatInterval = conf.getHeartbeatTime() 
@@ -362,6 +363,11 @@ class SCWorkerHeartbeat(ServerCommand):
         # get my own name to compare
         selfNode= Node.getSelfNode(serverState.conf)
         selfName = selfNode.getId()
+
+        #updating the status at every hearbeat. This is how we knwo that the worker
+        # is still talking to the server
+        serverState.setWorkerState(WorkerStatus.WORKER_STATUS_CONNECTED,workerID,
+                                   request.headers['originating-client'])
         # now iterate over the destinations, and send them their heartbeat
         # items.
         # Once we have many workers, this would be a place to pool heartbeat

@@ -29,13 +29,13 @@ from cpc.util.worker_state import WorkerState
 log=logging.getLogger('cpc.util.json_serializer')
 
 def toJson(obj):
-    if isinstance(obj,Nodes):        
+    if isinstance(obj,Nodes):
         return {'class':'Nodes',
                  'nodes':obj.nodes   
                }
     
     #NodeConnectRequest inherits from node this always instance of Node. we have to have this 
-    #if clause before checking if object is NODE !!!    
+    #if clause before checking if object is NODE !!!
     if isinstance(obj,NodeConnectRequest):
         return {'class' : 'NodeConnectRequest',
                  'server_id' : obj.server_id,
@@ -45,7 +45,7 @@ def toJson(obj):
                  'qualified_name':obj.getQualifiedName(),
                  'hostname':obj.getHostname()
                }
-    
+
     if isinstance(obj,Node):
         return {'class' : 'Node',
                  'server_id' : obj.server_id,
@@ -57,7 +57,7 @@ def toJson(obj):
                  'qualified_name':obj.getQualifiedName(),
                  'hostname':obj.getHostname()
                }
-    
+
     if isinstance(obj,WorkerState):
         return {'class' : 'WorkerState',
                  'server_id' : obj.server_id,
