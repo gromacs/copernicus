@@ -20,11 +20,15 @@
 '''
 helper module to serialize classes into json objects
 '''
+import logging
 from cpc.network.node import Node
 from cpc.network.node import Nodes
 from cpc.network.node_connect_request import NodeConnectRequest
 from cpc.util.worker_state import WorkerState
-def toJson(obj):       
+
+log=logging.getLogger('cpc.util.json_serializer')
+
+def toJson(obj):
     if isinstance(obj,Nodes):        
         return {'class':'Nodes',
                  'nodes':obj.nodes   

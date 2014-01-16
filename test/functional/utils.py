@@ -80,9 +80,10 @@ def getConnectedNodesFromConf(server):
 def setup_server(heartbeat='20' ,name='test_server',addServer=True):
 
     with open(os.devnull, "w") as null:
-        p = subprocess.Popen(["./cpc-server", "setup","-servername",name,
-                              "-stdin",
-                              PROJ_DIR],
+        args = ["./cpc-server", "setup","-servername",name,
+                "-stdin",
+                PROJ_DIR]
+        p = subprocess.Popen(args,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, close_fds=True)
         (stdout, stderr) = p.communicate(input='root\n')
@@ -407,8 +408,8 @@ class MonitorBase():
                     line = self.process.stdout.readline()
                 if line == '':
                     assert False,\
-                    "Reach EOF while waiting for '%s', last line"\
-                    "outputed was '%s'" % (expectedOutput, self.lastline)
+                    "Reach EOF while waiting for '%s', last output line"\
+                    " was '%s'" %(expectedOutput, self.lastline)
                 if expectedOutput in line:
                     break
                 self.lastline = line
@@ -426,7 +427,7 @@ class MonitorBase():
             self.thread.join()
             assert False,\
             "Expected  output '%s', but timed out waiting for it,"\
-            "last line outputed was '%s'" % (expectedOutput, self.lastline)
+            " last output line was '%s'" %(expectedOutput, self.lastline)
 
             #we got the expected output
 

@@ -595,20 +595,28 @@ class SCStatus(ProjectServerCommand):
             return
 
         # handle network
-        #topology = self._getTopology(serverState)
         topology = ServerToServerMessage.getNetworkTopology()
-        num_workers = 0
-        num_servers = 0
-        num_local_workers = len(serverState.getWorkerStates())
-        num_local_servers = len(ServerConf().getNodes().nodes)
+        numWorkers = 0
+        numServers = 0
+        numLocalWorkers = len(serverState.getWorkerStates())
+
+        numNotConnectedLocalServers = 0
+        numLocalServers = 0
+        for id,node in ServerConf().getNodes().nodes.iteritems():
+            if node.isConnected():
+                numLocalServers +=1
+            else:
+                numNotConnectedLocalServers+=1
+
         for name, node in topology.nodes.iteritems():
-            num_workers += len(node.workerStates)
-            num_servers += 1
+            numWorkers += len(node.workerStates)
+            numServers += 1
         ret_dict['network'] = {
-            'workers': num_workers,
-            'servers': num_servers,
-            'local_workers': num_local_workers,
-            'local_servers': num_local_servers
+            'workers': numWorkers,
+            'servers': numServers,
+            'local_workers': numLocalWorkers,
+            'local_servers': numLocalServers,
+            'not_connected_local_servers':numNotConnectedLocalServers
         }
 
         response.add("", ret_dict)

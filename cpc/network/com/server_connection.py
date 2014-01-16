@@ -23,6 +23,15 @@ class ServerConnection(ConnectionBase):
 
         """
             inputs:
+                node
+                conf:ServerConf
+                createConnection:boolean used to explicitly create a
+                                         connection for example when we
+                                         establish connections for the
+                                         first time
+                storeInConnectionPool:boolean  must be used for sockets that we
+                                               listen on
+            parameters:
                 httpsConnectionPool:ServerConnectionPool
                 connected:boolean
                 conf:ServerConf
@@ -113,9 +122,8 @@ class ServerConnection(ConnectionBase):
                 self.node.reduceOutboundConnection()
            # log.error(traceback.print_exc())
             raise ServerConnectionError(e)
-
         except Exception as e:
-            if self.createConnection==False:
+            if self.createConnection==False and self.node.isConnected():
                 self.node.reduceOutboundConnection()
            # log.error(traceback.print_exc())
             raise ServerConnectionError(e)
