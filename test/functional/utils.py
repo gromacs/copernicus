@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
+import glob
 
 import os
 import subprocess
@@ -32,15 +32,16 @@ import json
 from cpc.server.state.user_handler import *
 from cpc.util.conf.conf_base import Conf
 from cpc.util import json_serializer
+from cpc.util.conf.server_conf import ServerConf
 
-PROJ_DIR = "/tmp/cpc-proj"
+PROJ_DIR = "/tmp/cpc-proj-test"
 
-def getcnxFilePath(name="_default"):
+def getcnxFilePath(name="test_server"):
     home = os.path.expanduser("~")
     fileName = "%s/.copernicus/%s/client.cnx"%(home,name)
     return fileName
 
-def getServerDir(name="_default"):
+def getServerDir(name="test_server"):
     home = os.path.expanduser("~")
     dir = "%s/.copernicus/%s/server"%(home,name)
     return dir
@@ -76,7 +77,7 @@ def getConnectedNodesFromConf(server):
     confDict = getConf(server)
     return confDict['nodes']
 
-def setup_server(heartbeat='20' ,name='_default',addServer=True):
+def setup_server(heartbeat='20' ,name='test_server',addServer=True):
 
     with open(os.devnull, "w") as null:
         p = subprocess.Popen(["./cpc-server", "setup","-servername",name,
@@ -101,7 +102,7 @@ def setup_server(heartbeat='20' ,name='_default',addServer=True):
         p = subprocess.check_call(args)
 
 
-def generate_bundle(name="_default"):
+def generate_bundle(name="test_server"):
     #generate bundle
     cmd_line = './cpc-server -c %s bundle -o %s' %(name,getcnxFilePath(name))
     args = shlex.split(cmd_line)
@@ -133,7 +134,7 @@ def configureServerPorts(name,unverifiedHTTPS,verifiedHTTPS):
 def setLogToTrace(name):
     run_server_command("config mode trace ",name)
 
-def create_and_start_server(name="_default",unverifiedPort=None,
+def create_and_start_server(name="test_server",unverifiedPort=None,
                             verifiedPort=None):
 
         if (unverifiedPort==None):
@@ -171,7 +172,7 @@ def createServers(servers):
 
     return (unverifiedHttpsPorts,verifiedHttpsPorts)
 
-def start_server(name="_default"):
+def start_server(name="test_server"):
     cmd_line = './cpc-server -c %s start'%name
     args = shlex.split(cmd_line)
     p = subprocess.Popen(args, stdout=subprocess.PIPE,
@@ -182,7 +183,7 @@ def start_server(name="_default"):
     "Failed to start server. stderr:%s\nstdout%s" % (stderr, stdout)
 
 
-def stop_server(name="_default",useCnx=False):
+def stop_server(name="test_server",useCnx=False):
     #soft stop
     try:
         run_client_command("stop-server",expectstdout="Quitting",
@@ -206,20 +207,11 @@ def ensure_no_running_servers_or_workers():
 def stopAndFlush():
     """
      does a hard stop on all running worker and server processed
-     flushes the project dir,
-     flushes the .copernicus dir
+     flushes the test project dir,
+     flushes all the folders prefixed and suffixed with 'test' the .copernicus dir
     """
     ensure_no_running_servers_or_workers()
-    home = os.path.expanduser("~")
-    try:
-        shutil.rmtree(PROJ_DIR)
-    except Exception as e:
-        pass #OK
-    try:
-        #TODO not nice if you are developing and running a project at the same time!
-        shutil.rmtree("%s/.copernicus"%home)
-    except Exception as e:
-        pass #OK
+    clear_dirs()
 
 def run_mdrun_example(projname='mdrun'):
     cmd_line = 'examples/mdrun-test/rungmxtest %s' % projname
@@ -234,17 +226,43 @@ def run_mdrun_example(projname='mdrun'):
             stdout, stderr)
     time.sleep(3) #we need to give the server some time to handle the project
 
-def add_user(user, password, userlevel=UserLevel.REGULAR_USER):
+def add_user(user, password, userlevel=UserLevel.REGULAR_USER,server='test_server'):
+
+    '''
+    #NOTE to call a low level server function in a functional test is BAD.
+    At the moment the command cpcc add-user uses the getpass() method which does not allow
+    inputs to be echoed, so we are stuck with this way of doing things
+    '''
+
+    #we have to load the serverConf for the correct directory first, otherwise
+    #underlying method calls will try to initiate it from the _default dir.
+    confdir = os.path.join(
+        cpc.util.conf.conf_base.findAndCreateGlobalDir(), server)
+    ServerConf(confdir=confdir)
+
     UserHandler().addUser(user, password, userlevel)
 
 def clear_dirs():
+
+    '''
+    flushes the test project dir,
+    flushes all the folders prefixed and suffixed with 'test' the .copernicus dir'''
     home = os.path.expanduser("~")
     try:
         shutil.rmtree(PROJ_DIR)
     except Exception as e:
         pass #OK
     try:
-        shutil.rmtree("%s/.copernicus"%home)
+        #removing all folders in copernicus prefixed and suffixed with 'test'
+        testFolders = glob.glob("%s/.copernicus/test*"%home)
+        testFolders+= glob.glob("%s/.copernicus/*test"%home)
+        for f in testFolders:
+            shutil.rmtree(f)
+
+        '''FIXME not good but we have no option for this one at the moment
+         and the implications are not that huge if mistakenly removed '''
+
+        os.remove("%s/.copernicus/clientconfig.cfg"%home)
     except Exception as e:
         pass #OK
 
@@ -255,7 +273,7 @@ def teardown_server():
 def getHome():
     return os.path.expanduser("~")
 
-def run_server_command(command,name="_default",returnZero=True,\
+def run_server_command(command,name="test_server",returnZero=True,\
                                                         expectstdout=None
                                                         ,expectstderr=None):
     cmd_line = './cpc-server -c %s %s' %(name,command)
@@ -283,10 +301,16 @@ def run_server_command(command,name="_default",returnZero=True,\
 
 
 
-def run_client_command(command,name="_default", returnZero=True, \
+def run_client_command(command,name="test_server",returnZero=True, \
                                                        expectstdout=None,
                                                        expectstderr=None,
                                                        useCnx=False):
+
+    '''
+    Calls cpcc and checks the output to match expectedstdout or expectedstderr
+    Can assert that the return code should be valid(0) or invalid(!0)
+    '''
+
     if useCnx:
         cnxFlag = "-c %s"%(getcnxFilePath(name))
         cmd_line = './cpcc %s %s' %(cnxFlag,command)
@@ -329,7 +353,7 @@ def retry_client_command(command, expectstdout, iterations=5, sleep=3):
     "attempts" \
     % (expectstdout, iterations)
 
-def login_client(username='root', password='root',name="_default",
+def login_client(username='root', password='root',name="test_server",
                  useCnx=False):
     cnxFlag = ""
     if useCnx:
@@ -408,9 +432,14 @@ class MonitorBase():
 
 
 class Worker(MonitorBase):
-    def __init__(self):
+    def __init__(self,server='test_server'):
+        '''
+        server: the server to connect to, looks for the cnx file in the specified server conf dir
+        '''
         MonitorBase.__init__(self)
-        self.cmd_line = './cpc-worker -d smp'
+
+        cnxFile = "%s/.copernicus/%s/client.cnx"%(os.path.expanduser("~"),server)
+        self.cmd_line = './cpc-worker -c %s -d smp'%cnxFile
         self.readStderr = True
 
 
@@ -432,7 +461,7 @@ class Worker(MonitorBase):
 
 
 class ServerLogChecker(MonitorBase):
-    def __init__(self,name="_default"):
+    def __init__(self,name="test_server"):
         MonitorBase.__init__(self)
         logFile = "%s/log/server.log"%getServerDir(name)
         self.cmd_line = "tail -f %s"%logFile
