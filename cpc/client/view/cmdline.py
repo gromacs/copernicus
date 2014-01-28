@@ -520,14 +520,15 @@ class CmdLine(object):
     @staticmethod
     def listServers(message):
         response = message['data']
-        nodes = response['connections']
 
         sentRequests = response['sent_connect_requests']
         receivedRequests = response['received_connect_requests']
+        connected = response['connections']
+        broken = response['broken_connections']
         co = StringIO()
 
         if len(sentRequests.nodes.keys())>0:
-            co.write("Sent connection requests\n")
+            co.write("\nSent connection requests\n")
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in sentRequests.nodes.itervalues():
                 co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
@@ -535,21 +536,33 @@ class CmdLine(object):
 
 
         if len(receivedRequests.nodes.keys())>0:
-            co.write("Received connection requests\n")
+            co.write("\nReceived connection requests\n")
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in receivedRequests.nodes.itervalues():
                 co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
                                              node.getUnverifiedHttpsPort(),node.server_id))
 
-        if len(nodes)>0:
-            co.write("Connected nodes:\n")
+        if len(connected)>0:
+            co.write("\nConnected nodes:\n")
             co.write("%-10s %-20s %-10s %s\n"%("Priority","Hostname","Port",
                                           "Server Id") )
-            for node in nodes:
-                co.write("%-10s %-20s %-10s %s\n"%(node.getPriority(),
-                                                   node.getQualifiedName(),node.getVerifiedHttpsPort(),
-                                                   node.getId()) )
-        
+            for node in connected:
+                    co.write("%-10s %-20s %-10s %s\n"%(node.getPriority()
+                                                       ,node.getQualifiedName()
+                                                       ,node.getVerifiedHttpsPort()
+                                                       ,node.getId()) )
+
+
+        if len(broken)>0:
+            co.write("\nNodes currently unreachable:\n")
+            co.write("%-10s %-20s %-10s %s\n"%("Priority","Hostname","Port",
+                                               "Server Id") )
+            for node in broken:
+                co.write("%-10s %-20s %-10s %s\n"%(node.getPriority()
+                                                   ,node.getQualifiedName()
+                                                   ,node.getVerifiedHttpsPort()
+                                                   ,node.getId()) )
+
         return co.getvalue()
     
     @staticmethod
@@ -631,6 +644,12 @@ class CmdLine(object):
                          "s"[network['workers']==1:],
                          network['servers'],
                          "s"[network['servers']==1:]))
+
+        if(network['not_connected_local_servers']>0):
+            co.write("\n   Note:\n"
+                    "       There are %s server%s that currently cannot be reached\n"
+                    "       you can see which ones with the command \"cpcc list-servers\"\n"
+                     %(network['not_connected_local_servers'],"s"[network['not_connected_local_servers']==1:]))
 
         # projects
         projects = message['data']['projects']

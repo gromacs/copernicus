@@ -317,6 +317,9 @@ class ServerConf(conf_base.Conf):
         return True
 
     def getNodes(self):
+        '''
+        returns dict  (key=serverId, value=Node)
+        '''
         with self.lock:
             return self.conf.get('nodes').get()
 

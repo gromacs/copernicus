@@ -58,8 +58,6 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="%s (\s)* %s"%('localhost',
                                          self.unverifiedHttpsPorts[1]),useCnx=True)
 
-        #TODO server2 should get the hostname from the socket but we will wait with this
-        #until persistent sockets has been implemented
         """assert that server 2 has a connection request from server 2 in its
          networks list here we do expect to see the fqdn of the host since
          since we actually got it"""

@@ -43,6 +43,8 @@ import json
 
 log = logging.getLogger('cpc.server.message.network')
 
+
+#FIXME not sure if this one is used
 class SCNetworkTopologyClient(ServerCommand):
     """
     when a client requests a network topology
@@ -376,7 +378,16 @@ class ScListNodes(ServerCommand):
         conf = ServerConf()
         nodes = conf.getNodes()
         resp = dict()
-        resp['connections'] = nodes.getNodesByPriority()
+        nodes = nodes.getNodesByPriority()
+        log.debug(nodes)
+        resp['connections'] = []
+        resp['broken_connections']=[]
+        for node in nodes:
+            if node.isConnected():
+                resp['connections'].append(node)
+            else:
+                resp['broken_connections'].append(node)
+
         resp['sent_connect_requests'] = conf.getSentNodeConnectRequests()
         resp['received_connect_requests']= conf.getNodeConnectRequests()
 
