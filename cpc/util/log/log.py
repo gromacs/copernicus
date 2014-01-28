@@ -24,9 +24,9 @@ from cpc.util.conf.server_conf import ServerConf
 from cpc.util.log.format.colorformat import ColoredFormatter 
 from cpc.util.log.format import colorformat
 # maximum log file size
-MAXFILESIZE=4*1024*1024
+MAXFILESIZE=16*1024*1024
 # number of logs to keep
-NBACKUPS=5
+NBACKUPS=10
 
 #log level of for trace
 TRACE = 5
