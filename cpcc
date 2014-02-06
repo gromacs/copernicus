@@ -97,7 +97,7 @@ def print_usage():
     print "       cpcc trust             -all |server-id"
     print "       cpcc connect-server    host [unverified_https_port]"
     print "       cpcc revoke            server-id"
-    print "       cpcc list-servers"
+    print "       cpcc connected-servers | cs"
     print "       cpcc node-pri          priority host [port]"
     print "       cpcc network"
     print "       cpcc readconf"
@@ -482,7 +482,7 @@ try:
         ProcessedResponse(clnt.addNode(host, unverified_https_port)).\
         pprint(CmdLine.addNodeRequest)
 
-    elif cmd == 'list-servers':
+    elif cmd == 'connected-servers' or cmd=='cs':
         ProcessedResponse(clnt.listServers()).pprint(CmdLine.listServers)
     
     elif cmd == "revoke":
