@@ -26,6 +26,7 @@ from cpc.network.server_to_server_message import ServerToServerMessage
 from cpc.util.conf.server_conf import ServerConf
 from cpc.util.worker_state_handler import WorkerStateHandler
 
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -36,12 +37,9 @@ from server_command import ServerCommand
 import cpc.dataflow
 import cpc.util
 import cpc.server.state.projectlist
-from cpc.server.state.user_handler import UserHandler, UserError, UserLevel
-from cpc.client.message import ClientMessage
-from cpc.network.com.client_response import ProcessedResponse
+from cpc.server.state.user_handler import UserHandler, UserError
 import cpc.util.exception
 from cpc.dataflow.vtype import instanceType
-from cpc.network.node import Nodes,Node
 
 
 log=logging.getLogger(__name__)
@@ -614,6 +612,8 @@ class SCStatus(ProjectServerCommand):
         for name, node in topology.nodes.iteritems():
             numWorkers += len(node.workerStates)
             numServers += 1
+
+        numWorkers +=numLocalWorkers
         ret_dict['network'] = {
             'workers': numWorkers,
             'servers': numServers,
@@ -653,25 +653,4 @@ class SCStatus(ProjectServerCommand):
                 if child_obj.getType() == instanceType:
                     self._traverseInstance(child_obj,state_count, queue, 
                                            err_list, warn_list)
-
-    #TODO remove
-    def _getTopology(self, serverState):
-        """ Fetches topology information about the network """
-        # TODO Caching
-        conf = ServerConf()
-        topology = Nodes()
-        thisNode = Node.getSelfNode(conf)
-        thisNode.setNodes(conf.getNodes())
-        thisNode.workerStates = serverState.getWorkerStates()
-        topology.addNode(thisNode)
-        for node in thisNode.nodes.nodes.itervalues():
-            if not topology.exists(node.getId()):
-                #connect to correct node
-                clnt = ClientMessage(node.getHostname(), node.getServerSecurePort(),
-                                     conf=conf, use_secure_server_port=True)
-                #send along the current topology
-                rawresp = clnt.networkTopology(topology)
-                processedResponse = ProcessedResponse(rawresp)
-                topology = processedResponse.getData()
-        return topology
 

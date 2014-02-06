@@ -35,12 +35,12 @@ class ProcessedResponse(object):
             try:                 
                 str = response.message.read(len(response.message))
                 self.resp=json.loads(str,object_hook=json_serializer.fromJson)
-            except:                
+            except:
                 retd=dict()
                 retd['status']="ERROR"
                 retd['message']=response.message.read(len(response.message))
-                print "error %s"%retd
                 self.resp=[retd]
+                raise
         else:
             raise ResponseError("Wrong message type %s for JSON response"%
                                 response.content_type)

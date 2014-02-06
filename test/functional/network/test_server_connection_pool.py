@@ -181,7 +181,6 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
         #Server1 should note that Server2 is down when sending keep alive
         #and should close this socket.
 
-
         start_server(self.servers[1])
 
         #Server2 first send connections for Server1 to write to
@@ -196,6 +195,37 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
                                                self.server2Node
                                                .getServerSecurePort()))
 
+
+
+    def testStatusCommandShowsWhenServerIsDown(self):
+        """
+        Ensure that the cpcc status command is notyfing when a server is down
+        """
+
+        #Stopping Server2
+        login_client()
+        run_client_command("stop-server")
+
+        #give it some time to shutdown
+        time.sleep(3)
+
+
+        #Server1 should note that Server2 is down when sending keep alive
+        #and should close this socket.
+
+        #cpcc s should notify that the server is down
+        run_client_command("use-server test_server_1")
+        login_client()
+        run_client_command("status",
+                           expectstdout=".*There is 1 server that currently cannot be reached.*")
+
+        start_server(self.servers[1])
+
+        #Server2 first send connections for Server1 to write to
+        time.sleep(3) #give some time for connectios to be established
+
+        run_client_command("status",
+                           doNotExpectstdout=".*There is 1 server that currently cannot be reached.*")
 
     def testOneServerDownOtherServerTriesToEstablishConnection(self):
         """

@@ -463,4 +463,4 @@ class ServerConf(conf_base.Conf):
         return int(self.conf['reconnect_interval'].get())
 
     def getNumPersistentConnections(self):
-        return self.conf['num_persistent_connections'].get()
+        return int(self.conf['num_persistent_connections'].get())

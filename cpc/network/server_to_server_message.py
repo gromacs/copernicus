@@ -33,6 +33,7 @@ from cpc.network.com.client_response import ProcessedResponse
 from cpc.network.node import Nodes
 from cpc.network.node import Node
 from cpc.network.cache import Cache, NetworkTopologyCache
+from cpc.util.worker_state_handler import WorkerStateHandler
 
 log=logging.getLogger(__name__)
 
@@ -48,8 +49,10 @@ class ServerToServerMessage(ServerConnection):
 
 
     def __init__(self, endNodeId):
+
         #TODO perhaps node should be input
         node = ServerConf().getNodes().get(endNodeId)
+
         ServerConnection.__init__(self,node,ServerConf())
 
         self.initialize(endNodeId)
@@ -114,54 +117,63 @@ class ServerToServerMessage(ServerConnection):
             return False
 
     @staticmethod
-    def getNetworkTopology():
+    def getNetworkTopology(resetCache = False):
         """
         Used when a server wants to initiate a network topology request
         Tries to first get the topology from the cache
+
+        resetCache:boolean calls network topology and resets it to cache
         """
-        topology = NetworkTopologyCache().get()
+        topology=False
+        if (resetCache ==  False):
+            topology = NetworkTopologyCache().get()
         if topology==False:
             topology = Nodes()
             topology = ServerToServerMessage.requestNetworkTopology(topology)
             NetworkTopologyCache().add(topology)
+
         return topology
 
 
     @staticmethod
-    def requestNetworkTopology(topology):
+    def requestNetworkTopology(topology,serverState=None):
         """
         Asks each neigbouring node for their network topology
 
         inputs:
             topology:Nodes The list of the topology generated so far
+            serverState:ServerState
+                if provided worker states are fetched.
+                since this method is called by getNetworkTopology() which in turn
+                is called from places where we do not pass (and don't want) the serverState
+                we provide this option. Also it is not needed as the calling server always
+                knows the most up to date state of its own workers.
+
         """
         conf = ServerConf()
         thisNode = Node.getSelfNode(conf)
         thisNode.setNodes(conf.getNodes())
         topology.addNode(thisNode)
-        #TODO get worker states
-        #thisNode.workerStates = serverState.getWorkerStates()
+        if serverState:
+            thisNode.workerStates = WorkerStateHandler.getConnectedWorkers(serverState.getWorkerStates())
 
         for node in thisNode.getNodes().nodes.itervalues():
             if topology.exists(node.getId()) == False:
                 #connect to correct node
-                try:
-                    clnt = DirectServerMessage(node,conf=conf)
-                    #send along the current topology
-                    rawresp = clnt.networkTopology(topology)
-                    processedResponse = ProcessedResponse(rawresp)
-                    topology = processedResponse.getData()
-                except ServerConnectionError as e:
-                    #we cannot connect to the node,
-                    # and its marked as unreachable
-                    #we must still add it to the topology
-                    err = e.__str__()
-                    if err:
-                        log.info("node %s unreachable when asking for network "
-                                 "topology: error was %s"%(node.getId(),err))
-                    else:
-                        log.info("node %s unreachable when asking for network "
-                                 "topology." % node.getId())
-                    topology.addNode(node)
+                if node.isConnected():
+                    try:
+                        clnt = DirectServerMessage(node,conf=conf)
+                        #send along the current topology
+                        rawresp = clnt.networkTopology(topology)
+                        processedResponse = ProcessedResponse(rawresp)
+                        topology = processedResponse.getData()
+                    except ServerConnectionError as e:
+                        #we cannot connect to the node,
+                        # and its marked as unreachable
+                        #we must still add it to the topology
+                        log.error("node %s unreachable when asking for network "
+                                  "topology: error was %s"%(node.getId(),e.__str__()))
+                        topology.addNode(node)
 
+                #todo notify in topology that this node is not connected?
         return topology

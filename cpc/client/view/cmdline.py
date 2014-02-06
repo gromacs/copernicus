@@ -647,9 +647,9 @@ class CmdLine(object):
 
         if(network['not_connected_local_servers']>0):
             co.write("\n   Note:\n"
-                    "       There are %s server%s that currently cannot be reached\n"
+                    "       There %s %s server%s that currently cannot be reached\n"
                     "       you can see which ones with the command \"cpcc connected-servers\"\n"
-                     %(network['not_connected_local_servers'],"s"[network['not_connected_local_servers']==1:]))
+                     %(("is" if network['not_connected_local_servers']==1 else "are"),network['not_connected_local_servers'],"s"[network['not_connected_local_servers']==1:]))
 
         # projects
         projects = message['data']['projects']

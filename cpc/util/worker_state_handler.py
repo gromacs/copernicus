@@ -30,5 +30,4 @@ class WorkerStateHandler(object):
             if (timeSinceCommmunication < timeLimit):
                 connectedWorkers.append(w)
 
-
         return connectedWorkers

@@ -60,7 +60,7 @@ def toJson(obj):
 
     if isinstance(obj,WorkerState):
         return {'class' : 'WorkerState',
-                 'server_id' : obj.server_id,
+                 'host' : obj.host,
                  'workerId' : obj.workerId,
                  'id':obj.id,
                  'state':obj.state
@@ -87,7 +87,7 @@ def fromJson(jsonObj):
             return node
         
         if jsonObj['class'] == 'WorkerState':
-            return WorkerState(jsonObj['host'],jsonObj['state'])
+            return WorkerState(jsonObj['host'],jsonObj['state'],jsonObj['workerId'])
         
         if jsonObj['class'] == 'Nodes':
             nodes = Nodes()

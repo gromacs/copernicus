@@ -292,6 +292,9 @@ class ServerToServerConnectionTest(unittest.TestCase):
         start_server(self.servers[1])
         #when server 1 starts it should send connection params to server 2
         start_server(self.servers[0])
+
+        #give some time for the parameters to update
+        time.sleep(3)
         # get the server id of server 1
         confDict = getConf(self.servers[1])
         server1Id = confDict['nodes'].nodes.keys()[0]

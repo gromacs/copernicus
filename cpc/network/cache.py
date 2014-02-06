@@ -28,6 +28,7 @@ import copy
 #Singleton
 #A simple cache that stores objects infinitely
 import threading
+import time
 from cpc.util import json_serializer
 import cpc.util.log
 
@@ -44,7 +45,7 @@ class Cache(object):
 
         self.cacheLock = threading.Lock()
         log.log(cpc.util.log.TRACE,"instantiation of cache")
-        self.cache = {}        
+        self.cache = {}
         
     def cleanAll(self):
         with self.cacheLock:
@@ -62,10 +63,19 @@ class Cache(object):
         with self.cacheLock:
             return self.cache
     
-    def add(self,key,value):
+    def add(self,key,value,ttl=None):
+        '''
+        ttl : time to live in seconds, if set to none the cache lifetime is infinite
+        '''
         with self.cacheLock:
-            log.log(cpc.util.log.TRACE,'adding object %s to cache'%key)
-            self.cache[key] = value
+            if ttl:
+                log.log(cpc.util.log.TRACE,'adding object %s to cache with ttl %s'%(key,ttl))
+            else:
+                log.log(cpc.util.log.TRACE,'adding object %s to cache'%key)
+
+            if(ttl):
+                ttl = int(time.time())+ttl
+            self.cache[key] = (value,ttl)
     def get(self,key):
         """
         returns: the cacheobject if it exists, False otherwise
@@ -73,8 +83,13 @@ class Cache(object):
         with self.cacheLock:
             val = False
             if key in self.cache:
-                val = self.cache[key]
-            if val == False:
+                now = int(time.time())
+                val,ttl = self.cache[key]
+                if ttl<now:
+                    val = False
+                else:
+                    log.log(cpc.util.log.TRACE,'object %s in cache has expired'%key)
+            elif val == False:
                 log.log(cpc.util.log.TRACE,'did not find object %s in cache'%key)
             else:
                 log.log(cpc.util.log.TRACE,'getting object %s from cache'%key)
@@ -97,7 +112,10 @@ class NetworkTopologyCache(Cache):
         """
         jsonStr = json.dumps(value,default = json_serializer.toJson,
             indent=4)
-        Cache.add(self,self.cacheKey,jsonStr)
+
+        #5 minutes cache limit
+        ttl = 300
+        Cache.add(self,self.cacheKey,jsonStr,ttl)
 
     def get(self):
         """

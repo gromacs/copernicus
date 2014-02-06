@@ -79,7 +79,7 @@ class SCNetworkTopology(ServerCommand):
             topology = json.loads(request.getParam('topology'),
                 object_hook=json_serializer.fromJson)
 
-        topology = ServerToServerMessage.requestNetworkTopology(topology)
+        topology = ServerToServerMessage.requestNetworkTopology(topology,serverState)
 
         response.add("", topology)
         log.info("Returned network topology size %d" % topology.size())
@@ -117,7 +117,12 @@ class SCConnectionParamUpdate(ServerCommand):
             #Needed so that we write changes to conf file
             conf.removeNode(node.server_id)
             conf.addNode(node)
-            response.add("Updated connection paramters")
+
+            #update the network topology
+            ServerToServerMessage.getNetworkTopology(resetCache=True)
+
+
+            response.add("Updated connection parameters")
             log.info("Updated connection params for %s"%node.toString())
 
         else:

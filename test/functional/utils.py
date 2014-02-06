@@ -300,7 +300,9 @@ def run_server_command(command,name="test_server",returnZero=True,\
 def run_client_command(command,name="test_server",returnZero=True, \
                                                        expectstdout=None,
                                                        expectstderr=None,
-                                                       useCnx=False):
+                                                       useCnx=False
+                                                       ,doNotExpectstdout=None
+                                                       ,doNotExpectstderr=None):
 
     '''
     Calls cpcc and checks the output to match expectedstdout or expectedstderr
@@ -330,9 +332,17 @@ def run_client_command(command,name="test_server",returnZero=True, \
         assert re.search(expectstdout,stdout,re.MULTILINE)!=None,\
         "Expected '%s' in stdout, but got \n'%s'"%(expectstdout, stdout)
 
+    if doNotExpectstdout is not None:
+        assert re.search(doNotExpectstdout,stdout,re.MULTILINE)==None, \
+            "Did not expect '%s' in stdout, but got it stdout was\n'%s'"%(expectstdout, stdout)
+
     if expectstderr is not None:
         assert re.search(expectstderr,stderr,re.MULTILINE)!=None,\
         "Expected '%s' in stderr, but got \n'%s'"%(expectstderr, stderr)
+
+    if doNotExpectstderr is not None:
+        assert re.search(doNotExpectstderr,stdout,re.MULTILINE)==None, \
+            "Did not expect '%s' in stderr, but got it stderr was\n'%s'"%(expectstderr, stderr)
 
 
 

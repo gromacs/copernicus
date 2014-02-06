@@ -1,0 +1,41 @@
+#!/bin/sh -e
+
+# check whether all input files will be available:
+if [ ! -e examples/mdruns-test/conf.gro ]; then
+    echo "This example script must be run from within the copernicus base directory"
+    exit 1
+fi
+
+
+
+projectname=$1
+
+# start the project
+./cpcc start $projectname
+
+./cpcc import gromacs
+
+./cpcc instance gromacs::grompps grompp
+
+./cpcc instance gromacs::mdruns mdrun
+
+./cpcc transact
+
+./cpcc connect grompp:out.tpr mdrun:in.tpr
+
+./cpcc setf grompp.in.top[+] examples/mdruns-test/topol.top
+
+./cpcc setf grompp.in.mdp[+] examples/mdruns-test/grompp.mdp
+
+
+#adding the same conformation twice, should generate 2 independent simulations
+./cpcc setf grompp.in.conf[+] examples/mdruns-test/conf.gro
+
+./cpcc setf grompp.in.conf[+] examples/mdruns-test/conf.gro
+
+./cpcc commit
+
+./cpcc activate
+
+
+
