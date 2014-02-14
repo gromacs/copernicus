@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -20,6 +20,7 @@
 
 import logging
 import copy
+import os
 
 try:
     from collections import OrderedDict
@@ -105,7 +106,7 @@ class Type(description.Describable):
         """Initializes an empty type
 
            name = the type name
-           name = the type's parent in its inheritance tree 
+           name = the type's parent in its inheritance tree
         """
         self.name=name
         self.parent=parent
@@ -115,7 +116,7 @@ class Type(description.Describable):
         self.implicit=False
         self.builtin=False
         # whether the type has a single simple literal (like a number):
-        self.simpleLiteral=False 
+        self.simpleLiteral=False
         description.Describable.__init__(self)
 
     def getName(self):
@@ -229,7 +230,7 @@ class BoolType(Type):
     """The class describing a boolean type."""
     def __init__(self, name, parent, lib=None):
         Type.__init__(self, name, parent, lib=lib)
-        self.simpleLiteral=True 
+        self.simpleLiteral=True
     def valueFromLiteral(self, string):
         if string.lower()=="true" or string=="1":
             return True
@@ -247,7 +248,7 @@ class IntType(Type):
     """The class describing an int type."""
     def __init__(self, name, parent, lib=None):
         Type.__init__(self, name, parent, lib=lib)
-        self.simpleLiteral=True 
+        self.simpleLiteral=True
     def valueFromLiteral(self, string):
         try:
             return int(string)
@@ -260,7 +261,7 @@ class FloatType(Type):
     """The class describing a float type."""
     def __init__(self, name, parent, lib=None):
         Type.__init__(self, name, parent, lib=lib)
-        self.simpleLiteral=True 
+        self.simpleLiteral=True
     def valueFromLiteral(self, string):
         try:
             return float(string)
@@ -274,7 +275,7 @@ class StringType(Type):
     """The class describing a string type."""
     def __init__(self, name, parent, lib=None):
         Type.__init__(self, name, parent, lib=lib)
-        self.simpleLiteral=True 
+        self.simpleLiteral=True
     def valueFromLiteral(self, string):
         return string
     def valueToLiteral(self, value):
@@ -286,7 +287,7 @@ class FileType(Type):
         Type.__init__(self, name, parent, lib=lib)
         self.ext=None
         self.mimeType=None
-        self.simpleLiteral=True 
+        self.simpleLiteral=True
     def valueFromLiteral(self, string):
         return string
     def valueToLiteral(self, value):
@@ -306,17 +307,17 @@ class FileType(Type):
 
 class RecordMember(description.Describable):
     """Class containing information about a record member."""
-    def __init__(self, tp, name, opt=False, const=False, complete=False):
+    def __init__(self, tp, name, opt=False, cnst=False, complete=False):
         """Initialize based on type, name, description.
            tp = the type
            name = the name
            opt = whether this member is optional
-           const = whether this member is const
+           cnst = whether this member is const
            complete = whether this member's sub-items must not be None """
         self.type=tp
         self.name=name
         self.opt=opt
-        self.const=const
+        self.cnst=cnst
         self.complete=complete
         description.Describable.__init__(self)
 
@@ -326,7 +327,7 @@ class RecordMember(description.Describable):
 
     def isConst(self):
         """Return whether the field is constant."""
-        return self.const
+        return self.cnst
 
     def isComplete(self):
         """Return whether all sub-items of this item must be non-None"""
@@ -389,21 +390,21 @@ class RecordType(Type):
         if name in self.recordMembers:
             return True
         if self.parent.isSubtype(recordType):
-            return self.parent.hasMember(name) 
-    def addMember(self, name, vtype, opt, const, complete):
+            return self.parent.hasMember(name)
+    def addMember(self, name, vtype, opt, cnst, complete):
         """Add/override a new member to the record.
            name = the name of the new member item
            vtype = the type of the new member item
            opt = whether the member is optional
-           const = hwehter the member is const
+           cnst = whether the member is const
            complete = whether the member's subvalues must be non-None"""
         if name in self.recordMembers:
             self.recordMembers[name].type=vtype
             self.recordMembers[name].opt=opt
-            self.recordMembers[name].const=const
+            self.recordMembers[name].cnst=cnst
             self.recordMembers[name].complete=complete
         else:
-            self.recordMembers[name]=RecordMember(vtype, name, opt, const, 
+            self.recordMembers[name]=RecordMember(vtype, name, opt, cnst,
                                                   complete)
     def addDescription(self, name, desc):
         """Add a description of a member to the record"""
@@ -439,7 +440,7 @@ class RecordType(Type):
             attrstr=' '
             if mem.opt:
                 attrstr=' opt="true"'
-            if mem.const:
+            if mem.cnst:
                 attrstr=' const="true"%s'%attrstr
             if mem.complete:
                 attrstr=' complete="true"%s'%attrstr
@@ -500,7 +501,7 @@ class ArrayType(Type):
             types."""
         indstr=cpc.util.indStr*indent
         if self.memberType.hasMembers() and self.memberType.isAnonymous():
-            outf.write('%s<field type="%s">\n'%(indstr, 
+            outf.write('%s<field type="%s">\n'%(indstr,
                                                 self.memberType.getFullName()))
             self.memberType.writePartsXML(outf, indent+1)
             if self.memberType.desc is not None:
@@ -508,10 +509,10 @@ class ArrayType(Type):
             outf.write('%s</field>\n'%indstr)
         else:
             if self.memberType.desc is None:
-                outf.write('%s<field type="%s" />\n'%(indstr, 
+                outf.write('%s<field type="%s" />\n'%(indstr,
                                                  self.memberType.getFullName()))
             else:
-                outf.write('%s<field type="%s">\n'%(indstr, 
+                outf.write('%s<field type="%s">\n'%(indstr,
                                                  self.memberType.getFullName()))
                 self.memberType.desc.writeXML(outf, indent+1)
                 outf.write('%s</field>\n'%indstr)
@@ -525,7 +526,7 @@ class ArrayType(Type):
     def containsBasetype(self, basetype):
         """Check whether the type or one of its members contains an instance
            of basetype."""
-        return self.memberType.containsBasetype(basetype) 
+        return self.memberType.containsBasetype(basetype)
 
 
 class DictType(Type):
@@ -555,7 +556,7 @@ class DictType(Type):
             types."""
         indstr=cpc.util.indStr*indent
         if self.memberType.hasMembers() and self.memberType.isAnonymous():
-            outf.write('%s<field type="%s">\n'%(indstr, 
+            outf.write('%s<field type="%s">\n'%(indstr,
                                                 self.memberType.getFullName()))
             if self.memberType.desc is not None:
                 self.memberType.desc.writeXML(outf, indent+1)
@@ -563,14 +564,14 @@ class DictType(Type):
             outf.write('%s</field>\n'%indstr)
         else:
             if self.memberType.desc is None:
-                outf.write('%s<field type="%s" />\n'%(indstr, 
+                outf.write('%s<field type="%s" />\n'%(indstr,
                                                  self.memberType.getFullName()))
             else:
-                outf.write('%s<field type="%s">\n'%(indstr, 
+                outf.write('%s<field type="%s">\n'%(indstr,
                                                  self.memberType.getFullName()))
                 self.memberType.desc.writeXML(outf, indent+1)
                 outf.write('%s</field>\n'%indstr)
-            #outf.write('%s<field type="%s" />\n'%(indstr, 
+            #outf.write('%s<field type="%s" />\n'%(indstr,
             #                                   self.memberType.getFullName()))
 
     def getSubItem(self, item):
@@ -582,7 +583,7 @@ class DictType(Type):
     def containsBasetype(self, basetype):
         """Check whether the type or one of its members contains an instance
            of basetype."""
-        return self.memberType.containsBasetype(basetype) 
+        return self.memberType.containsBasetype(basetype)
 
 
 # these are global variables, so things can be checked against them

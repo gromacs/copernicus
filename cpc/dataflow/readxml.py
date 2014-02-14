@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -56,8 +56,8 @@ class ProjectXMLError(apperror.ApplicationXMLError):
     def __init__(self, msg, reader):
         loc=reader.getLocator()
         self.str = "%s (line %d, column %d): %s"%(reader.getFilename(),
-                                                  loc.getLineNumber(), 
-                                                  loc.getColumnNumber(), 
+                                                  loc.getLineNumber(),
+                                                  loc.getColumnNumber(),
                                                   msg)
 
 curVersion=1
@@ -66,7 +66,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
     """XML reader for a project and function definitions."""
     def __init__(self, thisImport, importList, project):
         """Initialize based on import library.
-           
+
            thisImport = the library to read into
            importList = the list of currenlty imported libraries.
            project = the projecct associated with this read """
@@ -76,7 +76,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         # the reading context (which function we're defining at the moment).
         self.function=None
         self.functionType=None
-        # subcontext is where we're at within in a function definition 
+        # subcontext is where we're at within in a function definition
         self.network=None # the top of the networkStack
         self.networkStack=[] # the stack of previous networks
         # list of local imports with their name mappings
@@ -85,7 +85,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         # in type definition
         #self.inType=None
         self.type=None
-        self.typeStack=[] # the stack of tuples of types and their field names 
+        self.typeStack=[] # the stack of tuples of types and their field names
         self.ioitem=None # the I/O item type we're in
         # in instance
         self.instance=None
@@ -228,14 +228,14 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 if nimport is None:
                     raise ProjectXMLError("Failed to import %s"%name,
                                           self)
-            self.localImports[name] = nimport    
+            self.localImports[name] = nimport
         elif name == "function":
             if self.function is not None:
                 raise ProjectXMLError(
-                        "function-in-function definitions not supported", 
+                        "function-in-function definitions not supported",
                         self)
             if not attrs.has_key("type"):
-                raise ProjectXMLError("function has no type", 
+                raise ProjectXMLError("function has no type",
                                             self)
             if not attrs.has_key("id"):
                 raise ProjectXMLError("function has no id", self)
@@ -252,7 +252,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                     raise ProjectXMLError(
                                     "external function without directory",
                                     self)
-                tsk=external.ExternalFunction(id, basedir=self.dirName, 
+                tsk=external.ExternalFunction(id, basedir=self.dirName,
                                               lib=self.thisImport)
             else:
                 raise ProjectXMLError("function type '%s' not recognized"%
@@ -271,14 +271,14 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key("base"):
                 raise ProjectXMLError("type has no base", self)
             name=keywords.fixID(attrs.getValue("id"))
-            basetype=self.importList.getTypeByFullName(attrs.getValue("base"), 
+            basetype=self.importList.getTypeByFullName(attrs.getValue("base"),
                                                        self.thisImport)
             self.type=basetype.inherit(name, self.thisImport)
             self.typeStack.append( (self.type, None) )
             if basetype.isSubtype(vtype.arrayType):
                 if attrs.has_key("member-type"):
                     tnm=keywords.fixID(attrs.getValue("member-type"))
-                    members=self.importList.getTypeByFullName(tnm, 
+                    members=self.importList.getTypeByFullName(tnm,
                                                               self.thisImport)
                     self.type.setMembers(members)
                     log.debug("new array(%s) type %s"%(members.name, name))
@@ -288,7 +288,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             elif basetype.isSubtype(vtype.dictType):
                 if attrs.has_key("member-type"):
                     tnm=keywords.fixID(attrs.getValue("member-type"))
-                    members=self.importList.getTypeByFullName(tnm, 
+                    members=self.importList.getTypeByFullName(tnm,
                                                               self.thisImport)
                     self.type.setMembers(members)
                     log.debug("new dict(%s) type %s"%(members.name, name))
@@ -310,7 +310,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             elif self.activeInst is not None:
                 curValue=self.activeInst.getStagedInputs()
                 self.affectedInputAIs.add(self.activeInst)
-                self.setValueReader(value.ValueReader(self.filename, curValue, 
+                self.setValueReader(value.ValueReader(self.filename, curValue,
                                                  importList=self.importList,
                                                  currentImport=self.thisImport,
                                                  sourceTag=self),
@@ -330,7 +330,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             elif self.activeInst is not None:
                 curValue=self.activeInst.getOutputs()
                 self.affectedOutputAIs.add(self.activeInst)
-                self.setValueReader(value.ValueReader(self.filename, curValue, 
+                self.setValueReader(value.ValueReader(self.filename, curValue,
                                                  importList=self.importList,
                                                  currentImport=self.thisImport,
                                                  sourceTag=self),
@@ -350,7 +350,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             elif self.activeInst is not None:
                 curValue=self.activeInst.getStagedSubnetInputs()
                 self.affectedInputAIs.add(self.activeInst)
-                self.setValueReader(value.ValueReader(self.filename, curValue, 
+                self.setValueReader(value.ValueReader(self.filename, curValue,
                                                  importList=self.importList,
                                                  currentImport=self.thisImport,
                                                  sourceTag=self),
@@ -371,7 +371,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             elif self.activeInst is not None:
                 curValue=self.activeInst.getSubnetOutputs()
                 self.affectedOutputAIs.add(self.activeInst)
-                self.setValueReader(value.ValueReader(self.filename, curValue, 
+                self.setValueReader(value.ValueReader(self.filename, curValue,
                                                  importList=self.importList,
                                                  currentImport=self.thisImport,
                                                  sourceTag=self),
@@ -415,7 +415,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 if len(self.activeInstStack) < 1:
                     # we're not. Get the top level
                     if len(self.networkStack)>0:
-                        raise ProjectXMLError("network in network definition", 
+                        raise ProjectXMLError("network in network definition",
                                               self)
                     self.networkStack.append(self.thisImport.getNetwork())
                 else:
@@ -455,10 +455,10 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             val.setUpdated(True)
             #log.debug("value is %s, %s"%(str(val), valueString))
             # get the destination
-            dstInstName,dstDir,dstItemName=(connection.splitIOName(dst, 
+            dstInstName,dstDir,dstItemName=(connection.splitIOName(dst,
                                                                    keywords.In))
-            cn=connection.makeInitialValue(self.network, 
-                                           dstInstName, dstDir, 
+            cn=connection.makeInitialValue(self.network,
+                                           dstInstName, dstDir,
                                            dstItemName, val)
             self.network.findConnectionSrcDest(cn, self.affectedInputAIs,
                                                self.affectedOutputAIs)
@@ -478,8 +478,8 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 # now check the source
                 srcInstName,srcDir,srcItemName=(connection.splitIOName(src,
                                                                        None))
-                cn=connection.makeConnection(self.network, 
-                                             srcInstName, srcDir, srcItemName, 
+                cn=connection.makeConnection(self.network,
+                                             srcInstName, srcDir, srcItemName,
                                              dstInstName, dstDir, dstItemName)
 
             else:
@@ -521,7 +521,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                           (self.function.getName()))
                 self.function.setAccessSubnetOutputs(True)
             # type-specific items
-            if (self.functionType == "python" or 
+            if (self.functionType == "python" or
                 self.functionType == "python-extended"):
                 importName=None
                 if attrs.has_key("import"):
@@ -543,21 +543,21 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 self.inController=True
         elif name=="stdin":
             if self.inController and self.functionType == "command":
-                if not atts.has_key('value'):
+                if not attrs.has_key('value'):
                     raise ProjectXMLError("stdin has no value", self)
                 self.function.setStdin(attrs.getValue('value'))
             else:
-                raise ProjectXMLError("stdin tag, without command controller", 
+                raise ProjectXMLError("stdin tag, without command controller",
                                       self)
         elif name=="arg":
             if self.inController and self.functionType == "command":
                 pass
             else:
-                raise ProjectXMLError("arg tag, without command controller", 
+                raise ProjectXMLError("arg tag, without command controller",
                                       self)
         elif name == "active":
             # read in a description of an active network + active instances
-            if not isinstance(self.network, active_network.ActiveNetwork): 
+            if not isinstance(self.network, active_network.ActiveNetwork):
                 raise ProjectXMLError("active instance without active network",
                                       self)
             if not attrs.has_key("id"):
@@ -600,7 +600,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             # any value associated with active connection points
             if self.activeInst is None:
                 raise ProjectXMLError(
-                                "active connection without active instance", 
+                                "active connection without active instance",
                                 self)
             if not attrs.has_key("id"):
                 raise ProjectXMLError("active conn field has no id", self)
@@ -618,12 +618,13 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             if attrs.has_key("value"):
                 if not attrs.has_key("value_type"):
                     raise ProjectXMLError(
-                        "active connection value without value_type", 
+                        "active connection value without value_type",
                         self)
                 vtpnm=keywords.fixID(attrs.getValue("value_type"))
                 vtp=self.importList.getTypeByFullName(vtpnm, self.thisImport)
                 valnm=attrs.getValue("value")
-                val=value.interpetLiteral(valueString, tp) 
+                valueString=attrs.getValue('value')
+                val=value.interpetLiteral(valueString, tp)
             if self.ioitem == "inputs":
                 self.activeInst.setInput(name, tp, val, seqnr)
             elif self.ioitem == "outputs":
@@ -649,7 +650,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 raise ProjectXMLError("task has no priority", self)
             priority=int(attrs.getValue("priority"))
             seqnr=int(attrs.getValue("seqnr"))
-            self.curTask=task.Task(self.project, self.activeInst, 
+            self.curTask=task.Task(self.project, self.activeInst,
                                    self.activeInst.getFunction(),
                                    None, priority, seqnr)
         elif name == "function-input":
@@ -666,7 +667,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
         elif name == "desc":
             # A description. First find out what it describes.
             if self.type is not None:
-                if ( len(self.typeStack) > 1 and 
+                if ( len(self.typeStack) > 1 and
                      self.typeStack[-2][0].isSubtype(vtype.recordType)):
                     # if it is a field, describe it as a field
                     tp=self.typeStack[-2][0]
@@ -693,7 +694,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                                                             self.filename),
                                    name)
                # raise ProjectXMLError("Unknown item to describe.")
-                
+
         else:
             raise ProjectXMLError("Unknown tag %s"%name, self)
 
@@ -704,7 +705,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
             self.cmdReader.endElement(name)
             if name == "command-list":
                 self.curTask.addCommands(self.cmdReader.getCommands(),
-                                         (self.activeInst.state != 
+                                         (self.activeInst.state !=
                                           active_inst.ActiveInstance.active))
                 self.cmdReader=None
         elif self.valueReader is not None:
@@ -757,7 +758,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 self.type=self.typeStack[-1][0]
             else:
                 self.type=None
-        elif (name == "inputs" or name == "outputs" or 
+        elif (name == "inputs" or name == "outputs" or
               name == "subnet-inputs" or name == "subnet-outputs"):
             self.ioitem=None
             self.typeStack.pop()
