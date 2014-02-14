@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Magnus Lundborg, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -33,12 +33,12 @@ class ActiveConnectionError(apperror.ApplicationError):
 
 class ReceiverConnection(object):
     """A class holding a single input connection for a receiver: an active
-       connection point that is a destination of the current active connection 
+       connection point that is a destination of the current active connection
        point."""
-    def __init__(self, 
+    def __init__(self,
                  srcActiveInstance, srcConnectionPoint,
                  dstActiveInstance, dstConnectionPoint):
-        """Initialize based on a specific activeConnectionPoint and a 
+        """Initialize based on a specific activeConnectionPoint and a
            (possibly empty) list of subitems. A subitem is a
            list of array subscripts, or data structure member names. """
         self.srcActiveInstance=srcActiveInstance
@@ -55,19 +55,19 @@ class Dest(object):
         self.conn=conn
 
 class ActiveConnectionPoint(active_value.ValueUpdateListener):
-    """An object holding a connection point that can is used in 
+    """An object holding a connection point that can is used in
        ActiveConnection objects. Can serve as input or output
        point, with active instance or further connection points associated
        with it."""
     __slots__=['value', 'directDests', 'activeInstance', 'sourceValue',
                'sourceAcp', 'directSource', 'direction', 'listeners']
     def __init__(self, val, activeInstance, direction):
-        """Initialize an active connection point with an any active instance 
+        """Initialize an active connection point with an any active instance
            and downstream connections.
 
            name = the acp (active connectin point)'s name
            val = the value associated with this connection point
-           activeInstance = the active instance associated with this connection 
+           activeInstance = the active instance associated with this connection
                             point
            direction = the direction associated with this acp
         """
@@ -85,7 +85,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         self.directSource=None
         #self.receiverList=[]
         self.direction=direction
-        # precomputed set of all the direct acps associated with the value of 
+        # precomputed set of all the direct acps associated with the value of
         # this acp.
         self.listeners=[]
 
@@ -99,7 +99,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
 
     def setSource(self, directSource, sourceAcp, sourceValue):
         """Set the source active instance.
-           
+
            directSource = the directly connectd source acp
            sourceAcp = the originating source (source of the source..)
            sourceValue = the originating source value
@@ -112,7 +112,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
 
     def stageNewInput(self, source, seqNr):
         """Stage new input into the newValue fields of the value
-          
+
            source = the source output item/project
            seqNr = the new sequence number (or None)
            """
@@ -123,9 +123,9 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         self.value.update(newValue, seqNr, sourceTag)
 
     def connectDestination(self, destAcp, conn, sourceTag):
-        """Add a downstream connection to another activeConnectionPoint. 
+        """Add a downstream connection to another activeConnectionPoint.
            To be called from ActiveNetwork.addConnection().
-   
+
            NOTE: assumes the active instance's output lock is locked
            """
         # now do the actual connecting bit
@@ -145,7 +145,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         # propagate our value downstream
         #self.value.setSourceTag(sourceTag)
         self._propagateSpecificDest(destAcp, sourceTag, None)
-        
+
 
     def _propagateSpecificDest(self, dest, sourceTag, seqNr):
         """Propagate a value to a specific destination"""
@@ -154,36 +154,44 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         dest.value.update(self.value, seqNr, sourceTag=sourceTag)
         dest.propagate(sourceTag, seqNr)
 
-    def propagate(self, sourceTag, seqNr):
-        """Accept a new value with a source tag and sequence number, 
+    def propagate(self, sourceTag, seqNr, propagated = None):
+        """Accept a new value with a source tag and sequence number,
            and propagate it to any listeners."""
         #log.debug("Propagating new value to %s"%self.value.getFullName())
         # first handle direct destinations
-        self._propagateDests(sourceTag, seqNr)
+
+        # Propagated cannot have set() as default parameter for some reason.
+        # In that case it is not properly emptied.
+        if propagated is None:
+            propagated = set()
+        self._propagateDests(sourceTag, seqNr, propagated)
         # then handle other listeners to the same value
         for listener in self.listeners:
             # these listeners are in the same value tree, so no need to update
             #log.debug("Listener-propagating to %s"%
             #          (listener.value.getFullName()))
-            listener._propagateDests(sourceTag, seqNr)
+            listener._propagateDests(sourceTag, seqNr, propagated)
 
     #def _propagateSelfDests(self, sourceTag, seqNr):
-    #    for dest in self.directDests:
-    #        dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
+    #   for dest in self.directDests:
+    #       dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
 
-    def _propagateDests(self, sourceTag, seqNr):
+    def _propagateDests(self, sourceTag, seqNr, propagated):
         """Propagate an updated value to the direct destinations of this acp."""
         for dest in self.directDests:
-            # because in it's another value tree, we first need to update it
-            #log.debug("Propagating new value %s to %s"%
-            #          (self.value.value, dest.acp.value.getFullName()))
-            #dest.acp.value.acceptNewValue(self.value, sourceTag)
-            dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
-            dest.acp.propagate(sourceTag, seqNr)
+            # If it has already been propagated it does not have to be propagated
+            # again.
+            if dest.acp.value not in propagated:
+                #log.debug("Propagating new value %s to %s"%
+                #          (self.value.value, dest.acp.value.getFullName()))
+                propagated.add(dest.acp.value)
+                # because in it's another value tree, we first need to update it
+                dest.acp.value.update(self.value, seqNr, sourceTag=sourceTag)
+                dest.acp.propagate(sourceTag, seqNr, propagated)
 
     def notifyDestinations(self, sourceTag, seqNr):
-        """Notify the ActiveInstance associated with this acp through 
-           handleNewInput(), and notify all listeners through 
+        """Notify the ActiveInstance associated with this acp through
+           handleNewInput(), and notify all listeners through
            notifyListeners()."""
         self._notifyDests(sourceTag, seqNr)
         for listener in self.listeners:
@@ -194,7 +202,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Helper function for notifyDestinations()"""
         for dest in self.directDests:
             # because in it's another value tree, we first need to update it
-            if ( (dest.acp.direction == function_io.inputs) or 
+            if ( (dest.acp.direction == function_io.inputs) or
                  (dest.acp.direction == function_io.subnetInputs) ):
                 dest.acp.activeInstance.handleNewInput(sourceTag, seqNr)
             else:
@@ -205,7 +213,7 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         """Get the set of destination active instances for this source acp."""
         self.listeners=[]
         self.value.findListeners(self.listeners, self)
-        #log.debug("%s: %d listeners"%(self.value.getFullName(), 
+        #log.debug("%s: %d listeners"%(self.value.getFullName(),
         #                              len(self.listeners)))
 
     def getListeners(self):
@@ -226,8 +234,9 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         for dest in self.directDests:
             # we add it and then make it search for its direct destinations
             # in all its listeners
-            affectedInputAIs.add(dest.acp.activeInstance)
-            dest.acp.findConnectedInputAIs(affectedInputAIs)
+            if dest.acp.activeInstance not in affectedInputAIs:
+                affectedInputAIs.add(dest.acp.activeInstance)
+                dest.acp.findConnectedInputAIs(affectedInputAIs)
 
     def findConnectedOutputAIs(self, affectedOutputAIs):
         """Find all source acps and their active instances. Update the set
@@ -245,6 +254,6 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
         else:
             val=""
             tp=""
-        outf.write('%s<active-connection id="%s" %s/>\n'% 
+        outf.write('%s<active-connection id="%s" %s/>\n'%
                    (indstr, self.val.getFullName(), val) )
 
