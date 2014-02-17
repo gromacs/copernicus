@@ -573,10 +573,10 @@ class Conf:
         return self.get("global_dir")
 
     @staticmethod
-    def getDefaultVerifiedHttpsPort():
+    def getDefaultServerSecurePort():
         return '13807'
 
     @staticmethod
-    def getDefaultUnverifiedHttpsPort():
+    def getDefaultClientSecurePort():
         return '14807'
 

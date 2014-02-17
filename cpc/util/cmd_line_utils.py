@@ -72,7 +72,7 @@ def getClientConf():
     try:
         cfg = ClientConf()
         #make sure there is configured server
-        cfg.getClientUnverifiedHTTPSPort()
+        cfg.getClientSecurePort()
         cfg.getClientHost()
     except (NoConfError, NoServerError):
         raise ClientError("No servers."\

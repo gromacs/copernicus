@@ -81,8 +81,8 @@ class SCServerInfo(ServerCommand):
         try:
             conf.getServerId()
             info['serverId'] = conf.getServerId()
-            info['verified_https_port'] = conf.getServerVerifiedHTTPSPort()
-            info['unverified_https_port'] = conf.getServerUnverifiedHTTPSPort()
+            info['server_secure_port'] = conf.getServerSecurePort()
+            info['client_secure_port'] = conf.getClientSecurePort()
         except ServerIdNotFoundException as e:
             info['serverId'] = "ERROR: %s"%e.str
         response.add("",info)

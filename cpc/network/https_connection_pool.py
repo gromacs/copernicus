@@ -37,7 +37,7 @@ class ConnectionPoolEmptyError(CpcError):
         self.str = exc.__str__()
 
 
-#the only thing that differs between ServerConnectionPool and VerifiedHTTPSConnectionPool
+#the only thing that differs between ServerConnectionPool and ConnectionPool
 #is that ServerConnectionPool is using server-id as keys
 
 class ConnectionPool(object):
@@ -105,7 +105,7 @@ class ConnectionPool(object):
     def getOrCreateQueue(self,host,port):
         key = self.getKey(host, port)
         if key not in self.pool:
-            log.log(cpc.util.log.TRACE,"Instantiating verified https "
+            log.log(cpc.util.log.TRACE,"Instantiating server https "
                                        "connection pool for host:%s:%s"%(host,port))
             q =  Queue()
             self.pool[key] = q
@@ -136,12 +136,12 @@ class ServerConnectionPool(ConnectionPool):
 
     def getConnection(self,node):
         return ConnectionPool.getConnection(self,node.getHostname()
-                                            ,node.getVerifiedHttpsPort())
+                                            ,node.getServerSecurePort())
 
 
     def getAllConnections(self,node):
         return ConnectionPool.getAllConnections(self,node.getHostname()
-            ,node.getVerifiedHttpsPort())
+            ,node.getServerSecurePort())
 
     def putConnection(self,connection,node):
         after_idle_sec = 1
@@ -156,4 +156,4 @@ class ServerConnectionPool(ConnectionPool):
 #        connection.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, interval_sec)
 #        connection.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, max_fails)
         ConnectionPool.putConnection(self,connection,node.getHostname(),
-           node.getVerifiedHttpsPort())
+           node.getServerSecurePort())

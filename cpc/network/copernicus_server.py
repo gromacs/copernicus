@@ -4,7 +4,7 @@ import SocketServer
 import logging
 import socket
 import select
-from cpc.network.https.real_https_connection import VerifiedHttpsConnection
+from cpc.network.https.real_https_connection import HttpsConnectionWithCertReq
 
 from cpc.network.https_connection_pool import ServerConnectionPool
 import cpc.server.message
@@ -30,7 +30,7 @@ class CopernicusServer(HTTPServer__base):
 
     def __init__(self, handler_class, conf,serverState):
         BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
-                        conf.getServerVerifiedHTTPSPort()),handler_class)
+                        conf.getServerSecurePort()),handler_class)
 
         #this informs SocketServer.ThreadingMixin that each reqeust thread
         # should be a daemon thread. If this is False threads will not
@@ -95,7 +95,7 @@ class CopernicusServer(HTTPServer__base):
         if(hasattr(request,"revertSocket") and request.revertSocket==True):
             node = ServerConf().getNodes().get(request.serverId)
 
-            request = self.wrapVerifiedHttpsConnection(request)
+            request = self.wrapHttpsConnectionWithCertReq(request)
             ServerConnectionPool().putConnection(request,node)
             node.addOutboundConnection()
             log.log(cpc.util.log.TRACE,"Socket not closed, "
@@ -111,18 +111,18 @@ class CopernicusServer(HTTPServer__base):
             SocketServer.TCPServer.shutdown_request(self,request)
 
 
-    def wrapVerifiedHttpsConnection(self,socket):
+    def wrapHttpsConnectionWithCertReq(self,socket):
         """
-            takes a socket object and wraps makes a VerifiedHttpsConnection
+            takes a socket object and wraps it in a HttpsConnectionWithCertReq
             instance
             input:
                 socket:SSLSocket
 
             returns:
-                VerifiedHttpsConnectionWithSocket
+                HttpsConnectionWithCertReq
         """
         host,port = socket.getpeername()
-        wrappedSock = VerifiedHttpsConnection(host,port,
+        wrappedSock = HttpsConnectionWithCertReq(host,port,
             socket=socket)
         wrappedSock.connected=True
         return wrappedSock

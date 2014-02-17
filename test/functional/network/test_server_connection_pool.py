@@ -30,7 +30,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
     def setUp(self):
         stopAndFlush()
         self.servers = ['test_server_1','test_server_2']
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(self.servers)
+        self.clientSecurePorts,self.serverSecurePorts = createServers(self.servers)
 
         self.establishConnection()
 
@@ -39,7 +39,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
 
         for i in range(0,len(self.servers)):
             server = self.servers[i]
-            port = self.unverifiedHttpsPorts[i]
+            port = self.clientSecurePorts[i]
             run_client_command("add-server -n %s localhost %s"%(server,port))
 
         self.server2Nodes = getConnectedNodesFromConf(self.servers[1]).nodes
@@ -70,7 +70,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
 
     def establishConnection(self):
         #send a 2 connect requests from Server1 to Server2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
@@ -91,13 +91,13 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
         # to Server2
         self.server1LogChecker.waitForOutput("Got a connection from pool for "
                                         "host:%s:%s"%(self.server2Node.getHostname(),
-                                                      self.server2Node.getVerifiedHttpsPort()))
+                                                      self.server2Node.getServerSecurePort()))
 
         #Ensure connection is put back in pool
         self.server1LogChecker.waitForOutput("put back connection in pool for"
                                              " host:%s:%s"\
                                              %(self.server2Node.getHostname(),
-                                               self.server2Node.getVerifiedHttpsPort()))
+                                               self.server2Node.getServerSecurePort()))
 
 
     def testConnectionsCreatedUponWakeup(self):
@@ -131,7 +131,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
         self.server2LogChecker.waitForOutput("put back connection in pool for"
                                              " host:%s:%s"\
                                              %(self.server1Node.getHostname(),
-                                               self.server1Node.getVerifiedHttpsPort()))
+                                               self.server1Node.getServerSecurePort()))
 
 
         #---STEP2: Server1 establishes an outbound connection
@@ -140,7 +140,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
         self.server1LogChecker.waitForOutput("put back connection in pool for"
                                              " host:%s:%s"\
                                              %(self.server2Node.getHostname(),
-                                               self.server2Node.getVerifiedHttpsPort()))
+                                               self.server2Node.getServerSecurePort()))
 
 
     def testKeepAlive(self):
@@ -194,7 +194,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
                                              " host:%s:%s"\
                                              %(self.server2Node.getHostname(),
                                                self.server2Node
-                                               .getVerifiedHttpsPort()))
+                                               .getServerSecurePort()))
 
 
     def testOneServerDownOtherServerTriesToEstablishConnection(self):
@@ -224,7 +224,7 @@ class ServerToServerConnectionPoolTest(unittest.TestCase):
         # connection
 
         server2Conf = getConf(self.servers[1])
-        server2Conf['nodes'].nodes.get(self.server1Id).setVerifiedHttpsPort(
+        server2Conf['nodes'].nodes.get(self.server1Id).setServerSecurePort(
             111111)
 
         writeConf(self.servers[1],server2Conf)

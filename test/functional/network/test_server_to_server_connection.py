@@ -40,11 +40,11 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a connect request from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],expectstdout="Connection request sent "
                                               "to %s"%serverAndPort,useCnx=True)
@@ -56,20 +56,20 @@ class ServerToServerConnectionTest(unittest.TestCase):
         below  """
         run_client_command("connected-servers",name=self.servers[0],
             expectstdout="%s (\s)* %s"%('localhost',
-                                         self.unverifiedHttpsPorts[1]),useCnx=True)
+                                         self.clientSecurePorts[1]),useCnx=True)
 
         """assert that server 2 has a connection request from server 2 in its
          networks list here we do expect to see the fqdn of the host since
          since we actually got it"""
         run_client_command("connected-servers",name=self.servers[1],
             expectstdout="%s (\s)* %s .*"%('localhost',
-                                        self.unverifiedHttpsPorts[0]),useCnx=True)
+                                        self.clientSecurePorts[0]),useCnx=True)
 
 
     def TestSendServerConnectionRequestToNonExistingHost(self):
         "Tries to send a connection request to a non existing server"
         self.servers = ['test_server_1']
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #startup 1 server
@@ -87,7 +87,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a connect request from server 1 to server 2
@@ -106,12 +106,12 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
 
     #send a connect request from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
         confDict = getConf(self.servers[1])
@@ -152,11 +152,11 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a connect request from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
@@ -190,12 +190,12 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
 
     #send a 2 connect requests from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
@@ -223,11 +223,11 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a 2 connect requests from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
@@ -238,7 +238,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
 
         #resend a connect request from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],expectstderr="localhost is already trusted",
             useCnx=True,returnZero=False)
@@ -249,17 +249,17 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
 
     #send a 2 connect requests from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
         #send connect requests twice from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,name=self.servers[0],useCnx=True)
 
         #ensure that we only have one connect request in the config list
@@ -273,11 +273,11 @@ class ServerToServerConnectionTest(unittest.TestCase):
         #startup 2 servers
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a connect requests from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 
@@ -309,11 +309,11 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
         self.servers = ['test_server_1','test_server_2']
 
-        self.unverifiedHttpsPorts,self.verifiedHttpsPorts = createServers(
+        self.clientSecurePorts,self.serverSecurePorts = createServers(
             self.servers)
 
         #send a connect requests from server 1 to server 2
-        serverAndPort = "%s %s"%("localhost",self.unverifiedHttpsPorts[1])
+        serverAndPort = "%s %s"%("localhost",self.clientSecurePorts[1])
         run_client_command("connect-server %s"%serverAndPort,
             name=self.servers[0],useCnx=True)
 

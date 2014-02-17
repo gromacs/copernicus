@@ -25,158 +25,158 @@
             "nodes": {
                 "tcbm03.theophys.kth.se:13808": {
                     "host": "tcbm03.theophys.kth.se", 
-                    "unverified_https_port": 14808, 
+                    "client_secure_port": 14808,
                     "nodes": {
                         "nodes": {
                             "tcbm03.theophys.kth.se:13809": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14809, 
+                                "client_secure_port": 14809,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13809
+                                "server_secure_port": 13809
                             }, 
                             "tcbm03.theophys.kth.se:13807": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14807, 
+                                "client_secure_port": 14807,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13807
+                                "server_secure_port": 13807
                             }
                         }, 
                         "class": "Nodes"
                     }, 
                     "class": "Node", 
-                    "verified_https_port": 13808
+                    "server_secure_port": 13808
                 }, 
                 "tcbm03.theophys.kth.se:13809": {
                     "host": "tcbm03.theophys.kth.se", 
-                    "unverified_https_port": 14809, 
+                    "client_secure_port": 14809,
                     "nodes": {
                         "nodes": {
                             "tcbm03.theophys.kth.se:13808": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14808, 
+                                "client_secure_port": 14808,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13808
+                                "server_secure_port": 13808
                             }, 
                             "tcbm03.theophys.kth.se:13811": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14811, 
+                                "client_secure_port": 14811,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13811
+                                "server_secure_port": 13811
                             }, 
                             "tcbm03.theophys.kth.se:13807": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14807, 
+                                "client_secure_port": 14807,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13807
+                                "server_secure_port": 13807
                             }, 
                             "tcbm03.theophys.kth.se:13810": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14810, 
+                                "client_secure_port": 14810,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13810
+                                "server_secure_port": 13810
                             }
                         }, 
                         "class": "Nodes"
                     }, 
                     "class": "Node", 
-                    "verified_https_port": 13809
+                    "server_secure_port": 13809
                 }, 
                 "tcbm03.theophys.kth.se:13811": {
                     "host": "tcbm03.theophys.kth.se", 
-                    "unverified_https_port": 14811, 
+                    "client_secure_port": 14811,
                     "nodes": {
                         "nodes": {
                             "tcbm03.theophys.kth.se:13809": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14809, 
+                                "client_secure_port": 14809,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13809
+                                "server_secure_port": 13809
                             }
                         }, 
                         "class": "Nodes"
                     }, 
                     "class": "Node", 
-                    "verified_https_port": 13811
+                    "server_secure_port": 13811
                 }, 
                 "tcbm03.theophys.kth.se:13807": {
                     "host": "tcbm03.theophys.kth.se", 
-                    "unverified_https_port": 14807, 
+                    "client_secure_port": 14807,
                     "nodes": {
                         "nodes": {
                             "tcbm03.theophys.kth.se:13808": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14808, 
+                                "client_secure_port": 14808,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13808
+                                "server_secure_port": 13808
                             }, 
                             "tcbm03.theophys.kth.se:13809": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14809, 
+                                "client_secure_port": 14809,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13809
+                                "server_secure_port": 13809
                             }
                         }, 
                         "class": "Nodes"
                     }, 
                     "class": "Node", 
-                    "verified_https_port": 13807
+                    "server_secure_port": 13807
                 }, 
                 "tcbm03.theophys.kth.se:13810": {
                     "host": "tcbm03.theophys.kth.se", 
-                    "unverified_https_port": 14810, 
+                    "client_secure_port": 14810,
                     "nodes": {
                         "nodes": {
                             "tcbm03.theophys.kth.se:13809": {
                                 "host": "tcbm03.theophys.kth.se", 
-                                "unverified_https_port": 14809, 
+                                "client_secure_port": 14809,
                                 "nodes": {
                                     "nodes": {}, 
                                     "class": "Nodes"
                                 }, 
                                 "class": "Node", 
-                                "verified_https_port": 13809
+                                "server_secure_port": 13809
                             }
                         }, 
                         "class": "Nodes"
                     }, 
                     "class": "Node", 
-                    "verified_https_port": 13810
+                    "server_secure_port": 13810
                 }
             }, 
             "class": "Nodes"

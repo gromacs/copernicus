@@ -160,7 +160,7 @@ class Node(object):
     STATUS_CONNECTED = "NODE_CONNECTED"
     STATUS_UNREACHABLE = "NODE_UNREACHABLE"
     STATUS_UNKNOWN = "UNKOWN"
-    def __init__(self,server_id,unverified_https_port,verified_https_port,
+    def __init__(self,server_id,client_secure_port,server_secure_port,
                  qualified_name,hostname):
         """
         Node objects hold information about how to connect to each trusted
@@ -171,8 +171,8 @@ class Node(object):
 
         inputs:
          server_id:String               The unique server id
-         unverified_https_port:String   The client connection port
-         verified_https_port:String     The server connection port
+         client_secure_port:String   The client connection port
+         server_secure_port:String     The server connection port
          qualified_name:String          qualified_name: the address of the
                                         node as known by itself.
          hostname:String                The address to this node as known by
@@ -184,8 +184,8 @@ class Node(object):
         self.server_id = server_id
         # node
         self.__qualified_name = qualified_name
-        self.__unverified_https_port = unverified_https_port
-        self.__verified_https_port = verified_https_port
+        self.__client_secure_port = client_secure_port
+        self.__server_secure_port = server_secure_port
         self.__hostname = hostname
         self.__priority = None
         self.__nodes = Nodes()
@@ -261,21 +261,21 @@ class Node(object):
             return self.__qualified_name
 
 
-    def getUnverifiedHttpsPort(self):
+    def getClientSecurePort(self):
         with self.lock:
-            return self.__unverified_https_port
+            return self.__client_secure_port
 
-    def setUnverifiedHttpsPort(self,unverifiedHttpsPort):
+    def setClientSecurePort(self,portNumber):
         with self.lock:
-            self.__unverified_https_port = unverifiedHttpsPort
+            self.__client_secure_port = portNumber
 
-    def getVerifiedHttpsPort(self):
+    def getServerSecurePort(self):
         with self.lock:
-            return self.__verified_https_port
+            return self.__server_secure_port
 
-    def setVerifiedHttpsPort(self, verifiedHttpsPort):
+    def setServerSecurePort(self, portNumber):
         with self.lock:
-            self.__verified_https_port = verifiedHttpsPort
+            self.__server_secure_port = portNumber
 
     def getHostname(self):
         with self.lock:
@@ -356,7 +356,7 @@ class Node(object):
     def toString(self):
         with self.lock:
             return "%s(%s:%s)"%(self.server_id,self.__hostname,
-                                self.__verified_https_port)
+                                self.__server_secure_port)
 
     @staticmethod
     def getSelfNode(conf):
@@ -365,8 +365,8 @@ class Node(object):
         with selfNodeLock:
             if selfNode is None:
                 selfNode=Node(conf.getServerId(),
-                    conf.getServerUnverifiedHTTPSPort(),
-                    conf.getServerVerifiedHTTPSPort(),
+                    conf.getClientSecurePort(),
+                    conf.getServerSecurePort(),
                     conf.getFqdn(),
                     conf.getHostName())
         return selfNode

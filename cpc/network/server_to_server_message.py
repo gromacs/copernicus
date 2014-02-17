@@ -67,14 +67,14 @@ class ServerToServerMessage(ServerConnection):
 
         log.log(cpc.util.log.TRACE,"Finding route between %s(%s %s) and %s(%s "
                                    "%s"")"%(startNode.server_id,startNode.getHostname(),
-                                    startNode.getVerifiedHttpsPort(),
+                                    startNode.getServerSecurePort(),
                                     self.endNode.server_id,
-                                    self.endNode.getHostname(),self.endNode.getVerifiedHttpsPort()))
+                                    self.endNode.getHostname(),self.endNode.getServerSecurePort()))
         route = Nodes.findRoute(startNode, self.endNode,topology)
 
         self.hostNode = route[1]   #route[0] is the current host
         self.host = self.hostNode.getHostname()
-        self.port = self.hostNode.getVerifiedHttpsPort()
+        self.port = self.hostNode.getServerSecurePort()
         self.serverId = self.hostNode.getId()
         log.log(cpc.util.log.TRACE,"Server-to-server connecting to %s(%s:%s)"%
                 (self.serverId,self.host,self.port))

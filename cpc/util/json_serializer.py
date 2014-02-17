@@ -39,8 +39,8 @@ def toJson(obj):
     if isinstance(obj,NodeConnectRequest):
         return {'class' : 'NodeConnectRequest',
                  'server_id' : obj.server_id,
-                 'unverified_https_port' : obj.getUnverifiedHttpsPort(),
-                 'verified_https_port' : obj.getVerifiedHttpsPort(),
+                 'client_secure_port' : obj.getClientSecurePort(),
+                 'server_secure_port' : obj.getServerSecurePort(),
                  'key'  : obj.key,
                  'qualified_name':obj.getQualifiedName(),
                  'hostname':obj.getHostname()
@@ -49,8 +49,8 @@ def toJson(obj):
     if isinstance(obj,Node):
         return {'class' : 'Node',
                  'server_id' : obj.server_id,
-                 'unverified_https_port' : obj.getUnverifiedHttpsPort(),
-                 'verified_https_port' : obj.getVerifiedHttpsPort(),
+                 'client_secure_port' : obj.getClientSecurePort(),
+                 'server_secure_port' : obj.getServerSecurePort(),
                  'nodes':obj.getNodes(),
                  'priority':obj.getPriority(),
                  'workerStates':obj.workerStates,
@@ -74,8 +74,8 @@ def fromJson(jsonObj):
     if 'class' in jsonObj:        
         if jsonObj['class'] == 'Node':
             node = Node(jsonObj['server_id'],
-                        int(jsonObj['unverified_https_port']),
-                        int(jsonObj['verified_https_port']),
+                        int(jsonObj['client_secure_port']),
+                        int(jsonObj['server_secure_port']),
                         jsonObj['qualified_name'],
                         jsonObj['hostname'])
             if "nodes" in jsonObj:
@@ -97,8 +97,8 @@ def fromJson(jsonObj):
         
         if jsonObj['class'] == 'NodeConnectRequest':
             return NodeConnectRequest(jsonObj['server_id'],
-                                      jsonObj['unverified_https_port'],
-                                      jsonObj['verified_https_port'], 
+                                      jsonObj['client_secure_port'],
+                                      jsonObj['server_secure_port'],
                                       jsonObj['key'],
                                       jsonObj['qualified_name'],
                                       jsonObj['hostname'])

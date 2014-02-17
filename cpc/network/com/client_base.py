@@ -64,10 +64,10 @@ class ClientBase(object):
         self.host = host
         self.port = port
         self.conf = conf
-        self.use_verified_https = None
+        self.require_certificate_authentication = None
 
-    def putRequest(self, req, use_verified_https=None, disable_cookies=False):
-        self.__connect(use_verified_https, disable_cookies)
+    def putRequest(self, req, require_certificate_authentication=None, disable_cookies=False):
+        self.__connect(require_certificate_authentication, disable_cookies)
         try:
 
             ret=self.conn.sendRequest(req,"PUT")
@@ -77,8 +77,8 @@ class ClientBase(object):
             raise ClientConnectionError(e,self.host,self.port)
         return ret
 
-    def postRequest(self, req, use_verified_https=None, disable_cookies=False):
-        self.__connect(use_verified_https, disable_cookies)
+    def postRequest(self, req, require_certificate_authentication=None, disable_cookies=False):
+        self.__connect(require_certificate_authentication, disable_cookies)
         try:
             ret=self.conn.sendRequest(req)
         except httplib.HTTPException as e:
@@ -90,28 +90,33 @@ class ClientBase(object):
     def closeClient(self):
         self.conn.conn.close()
 
-    # the order in which we determine whether to use verified https is
-    # 1, overrides lower priorities : argument use_verified_https
-    # 2, if self.use.verified_https is set
+    # the order in which we determine whether to require certificate from server for authentication is
+    # 1, overrides lower priorities : argument require_certificate_authentication
+    # 2, if self.require_certificate_authentication is set
     # default to true
-    def __connect(self, use_verified_https=None, disable_cookies=False):
-        if use_verified_https is not None:
-            use_verified = use_verified_https
+    def __connect(self, require_certificate_authentication=None, disable_cookies=False):
+
+        '''
+        inputs:
+             require_certificate_authentication:boolean  requires a certificate from the server
+        '''
+        if require_certificate_authentication is not None:
+            require_certificate_authentication = require_certificate_authentication
         else:
             try:
-                if self.use_verified_https is not None:
-                    use_verified = self.use_verified_https
+                if self.require_certificate_authentication is not None:
+                    require_certificate_authentication = self.require_certificate_authentication
                 else:
-                    use_verified = True
+                    require_certificate_authentication = True
             except AttributeError:
-                use_verified = True
+                require_certificate_authentication = True
         try:
-            if use_verified:
-                log.log(cpc.util.log.TRACE,"Connecting using verified HTTPS")
-                self.conn=client_connection.VerifiedClientConnection(self.conf)
+            if require_certificate_authentication:
+                log.log(cpc.util.log.TRACE,"Connecting HTTPS with cert authentication")
+                self.conn=client_connection.ClientConnectionRequireCert(self.conf)
             else:
-                log.log(cpc.util.log.TRACE,"Connecting using unverified HTTPS")
-                self.conn=client_connection.UnverifiedClientConnection(
+                log.log(cpc.util.log.TRACE,"Connecting HTTPS with no cert authentication")
+                self.conn=client_connection.ClientConnectionNoCertRequired(
                             self.conf, disable_cookies)
             self.conn.connect(self.host,self.port)
         except httplib.HTTPException as e:

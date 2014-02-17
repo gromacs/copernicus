@@ -110,8 +110,8 @@ class SCConnectionParamUpdate(ServerCommand):
         if nodes.exists(newParams['serverId']):
             node = nodes.get(newParams['serverId'])
             node.setHostname(newParams['hostname'])
-            node.setVerifiedHttpsPort(newParams['server_verified_https_port'])
-            node.setUnverifiedHttpsPort(newParams['server_unverified_https_port'])
+            node.setServerSecurePort(newParams['server_secure_port'])
+            node.setClientSecurePort(newParams['client_secure_port'])
             node.setQualifiedName(newParams['fqdn'])
 
             #Needed so that we write changes to conf file
@@ -140,19 +140,19 @@ class ScAddNode(ServerCommand):
         conf = ServerConf()
         host = request.getParam('host')
 
-        unverified_https_port = request.getParam('unverified_https_port')
+        client_secure_port = request.getParam('client_secure_port')
         result = dict()
         #do we have a server with this hostname or fqdn?
         connectedNodes = conf.getNodes()
 
         if (connectedNodes.hostnameOrFQDNExists(host) == False):
-            serv = RawServerMessage(host, unverified_https_port)
+            serv = RawServerMessage(host, client_secure_port)
             resp = ProcessedResponse(serv.sendAddNodeRequest(host))
 
             if resp.isOK():
                 result = resp.getData()
                 nodeConnectRequest = NodeConnectRequest(result['serverId'],
-                    int(unverified_https_port),None,None,result['fqdn'],host)
+                    int(client_secure_port),None,None,result['fqdn'],host)
 
                 conf.addSentNodeConnectRequest(nodeConnectRequest)
                 result['nodeConnectRequest']=nodeConnectRequest
@@ -266,15 +266,15 @@ class ScGrantNodeConnection(ServerCommand):
             nodeToAdd = nodeConnectRequests.get(key) #this returns a nodeConnectRequest object
 
             serv = RawServerMessage(nodeToAdd.getHostname(),
-                nodeToAdd.getUnverifiedHttpsPort())
+                nodeToAdd.getClientSecurePort())
 
             #letting the requesting node know that it is accepted
             #also sending this servers connection parameters
             resp = serv.addNodeAccepted()
 
             conf.addNode(Node(nodeToAdd.server_id,
-                nodeToAdd.getUnverifiedHttpsPort(),
-                nodeToAdd.getVerifiedHttpsPort(),
+                nodeToAdd.getClientSecurePort(),
+                nodeToAdd.getServerSecurePort(),
                 nodeToAdd.getQualifiedName(),nodeToAdd.getHostname()))
 
             #trust the key
@@ -343,8 +343,8 @@ class ScAddNodeAccepted(ServerCommand):
         if(sentConnectRequests.exists(node.getId())):
             nodeToAdd = sentConnectRequests.get(node.getId())
             conf.addNode(Node(node.server_id,
-                node.getUnverifiedHttpsPort(),
-                node.getVerifiedHttpsPort(),
+                node.getClientSecurePort(),
+                node.getServerSecurePort(),
                 node    .getQualifiedName(),nodeToAdd.getHostname()))
             #conf.addNode(nodeToAdd)
             openssl = OpenSSL(conf)

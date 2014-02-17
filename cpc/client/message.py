@@ -35,7 +35,7 @@ class ClientMessage(ClientBase):
         Messages that end users should be able to call should be defined here
     '''
 
-    def __init__(self,host=None,port=None,conf=None, use_verified_https=False):
+    def __init__(self,host=None,port=None,conf=None, use_secure_server_port=False):
         '''
         @input String host : the hostname
         @input String port : the port to connect to
@@ -45,7 +45,7 @@ class ClientMessage(ClientBase):
         self.host = host
         self.port = port
         self.conf = conf
-        self.use_verified_https = use_verified_https
+        self.require_certificate_authentication = use_secure_server_port
         if self.conf is None:
             #FIXME THIS IS WRONG AND TOOK HOURS TO FIND OUT WHY
             #APPERANTLY WE CANNOT INITIATE A CLIENTCONF WITHOUT SPECYFYING A
@@ -54,10 +54,10 @@ class ClientMessage(ClientBase):
         if self.host is None:
             self.host = self.conf.getClientHost()
         if self.port is None:
-            if use_verified_https:
-                self.port = self.conf.getClientVerifiedHTTPSPort()
+            if use_secure_server_port:
+                self.port = self.conf.getServerSecurePort()
             else:
-                self.port = self.conf.getClientUnverifiedHTTPSPort()
+                self.port = self.conf.getClientSecurePort()
 
     #NOTE should not be able to perform with a post or put request 
     def stopRequest(self): 
@@ -173,7 +173,7 @@ class ClientMessage(ClientBase):
         return response
 
     #port is what port the request should be sent to not what port to communicate with later on
-    def addNode(self,host,unverified_https_port):
+    def addNode(self,host,client_secure_port):
         #sends an add node request to the server
         cmdstring = "connnect-server"
         fields = []
@@ -183,7 +183,7 @@ class ClientMessage(ClientBase):
         fields.append(Input('version', "1"))
 
         input2 = Input('host',host)
-        input3 = Input('unverified_https_port',unverified_https_port)
+        input3 = Input('client_secure_port',client_secure_port)
 
         fields.append(input)
         fields.append(input2)

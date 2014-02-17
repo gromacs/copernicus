@@ -77,12 +77,13 @@ def getConnectedNodesFromConf(server):
     confDict = getConf(server)
     return confDict['nodes']
 
-def setup_server(heartbeat='20' ,name='test_server',addServer=True):
+def setup_server(heartbeat='20' ,name='test_server'):
 
     with open(os.devnull, "w") as null:
         args = ["./cpc-server", "setup","-servername",name,
                 "-stdin",
                 PROJ_DIR]
+        print " ".join(args)
         p = subprocess.Popen(args,
                              stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, close_fds=True)
@@ -118,27 +119,26 @@ def purge_client_config():
     with open(os.devnull, "w") as null:
         subprocess.call(args, stderr=null) 
 
-def configureServerPorts(name,unverifiedHTTPS,verifiedHTTPS):
+def configureServerPorts(name,secureClientPort,secureServerPort):
 
-    #set unverified https
-    run_server_command("config server_unverified_https_port "
-                       "%s"%unverifiedHTTPS,name)
+    run_server_command("config client_secure_port "
+                       "%s"%secureClientPort,name)
 
-    run_server_command("config server_verified_https_port "
-                       "%s"%verifiedHTTPS,name)
+    run_server_command("config server_secure_port "
+                       "%s"%secureServerPort,name)
 
 def setLogToTrace(name):
     run_server_command("config mode trace ",name)
 
-def create_and_start_server(name="test_server",unverifiedPort=None,
-                            verifiedPort=None):
+def create_and_start_server(name="test_server",clientSecurePort=None,
+                            serverSecurePort=None):
 
-        if (unverifiedPort==None):
-            unverifiedPort = Conf.getDefaultUnverifiedHttpsPort()
-        if (verifiedPort==None):
-            verifiedPort = Conf.getDefaultVerifiedHttpsPort()
-        setup_server(name=name,addServer=False)
-        configureServerPorts(name,unverifiedPort,verifiedPort)
+        if (clientSecurePort==None):
+            clientSecurePort = Conf.getDefaultClientSecurePort()
+        if (serverSecurePort==None):
+            serverSecurePort = Conf.getDefaultServerSecurePort()
+        setup_server(name=name)
+        configureServerPorts(name,clientSecurePort,serverSecurePort)
         run_server_command("config keep_alive_interval "
                            "%s"%3,name)  #every 3 seconds
         run_server_command("config reconnect_interval "
@@ -156,17 +156,17 @@ def createServers(servers):
         servers:array<String>  an array of servernames,
         the names correspond to names of conf folders that will be created
     returns:
-        (unverifiedHttpsPorts:array(int),verifiedHttpsPorts:array<int>)
+        (secureClientPorts:array(int),secureServerPorts:array<int>)
     """
-    unverifiedHttpsPorts = range(14807,14807+len(servers))
-    verifiedHttpsPorts = range(13807,13807+len(servers))
+    secureClientPorts = range(14807,14807+len(servers))
+    secureServerPorts = range(13807,13807+len(servers))
 
     for i in range(0,len(servers)):
         create_and_start_server(servers[i],
-            unverifiedPort=unverifiedHttpsPorts[i],
-            verifiedPort=verifiedHttpsPorts[i])
+            clientSecurePort=secureClientPorts[i],
+            serverSecurePort=secureServerPorts[i])
 
-    return (unverifiedHttpsPorts,verifiedHttpsPorts)
+    return (secureClientPorts,secureServerPorts)
 
 def start_server(name="test_server"):
     cmd_line = './cpc-server -c %s start'%name

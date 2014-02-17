@@ -54,10 +54,10 @@ class BroadcastMessage(ServerToServerMessage):
         connectionParams['serverId'] = conf.getServerId()
         connectionParams['hostname'] = conf.getHostName()
         connectionParams['fqdn'] = conf.getFqdn()
-        connectionParams['server_unverified_https_port'] = conf\
-        .getServerUnverifiedHTTPSPort()
-        connectionParams['server_verified_https_port'] = conf\
-        .getServerVerifiedHTTPSPort()
+        connectionParams['client_secure_port'] = conf\
+        .getClientSecurePort()
+        connectionParams['server_secure_port'] = conf\
+        .getServerSecurePort()
 
 
         input2 = Input('connectionParams',
@@ -109,7 +109,7 @@ class BroadcastMessage(ServerToServerMessage):
         ServerToServerMessage.__init__(self,node.getId())
         #self.initialize(node.server_id)
         headers['end-node'] = node.getHostname()
-        headers['end-node-port'] = node.getVerifiedHttpsPort()
+        headers['end-node-port'] = node.getServerSecurePort()
         msg = ServerRequest.prepareRequest(fields,[],headers)
         resp  = self.putRequest(msg)
         #print ProcessedResponse(resp).pprint()

@@ -44,9 +44,9 @@ class WorkerMessage(ClientBase):
         if self.host == None:
             self.host = self.conf.getClientHost()
         if self.port == None:
-            self.port = self.conf.getClientVerifiedHTTPSPort()
+            self.port = self.conf.getServerSecurePort()
         
-        self.use_verified_https=True
+        self.require_certificate_authentication=True
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()
 

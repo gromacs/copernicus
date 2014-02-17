@@ -79,10 +79,11 @@ class ClientConnectionBase(ConnectionBase):
         return response
 
 
-class VerifiedClientConnection(ClientConnectionBase):
+class ClientConnectionRequireCert(ClientConnectionBase):
     """
-    HTTPS connections are verified both client and server side
-    This one is used by the worker and the client
+
+    Used for HTTPS connections with cert authentication both on client server
+    This one is used by the worker and the client when passing connection bundles
     """
     def __init__(self, conf):
         self.connected=False
@@ -99,7 +100,7 @@ class VerifiedClientConnection(ClientConnectionBase):
 
         log.log(cpc.util.log.TRACE,"Connecting VerHTTPS to host %s, port %s"%(
             self.host,self.port))
-        self.conn = VerifiedHttpsConnection(self.host,
+        self.conn = HttpsConnectionWithCertReq(self.host,
                                             self.port,
                                             privateKey,
                                             keyChain,
@@ -110,11 +111,17 @@ class VerifiedClientConnection(ClientConnectionBase):
     def handleSocket(self):
         pass
 
-class UnverifiedClientConnection(ClientConnectionBase):
+
+
+class ClientConnectionNoCertRequired(ClientConnectionBase):
     """
-    HTTPS connections are unverified, meaning no server side or client side
-    verification is performed.
+    HTTPS connection are are not requiring a certificate from the server
+    Should connect to a port on the server that also do not require cert authentication
+    #FIXME this should be changed to require server certificates
     """
+
+
+
     def __init__(self, conf, disable_cookies=False):
         self.connected=False
         self.conf = conf
@@ -127,9 +134,9 @@ class UnverifiedClientConnection(ClientConnectionBase):
         self.host = host
         self.port = port
 
-        log.log(cpc.util.log.TRACE,"Connecting UnverHTTPS to host %s, port %s"%(
+        log.log(cpc.util.log.TRACE,"Connecting HTTPS with no cert req to host %s, port %s"%(
             self.host,self.port))
-        self.conn = UnverifiedHttpsConnection(self.host,self.port)
+        self.conn = HttpsConnectionNoCertReq(self.host,self.port)
         self.conn.connect()
         self.connected=True
 

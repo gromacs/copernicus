@@ -136,9 +136,7 @@ class ServerConf(conf_base.Conf):
     def initDefaults(self):
         conf_base.Conf.initDefaults(self)
         server_host = ''
-        self.defaultVerifiedHTTPSPort = Conf.getDefaultVerifiedHttpsPort()
-        self.defaultUnverifiedHTTPSPort = Conf.getDefaultUnverifiedHttpsPort()
-        
+
         self._add('server_host', server_host, 
                   "Address the server listens on", True)
 
@@ -146,16 +144,13 @@ class ServerConf(conf_base.Conf):
                   "Manually specified fqdn", True)
 
 
-        self._add('server_verified_https_port', self.defaultVerifiedHTTPSPort,
-                  "Port number the server listens on for verified https connections",
+        self._add('server_secure_port', Conf.getDefaultServerSecurePort(),
+                  "Port number the server uses for communication from servers ",
                   True,None,'\d+')
 
-        self._add('server_unverified_https_port', self.defaultUnverifiedHTTPSPort,
-                  "Port number the server listens on for unverified https connections",
-                  True,None,'\d+')
 
-        self._add('client_unverified_https_port', Conf.getDefaultUnverifiedHttpsPort(),
-                  "Port number the server listens on for http connections",
+        self._add('client_secure_port', Conf.getDefaultClientSecurePort(),
+                  "Port number the server listens on for communication from clients",
                   True,None,'\d+')
         
         self._add( 'nodes', Nodes(), 
@@ -355,9 +350,6 @@ class ServerConf(conf_base.Conf):
         with self.lock:
             return int(self.conf['server_cores'].get())
 
-    def getClientUnverifiedHTTPSPort(self):
-        return int(self.get('client_unverified_https_port'))
-
     def setMode(self,mode):
         with self.lock:
             self.conf['mode'].set(mode)
@@ -395,28 +387,17 @@ class ServerConf(conf_base.Conf):
     def getServerHost(self):
         return self.conf['server_host'].get()
 
-    def getServerVerifiedHTTPSPort(self):
+    def getServerSecurePort(self):
         with self.lock:
-            return int(self.conf['server_verified_https_port'].get())
+            return int(self.conf['server_secure_port'].get())
 
-    def getServerUnverifiedHTTPSPort(self):
+    def getClientSecurePort(self):
         with self.lock:
-            return int(self.conf['server_unverified_https_port'].get())
+            return int(self.conf['client_secure_port'].get())
 
     def getFqdn(self):
         with self.lock:
             return self.conf['server_fqdn'].get()
-
-
-    #just a wrapper method to conform with clientConnection
-    def getClientHTTPPort(self):
-        with self.lock:
-            return int(self.get('server_unverified_https_port'))
-
-    #just a wrapper method to conform with clientConnection
-    def getClientHost(self):
-        with self.lock:
-            return self.conf['client_host'].get()
 
 
     def getDefaultServer(self):
@@ -429,11 +410,6 @@ class ServerConf(conf_base.Conf):
 
     def getProjectFile(self):
         return self.getFile('project_file')
-    #def getTaskFile(self):
-    #    return self.getFile('task_file')
-
-    #def getRunBasedir(self):
-    #    return self.getFile('project_file')
 
     def getRunDir(self):
         return self.getFile('run_dir')
@@ -446,10 +422,6 @@ class ServerConf(conf_base.Conf):
     
     def getWebRootPath(self):        
         return os.path.join(self.execBasedir,self.get('web_root'))
-    
-    
-    #def getImportPath(self):
-    #    return self.conf['import_path'].get()
 
     def getImportPaths(self):
         retlist=[]

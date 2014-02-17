@@ -50,7 +50,7 @@ class Error(Exception):
     pass
 
 
-class VerifiedSecureServer(CopernicusServer):
+class HTTPSServerWithCertAuthentication(CopernicusServer):
     """
     This server provides both client and server side verification
     """
@@ -79,12 +79,12 @@ class VerifiedSecureServer(CopernicusServer):
             #FIXME this is not always true server can not start due to other
             # reasons
             traceback.print_exc()
-            print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
+            print "HTTPS port %s already taken"%conf.getServerSecurePort()
             serverState.doQuit()
 
 
 
-class UnverifiedSecureServer(HTTPServer__base):
+class HTTPSServerNoCertAuthentication(HTTPServer__base):
     """
     This server provides no verification as of now, but is scheduled to provide
     server side verification
@@ -94,7 +94,7 @@ class UnverifiedSecureServer(HTTPServer__base):
         self.serverState=serverState
 
         BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
-                                           conf.getServerUnverifiedHTTPSPort()),
+                                           conf.getClientSecurePort()),
                                            handler_class)
 
         #https part
@@ -114,16 +114,16 @@ class UnverifiedSecureServer(HTTPServer__base):
         except Exception:
             #FIXME this is not always true server can not start due to other
             # reasons
-            print "HTTPS port %s already taken"%conf.getServerVerifiedHTTPSPort()
+            print "HTTPS port %s already taken"%conf.getServerSecurePort()
             serverState.doQuit()
 
    
 
-def serveVerifiedHTTPS(serverState):
+def serveHTTPSWithCertAuthentication(serverState):
     try:
-        httpd = VerifiedSecureServer(request_handler.verified_handler, ServerConf(), serverState)
+        httpd = HTTPSServerWithCertAuthentication(request_handler.handlerForRequestWithCertReq, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
-        log.info("Serving verified HTTPS on %s port %s..."%(sa[0], sa[1]))
+        log.info("Serving HTTPS for server communication on %s port %s..."%(sa[0], sa[1]))
         httpd.serve_forever();
 
     except KeyboardInterrupt:
@@ -132,14 +132,14 @@ def serveVerifiedHTTPS(serverState):
     except Exception as e:
         #TODO better error handling of server errors during startup
         traceback.print_exc()
-        print "HTTPS port %s already taken"%ServerConf().getServerVerifiedHTTPSPort()
+        print "HTTPS port %s already taken"%ServerConf().getServerSecurePort()
         serverState.doQuit()
 
-def serveUnverifiedHTTPS(serverState):
+def serveHTTPSWithNoCertReq(serverState):
     try:
-        httpd = UnverifiedSecureServer(request_handler.unverified_handler, ServerConf(), serverState)
+        httpd = HTTPSServerNoCertAuthentication(request_handler.handlerForRequestWithNoCertReq, ServerConf(), serverState)
         sa = httpd.socket.getsockname()
-        log.info("Serving unverified HTTPS on %s port %s..."%(sa[0], sa[1]))
+        log.info("Serving HTTPS for client communication on %s port %s..."%(sa[0], sa[1]))
         httpd.serve_forever()
 
     except KeyboardInterrupt:
@@ -147,7 +147,7 @@ def serveUnverifiedHTTPS(serverState):
         serverState.doQuit()
     except Exception:
         #TODO better error handling of server errors during startup
-        print "HTTPS port %s already taken"%ServerConf().getServerUnverifiedHTTPSPort()
+        print "HTTPS port %s already taken"%ServerConf().getClientSecurePort()
         serverState.doQuit()
 
 
@@ -155,11 +155,11 @@ def serveUnverifiedHTTPS(serverState):
 def serverLoop(conf, serverState):
     """The main loop of the server process."""
     cpc.util.log.initServerLog(conf,log_mode=ServerConf().getMode())
-    th2=Thread(target = serveVerifiedHTTPS,args=[serverState])
+    th2=Thread(target = serveHTTPSWithCertAuthentication,args=[serverState])
     th2.daemon=True
     th2.start()
 
-    serveUnverifiedHTTPS(serverState)
+    serveHTTPSWithNoCertReq(serverState)
 
 def shutdownServer(self):
     log.info("shutdown complete")

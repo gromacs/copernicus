@@ -667,8 +667,8 @@ class SCStatus(ProjectServerCommand):
         for node in thisNode.nodes.nodes.itervalues():
             if not topology.exists(node.getId()):
                 #connect to correct node
-                clnt = ClientMessage(node.getHostname(), node.getVerifiedHttpsPort(),
-                                     conf=conf, use_verified_https=True)
+                clnt = ClientMessage(node.getHostname(), node.getServerSecurePort(),
+                                     conf=conf, use_secure_server_port=True)
                 #send along the current topology
                 rawresp = clnt.networkTopology(topology)
                 processedResponse = ProcessedResponse(rawresp)

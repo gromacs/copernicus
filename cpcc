@@ -95,7 +95,7 @@ def print_usage():
     print "Server control commands"    
     print "       cpcc stop-server"
     print "       cpcc trust             -all |server-id"
-    print "       cpcc connect-server    host [unverified_https_port]"
+    print "       cpcc connect-server    host [client_secure_port]"
     print "       cpcc revoke            server-id"
     print "       cpcc connected-servers | cs"
     print "       cpcc node-pri          priority host [port]"
@@ -197,13 +197,13 @@ try:
             name = getArg(args, 2, "servername")
             host = getArg(args, 3, "host")
             if len(pargs) == 4:
-                port = Conf.getDefaultUnverifiedHttpsPort()
+                port = Conf.getDefaultClientSecurePort()
             else:
                 port = getArg(args, 4, "port")
         else:
             name = host
             if len(pargs) == 2:
-                port = Conf.getDefaultUnverifiedHttpsPort()
+                port = Conf.getDefaultClientSecurePort()
             else:
                 port = getArg(args, 2, "port")
         cmd_line_utils.addServer(name, host, port)
@@ -225,10 +225,10 @@ try:
     # Get the client
     if bundleFile is not None:
         conf = cmd_line_utils.initiateConnectionBundle(bundleFile)
-        clnt=ClientMessage(conf=conf,use_verified_https=True)
+        clnt=ClientMessage(conf=conf, use_secure_server_port=True)
     else:
         conf = cmd_line_utils.getClientConf()
-        clnt=ClientMessage(conf=conf,use_verified_https=False)
+        clnt=ClientMessage(conf=conf, use_secure_server_port=False)
 
     # handle remote commands
     if cmd == "login":
@@ -472,14 +472,14 @@ try:
 
     elif cmd == "connect-server":
         host = getArg(args,1,"hostname")
-        unverified_https_port = None
-        verified_https_port = None        
+        client_secure_port = None
+        server_secure_port = None
         if len(args)>2:
-            unverified_https_port = str(getArg(args,2,'unverified_https_port'))
+            client_secure_port = str(getArg(args,2,'client_secure_port'))
         else:
-            unverified_https_port = Conf.getDefaultUnverifiedHttpsPort()
+            client_secure_port = Conf.getDefaultClientSecurePort()
                   
-        ProcessedResponse(clnt.addNode(host, unverified_https_port)).\
+        ProcessedResponse(clnt.addNode(host, client_secure_port)).\
         pprint(CmdLine.addNodeRequest)
 
     elif cmd == 'connected-servers' or cmd=='cs':

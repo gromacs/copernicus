@@ -190,7 +190,7 @@ try:
 
         #direct invocation of method not feasible since a conf object is a singleton,
         # client conf and server conf cannot be instantiated at the same time
-        cmd = "cpcc add-server localhost %s"%ServerConf().getServerUnverifiedHTTPSPort()
+        cmd = "cpcc add-server localhost %s"%ServerConf().getClientSecurePort()
         os.system(cmd)
 
         print "\nInstallation succeeded.\nYou can now start the server with cpc-server start"

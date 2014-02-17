@@ -333,23 +333,21 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         return True
 
 
-class unverified_handler(handler_base):
+class handlerForRequestWithNoCertReq(handler_base):
     """
-    Handles request that comes from an HTTPS connection where no verification
-    has been done
+    Handles request that comes from an HTTPS connection with no certificate authentication
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('cpc.server.request_handler_unverified')
+        self.log=logging.getLogger('cpc.server.request_handler_handler_for_request_with_no_cert_req')
 
-class verified_handler(handler_base):
+class handlerForRequestWithCertReq(handler_base):
     """
-    Handles request that comes from an HTTPS connection where the client is
-    verified by the server and thus can be trusted.
+    Handles request that comes from an HTTPS connection with certificate authentication
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('cpc.server.request_handler_verified')
+        self.log=logging.getLogger('cpc.server.handler_for_request_with_cert_req')
     def _handleSession(self, request):
         handler_base._handleSession(self,request)
         if 'user' not in request.session:

@@ -82,10 +82,10 @@ class PersistentServerMessage(ServerConnection):
         connectionParams['serverId'] = conf.getServerId()
         connectionParams['hostname'] = conf.getHostName()
         connectionParams['fqdn'] = conf.getFqdn()
-        connectionParams['server_unverified_https_port'] = conf\
-        .getServerUnverifiedHTTPSPort()
-        connectionParams['server_verified_https_port'] = conf\
-        .getServerVerifiedHTTPSPort()
+        connectionParams['client_secure_port'] = conf\
+        .getClientSecurePort()
+        connectionParams['server_secure_port'] = conf\
+        .getServerSecurePort()
 
 
         input2 = Input('connectionParams',

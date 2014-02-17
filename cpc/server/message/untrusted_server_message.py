@@ -21,7 +21,7 @@ class RawServerMessage(ClientBase):
         if self.host == None:
             self.host = self.conf.getServerHost()
         if self.port == None:
-            self.port = self.conf.getServerVerifiedHTTPSPort()
+            self.port = self.conf.getServerSecurePort()
 
         self.privateKey = self.conf.getPrivateKey()
         self.keychain = self.conf.getCaChainFile()
@@ -39,8 +39,8 @@ class RawServerMessage(ClientBase):
         key = inf.read()
 
         nodeConnectRequest = NodeConnectRequest(conf.getServerId()
-            ,conf.getServerUnverifiedHTTPSPort()
-            ,conf.getServerVerifiedHTTPSPort()
+            ,conf.getClientSecurePort()
+            ,conf.getServerSecurePort()
             ,key
             ,conf.getFqdn()
             ,conf.getHostName())
@@ -56,10 +56,10 @@ class RawServerMessage(ClientBase):
         fields.append(input2)
         fields.append(input3)
         fields.append(Input('version', "1"))
-        # this goes over unverified https, and we don't want the server to use
+        # this goes over the client Secure Port, and we don't want the server to use
         # cookies
         response= self.postRequest(ServerRequest.prepareRequest(fields),
-            use_verified_https=False,
+            require_certificate_authentication=False,
             disable_cookies=True)
         return response
 
@@ -71,8 +71,8 @@ class RawServerMessage(ClientBase):
         #only sending fqdn the requesting should already know the unqualified
         # hostname
         node = NodeConnectRequest(conf.getServerId(),
-            conf.getServerUnverifiedHTTPSPort(),
-            conf.getServerVerifiedHTTPSPort(),
+            conf.getClientSecurePort(),
+            conf.getServerSecurePort(),
             key,
             conf.getFqdn(),
             None)
@@ -89,9 +89,9 @@ class RawServerMessage(ClientBase):
         fields.append(input2)
         fields.append(Input('version', "1"))
 
-        # this goes over unverified https, and we don't want the server to use
+        # this goes over  client secure port , and we don't want the server to use
         # cookies 
         response= self.postRequest(ServerRequest.prepareRequest(fields),
-            use_verified_https=False,
+            require_certificate_authentication=False,
             disable_cookies=True)
         return response

@@ -67,8 +67,8 @@ class ClientConf(Conf):
             default_server = servers[default_server_str]
 
             self.conf["client_host"].set(default_server['client_host'])
-            self.conf["client_unverified_https_port"].set(
-                default_server['client_unverified_https_port'])
+            self.conf["client_secure_port"].set(
+                default_server['client_secure_port'])
         except KeyError as e:
             # this implies an invalid default_server pointer,
             # and should only occur upon manual user interaction with the
@@ -100,8 +100,8 @@ class ClientConf(Conf):
         self._add('client_host', None,
              "Hostname for the client to connect to",
              userSettable=False, writable=False)
-        self._add('client_unverified_https_port', None,
-             "Port number for the client to connect to unverified https",
+        self._add('client_secure_port', None,
+             "Port number the server listens on for communication from clients",
              userSettable=False, writable=None)
 
     def getClientHost(self):
@@ -110,8 +110,8 @@ class ClientConf(Conf):
             raise NoServerError("No default server")
         return host
 
-    def getClientUnverifiedHTTPSPort(self):
-        port = self.get('client_unverified_https_port')
+    def getClientSecurePort(self):
+        port = self.get('client_secure_port')
         if port is None:
             raise NoServerError("No default server")
         return int(port)
@@ -121,7 +121,7 @@ class ClientConf(Conf):
         if name in servers:
             raise ConfError("A server with name %s already exist"%name)
         servers[name] = {
-            "client_unverified_https_port" : port,
+            "client_secure_port" : port,
             "client_host" : host
         }
         self.set('servers', servers)

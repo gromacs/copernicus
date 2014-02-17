@@ -4,7 +4,7 @@ import logging
 import traceback
 
 from cpc.network.com.connection_base import ConnectionBase
-from cpc.network.https.real_https_connection import VerifiedHttpsConnection
+from cpc.network.https.real_https_connection import HttpsConnectionWithCertReq
 from cpc.network.https_connection_pool import ServerConnectionPool, ConnectionPoolEmptyError
 from cpc.network.node import Node
 from cpc.util import CpcError, cpc
@@ -36,7 +36,7 @@ class ServerConnection(ConnectionBase):
                 connected:boolean
                 conf:ServerConf
                 storeInConnectionPool:boolean
-                conn:VerifiedHttpsConnection
+                conn:HttpsConnectionWithCertReq
         """
         self.node = node
         self.httpsConnectionPool = ServerConnectionPool()
@@ -60,8 +60,8 @@ class ServerConnection(ConnectionBase):
         # another server
         try:
             if(self.createConnection):
-                self.conn = VerifiedHttpsConnection(self.node.getHostname(),
-                    self.node.getVerifiedHttpsPort(),
+                self.conn = HttpsConnectionWithCertReq(self.node.getHostname(),
+                    self.node.getServerSecurePort(),
                     self.conf.getCAPrivateKey()
                     ,self.conf.getCaChainFile()
                     ,self.conf.getCACertFile())
@@ -108,7 +108,7 @@ class ServerConnection(ConnectionBase):
             ClientResponse
         """
         try:
-            log.log(cpc.util.log.TRACE,"Connecting using verified HTTPS")
+            log.log(cpc.util.log.TRACE,"Connecting using HTTPS with cert authentication")
             if self.conn == None:
                 self.connect()
             ret=self.sendRequest(req,"PUT")

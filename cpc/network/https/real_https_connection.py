@@ -11,12 +11,12 @@ from array import array
 from cpc.util import CpcError
 
 log=logging.getLogger('cpc.network.https.real_https_connection')
-class VerifiedHttpsInstanceCreationException(CpcError):
+class HttpsConnectionWithCertReqCreationException(CpcError):
     def __init__(self, str):
         self.str = str
 
 
-class VerifiedHttpsConnection(httplib.HTTPConnection):
+class HttpsConnectionWithCertReq(httplib.HTTPConnection):
     '''
     Provides an HTTPS connection with certificate verification
     '''
@@ -28,11 +28,11 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
            Creates the object, one has to either provide privateKeyFile,
            caFile and certFile or pass in an already created SSLSocket object.
            the latter is for the case where we have an established connection
-           that we want to wrap as a VerifiedHttpsConnection
+           that we want to wrap as a HttpsConnectionWithCertReq
 
            inputs:
             host:String             hostname of the destination
-            port:String             the verified HTTPS port to connect to
+            port:String             the HTTPS port to connect to
             privateKeyFile:String   path to our private key,
                                     used to verify local side
             caFile:String           path local certificate authority file
@@ -42,14 +42,14 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
                                     connect to
 
             socket:SSLSocket        a socket we want to wrap as a
-                                    VerifiedHttpsConnection
+                                    HttpsConnectionWithCertReq
         """
         httplib.HTTPConnection.__init__(self, host,int(port))
         self.auto_open = False
         if(socket==None):
             if(privateKeyFile==None or caFile==None or certFile==None):
-                raise VerifiedHttpsInstanceCreationException("Cannot create "
-                    "instance of VerifiedHttpsConnection, "
+                raise HttpsConnectionWithCertReqCreationException("Cannot create "
+                    "instance of HttpsConnectionWithCertReq, "
                     "either provide a ready made SSLsocket or  "
                     "privateKeyfile,certFile and caFile")
 
@@ -79,7 +79,7 @@ class VerifiedHttpsConnection(httplib.HTTPConnection):
         self.sock.connect((self.host,self.port))
         self.connected = True
 
-class UnverifiedHttpsConnection(httplib.HTTPConnection):
+class HttpsConnectionNoCertReq(httplib.HTTPConnection):
     '''
     Provides an HTTPS connection with no certificate verification
     '''

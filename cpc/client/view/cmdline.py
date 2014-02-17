@@ -498,10 +498,10 @@ class CmdLine(object):
         co.write("    Server hostname:        %s \n"%info['fqdn'])
         co.write("    Server version:         %s\n"%(info['version']))
         co.write("    Server id     :         %s\n"%(info['serverId']))
-        co.write("    Verified HTTPS port:    %s\n"%(info[
-                                                   'verified_https_port']))
-        co.write("    Unverified HTTPS port:  %s"%(info[
-                                                      'unverified_https_port']))
+        co.write("    Server HTTPS port:    %s\n"%(info[
+                                                   'server_secure_port']))
+        co.write("    Client HTTPS port:  %s"%(info[
+                                                      'client_secure_port']))
         return co.getvalue()
     
     @staticmethod   
@@ -513,7 +513,7 @@ class CmdLine(object):
         co.write("Connection request sent to %s %s "%(nodeConnectRequest
                                                          .getHostname(),
                                                       nodeConnectRequest
-                                                      .getUnverifiedHttpsPort()))
+                                                      .getClientSecurePort()))
         return co.getvalue()
 
 
@@ -532,7 +532,7 @@ class CmdLine(object):
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in sentRequests.nodes.itervalues():
                 co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
-                                             node.getUnverifiedHttpsPort(),node.server_id))
+                                             node.getClientSecurePort(),node.server_id))
 
 
         if len(receivedRequests.nodes.keys())>0:
@@ -540,7 +540,7 @@ class CmdLine(object):
             co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
             for node in receivedRequests.nodes.itervalues():
                 co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
-                                             node.getUnverifiedHttpsPort(),node.server_id))
+                                             node.getClientSecurePort(),node.server_id))
 
         if len(connected)>0:
             co.write("\nConnected nodes:\n")
@@ -549,7 +549,7 @@ class CmdLine(object):
             for node in connected:
                     co.write("%-10s %-20s %-10s %s\n"%(node.getPriority()
                                                        ,node.getQualifiedName()
-                                                       ,node.getVerifiedHttpsPort()
+                                                       ,node.getServerSecurePort()
                                                        ,node.getId()) )
 
 
@@ -560,7 +560,7 @@ class CmdLine(object):
             for node in broken:
                 co.write("%-10s %-20s %-10s %s\n"%(node.getPriority()
                                                    ,node.getQualifiedName()
-                                                   ,node.getVerifiedHttpsPort()
+                                                   ,node.getServerSecurePort()
                                                    ,node.getId()) )
 
         return co.getvalue()
@@ -577,7 +577,7 @@ class CmdLine(object):
         co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
         for node in connected:
             co.write("%-20s %-10s %s\n"%(node.getQualifiedName(),
-                                         node.getUnverifiedHttpsPort(),node.server_id))
+                                         node.getClientSecurePort(),node.server_id))
 
         return co.getvalue()
 
@@ -731,6 +731,6 @@ class CmdLine(object):
             def_str = ' (default)' if 'default' in val else ''
             print "%s%s:"%(key,def_str)
             print "   host: %s"%val['client_host']
-            print "   port: %s"%val['client_unverified_https_port']
+            print "   port: %s"%val['client_secure_port']
             print
 

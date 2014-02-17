@@ -33,14 +33,14 @@ class NodeConnectRequest(Node):
 
 
     def __init__(self,server_id
-                 ,unverified_https_port,
-                 verified_https_port
+                 ,client_secure_port,
+                 server_secure_port
                  ,key
                  ,qualified_name,hostname):
 
         Node.__init__(self,server_id
-            ,unverified_https_port
-            ,verified_https_port
+            ,client_secure_port
+            ,server_secure_port
             ,qualified_name,hostname)
         self.key = key  #the public key of the server
             
