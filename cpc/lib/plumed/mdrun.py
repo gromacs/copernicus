@@ -432,7 +432,7 @@ def mdrun(inp):
 
 
 
-def grompp_mdrun_multi(inp):
+def grompp_mdruns(inp):
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("grompp -version")
@@ -469,7 +469,7 @@ def grompp_mdrun_multi(inp):
     pers.write()
     return out
 
-def mdrun_multi(inp):
+def mdruns(inp):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjcat -version")

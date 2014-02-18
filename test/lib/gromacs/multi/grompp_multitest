@@ -18,7 +18,7 @@ projectname=$1
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import gromacs
 # add the grompp and mdrun function instances
-./cpcc instance gromacs::grompp_multi grompp_multi
+./cpcc instance gromacs::grompps grompps
 #./cpcc instance gromacs::mdrun mdrun
 # activate the function instance
 ./cpcc activate 
@@ -31,21 +31,21 @@ projectname=$1
 # set the grompp inputs
 
 #NOTE WE CAN LOOP OVER THIS
-./cpcc set-file grompp_multi:in.conf[+] test/lib/gromacs/multi/conf.gro
-./cpcc set-file grompp_multi:in.mdp[+]  test/lib/gromacs/multi/grompp.mdp
-./cpcc set-file grompp_multi:in.top[+]  test/lib/gromacs/multi/topol.top
+./cpcc set-file grompps:in.conf[+] test/lib/gromacs/multi/conf.gro
+./cpcc set-file grompps:in.mdp[+]  test/lib/gromacs/multi/grompp.mdp
+./cpcc set-file grompps:in.top[+]  test/lib/gromacs/multi/topol.top
 # 
-./cpcc set-file grompp_multi:in.conf[+] test/lib/gromacs/multi/conf.gro
-./cpcc set-file grompp_multi:in.mdp[+]  test/lib/gromacs/multi/grompp.mdp
-./cpcc set-file grompp_multi:in.top[+]  test/lib/gromacs/multi/topol.top
+./cpcc set-file grompps:in.conf[+] test/lib/gromacs/multi/conf.gro
+./cpcc set-file grompps:in.mdp[+]  test/lib/gromacs/multi/grompp.mdp
+./cpcc set-file grompps:in.top[+]  test/lib/gromacs/multi/topol.top
 
 
 
 #NOTE these ones cannot be set with +
-#./cpcc set grompp_multi:in.settings[0].name nsteps
-#./cpcc set grompp_multi:in.settings[0].value 10000
-#./cpcc set grompp_multi:in.settings[1].name integrator
-#./cpcc set grompp_multi:in.settings[1].value md
+#./cpcc set grompps:in.settings[0].name nsteps
+#./cpcc set grompps:in.settings[0].value 10000
+#./cpcc set grompps:in.settings[1].name integrator
+#./cpcc set grompps:in.settings[1].value md
 # and commit this set of updates
 
 
