@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import os
+import shlex
+import subprocess
+import sys
+
+
+'''
+Given a version number this script will
+1. check out a new branch
+2. change the version number in cpc/util/version.py
+3. commit the change
+4. create an archive for release
+5. push the tag to refs/tags
+
+if the version number exists in refs/tags the script will not do the
+above 5 steps but only create an archive
+'''
+
+
+def executeCommand(command):
+    ret =os.system(command)
+    if ret:
+        print "error while executing the command %s.\n Aborting release"%command
+        sys.exit(1)
+
+
+if(sys.argc<2):
+    print "Usage release VERSION_NUM"
+
+versionExists = False
+version = sys.argv[1].strip()
+releaseArchive = "copernicus-%s.tar.gz"%version
+cmd = "git ls-remote --tags"
+p = subprocess.Popen(shlex.split(cmd),stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+
+(stdout,stderr) = p.communicate()
+
+if p.returncode:
+    print "error while executing the command %s.\n Aborting release"%cmd
+    sys.exit(0)
+
+else:
+    lines = stdout.splitlines()
+    for line in lines:
+        if line.endswith(version):
+            print """\nVersion %s already exists. Will check out existing tag and create release from there"""%version
+            versionExists = True
+
+
+
+if versionExists:
+    cmd = "git archive --format=tar.gz  %s > %s"%(version,releaseArchive)
+    executeCommand(cmd)
+else:
+    cmd = "git checkout -b release-%s origin/master"%version
+    executeCommand(cmd)
+
+    #set version number in file
+    versionFile = "cpc/util/version.py"
+
+    #change the version number
+    cmd = r"""sed -i '' s/__version.*/__version__=\"%s\"/ %s"""%(version,versionFile)
+    executeCommand(cmd)
+
+    #commit
+    cmd = r"""git commit -a -m "setting version %s" """%version
+    executeCommand(cmd)
+
+    cmd = r"""git tag -a %s -m "version %s" """%(version,version)
+    executeCommand(cmd)
+
+
+    cmd = "git archive --format=tar.gz  %s > %s"%(version,releaseArchive)
+    executeCommand(cmd)
+
+    cmd = "git push origin HEAD:refs/tags/%s"%version
+    executeCommand(cmd)
+
+
+print """\nRelease for version %s is now created. You should now upload %s to the copernicus site"""%(version,releaseArchive)
+
+
