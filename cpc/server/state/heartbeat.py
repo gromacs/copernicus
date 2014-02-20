@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2012, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -49,16 +49,16 @@ class WorkerDataListError(cpc.util.CpcError):
 class RunningCommand(object):
     """The data associated with a running command. Mostly heartbeat monitoring
        data"""
-    def __init__(self, cmd, workerID, workerDir, runDir, server, 
+    def __init__(self, cmd, workerID, workerDir, runDir, server,
                  heartbeatInterval):
         self.cmd=cmd   # the command
-        self.workerID=workerID 
+        self.workerID=workerID
         self.workerDir=workerDir # the working directory of the worker
         self.runDir=runDir # the working directory for this command
-        self.lastHeard=time.time() 
+        self.lastHeard=time.time()
         self.workerServer=server
         # the relevant heartbeat interval
-        self.heartbeatInterval=int(heartbeatInterval) 
+        self.heartbeatInterval=int(heartbeatInterval)
         # before the first ping we have to assume this
         self.isLocal=False
         self.haveData=False
@@ -129,11 +129,11 @@ class RunningCommand(object):
 class WorkerDataList(object):
     """Maintains a list of directories used by workers connected to this
        server. Only these directories are fetchable with dead-worker-fetch.
-       
+
        Each directory indexes a random has that is the name of a file that
-       the worker should generate. This way a worker can prove that it 
+       the worker should generate. This way a worker can prove that it
        can write to the directory it claims is the worker directory. This
-       closes a potential security issue where the worker could make the 
+       closes a potential security issue where the worker could make the
        server read any file."""
     def __init__(self):
         # the directories are held in a dict that indexes the random file
@@ -191,14 +191,14 @@ class RunningCmdList(object):
 
     # Minimum time to wait for heartbeat expiries. This limits the rate
     # at which worker failures can cause data requests to worker servers if
-    # they can be bundled. 
-    rateLimitTime = 5 
+    # they can be bundled.
+    rateLimitTime = 5
 
     def __init__(self, conf, cmdQueue, workerData):
         """Initialize the object with an empty list."""
         # a list of heartbeat items in a dict indexed by command ID, of
         # RunningCommand objects. Because this is just a flat list, we can
-        # ensure that if a worker 'forgets' about a job, it will trigger a 
+        # ensure that if a worker 'forgets' about a job, it will trigger a
         # heartbeat timeout on a single job. Likewise, if a group of jobs time
         # out, they will time out closely in time so a small lag time will
         # gather a group of job-failure requests to send to the worker-server
@@ -225,9 +225,9 @@ class RunningCmdList(object):
             for cmd in cmds:
                 if cmd.id in self.runningCommands:
                     raise RunningCmdListError("Duplicate command ID")
-                # the worker ID and directory will be set when the first 
+                # the worker ID and directory will be set when the first
                 # heartbeat signal is received.
-                rc=RunningCommand(cmd, None, None, None, workerServer, 
+                rc=RunningCommand(cmd, None, None, None, workerServer,
                                   heartbeatInterval)
                 self.runningCommands[cmd.id] = rc
                 cmd.setRunning(True, workerServer)
@@ -240,6 +240,7 @@ class RunningCmdList(object):
             if cmd.id not in self.runningCommands:
                 raise RunningCmdListNotFoundError(cmd.id)
             del self.runningCommands[cmd.id]
+            cmd.setRunning(False)
 
     def handleFinished(self, cmdID, returncode, cputime, runfile):
         """Handle a finished command (successful or otherwise), with optional
@@ -255,6 +256,7 @@ class RunningCmdList(object):
                 raise RunningCmdListNotFoundError(cmdID)
             cmd=self.runningCommands[cmdID].cmd
             del self.runningCommands[cmdID]
+            cmd.setRunning(False)
         # the command is now removed from the list so we can stop locking.
         if runfile is not None:
             log.debug("extracting file for %s to dir %s"%(cmd.id,cmd.getDir()))
@@ -263,16 +265,14 @@ class RunningCmdList(object):
         else:
             # there was no output. Try again
             cmd.addCputime(cputime)
-            cmd.running=False
             self.cmdQueue.add(cmd)
 
     def _handleFinishedCmd(self, cmd, returncode, cputime):
         """Handle the command finishing itself. The command must be removed
            from the list first using self.lock, so no two threads own this
            command first."""
-        # handle the associated status 
+        # handle the associated status
         task=cmd.getTask()
-        cmd.running=False
         cmd.setReturncode(returncode)
         cmd.addCputime(cputime)
         #if runfile is not None:
@@ -301,12 +301,12 @@ class RunningCmdList(object):
     def ping(self, workerID, workerDir, iteration, heartbeatItems, isLocal,
              faultyItems):
         """Handle a heartbeat signal from a worker (possibly relayed)
-          
+
            workerID = the sending worker's ID
-           workerDir = the sending worker's run directory 
+           workerDir = the sending worker's run directory
            iteration = the sending workers' claimed iteration
            heartbeatItems = the hearbeat items describing commands.
-           isLocal = a boolean that is true when the worker server is this 
+           isLocal = a boolean that is true when the worker server is this
                      server
            faultyItems = a list containing faulty heartbeat items
            """
@@ -336,7 +336,7 @@ class RunningCmdList(object):
                         rc.setWorkerDir(workerDir)
                         rc.setRunDir(item.getRunDir())
                         rc.setIsLocal(isLocal)
-                        haveData=item.getHaveRunDir() 
+                        haveData=item.getHaveRunDir()
                         if haveData is None:
                             haveData=False
                         rc.setHaveData(haveData)
@@ -358,13 +358,13 @@ class RunningCmdList(object):
         pass
 
     def _fetchRemoteRunFiles(self, rc):
-        """Get the result files from a remote run directory to a local 
-            command directory. 
+        """Get the result files from a remote run directory to a local
+            command directory.
             Return true if successful. May throw exception in case of failure"""
         if rc.haveData:
             log.debug("Fetching remote results directory %s to %s"%
                       (rc.runDir, rc.cmd.getDir()))
-            # the data is remote: we must fetch data through a 
+            # the data is remote: we must fetch data through a
             # server-to-server command.
             msg=ServerMessage(rc.workerServer)
             resp=msg.deadWorkerFetchRequest(rc.workerDir, rc.runDir)
@@ -378,8 +378,8 @@ class RunningCmdList(object):
         return False
 
     def _moveRunFiles(self, rc):
-        """Move the result files from a local run directory to a local 
-            command directory. 
+        """Move the result files from a local run directory to a local
+            command directory.
             Return true if successful. May throw exception in case of failure"""
         runDir=rc.runDir
         destDir=rc.cmd.getDir()
@@ -400,8 +400,8 @@ class RunningCmdList(object):
             os.mkdir(tmpDestDir)
             try:
                 os.mkdir(tmpBackupDir)
-                # now move all the files into the temp dest dir 
-                # If there is a problem with permissions, it will happen now, 
+                # now move all the files into the temp dest dir
+                # If there is a problem with permissions, it will happen now,
                 # before we overwrite any of the original files.
                 files=os.listdir(runDir)
                 # now move the files individually
@@ -412,7 +412,7 @@ class RunningCmdList(object):
                         # we must remove them first because otherwise
                         # shutil.move will thrown an exception
                         shutil.move(srcFile, dstFile)
-                # and move all of them in place. We can now do this safely with 
+                # and move all of them in place. We can now do this safely with
                 # os.rename
                 files=os.listdir(tmpDestDir)
                 for filename in files:
@@ -421,7 +421,7 @@ class RunningCmdList(object):
                         dstFile=os.path.join(destDir, filename)
                         # we move any existing files to dstBackupDir
                         if os.path.exists(dstFile):
-                            os.rename(dstFile, os.path.join(tmpBackupDir, 
+                            os.rename(dstFile, os.path.join(tmpBackupDir,
                                                             filename))
                         os.rename(srcFile, dstFile)
                 # and remove the run directory, the tmp dir and the backup dir
@@ -431,9 +431,9 @@ class RunningCmdList(object):
                 shutil.rmtree(tmpDestDir)
                 shutil.rmtree(tmpBackupDir)
             return done
-          
+
     def checkHeartbeatTimes(self, interval):
-        """Check the heartbeat times and deal with dead jobs. 
+        """Check the heartbeat times and deal with dead jobs.
            interval = the max. heartbeat interval
            Returns the time of the first heartbeat expiry."""
         with self.lock:
@@ -442,27 +442,27 @@ class RunningCmdList(object):
             firstExpiry=interval
             now=time.time()
             for rc in self.runningCommands.itervalues():
-                expiry = rc.expiry(now) 
+                expiry = rc.expiry(now)
                 if expiry < 0:
                     todelete.append(rc)
                 elif expiry < firstExpiry:
                     firstExpiry = expiry + 1
-            # first remove the expired running commands from the 
+            # first remove the expired running commands from the
             # running list
             for rc in todelete:
                 del self.runningCommands[rc.cmd.id]
+                rc.cmd.setRunning(False)
         # then handle their failure
         if len(todelete)>0:
             # first try to get the data
-            finishedReported=False
-            haveDir=False
             for rc in todelete:
+                finishedReported=False
                 # TODO: consolidate all requests for each worker server into
                 # one request
                 try:
                     if not rc.isLocal:
                         haveDir=self._fetchRemoteRunFiles(rc)
-                    else: 
+                    else:
                         # the data is local. Copy the directory
                         haveDir=self._moveRunFiles(rc)
                     if haveDir:
