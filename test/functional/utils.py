@@ -97,10 +97,6 @@ def setup_server(heartbeat='20' ,name='test_server',addServer=True):
         p = subprocess.check_call(["./cpc-server","-c",name,
                                    "config", "heartbeat_time",
                                    heartbeat], stdout=null, stderr=null)
-        #should no longer be needed
-    if addServer:
-        run_client_command('add-server localhost')
-
 
 def generate_bundle(name="test_server"):
     #generate bundle
