@@ -54,14 +54,14 @@ class ServerToServerConnectionTest(unittest.TestCase):
         """ Expect to see the address of the host in the list,
         we only have a hostname of the remote host so thats whah we display
         below  """
-        run_client_command("list-servers",name=self.servers[0],
+        run_client_command("connected-servers",name=self.servers[0],
             expectstdout="%s (\s)* %s"%('localhost',
                                          self.unverifiedHttpsPorts[1]),useCnx=True)
 
         """assert that server 2 has a connection request from server 2 in its
          networks list here we do expect to see the fqdn of the host since
          since we actually got it"""
-        run_client_command("list-servers",name=self.servers[1],
+        run_client_command("connected-servers",name=self.servers[1],
             expectstdout="%s (\s)* %s .*"%('localhost',
                                         self.unverifiedHttpsPorts[0]),useCnx=True)
 
@@ -122,7 +122,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="localhost(\s)*14807\s*.*",useCnx=True)
 
         #check network topologies of server 2
-        run_client_command("list-servers",name=self.servers[1],
+        run_client_command("connected-servers",name=self.servers[1],
             expectstdout="0(\s)*localhost(\s)*13807\s*.*",useCnx=True)
 
         #read the conf json, get the connected nodes assert we only have one
@@ -137,7 +137,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="OK",useCnx=True)
 
         #check network topologies of server 1
-        run_client_command("list-servers",name=self.servers[0],
+        run_client_command("connected-servers",name=self.servers[0],
             expectstdout="0(\s)*localhost(\s)*13808\s*.*",useCnx=True)
 
         #do a test request from server 1 to server 2
@@ -168,7 +168,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
             expectstdout="Server %s is now revoked"%serverIdToRevoke,useCnx=True)
 
         #assert that there is no pending requests on server2
-        run_client_command("list-servers",name=self.servers[1],
+        run_client_command("connected-servers",name=self.servers[1],
             expectstdout="",useCnx=True)
 
 
@@ -181,7 +181,7 @@ class ServerToServerConnectionTest(unittest.TestCase):
 
         # ping to server2 should have been done and now server 1 should not
         # have an outgoing connection request in its list
-        run_client_command("list-servers",name=self.servers[0],
+        run_client_command("connected-servers",name=self.servers[0],
             expectstdout="",useCnx=True)
 
 
