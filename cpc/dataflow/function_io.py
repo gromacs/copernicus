@@ -21,7 +21,7 @@
 #import logging
 
 
-#log=logging.getLogger('cpc.dataflow.function')
+#log=logging.getLogger(__name__)
 
 import apperror
 import keywords

@@ -25,7 +25,7 @@ Created on May 25, 2011
 
 from cpc.network.node import Node
 import logging
-log=logging.getLogger('cpc.network.node_connect_request')
+log=logging.getLogger(__name__)
 class NodeConnectRequest(Node):
     '''
     classdocs

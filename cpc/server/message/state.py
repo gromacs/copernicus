@@ -31,7 +31,7 @@ from server_command import ServerCommand
 from server_command import ServerCommandError
 from cpc.server.state.user_handler import UserLevel, UserHandler, UserError
 from cpc.dataflow.lib import getModulesList
-log = logging.getLogger('cpc.server.message.state')
+log=logging.getLogger(__name__)
 
 class SCStop(ServerCommand):
     """Stop server command"""

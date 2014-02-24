@@ -30,7 +30,7 @@ from cpc.network.com.input import Input
 from cpc.network.server_request import ServerRequest
 from cpc.util import json_serializer
 
-log=logging.getLogger('cpc.server_to_server')
+log=logging.getLogger(__name__)
 
 class ServerMessage(ServerToServerMessage):
     """Server-to-server messages.

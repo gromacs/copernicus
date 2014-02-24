@@ -29,7 +29,7 @@ from cpc.network.com.file_input import FileInput
 from cpc.network.server_request import ServerRequest
 from cpc.util.conf.connection_bundle import ConnectionBundle
 
-log=logging.getLogger('cpc.worker.message')
+log=logging.getLogger(__name__)
 class WorkerMessage(ClientBase):
     '''
     Messages not directly sent from a user of copernicus

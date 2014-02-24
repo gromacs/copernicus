@@ -3,7 +3,7 @@ from cpc.network.com.client_response import ClientResponse
 from cpc.util import ClientError, cpc
 
 import logging
-log=logging.getLogger('cpc.connection_base')
+log=logging.getLogger(__name__)
 class ConnectionBase:
     """
     Abstract class

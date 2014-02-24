@@ -30,7 +30,7 @@ except ImportError:
 import cpc.util.plugin
 import logging
 
-log = logging.getLogger('cpc.command.extras_handler')
+log=logging.getLogger(__name__)
 
 
 

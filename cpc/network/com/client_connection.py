@@ -27,7 +27,7 @@ import cpc.util.log
 from cpc.util.conf.client_conf import ClientConf
 from cpc.network.https_connection_pool import *
 
-log=logging.getLogger('cpc.client')
+log=logging.getLogger(__name__)
 
 class CookieHandler(object):
     """Keeps cookies for the client. Loads and stores in a file"""

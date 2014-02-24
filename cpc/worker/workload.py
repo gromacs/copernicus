@@ -47,7 +47,7 @@ from cpc.command.platform_reservation import PlatformReservation
 import cpc.worker
 from cpc.worker.message import *
 
-log=logging.getLogger('cpc.workload')
+log=logging.getLogger(__name__)
 
 
 # this lock avoids two simultaneous Popen commands. This seems to fix

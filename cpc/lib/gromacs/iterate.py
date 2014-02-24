@@ -29,7 +29,7 @@ import logging
 import time
 
 
-log=logging.getLogger('cpc.lib.mdrun')
+log=logging.getLogger(__name__)
 
 import cpc.util
 

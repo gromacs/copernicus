@@ -33,7 +33,7 @@ import resource
 import cpc.server.queue.cmdqueue
 import cpc.util.rng
 
-log=logging.getLogger('cpc.project')
+log=logging.getLogger(__name__)
 
 
 seeded=False # whether the command id generator has been seeded

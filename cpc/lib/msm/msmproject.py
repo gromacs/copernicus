@@ -57,7 +57,7 @@ import msmbuilder.Trajectory
 import cpc.dataflow
 from cpc.dataflow import FileValue
 
-log = logging.getLogger('cpc.msm.project')
+log=logging.getLogger(__name__)
 
 
 class TrajData(object):

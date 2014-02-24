@@ -21,7 +21,7 @@
 import logging
 
 
-log=logging.getLogger('cpc.dataflow.active_conn')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import apperror

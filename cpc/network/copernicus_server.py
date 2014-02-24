@@ -12,7 +12,7 @@ import cpc.server.message
 from cpc.util.conf.server_conf import ServerConf
 
 
-log=logging.getLogger('cpc.network.copernicius_server')
+log=logging.getLogger(__name__)
 
 class HTTPServer__base(SocketServer.ThreadingMixIn,HTTPServer):
     """

@@ -30,7 +30,7 @@ import time
 import math
 
 
-log=logging.getLogger('cpc.lib.gromacs.tune')
+log=logging.getLogger(__name__)
 
 
 from cpc.dataflow import Value

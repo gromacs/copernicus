@@ -21,7 +21,7 @@ from server_command import ServerCommand
 import logging
 import cpc.util.log
 
-log=logging.getLogger('cpc.server.message.trackingcmd')
+log=logging.getLogger(__name__)
 
 class SCPullAsset(ServerCommand):
     """Return finished command data to requesting server"""

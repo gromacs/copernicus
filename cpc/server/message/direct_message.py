@@ -6,7 +6,7 @@ from cpc.network.server_request import ServerRequest
 from cpc.util import json_serializer
 from cpc.util.conf.server_conf import ServerConf
 
-log=logging.getLogger('cpc.serve.message.direct_message')
+log=logging.getLogger(__name__)
 class DirectServerMessage(ServerConnection):
     """
     Messages that should only between trusted neighbouring nodes.

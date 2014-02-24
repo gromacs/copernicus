@@ -30,7 +30,7 @@ import logging
 import time
 
 
-log=logging.getLogger('cpc.lib.plumed')
+log=logging.getLogger(__name__)
 
 
 from cpc.dataflow import Value

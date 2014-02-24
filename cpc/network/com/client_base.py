@@ -28,7 +28,7 @@ Created on Mar 10, 2011
 
 @author: iman
 '''
-log=logging.getLogger('cpc.network.com.client_base')
+log=logging.getLogger(__name__)
 
 class ClientConnectionError(CpcError):
     def __init__(self, exc,host,port):

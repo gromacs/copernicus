@@ -23,6 +23,8 @@ import platform
 from cpc.util.log.format.colorformat import ColoredFormatter
 from cpc.util.log.format import colorformat
 # maximum log file size
+from cpc.util.log.log_conf import LogConf
+
 MAXFILESIZE=16*1024*1024
 # number of logs to keep
 NBACKUPS=10
@@ -105,6 +107,7 @@ def initServerLogToStdout(log_mode=None):
     colorFormatter = ColoredFormatter(COLOR_FORMAT)
     streamhandler=logging.StreamHandler()
     streamhandler.setFormatter(colorFormatter)
+    streamhandler.addFilter(LogFilter())
     
     logger.addHandler(streamhandler)
     #streamhandler.setFormatter(soformatter)
@@ -148,3 +151,11 @@ def initControllerLog(dir, controllerName=""):
 
 
 
+class LogFilter(logging.Filter):
+    def __init__(self):
+        conf = LogConf()
+        self.whitelist = [logging.Filter(name) for name in conf.getWhitelist()]
+        self.blacklist = [logging.Filter(name) for name in conf.getBlacklist()]
+
+    def filter(self, record):
+        return any(f.filter(record) for f in self.whitelist) and not any(f.filter(record) for f in self.blacklist)

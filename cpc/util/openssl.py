@@ -29,6 +29,7 @@ from cpc.util.conf.server_conf import ServerConf, SetupError
 from cpc.util.conf.connection_bundle import ConnectionBundle
 import random
 import string
+from cpc.util.log import LogConf
 
 '''
 Created on Oct 29, 2010
@@ -116,6 +117,8 @@ class OpenSSL(object):
         self._generateCert(self.conf.getPrivateKey(),
                            self.conf.getCertFile(),
                            certReqConfigFile=self.conf.getCertReqConfigFile())
+
+        self._createDefaultLogConfig()
 
 
     def _generateCA(self):
@@ -270,6 +273,11 @@ class OpenSSL(object):
                     "An error occured while generating a public key\n openssl returned the following error:\n" % stderr)
 
 
+
+    def _createDefaultLogConfig(self):
+        file = open(LogConf.getLogConfFile(),"w")
+        file.write(LogConf.getDefaultConfigString())
+        file.close()
     #@input String certfile
     def addCa(self, certfile):
         file = open(self.conf.getCaChainFile(), "a")

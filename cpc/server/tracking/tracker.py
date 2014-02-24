@@ -25,7 +25,7 @@ from cpc.server.state.asset import Asset
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.log
 
-log=logging.getLogger('cpc.server.tracking.tracker')
+log=logging.getLogger(__name__)
 
 def initTracker():
     conf = ServerConf()

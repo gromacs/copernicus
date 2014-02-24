@@ -23,7 +23,7 @@ import os
 import xml.sax
 
 
-log=logging.getLogger('cpc.dataflow.value')
+log=logging.getLogger(__name__)
 
 
 import cpc.util

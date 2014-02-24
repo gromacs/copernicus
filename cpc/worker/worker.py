@@ -34,7 +34,7 @@ import workload
 import heartbeat
 from cpc.worker.message import WorkerMessage
 
-log=logging.getLogger('cpc.worker')
+log=logging.getLogger(__name__)
 import sys
 
 class WorkerError(cpc.util.CpcError):

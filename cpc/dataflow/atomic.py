@@ -33,7 +33,7 @@ import run
 import network_function
 
 
-log=logging.getLogger('cpc.dataflow.atomic')
+log=logging.getLogger(__name__)
 
 class AtomicFunctionError(apperror.ApplicationError):
     pass

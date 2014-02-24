@@ -23,7 +23,7 @@ import logging
 
 import exception
 
-log=logging.getLogger("cpc.util.file")
+log=logging.getLogger(__name__)
 
 
 class TarfileError(exception.CpcError):

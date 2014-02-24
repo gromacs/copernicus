@@ -10,7 +10,7 @@ from cpc.network.node import Node
 from cpc.util import CpcError, cpc
 
 
-log=logging.getLogger('cpc.network.com.server_connection')
+log=logging.getLogger(__name__)
 class ServerConnectionError(CpcError):
     def __init__(self, exc):
         self.str = exc.__str__()

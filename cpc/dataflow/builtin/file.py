@@ -20,7 +20,7 @@
 import os
 import logging
 
-log=logging.getLogger('cpc.dataflow.builtin.file')
+log=logging.getLogger(__name__)
 
 from cpc.dataflow import FileValue
 from cpc.dataflow import FloatValue

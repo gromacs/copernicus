@@ -23,7 +23,7 @@ import os
 import sys
 
 
-log=logging.getLogger('cpc.dataflow.active_value')
+log=logging.getLogger(__name__)
 
 
 import cpc.util

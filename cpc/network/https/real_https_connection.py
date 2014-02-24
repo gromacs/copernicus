@@ -10,7 +10,7 @@ import ssl
 from array import array
 from cpc.util import CpcError
 
-log=logging.getLogger('cpc.network.https.real_https_connection')
+log=logging.getLogger(__name__)
 class HttpsConnectionWithCertReqCreationException(CpcError):
     def __init__(self, str):
         self.str = str

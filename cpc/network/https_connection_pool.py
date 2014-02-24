@@ -30,7 +30,7 @@ from cpc.util.conf.server_conf import ServerConf
 import cpc.util.log
 from cpc.network.https.real_https_connection import *
 #Singleton
-log=logging.getLogger('cpc.server.https_connection_pool')
+log=logging.getLogger(__name__)
 
 class ConnectionPoolEmptyError(CpcError):
     def __init__(self, exc):

@@ -37,7 +37,7 @@ import active_value
 import vtype
 
 
-log=logging.getLogger('cpc.dataflow.transaction')
+log=logging.getLogger(__name__)
 
 class SetError(apperror.ApplicationError):
     pass

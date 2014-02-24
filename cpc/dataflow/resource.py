@@ -22,7 +22,7 @@ import logging
 import json
 
 
-log=logging.getLogger('cpc.dataflow.resource')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import run

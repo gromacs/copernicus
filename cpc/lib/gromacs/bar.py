@@ -29,7 +29,7 @@ import logging
 import time
 
 
-log=logging.getLogger('cpc.lib.bar')
+log=logging.getLogger(__name__)
 
 from cpc.dataflow import Value
 from cpc.dataflow import FileValue

@@ -44,7 +44,7 @@ from cpc.dataflow.vtype import instanceType
 from cpc.network.node import Nodes,Node
 
 
-log=logging.getLogger('cpc.server.projectcmd')
+log=logging.getLogger(__name__)
 
 
 class ProjectServerCommandException(cpc.util.exception.CpcError):

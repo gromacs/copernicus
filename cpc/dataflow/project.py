@@ -50,7 +50,7 @@ import lib
 import readxml
 from cpc.dataflow.value import ValError
 
-log=logging.getLogger('cpc.dataflow.project')
+log=logging.getLogger(__name__)
 
 class ProjectError(apperror.ApplicationError):
     pass

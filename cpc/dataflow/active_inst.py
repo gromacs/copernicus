@@ -19,7 +19,7 @@
 
 
 import logging
-log=logging.getLogger('cpc.dataflow.active_inst')
+log=logging.getLogger(__name__)
 
 import threading
 import os

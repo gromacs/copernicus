@@ -30,7 +30,7 @@ except ImportError:
 import cpc.util
 import cpc.server.message
 
-log=logging.getLogger('cpc.heartbeat.item')
+log=logging.getLogger(__name__)
 
 
 class HeartbeatReaderError(cpc.util.CpcXMLError):

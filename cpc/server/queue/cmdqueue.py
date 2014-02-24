@@ -21,7 +21,7 @@ from collections import deque
 from threading import Lock
 import logging
 
-log=logging.getLogger('cpc.server.queue.cmdqueue')
+log=logging.getLogger(__name__)
 
 import cpc.util
 

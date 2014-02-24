@@ -27,7 +27,7 @@ except ImportError:
 
 from cpc.util.exception import CpcError
 
-log = logging.getLogger('cpc.server.message')
+log=logging.getLogger(__name__)
 
 class ServerCommandError(CpcError):
     def __init__(self, msg):

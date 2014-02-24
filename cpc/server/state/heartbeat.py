@@ -35,7 +35,7 @@ import cpc.command.heartbeat
 #from cpc.util.conf.server_conf import ServerConf
 from cpc.server.message.server_message import ServerMessage
 
-log=logging.getLogger('cpc.server.heartbeat')
+log=logging.getLogger(__name__)
 
 class RunningCmdListNotFoundError(cpc.util.CpcError):
     def __init__(self, cmdID):

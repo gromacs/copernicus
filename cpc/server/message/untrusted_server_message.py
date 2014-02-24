@@ -7,7 +7,7 @@ from cpc.network.server_request import ServerRequest
 from cpc.util import json_serializer
 from cpc.util.conf.server_conf import ServerConf
 
-log=logging.getLogger('cpc.serve.message.untrusted_server_message')
+log=logging.getLogger(__name__)
 class RawServerMessage(ClientBase):
     """Raw named server-to-server messages for messages to servers that are not
         yet in the topology.

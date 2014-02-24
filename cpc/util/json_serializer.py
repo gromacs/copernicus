@@ -26,7 +26,7 @@ from cpc.network.node import Nodes
 from cpc.network.node_connect_request import NodeConnectRequest
 from cpc.util.worker_state import WorkerState
 
-log=logging.getLogger('cpc.util.json_serializer')
+log=logging.getLogger(__name__)
 
 def toJson(obj):
     if isinstance(obj,Nodes):

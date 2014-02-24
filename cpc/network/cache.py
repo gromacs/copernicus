@@ -31,7 +31,7 @@ import threading
 from cpc.util import json_serializer
 import cpc.util.log
 
-log=logging.getLogger('cpc.server.cache')
+log=logging.getLogger(__name__)
 
 
 class Cache(object):

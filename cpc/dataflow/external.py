@@ -34,7 +34,7 @@ import run
 import atomic
 
 
-log=logging.getLogger('cpc.dataflow.external')
+log=logging.getLogger(__name__)
 
 class ExternalFunctionError(apperror.ApplicationError):
     pass

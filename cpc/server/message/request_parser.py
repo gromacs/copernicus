@@ -37,7 +37,7 @@ import cpc.network.server_response
 import cpc.util
 from cpc.server.state.user_handler import UserLevel
 
-log=logging.getLogger('cpc.server.request_parser')
+log=logging.getLogger(__name__)
 
 
 class ServerCommandError(cpc.util.CpcError):

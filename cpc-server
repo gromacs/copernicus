@@ -120,16 +120,14 @@ try:
         doFork = True
         if len(args) > 1:
             if args[1] == "-dev":
-                serverMode = cpc.util.log.MODE_DEBUG
-                cpc.util.log.initServerLogToStdout(serverMode)
-                doFork = False
-            #this is just another log level Jira issue CPC-68:logging configurable on class level
-            #will deal with this
-            elif args[1] == "-t":
-                serverMode = cpc.util.log.MODE_TRACE
-                doFork = False
-                cpc.util.log.initServerLogToStdout(serverMode)
+                #dev mode should always at least print out debug log output
+                if ServerConf().getMode() == "prod":
+                    serverMode = "debug"
 
+                else:
+                    serverMode = ServerConf().getMode()
+                cpc.util.log.initServerLogToStdout(serverMode)
+                doFork = False
         print "Starting server.."
         cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)

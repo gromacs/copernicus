@@ -6,7 +6,7 @@ from cpc.dataflow import IntValue, FloatValue, StringValue
 import cpc.command
 from cpc.lib.gromacs import iterate
 
-log = logging.getLogger('cpc.lib.benchmark')
+log=logging.getLogger(__name__)
 
 def sleep(inp):
     if (inp.testing()):

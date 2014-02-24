@@ -41,7 +41,7 @@ from cpc.network.broadcast_message import BroadcastMessage
 from cpc.network.node_connect_request import NodeConnectRequest
 import json
 
-log = logging.getLogger('cpc.server.message.network')
+log=logging.getLogger(__name__)
 
 
 #FIXME not sure if this one is used

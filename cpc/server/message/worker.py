@@ -52,7 +52,7 @@ import cpc.command.heartbeat
 
 
 
-log=logging.getLogger('cpc.server.workercmd')
+log=logging.getLogger(__name__)
 
 
 #Child to Parent message

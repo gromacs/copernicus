@@ -34,7 +34,7 @@ except ImportError:
 
 
 
-log=logging.getLogger('cpc.lib.mdrun')
+log=logging.getLogger(__name__)
 
 
 from cpc.dataflow import Value

@@ -27,7 +27,7 @@ from cpc.network.com.input import Input
 from cpc.network.com.file_input import FileInput
 from cpc.util.conf.client_conf import ClientConf
 
-log=logging.getLogger('cpc.client')
+log=logging.getLogger(__name__)
 
 
 class ClientMessage(ClientBase):

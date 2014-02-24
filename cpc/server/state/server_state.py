@@ -42,7 +42,7 @@ from cpc.util.worker_state import WorkerState
 from cpc.server.state.session import SessionHandler
 from cpc.network.broadcast_message import BroadcastMessage
 
-log=logging.getLogger('cpc.server.state')
+log=logging.getLogger(__name__)
 
 class ServerState:
     """Maintains the server state. Must provide synchronized access 

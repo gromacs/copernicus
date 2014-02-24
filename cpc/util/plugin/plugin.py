@@ -23,7 +23,7 @@ import subprocess
 import stat
 import logging
 import threading
-log=logging.getLogger('cpc.plugin')
+log=logging.getLogger(__name__)
 import plugininfo
 import cpc.util
 

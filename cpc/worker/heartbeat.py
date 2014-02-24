@@ -34,7 +34,7 @@ except ImportError:
 from cpc.worker.message import WorkerMessage
 from cpc.network.com.client_response import ProcessedResponse
 
-log=logging.getLogger('cpc.heartbeat.client')
+log=logging.getLogger(__name__)
 
 
 class HeartbeatSender(object):

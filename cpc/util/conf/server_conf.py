@@ -35,7 +35,7 @@ import cpc.util.exception
 from cpc.util.conf.conf_base import Conf, ConfError
 
 
-log=logging.getLogger('cpc.util.conf.server_conf')
+log=logging.getLogger(__name__)
 
 class ServerIdNotFoundException(cpc.util.exception.CpcError):
     pass

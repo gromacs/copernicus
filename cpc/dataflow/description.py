@@ -23,7 +23,7 @@ import textwrap
 import xml.sax
 import xml.sax.saxutils
 
-log=logging.getLogger('cpc.dataflow.description')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import apperror

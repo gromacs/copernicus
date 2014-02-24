@@ -37,7 +37,7 @@ import active_inst
 import transaction
 
 
-log=logging.getLogger('cpc.dataflow.task')
+log=logging.getLogger(__name__)
 
 class TaskError(apperror.ApplicationError):
     pass

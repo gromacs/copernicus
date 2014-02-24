@@ -24,7 +24,7 @@ import cpc.util.log
 import resource
 
 
-log=logging.getLogger('cpc.command.worker_matcher')
+log=logging.getLogger(__name__)
 
 class CommandWorkerMatcher(object):
     """Object that stores information about a worker for the 

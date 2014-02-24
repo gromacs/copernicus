@@ -35,7 +35,7 @@ import os
 from cpc.util.conf.server_conf import ServerConf
 
 
-log=logging.getLogger('cpc.dataflow.lib')
+log=logging.getLogger(__name__)
 
 
 class ImportLibraryError(apperror.ApplicationError):

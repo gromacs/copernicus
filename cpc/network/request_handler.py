@@ -60,7 +60,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
     def setup(self):
-        self.log=logging.getLogger('cpc.server.request_handler_base')
+        self.log=logging.getLogger(__name__)
         self.application_root = "/copernicus"
         self.connection = self.request
         self.responseCode = 200
@@ -339,7 +339,8 @@ class handlerForRequestWithNoCertReq(handler_base):
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('cpc.server.request_handler_handler_for_request_with_no_cert_req')
+        self.log=logging.getLogger(__name__)
+
 
 class handlerForRequestWithCertReq(handler_base):
     """
@@ -347,7 +348,8 @@ class handlerForRequestWithCertReq(handler_base):
     """
     def setup(self):
         handler_base.setup(self)
-        self.log=logging.getLogger('cpc.server.handler_for_request_with_cert_req')
+        self.log=logging.getLogger(__name__)
+
     def _handleSession(self, request):
         handler_base._handleSession(self,request)
         if 'user' not in request.session:

@@ -28,7 +28,7 @@ except ImportError:
     from StringIO import StringIO
 
 
-log=logging.getLogger('cpc.util.plugininfo')
+log=logging.getLogger(__name__)
 
 class PluginInfo(xml.sax.handler.ContentHandler):
     def __init__(self, plugin):

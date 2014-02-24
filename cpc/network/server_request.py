@@ -22,7 +22,7 @@ import cpc.util
 import urllib
 from cpc.network.http.messaging import Messaging
 import logging
-log=logging.getLogger('cpc.network.sever_request')
+log=logging.getLogger(__name__)
 
 class ServerRequest(object):
     """Server request object; contains all the fields as 'fields' (strings) or

@@ -23,7 +23,7 @@ import logging
 import hashlib
 import cpc.util.exception
 from cpc.server.state.user_handler import UserLevel
-log=logging.getLogger('cpc.server.state.database')
+log=logging.getLogger(__name__)
 
 class DataBaseError(cpc.util.exception.CpcError):
     pass

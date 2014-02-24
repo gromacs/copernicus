@@ -33,7 +33,7 @@ from cpc.network.node import Node
 import json
 import logging
 #messages that are broadcasted to all nodes
-log=logging.getLogger('cpc.network.broadcast_message')
+log=logging.getLogger(__name__)
 class BroadcastMessage(ServerToServerMessage):
 
 

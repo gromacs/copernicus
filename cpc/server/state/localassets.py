@@ -24,7 +24,7 @@ from cpc.util.conf.server_conf import ServerConf
 from cpc.server.state.asset import Asset
 import cpc.util
 
-log=logging.getLogger('cpc.server.state.localassets')
+log=logging.getLogger(__name__)
 
 class LocalAssetError(cpc.util.CpcError):
     pass

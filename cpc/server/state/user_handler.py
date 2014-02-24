@@ -19,7 +19,7 @@
 import cpc.util.exception
 import hashlib
 import logging
-log=logging.getLogger('cpc.server.state.user_handler')
+log=logging.getLogger(__name__)
 
 class UserError(cpc.util.CpcError):
     pass

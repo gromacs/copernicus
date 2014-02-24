@@ -21,7 +21,7 @@ import sys
 import os
 import logging
 
-log=logging.getLogger('cpc.lib.grompp')
+log=logging.getLogger(__name__)
 
 
 from cpc.dataflow import Value

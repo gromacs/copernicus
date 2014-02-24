@@ -29,7 +29,7 @@ from cpc.util.conf.server_conf import ServerConf
 import cpc.util.file
 import cpc.util
 
-log = logging.getLogger('cpc.server.projectlist')
+log=logging.getLogger(__name__)
 
 class ProjectListError(cpc.util.CpcError):
     pass

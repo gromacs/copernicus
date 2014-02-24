@@ -20,7 +20,7 @@
 
 import logging
 
-log=logging.getLogger('cpc.dataflow.instance')
+log=logging.getLogger(__name__)
 
 
 import cpc.util

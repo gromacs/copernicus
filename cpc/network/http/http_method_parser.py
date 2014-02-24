@@ -35,7 +35,7 @@ from cpc.network.server_request import ServerRequest
 import urlparse
 
 
-log=logging.getLogger('cpc.server.http_method_parser')
+log=logging.getLogger(__name__)
 #handles parsing of the HTTP methods
 class HttpMethodParser(object):
     '''

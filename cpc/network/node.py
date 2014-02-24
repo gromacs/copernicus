@@ -27,7 +27,7 @@ import threading
 import logging
 from cpc.util import CpcError
 
-log=logging.getLogger('cpc.network.node')
+log=logging.getLogger(__name__)
 
 class ValueLessThanZeroException(Exception):
     pass

@@ -32,7 +32,7 @@ from cpc.util.conf.server_conf import ServerConf
 from version import Version
 import logging
 
-log = logging.getLogger('cpc.command.executable')
+log=logging.getLogger(__name__)
 
 
 class Executable(object):

@@ -34,7 +34,7 @@ from cpc.network.node import Nodes
 from cpc.network.node import Node
 from cpc.network.cache import Cache, NetworkTopologyCache
 
-log=logging.getLogger('cpc.server.server_to_server')
+log=logging.getLogger(__name__)
 
 class ServerToServerMessageError(CpcError):
     def __init__(self, exc):

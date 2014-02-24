@@ -29,7 +29,7 @@ except ImportError:
 import logging
 
 
-log=logging.getLogger('cpc.dataflow.readxml')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import apperror

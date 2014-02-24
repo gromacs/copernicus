@@ -28,7 +28,7 @@ try:
 except ImportError:
     from StringIO import StringIO
 
-log=logging.getLogger('cpc.dataflow.run')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import apperror

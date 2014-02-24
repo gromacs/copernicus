@@ -29,7 +29,7 @@ import traceback
 
 
 
-log=logging.getLogger('cpc.queue.exec_thread')
+log=logging.getLogger(__name__)
 
 import cpc.util
 

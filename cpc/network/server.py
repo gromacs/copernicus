@@ -44,7 +44,7 @@ debug=False
 
 
 
-log=logging.getLogger('cpc.server')
+log=logging.getLogger(__name__)
 
 class Error(Exception):
     pass

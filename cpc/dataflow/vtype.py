@@ -27,7 +27,7 @@ try:
 except ImportError:
     from cpc.util.ordered_dict import OrderedDict
 
-log=logging.getLogger('cpc.dataflow.vtype')
+log=logging.getLogger(__name__)
 
 import cpc.util
 import keywords
