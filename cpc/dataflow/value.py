@@ -240,7 +240,7 @@ class Value(ValueBase):
                                                     index,
                                                     None)
             else:
-                raise ValError("Unknown compound type %s."%tp.getName())
+                raise ValError("Unknown compound type %s."%self.type.getName())
         if rmref is not None:
             rmref.rmRef()
 
