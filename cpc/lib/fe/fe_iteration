@@ -94,7 +94,7 @@ def fe_iteration(inp, out):
     if mdruns is None:
         mdruns=0
         # these are the multiple runs
-        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        out.addInstance('runs', 'gromacs::grompp_mdruns')
         # connect the mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')

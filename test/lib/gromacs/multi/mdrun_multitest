@@ -19,7 +19,7 @@ projectname=$1
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import gromacs
 # add the grompp and mdrun function instances
-./cpcc instance gromacs::mdrun_multi mdrun_multi
+./cpcc instance gromacs::mdruns mdruns
 
 # activate the function instance
 ./cpcc activate 
@@ -30,8 +30,8 @@ projectname=$1
 # connect the tpr output of grompp to the tpr input of mdrun
 
 #NOTE WE CAN LOOP OVER THIS
-./cpcc set-file mdrun_multi:in.tpr[+] test/lib/gromacs/multi/topol.tpr
-#./cpcc set-file mdrun_multi:in.tpr[+] test/lib/gromacs/multi/topol.tpr
+./cpcc set-file mdruns:in.tpr[+] test/lib/gromacs/multi/topol.tpr
+#./cpcc set-file mdruns:in.tpr[+] test/lib/gromacs/multi/topol.tpr
  
 ./cpcc commit
 

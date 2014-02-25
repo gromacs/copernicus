@@ -247,7 +247,7 @@ def tune_fn(inp):
     fo.setOut('resources', rsrc.setOutputValue())
     return fo
 
-def grompp_multi(inp):
+def grompps(inp):
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("grompp -version")
@@ -276,7 +276,7 @@ def grompp_multi(inp):
 
 
 
-def mdrun_multi(inp):
+def mdruns(inp):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjcat -version")
@@ -304,7 +304,7 @@ def mdrun_multi(inp):
     return out
 
 
-def grompp_mdrun_multi(inp):
+def grompp_mdruns(inp):
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("grompp -version")
