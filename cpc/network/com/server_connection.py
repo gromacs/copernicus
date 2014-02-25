@@ -76,7 +76,7 @@ class ServerConnection(ConnectionBase):
             # have any outbound connections to this node
             #It could just be that we currently are not connected or all
             # connections are simply taken!
-            log.error("No connections in pool")
+            log.info("No connections in pool. No outbound connections of this network node.")
             raise
 
     def handleSocket(self):

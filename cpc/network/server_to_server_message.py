@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -41,7 +41,7 @@ class ServerToServerMessageError(CpcError):
         self.str=exc.__str__()
 
 class ServerToServerMessage(ServerConnection):
-    """Network-related server-to-server messages. 
+    """Network-related server-to-server messages.
        Only those messages related to network topology should go here, the
        rest should be in cpc.server.message.server_message."""
 
@@ -54,7 +54,7 @@ class ServerToServerMessage(ServerConnection):
 
         self.initialize(endNodeId)
         """Connect to a server opening a connection"""
-        
+
     #@param String endNodeHostName
     #figures out what node to connect to in order to reach the end node
     def initialize(self,endNodeId):
@@ -103,8 +103,8 @@ class ServerToServerMessage(ServerConnection):
         # and focus on the response (that we return)
         content.close()
         tmp.close()
-        return ret 
-     
+        return ret
+
     @staticmethod
     def connectToSelf(headers):
         conf = ServerConf()
@@ -112,7 +112,7 @@ class ServerToServerMessage(ServerConnection):
             return True
         else:
             return False
-    
+
     @staticmethod
     def getNetworkTopology():
         """
@@ -155,8 +155,13 @@ class ServerToServerMessage(ServerConnection):
                     #we cannot connect to the node,
                     # and its marked as unreachable
                     #we must still add it to the topology
-                    log.error("node %s unreachable when asking for network "
-                              "topology: error was %s"%(node.getId(),e.__str__()))
+                    err = e.__str__()
+                    if err:
+                        log.info("node %s unreachable when asking for network "
+                                 "topology: error was %s"%(node.getId(),err))
+                    else:
+                        log.info("node %s unreachable when asking for network "
+                                 "topology." % node.getId())
                     topology.addNode(node)
 
         return topology
