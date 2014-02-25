@@ -790,8 +790,8 @@ class ActiveInstance(value.ValueBase):
     def _genTask(self):
         """Generate a task.  Assumes self.inputLock is locked ."""
         # prepare inputs
-        #log.debug("Generating task for %s (of fn %s)"%
-        #          (self.getCanonicalName(), self.function.getName()))
+        log.debug("Generating task for %s (of fn %s)"%
+                  (self.getCanonicalName(), self.function.getName()))
         inputs=value.Value(self.inputVal, self.inputVal.type)
         subnetInputs=value.Value(self.subnetInputVal, self.subnetInputVal.type)
         # reset the status of the inputs, subnetInputs
@@ -799,7 +799,7 @@ class ActiveInstance(value.ValueBase):
         self.subnetInputVal.setUpdated(False)
         # run dir
         if self.function.outputDirNeeded():
-            #log.debug("Creating output dir")
+            log.debug("Creating output dir")
             created=False
             while not created:
                 outputDirName=os.path.join(self.baseDir, 
@@ -811,7 +811,7 @@ class ActiveInstance(value.ValueBase):
                     os.mkdir(fullOutputDirName)
                     created=True
         else:
-            #log.debug("Not creating output dir")
+            log.debug("Not creating output dir")
             outputDirName=None
         # make a task out of it.
         outputs=None
@@ -880,16 +880,41 @@ class ActiveInstance(value.ValueBase):
                         changed=True
                         ret+=1
                 else:
-                    log.debug("Forcing rerun on %s"%self.getCanonicalName())
+                    log.debug("Forcing rerun on %s. Recursive = %s " % (self.getCanonicalName(), recursive))
                     outf.write("Forcing rerun on %s\n"%self.getCanonicalName())
                     self.updated=True
                     changed=True
                     ret+=1
+                    if self.persDir:
+                        listeners = []
+                        self.outputVal.findListeners(listeners)
+                        # If there are listeners listening to this output value, but it is not yet set
+                        # remove persistence files to ensure a rerun.
+                        for listener in listeners:
+                            val = listener.getValue()
+                            if val == None or val.get() == None:
+                                source = listener.getSourceActiveInstance()
+                                if source == self:
+                                    fullPersDir=os.path.join(self.project.basedir, self.persDir)
+                                    if os.path.isdir(fullPersDir):
+                                        for f in os.listdir(fullPersDir):
+                                            file_path = os.path.join(fullPersDir, f)
+                                            try:
+                                                if os.path.isfile(file_path):
+                                                    log.debug("Removing persistence file: %s" % file_path)
+                                                    os.remove(file_path)
+                                            except Exception, e:
+                                                log.error("Error deleting persistent data file: %s" % file_path)
+                                        break
+                                                
                 if recursive and (self.subnet is not None):
                     ret+=self.subnet.rerun(recursive, clearError, outf)
             if changed:
                 if self._canRun():
+                    log.debug("Can do rerun on %s"%self.getCanonicalName())
                     self._genTask()
+                else:
+                    log.debug("Cannot do rerun on %s"%self.getCanonicalName())
         return ret
  
     def writeXML(self, outf, indent=0):
