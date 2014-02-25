@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -74,13 +74,13 @@ class WorkerReadyBase(ServerCommand):
         log.debug("Worker platform + executables: %s"%workerData)
         rdr.readString(workerData,"Worker-reported platform + executables")
         # match queued commands to executables.
-        cwm=CommandWorkerMatcher(rdr.getPlatforms(), 
+        cwm=CommandWorkerMatcher(rdr.getPlatforms(),
                                  rdr.getExecutableList(),
                                  rdr.getWorkerRequirements())
         cmds=cwm.getWork(serverState.getCmdQueue())
         if not cwm.isDepleted():
-            # now sleep for 5 seconds to give the dataflow time to react to any 
-            # new state. 
+            # now sleep for 5 seconds to give the dataflow time to react to any
+            # new state.
             time.sleep(5)
             cmds.extend(cwm.getWork(serverState.getCmdQueue()))
         # now check the forwarded variables
@@ -93,13 +93,13 @@ class WorkerReadyBase(ServerCommand):
                 originatingServer = request.headers['originating-server-id']
             # check the expected heartbeat time.
             log.debug("Forwarded message")
-            if request.hasParam('heartbeat-interval'): 
+            if request.hasParam('heartbeat-interval'):
                 heartbeatInterval = int(request.getParam('heartbeat-interval'))
                 log.debug("Forwarded heartbeat interval is %d"%
                           heartbeatInterval)
         if originatingServer is None:
             # If the originating server property has not been set,  the
-            # request hasn't been forwarded, therefore we are the originating 
+            # request hasn't been forwarded, therefore we are the originating
             # server
             selfNode=Node.getSelfNode(conf)
             originatingServer = selfNode.getId()
@@ -107,14 +107,14 @@ class WorkerReadyBase(ServerCommand):
             serverState.setWorkerState(WorkerStatus.WORKER_STATUS_CONNECTED,workerID,
                                        request.headers['originating-client'])
         if heartbeatInterval is None:
-            heartbeatInterval = conf.getHeartbeatTime() 
+            heartbeatInterval = conf.getHeartbeatTime()
         log.debug("worker identified %s"%request.headers['originating-client'] )
 
         if len(cmds) > 0:
             # first add them to the running list so they never get lost
             runningCmdList=serverState.getRunningCmdList()
             runningCmdList.add(cmds, originatingServer, heartbeatInterval)
-            # construct the tar file with the workloads. 
+            # construct the tar file with the workloads.
             tff=tempfile.TemporaryFile()
             tf=tarfile.open(fileobj=tff, mode="w:gz")
             # make the commands ready
@@ -126,7 +126,9 @@ class WorkerReadyBase(ServerCommand):
                 project=task.getProject()
                 taskDir = "task_%s"%task.getID()
                 cmddir=cmd.getDir()
-                #os.path.join(project.basedir,taskDir, cmd.getDir())
+                if not os.path.exists(cmddir):
+                    log.debug("cmddir %s did not exist. Created directory."%cmd.id)
+                    os.mkdir(cmddir)
                 arcdir="%s"%(cmd.id)
                 log.debug("cmddir=%s"%cmddir)
                 outf=open(os.path.join(cmddir, "command.xml"), "w")
@@ -140,32 +142,32 @@ class WorkerReadyBase(ServerCommand):
             # now send it back
             response.setFile(tff,'application/x-tar')
             #project.writeTasks()
-            # the file is closed after the response is sent.            
+            # the file is closed after the response is sent.
             log.info("Did direct worker-ready")
         else:
             nodes = conf.getNodes().getNodesByPriority()
-            
+
             topology = Nodes()
             if request.hasParam('topology'):
                 topology = json.loads(request.getParam('topology')
                                       ,object_hook = json_serializer.fromJson)
-            
+
             thisNode = Node.getSelfNode(conf)
             thisNode.nodes = conf.getNodes()
             topology.addNode(thisNode)
-      
+
             hasJob =False # temporary flag that should be removed
             for node in nodes:
                 if topology.exists(node.getId()) == False:
                     clnt=ServerMessage(node.getId())
-                    
+
                     clientResponse=clnt.workerReadyForwardedRequest(workerID,
                                         workerData,
                                         topology,
                                         originatingServer,
                                         heartbeatInterval,
                                         request.headers['originating-client'])
-                    
+
                     if clientResponse.getType() == 'application/x-tar':
 
                         log.log(cpc.util.log.TRACE,
@@ -173,27 +175,27 @@ class WorkerReadyBase(ServerCommand):
                                 (clientResponse.headers[
                                      'originating-server-id']))
                         hasJob=True
-                        # we need to rewrap the message 
-                        
+                        # we need to rewrap the message
+
                         #TODO stupid intermediary step because the mmap form
                         # clientresponse is prematurely closed
                         tmp = tempfile.TemporaryFile('w+b')
-                        
+
                         message = clientResponse.getRawData()
-                        
+
                         tmp.write(message.read(len(message)))
-                        tmp.seek(0)    
-                        
+                        tmp.seek(0)
+
                         #for key in clientResponse.headers:
                         #    print "%s:%s"%(key,clientResponse.headers[key])
-                                                    
+
                         response.setFile(tmp,'application/x-tar')
                         response.headers['originating-server-id']=\
                                   clientResponse.headers[
                                       'originating-server-id']
-                    #OPTIMIZE leads to a lot of folding and unfolding of 
-                    #packages 
-            if not hasJob:           
+                    #OPTIMIZE leads to a lot of folding and unfolding of
+                    #packages
+            if not hasJob:
                 response.add("No command")
             log.info("Did delegated worker-ready")
 
@@ -228,22 +230,22 @@ class CommandFinishedBase(ServerCommand):
 
         # get the source server if set. If not set, it means that this server
         # is the worker server.
-        workerServer=selfName
         if request.hasParam('worker_server'):
             workerServer=request.getParam('worker_server')
+        else:
+            workerServer=selfName
 
         # get the destination server if set
-        projServer=selfName
         if request.hasParam('project_server'):
             projServer=request.getParam('project_server')
         else:
             # for backward compatibility, we assume that we are the project
             # server if it's forwarded. If not, there's something wrong.
+            projServer=selfName
             if not self.forwarded:
                 raise CommandFinishError(
                            "no project server set in command finished request.")
 
-        #cmd=runningCmdList.getCmd(cmdID)
         returncode=None
         if request.hasParam('return_code'):
             returncode=int(request.getParam('return_code'))
@@ -317,7 +319,7 @@ class SCCommandFailed(CommandFinishedBase):
     """Get notified about a failed run."""
     def __init__(self):
         CommandFinishedBase.__init__(self, "command-failed", False)
-    
+
     def run(self, serverState, request, response):
         cmdID=request.getParam('cmd_id')
         self.runLocal(serverState, request, response)
@@ -409,7 +411,7 @@ class SCWorkerHeartbeat(ServerCommand):
             # TODO: per-workload error reporting
             response.add('Heatbeat NOT OK', status="ERROR", data=retData)
         log.info("Handled %d heartbeat signal items."%(Nhandled))
-            
+
 
 class SCHeartbeatForwarded(ServerCommand):
     """Handle a worker's heartbeat signal."""
@@ -427,7 +429,7 @@ class SCHeartbeatForwarded(ServerCommand):
         faultyItems=[]
         Nhandled=len(hwr.getItems())
         ret=serverState.getRunningCmdList().ping(workerID, workerDir, iteration,
-                                                 hwr.getItems(), False, 
+                                                 hwr.getItems(), False,
                                                  faultyItems)
         if len(faultyItems)==0:
             response.add('', data=serverState.conf.getHeartbeatTime())
@@ -465,7 +467,7 @@ class SCDeadWorkerFetch(ServerCommand):
 
     def finish(self, serverState, request):
         """Now delete the directories associated with that run.
-            
+
            This will only be run if the run() method threw no exception"""
         doRemove=request.getFlag('remove')
         if doRemove is not None and doRemove:
