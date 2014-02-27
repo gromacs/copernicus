@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -26,6 +26,7 @@ except ImportError:
 import Queue
 import traceback
 import sys
+import os
 import threading
 
 
@@ -53,7 +54,7 @@ class TaskQueue(object):
         log.debug("Creating new task queue.")
         self.queue=Queue.Queue(maxsize=ServerConf().getTaskQueueSize())
         self.cmdQueue=cmdQueue
-    
+
     def put(self, task):
         """Put a task in the queue."""
         self.queue.put(task)
@@ -61,7 +62,7 @@ class TaskQueue(object):
     def putNone(self):
         """Put a none into the queue to make sure threads are reading it."""
         self.queue.put(None)
-    
+
     def get(self):
         return self.queue.get()
 
@@ -71,19 +72,19 @@ class TaskQueue(object):
 
 class Task(object):
     """A task is a queueable and runnable function with inputs."""
-    def __init__(self, project, activeInstance, function, fnInput, 
+    def __init__(self, project, activeInstance, function, fnInput,
                  priority, seqNr):
-        """Create a task based on a function 
-       
-           project = the project of this task 
+        """Create a task based on a function
+
+           project = the project of this task
            activeInstance = the activeInstance this task belongs to
            function = the function object
            fnInput = the FunctionRunInput object
            priority = the task's priority.
            seqNr = the task's sequence number
            """
-           
-        #log.debug("creating task")    
+
+        #log.debug("creating task")
         log.debug("Making task of instance %s"%
                   (activeInstance.getCanonicalName()) )
         self.activeInstance=activeInstance
@@ -92,7 +93,7 @@ class Task(object):
         self.id=id(self)
         self.project = project
         # we want only one copy of a task running at a time
-        self.lock=threading.Lock() 
+        self.lock=threading.Lock()
         self.seqNr=seqNr
         self.fnInput=fnInput
         self.cmds=[]
@@ -136,9 +137,9 @@ class Task(object):
 
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,
-           possibly in response to a finished command (given as parameter cmd) 
+           possibly in response to a finished command (given as parameter cmd)
            and return a list of commands to queue. If a command is queued,
-           the task should continue existining until its corresponding 
+           the task should continue existining until its corresponding
            run() call is called. """
         with self.lock:
             if self.canceled:
@@ -149,7 +150,7 @@ class Task(object):
             try:
                 log.debug("Running function %s"%
                           self.activeInstance.instance.getName())
-                # a transaction object that serves as the function run 
+                # a transaction object that serves as the function run
                 # output object.
                 fnOutput=transaction.Transaction(self.project,
                                                  self,
@@ -175,7 +176,7 @@ class Task(object):
                     locked=False
 
                 # the commands must be handled here because they're really
-                # a property of the task 
+                # a property of the task
                 self.fnInput.cmd=None
                 if cmd is not None:
                     self.cmds.remove(cmd)
@@ -188,7 +189,7 @@ class Task(object):
                 haveRetcmds=( (self.fnOutput.cmds is not None) and
                               (len(self.fnOutput.cmds)>0) )
 
-                if ( (self.fnOutput.hasOutputs() or 
+                if ( (self.fnOutput.hasOutputs() or
                       self.fnOutput.hasSubnetOutputs()) and
                      ( haveRetcmds or len(self.cmds)>0 ) ):
                     raise TaskError(
@@ -234,19 +235,38 @@ class Task(object):
             self.activeInstance.removeTask(self)
 
             # everything went OK; we got results
-            log.debug("Ran fn %s, got %s"%(self.function.getName(), 
+            log.debug("Ran fn %s, got %s"%(self.function.getName(),
                                            str(self.fnOutput.outputs)) )
             # there is nothing more to execute
             if len(self.cmds) == 0:
                 self.fnInput.destroy()
                 self.fnInput=None
 
+                log.debug("Removing files in persistence subdirectories")
+                fullPersDir=os.path.join(self.project.basedir, self.activeInstance.persDir)
+                if os.path.isdir(fullPersDir):
+                    for d in os.listdir(fullPersDir):
+                        dir_path = os.path.join(fullPersDir, d)
+                        if os.path.isdir(dir_path):
+                            for f in os.listdir(dir_path):
+                                file_path = os.path.join(dir_path, f)
+                                try:
+                                    if os.path.isfile(file_path):
+                                        os.remove(file_path)
+                                except Exception, e:
+                                    log.error("Error deleting persistent data file: %s" % file_path)
+                            try:
+                                os.rmdir(dir_path)
+                            except Exception, e:
+                                log.error("Error removing subdir in persistence directory: %s" % dir_path)
+
+
     def getID(self):
         return "%s.%s"%(self.activeInstance.getCanonicalName(), self.seqNr)
 
     def getFunctionName(self):
         return self.function.getName()
-    
+
     def getProject(self):
         return self.project
 
@@ -256,7 +276,7 @@ class Task(object):
         outf.write('%s<task project="%s" priority="%d" active_instance="%s" seqnr="%d">\n'%
                    (indstr,
                     self.project.getName(),
-                    self.priority, 
+                    self.priority,
                     self.activeInstance.getCanonicalName(),
                     self.seqNr))
         self.fnInput.writeStateXML(outf, indent+1)
