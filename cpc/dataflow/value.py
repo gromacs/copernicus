@@ -240,7 +240,7 @@ class Value(ValueBase):
                                                     index,
                                                     None)
             else:
-                raise ValError("Unknown compound type %s."%self.type.getName())
+                raise ValError("Unknown compound type %s."%tp.getName())
         if rmref is not None:
             rmref.rmRef()
 
@@ -683,7 +683,7 @@ class File(object):
         if self.refs <= 0:
             log.debug("Removing %s because it is no longer in use."%self.name)
             try:
-                d = os.path.dirname(self.name)
+                d = os.path.dirname(os.path.join(self.fileList.root, self.name, self.name))
                 os.remove( os.path.join(self.fileList.root, self.name ) )
             except OSError:
                 # we don't care about non-existing files at this point
