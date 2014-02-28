@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -122,7 +122,7 @@ class ServerConf(conf_base.Conf):
         if self.exists():
             return
         # call parent constructor with right dir name
-        conf_base.Conf.__init__(self, name='server.conf', 
+        conf_base.Conf.__init__(self, name='server.conf',
                                 confSubdirName="server",
                                 userSpecifiedPath=confdir)
         self.initDefaults()
@@ -137,7 +137,7 @@ class ServerConf(conf_base.Conf):
         conf_base.Conf.initDefaults(self)
         server_host = ''
 
-        self._add('server_host', server_host, 
+        self._add('server_host', server_host,
                   "Address the server listens on", True)
 
         self._add('server_fqdn', socket.getfqdn(),
@@ -152,25 +152,25 @@ class ServerConf(conf_base.Conf):
         self._add('client_secure_port', Conf.getDefaultClientSecurePort(),
                   "Port number the server listens on for communication from clients",
                   True,None,'\d+')
-        
-        self._add( 'nodes', Nodes(), 
+
+        self._add( 'nodes', Nodes(),
                   "List of nodes connected to this server", False)
 
         self._add('revoked_nodes',Nodes(),"List of revoked nodes",False)
         self._add('node_connect_requests',Nodes(),
                   "List of nodes requesting to connect to this server",False)
-      
+
         self._add('sent_node_connect_requests',Nodes(),
                   "List of connect requests sent",False)
-      
-        self._add('project_file', "projects.xml", 
+
+        self._add('project_file', "projects.xml",
                   "Projects file name (relative to conf_dir)",
                   relTo='conf_dir')
         self._add('state_save_interval', 240,
                   "Time in seconds between state saves",
                   True, validation='\d+')
-        
-        self._add('import_path', "", 
+
+        self._add('import_path', "",
                   "Colon-separated list of directories to search for imports, in addition to cpc/lib, .copernicus/lib and .copernicus/<hostname>/lib",
                   True)
 
@@ -178,23 +178,27 @@ class ServerConf(conf_base.Conf):
                   "The run mode of the server",
                   True,None,None,['trace','debug','prod'])
 
+        self._add('profiling', 'false',
+                  "Profile the server CPU usage using yappi (ver >= 0.82)",
+                  True, None, None, ['false', 'true'])
+
         # run options
         self._add('run_dir', None,
                   "Base directory of all files produced by running projects.",
                   True)
-        
+
                 # log options
         self._add('log_dir', "log",
                   "Directory containing logs",
                   True,
                   relTo='conf_dir')
         self._add('server_log_file', "server.log",
-                  "The server log file", False, 
+                  "The server log file", False,
                   relTo='log_dir')
         self._add('error_log_file', "error.log",
-                  "The error log file", False, 
+                  "The error log file", False,
                   relTo='log_dir')
-        
+
                 # heartbeat options
         self._add('heartbeat_time', 120,
                   "Time in seconds between heartbeats",
@@ -203,12 +207,12 @@ class ServerConf(conf_base.Conf):
                   "Heartbeat monitor list", False,
                   relTo='conf_dir')
 
-        # Task exec queue size. If it exceeds this size, the dataflow 
+        # Task exec queue size. If it exceeds this size, the dataflow
         # propagation blocks.
         self._add('task_queue_size', 1024,
                   "Dataflow execution task queue size",
                   True, validation='\d+')
-        
+
                 #static configuration
         self._add('web_root', 'web',
                   "The directory where html,js and css files are located")
@@ -244,7 +248,7 @@ class ServerConf(conf_base.Conf):
         self.execBasedir = ''
         if dn != "":
             self.execBasedir=os.path.abspath(dn)
-            self._add('exec_base_dir', self.execBasedir, 
+            self._add('exec_base_dir', self.execBasedir,
                       'executable base directory')
         # make child processes inherit our path
         if os.environ.has_key('PYTHONPATH'):
@@ -259,14 +263,14 @@ class ServerConf(conf_base.Conf):
 
     def setClientHost(self,address):
         return self.set('client_host',address)
-                    
+
 
     def addSentNodeConnectRequest(self,nodeConnectRequest):
         nodes = self.conf['sent_node_connect_requests'].get()
         nodes.addNode(nodeConnectRequest)
         self.set('sent_node_connect_requests',nodes)
         return True
-    
+
     def addNodeConnectRequest(self,nodeConnectRequest):
         nodes = self.conf['node_connect_requests'].get()
         nodes.addNode(nodeConnectRequest)
@@ -296,17 +300,17 @@ class ServerConf(conf_base.Conf):
         self.set('revoked_nodes',nodes)
         return True
 
-    def addNode(self,node):        
-        """adds a server to the list of servers that this server can connect 
-           to."""    
-        with self.lock:            
+    def addNode(self,node):
+        """adds a server to the list of servers that this server can connect
+           to."""
+        with self.lock:
             nodes=self.conf['nodes'].get()
             nodes.addNode(node)
             self.conf['nodes'].set(nodes)
             self._writeLocked()
-        return True 
+        return True
 
-    
+
     def removeNode(self,id):
         with self.lock:
             nodes=self.conf['nodes'].get()
@@ -329,10 +333,10 @@ class ServerConf(conf_base.Conf):
         return self.get('sent_node_connect_requests')
     def getLogDir(self):
         return self.getFile('log_dir')
- 
+
     def getServerLogFile(self):
         return self.getFile('server_log_file')
- 
+
     def getErrorLogFile(self):
         return self.getFile('error_log_file')
 
@@ -353,20 +357,29 @@ class ServerConf(conf_base.Conf):
     def setMode(self,mode):
         with self.lock:
             self.conf['mode'].set(mode)
-    
+
+    def setProfiling(self, profMode):
+        bMode = bool(profMode)
+        if bMode:
+            strMode = 'true'
+        else:
+            strMode = 'false'
+        with self.lock:
+            self.conf['profiling'].set(strMode)
+
     def hasParent(self):
         with self.lock:
             return (len(self.conf['parent_nodes'].get()) > 0)
-    
+
     def isDebug(self):
         with self.lock:
             if self.conf['mode'].get() == 'debug':
                 return True
             else:
                 return False
-                   
+
     # get functions
-    
+
     def getUserSettableConfigs(self):
         configs = dict()
         with self.lock:
@@ -374,16 +387,16 @@ class ServerConf(conf_base.Conf):
                 if value.userSettable == True:
                     configs[key] = value
         return configs
-             
-    
+
+
     def getParent(self):
         with self.lock:
-            #NOTE this should be extended so that it choses the parent 
+            #NOTE this should be extended so that it choses the parent
             # with the highest prioirity
             parentNodes = self.conf['parent_nodes'].get()
             #At the moment a child can only have one parent <- still?? SP
-            return parentNodes[0] 
-    
+            return parentNodes[0]
+
     def getServerHost(self):
         return self.conf['server_host'].get()
 
@@ -403,10 +416,15 @@ class ServerConf(conf_base.Conf):
     def getDefaultServer(self):
         with self.lock:
             return self.conf['client_host'].get()
-    
+
     def getMode(self):
         with self.lock:
             return self.conf['mode'].get()
+
+    def getProfiling(self):
+        with self.lock:
+            strMode = self.conf['profiling'].get()
+        return strMode == 'true'
 
     def getProjectFile(self):
         return self.getFile('project_file')
@@ -419,8 +437,8 @@ class ServerConf(conf_base.Conf):
     def getTaskQueueSize(self):
         with self.lock:
             return self.conf['task_queue_size'].get()
-    
-    def getWebRootPath(self):        
+
+    def getWebRootPath(self):
         return os.path.join(self.execBasedir,self.get('web_root'))
 
     def getImportPaths(self):
@@ -436,8 +454,8 @@ class ServerConf(conf_base.Conf):
             retlist.append(os.path.join(self.conf['conf_dir'].get(), 'lib'))
             retlist.append(os.path.join(self.execBasedir, 'cpc', 'lib'))
         return retlist
- 
-    
+
+
     def getLocalAssetsDir(self):
         return self.getFile('local_assets_dir')
 

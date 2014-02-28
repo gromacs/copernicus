@@ -2,11 +2,11 @@
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -20,7 +20,7 @@
 
 
 
-# This is the main executable, from which all actions are launched. 
+# This is the main executable, from which all actions are launched.
 
 import sys
 import copy
@@ -121,14 +121,21 @@ try:
         if len(args) > 1:
             if args[1] == "-dev":
                 #dev mode should always at least print out debug log output
-                if ServerConf().getMode() == "prod":
+                if serverMode == "prod":
                     serverMode = "debug"
 
-                else:
-                    serverMode = ServerConf().getMode()
                 cpc.util.log.initServerLogToStdout(serverMode)
                 doFork = False
         print "Starting server.."
+
+        doProfile = cf.getProfiling()
+        if doProfile:
+            try:
+                import yappi
+                yappi.start()
+            except:
+                pass
+
         cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)
     elif cmd == "setup":
