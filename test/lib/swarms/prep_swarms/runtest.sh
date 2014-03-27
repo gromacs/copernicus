@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e cpc/test/lib/swarms/g_rama_multi/topol.tpr ]; then
+if [ ! -e test/lib/swarms/g_rama_multi/topol.tpr ]; then
     echo "This test script must be run from within the copernicus base directory"
     exit 1
 fi
@@ -21,12 +21,12 @@ fi
 ./cpcc transact
 
 # create the conf_path object
-./cpcc set-file run:in.trrs[0] cpc/test/lib/swarms/prep_swarms/1.trr
-./cpcc set-file run:in.trrs[1] cpc/test/lib/swarms/prep_swarms/2.trr
-./cpcc set-file run:in.trrs[2] cpc/test/lib/swarms/prep_swarms/3.trr
+./cpcc set-file run:in.trrs[0] test/lib/swarms/prep_swarms/1.trr
+./cpcc set-file run:in.trrs[1] test/lib/swarms/prep_swarms/2.trr
+./cpcc set-file run:in.trrs[2] test/lib/swarms/prep_swarms/3.trr
 
 # create the trrmpp_input object
-./cpcc set-file run:in.tpr cpc/test/lib/swarms/prep_swarms/topol.tpr
+./cpcc set-file run:in.tpr test/lib/swarms/prep_swarms/topol.tpr
 
 # and commit this set of updates
 ./cpcc commit

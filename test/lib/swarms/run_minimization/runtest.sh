@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e cpc/test/lib/swarms/g_rama_multi/topol.tpr ]; then
+if [ ! -e test/lib/swarms/g_rama_multi/topol.tpr ]; then
     echo "This test script must be run from within the copernicus base directory"
     exit 1
 fi
@@ -21,17 +21,17 @@ fi
 ./cpcc transact
 
 # create the conf_path object
-./cpcc set-file run:in.conf_path[0].conf cpc/test/lib/swarms/run_minimization/1.gro
-./cpcc set-file run:in.conf_path[0].itp cpc/test/lib/swarms/run_minimization/1.itp
-./cpcc set-file run:in.conf_path[1].conf cpc/test/lib/swarms/run_minimization/2.gro
-./cpcc set-file run:in.conf_path[1].itp cpc/test/lib/swarms/run_minimization/2.itp
-./cpcc set-file run:in.conf_path[2].conf cpc/test/lib/swarms/run_minimization/3.gro
-./cpcc set-file run:in.conf_path[2].itp cpc/test/lib/swarms/run_minimization/3.itp
+./cpcc set-file run:in.conf_path[0].conf test/lib/swarms/run_minimization/1.gro
+./cpcc set-file run:in.conf_path[0].itp test/lib/swarms/run_minimization/1.itp
+./cpcc set-file run:in.conf_path[1].conf test/lib/swarms/run_minimization/2.gro
+./cpcc set-file run:in.conf_path[1].itp test/lib/swarms/run_minimization/2.itp
+./cpcc set-file run:in.conf_path[2].conf test/lib/swarms/run_minimization/3.gro
+./cpcc set-file run:in.conf_path[2].itp test/lib/swarms/run_minimization/3.itp
 
 # create the grompp_input object
-./cpcc set-file run:in.grompp.mdp cpc/test/lib/swarms/run_minimization/minim.mdp
-./cpcc set-file run:in.grompp.top cpc/test/lib/swarms/run_minimization/topol.top
-./cpcc set-file run:in.grompp.ndx cpc/test/lib/swarms/run_minimization/index.ndx
+./cpcc set-file run:in.grompp.mdp test/lib/swarms/run_minimization/minim.mdp
+./cpcc set-file run:in.grompp.top test/lib/swarms/run_minimization/topol.top
+./cpcc set-file run:in.grompp.ndx test/lib/swarms/run_minimization/index.ndx
 
 ./cpcc set run:in.em_tolerance 1000
 # and commit this set of updates
