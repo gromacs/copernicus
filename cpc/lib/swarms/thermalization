@@ -44,7 +44,7 @@ class FEError(cpc.dataflow.ApplicationError):
 # initially unstable system
 
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
     # first create the right mdp file

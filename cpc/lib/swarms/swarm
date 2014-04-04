@@ -45,7 +45,7 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def swarm(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     
     # TODO allow additional iterations to be set by having each iteration within pers object
