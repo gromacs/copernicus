@@ -24,6 +24,9 @@
     <type id="conf" base="file">
         <desc>A conformation of the input protein.</desc>
     </type>
+    <type id="z_point" base="array" member-type="float">
+        <desc>A point in collective variables space.</desc>
+    </type>
     <type id="path_point" base="record">
         <desc>Describes one point on a path.</desc>
         <field type="file" id="conf">
@@ -36,7 +39,7 @@
             <desc>The protein topology include file with dihedral restraints 
                   for this point in the path</desc>
         </field>
-        <field type="z_point">
+        <field type="z_point" id="z" opt="true">
             <desc>The point in z-space being represented</desc>
         </field>
     </type>
@@ -50,9 +53,6 @@
     </type>
     <type id="conf_array_array" base="array" member-type="conf_array">
         <desc>An array of configurations without itp files</desc>
-    </type>
-    <type id="z_point" base="array" member-type="float">
-        <desc>A point in collective variables space.</desc>
     </type>
     <type id="dist_array" base="array" member-type="float">
         <desc>An array of max. path displacements.</desc>
