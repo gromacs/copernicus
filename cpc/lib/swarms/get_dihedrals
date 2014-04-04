@@ -42,7 +42,7 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.persistentDir,
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     # ensure that the mdruns are finished and call g_rama multi
     ramas=pers.get('ramas')
