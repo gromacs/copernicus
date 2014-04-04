@@ -1,10 +1,12 @@
 #!/bin/sh
 
 # check whether all input files will be available:
-if [ ! -e test/lib/swarms/g_rama_multi/topol.tpr ]; then
-    echo "This test script must be run from within the copernicus base directory"
-    exit 1
-fi
+# NOTE: check removed in this form, since g_rama_multi does not exist among the tests.
+
+#if [ ! -e test/lib/swarms/g_rama_multi/topol.tpr ]; then
+#    echo "This test script must be run from within the copernicus base directory"
+#    exit 1
+#fi
 
 # start the project
 ./cpcc start test
@@ -21,15 +23,24 @@ fi
 ./cpcc transact
 
 # create the conf_path object
+# Note: I changed these so conf_path[].itp now is .include[0], and we include a .top in each
+# conf_path[] entry as it seems it's needed there - on the other hand, the "global" grompp top
+# further below is not actually used it seems.
 ./cpcc set-file run:in.conf_path[0].conf test/lib/swarms/run_minimization/1.gro
-./cpcc set-file run:in.conf_path[0].itp test/lib/swarms/run_minimization/1.itp
+./cpcc set-file run:in.conf_path[0].include[0] test/lib/swarms/run_minimization/1.itp
+./cpcc set-file run:in.conf_path[0].top test/lib/swarms/run_minimization/topol.top
+
 ./cpcc set-file run:in.conf_path[1].conf test/lib/swarms/run_minimization/2.gro
-./cpcc set-file run:in.conf_path[1].itp test/lib/swarms/run_minimization/2.itp
+./cpcc set-file run:in.conf_path[1].include[0] test/lib/swarms/run_minimization/2.itp
+./cpcc set-file run:in.conf_path[1].top test/lib/swarms/run_minimization/topol.top
+
 ./cpcc set-file run:in.conf_path[2].conf test/lib/swarms/run_minimization/3.gro
-./cpcc set-file run:in.conf_path[2].itp test/lib/swarms/run_minimization/3.itp
+./cpcc set-file run:in.conf_path[2].include[0] test/lib/swarms/run_minimization/3.itp
+./cpcc set-file run:in.conf_path[2].top test/lib/swarms/run_minimization/topol.top
 
 # create the grompp_input object
 ./cpcc set-file run:in.grompp.mdp test/lib/swarms/run_minimization/minim.mdp
+# this is not read by run_minimization..
 ./cpcc set-file run:in.grompp.top test/lib/swarms/run_minimization/topol.top
 ./cpcc set-file run:in.grompp.ndx test/lib/swarms/run_minimization/index.ndx
 
