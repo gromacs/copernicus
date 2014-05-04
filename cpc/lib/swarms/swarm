@@ -53,7 +53,8 @@ def swarm(inp, out):
     iterations=pers.get('iterations')
     if iterations is None or iterations<1:
         Niterations=inp.getInput('Niterations')
-        # Niterations is an optional input, path converge may also be used to monitor iterations
+        # Niterations is an optional input, path converge may also be 
+        #used to monitor iterations
     #if Niterations is not None:
 
         start=inp.getInput('start_conf')
@@ -82,7 +83,8 @@ def swarm(inp, out):
         for i in range(n-2):
             out.setSubOut('path[%d].conf'%i, FileValue(start))
         
-        dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Nchains)
+        dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, 
+                                             top, includes, n, ndx, Nchains)
         for i in range(1,n-1):
             #if len(includes)==0:
             top_i=os.path.join(inp.getOutputDir(),'topol_%d.top'%i)
@@ -97,7 +99,8 @@ def swarm(inp, out):
             if len(includes)>Nchains:
                 for j in range(Nchains,len(includes)):
                     include=inp.getInput('include[%d]'%j)
-                    out.setSubOut('path[%d].include[%d]'%(i-1,j),FileValue(include))
+                    out.setSubOut('path[%d].include[%d]'%(i-1,j),
+                                              FileValue(include))
         
         # Create the dihedral swarm iteration instances
         for i in range(Niterations):
