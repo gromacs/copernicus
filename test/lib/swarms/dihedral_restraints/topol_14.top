@@ -1,0 +1,59 @@
+;
+;	File 'topol.top' was generated
+;	By user: onbekend (0)
+;	On host: onbekend
+;	At date: Tue Jun 19 23:39:30 2012
+;
+;	This is a standalone topology file
+;
+;	It was generated using program:
+;	pdb2gmx - VERSION 4.5.5
+;
+;	Command line was:
+;	pdb2gmx -f start.pdb -o oxy_vsites.pdb -vsite h 
+;
+;	Force field was read from the standard Gromacs share directory.
+;
+
+; Include forcefield parameters
+#include "charmm27.ff/forcefield.itp"
+
+; Include chain topologies
+#include "dihre_14_chain_0.itp"
+#include "dihre_14_chain_1.itp"
+#include "dihre_14_chain_2.itp"
+#include "dihre_14_chain_3.itp"
+#include "topol_Other_chain_A2.itp"
+#include "topol_Other_chain_B2.itp"
+#include "topol_Other_chain_C2.itp"
+#include "topol_Other_chain_D2.itp"
+
+; Include water topology
+#include "charmm27.ff/tip3p.itp"
+
+#ifdef POSRES_WATER
+; Position restraint for each water oxygen
+[ position_restraints ]
+;  i funct       fcx        fcy        fcz
+   1    1       1000       1000       1000
+#endif
+
+; Include topology for ions
+#include "charmm27.ff/ions.itp"
+
+[ system ]
+; Name
+Protein in water
+
+[ molecules ]
+; Compound        #mols
+Protein_chain_A     1
+Protein_chain_B     1
+Protein_chain_C     1
+Protein_chain_D     1
+Other_chain_A2      1
+Other_chain_B2      1
+Other_chain_C2      1
+Other_chain_D2      1
+SOL         28311
+NA               6
