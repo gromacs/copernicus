@@ -79,7 +79,7 @@ def run(inp, out):
 
     mdruns=pers.get('mdruns')
     if mdruns is None and mdruns<1:
-        out.addInstance('runs', 'gromacs::grompp_mdrun_multi')
+        out.addInstance('runs', 'gromacs::grompp_mdruns')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
@@ -141,6 +141,7 @@ if inp.testing():
 
 # prepare the output data
 out=inp.getFunctionOutput()
+
 run(inp, out)
 
 out.writeXML(sys.stdout)
