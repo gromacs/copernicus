@@ -82,7 +82,7 @@
                 </desc>
             </field>
              <field type="float" id="em_tolerance">
-                <desc>The number of steps of minimization to preform.</desc>
+                <desc>The number of steps of minimization to perform.</desc>
             </field>
             <field type="file" id="top">
                 <desc>The topology include file describing the protein to be
