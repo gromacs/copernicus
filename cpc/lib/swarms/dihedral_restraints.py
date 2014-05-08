@@ -58,8 +58,10 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
                 moltop=open(includes[mol]).read()
                 restraint_itp.write(moltop)
             # write the initial part of the topology file
+            # NOTE: the dihedral_restraints format changed in gromacs 4.6+ or so to this. before it had
+            # some other parameters as well. 
             restraint_itp.write("[ dihedral_restraints ]\n")
-            restraint_itp.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
+            restraint_itp.write("; ai   aj   ak   al  phi  dphi  kfac\n")
             if len(includes)>0:
                 protein=molecule(includes[mol])
                 # replace the chain names with the chain names
@@ -86,12 +88,10 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
                 phi_val=startpts[r][mol][0]+(endpts[r][mol][0]-startpts[r][mol][0])/n*k
                 psi_val=startpts[r][mol][1]+(endpts[r][mol][1]-startpts[r][mol][1])/n*k
 
-                restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
-                                    %(phi[0].atomnr,phi[1].atomnr,phi[2].atomnr,phi[3].atomnr, 
-                                      1, 1, phi_val, 0, 1, 2))
-                restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
-                                    %(psi[0].atomnr,psi[1].atomnr,psi[2].atomnr,psi[3].atomnr, 
-                                      1, 1, psi_val, 0, 1, 2))
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d%5d\n"
+                                    %(phi[0].atomnr,phi[1].atomnr,phi[2].atomnr, phi[3].atomnr, 1, phi_val, 0, 1))
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d%5d\n"
+                                    %(psi[0].atomnr,psi[1].atomnr,psi[2].atomnr, psi[3].atomnr, 1, psi_val, 0, 1))
             restraint_itp.close()
 
 
