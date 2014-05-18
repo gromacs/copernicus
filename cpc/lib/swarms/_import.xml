@@ -44,7 +44,7 @@
         </field>-->
     </type>
     <type id="conf_path" base="array" member-type="path_point">
-        <desc>An array of configurations of the structure</desc>
+        <desc>An array of configurations of the structure including topologies</desc>
     </type>
    <type id="conf_path_array" base="array" member-type="conf_path">
         <desc>An array of paths: the output of a full swarm set.</desc>
@@ -137,7 +137,7 @@
             <field type="int" id="Nswarms">
                 <desc>The number of swarm simulations to run.</desc>
             </field>
-            <field type="int" id="Niterations" opt="true">
+            <field type="int" id="Niterations">  <!-- opt true was here, but is not working without anyway right now -->
                 <desc>The number of swarm simulations to run.</desc>
             </field>
             <field type="int" id="Nchains" opt="true">
@@ -162,7 +162,7 @@
         </outputs>
         <subnet-outputs>
             <field type="conf_path" id="path">
-                <desc>A linearly interpolated path as the initial path</desc>
+                <desc>A dihedrally interpolated path as the initial path</desc>
             </field>
             <field type="conf_path_array" id="paths">
             </field>
@@ -185,7 +185,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_path" id="conf_path">
+            <field type="conf_path" id="path">
                 <desc>Configurations to be minimized</desc>
             </field>
             <field type="float" id="em_tolerance">
@@ -193,7 +193,7 @@
             </field>
         </inputs>
         <outputs>
-            <field type="conf_path" id="minimized_conf_path">
+            <field type="conf_path" id="path">
                 <desc>Output configurations of the minimization</desc>
             </field>
         </outputs>
@@ -220,14 +220,14 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_path" id="path">
+            <field type="conf_path" id="path" complete="true">
                 <desc>Output structures of the minimization and their
                       restraint parameters.</desc>
             </field>
         </inputs>
         <outputs>
             <field type="conf_array" id="confs" />
-            <field type="conf_path" id="path"/>
+            <field type="conf_path" id="path" />
         </outputs>
         <subnet-inputs>
             <field type="gromacs::conf_array" id="confs" />
@@ -260,8 +260,8 @@
                       restrained trajectory will output this number of
                       frames. </desc>
             </field>
-            <field type="conf_path" id="path">
-                <desc>Output structures of the minimization and their
+            <field type="conf_path" id="path" complete="true">
+                <desc>Output structures of the thermalization and their
                       restraint parameters.</desc>
             </field>
             <field type="conf_array" id="confs">
@@ -517,22 +517,24 @@
             <instance id="get_dihedrals" function="get_dihedrals"/>
             <instance id="reparametrize" function="reparametrize"/>
 
-            <!-- connections to minimization -->
+            <!-- connections from the input to minimization -->
             <connection src="self:ext_in.minim_grompp"
                         dest="minimization:in.grompp"/>
             <connection src="self:ext_in.em_tolerance"
                         dest="minimization:in.em_tolerance"/>
             <connection src="self:ext_in.path"
-                        dest="minimization:in.conf_path"/>
+                        dest="minimization:in.path"/>
             <connection src="self:ext_in.resources"
                         dest="minimization:in.resources"/>
+
             <!-- connections to thermalization -->
-            <connection src="minimization:out.minimized_conf_path"
+            <connection src="minimization:out.path"
                         dest="thermalization:in.path"/>
             <connection src="self:ext_in.therm_grompp"
                         dest="thermalization:in.grompp"/>
             <connection src="self:ext_in.resources"
                         dest="thermalization:in.resources"/>
+
             <!-- connections to equilibration -->
             <connection src="self:ext_in.restrained_steps"
                         dest="equilibration:in.restrained_steps"/>
