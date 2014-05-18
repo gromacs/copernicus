@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -39,6 +39,10 @@ from cpc.dataflow import ArrayValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
+# Note:
+# A swarm iteration is a pipeline of steps, all of which are instantiated and connected
+# using the dihedral_swarm_iteration function in the _import.xml file. This controller
+# doesn't do anything by itself.
 
 def swarm_iteration(inp, out):
     return

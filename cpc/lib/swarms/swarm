@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -45,8 +45,7 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def swarm(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
-                                               "persistent.dat"))
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(), "persistent.dat"))
     
     # TODO allow additional iterations to be set by having each iteration within pers object
     
@@ -55,6 +54,7 @@ def swarm(inp, out):
         Niterations=inp.getInput('Niterations')
         # Niterations is an optional input, path converge may also be 
         #used to monitor iterations
+        # BW: Note, removed opt flag on Niterations as this is not implemented here anyway now.
     #if Niterations is not None:
 
         start=inp.getInput('start_conf')
@@ -80,22 +80,47 @@ def swarm(inp, out):
         # if the include array is none, the single chain is in topol.top
         top=inp.getInput('top')
         
-        for i in range(n-2):
-            out.setSubOut('path[%d].conf'%i, FileValue(start))
-        
+        # Interpolate the dihedral coordinates between the given start and end
+        # structures and write out as dihedral restraint include files dihre_N_chain_Y.itp
+
         dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, 
                                              top, includes, n, ndx, Nchains)
-        for i in range(1,n-1):
+        
+        # Setup the subnet's path output with a config, top and itp.
+        # 
+        # Use these dihedral restraint includes to set as include inputs for the
+        # configs of the initial path. These are set through a subnet, which is connected
+        # to the first iteration iter0 further below (sub_out.path -> iter0:in.path)
+        #
+        # Since we don't move the start and end points, we are really going to process
+        # only the path points 1 to n-2 (if n is the total number of points and we start at 0).
+        # Let i reflect the "true" point index, but the arrays have to start at 0, hence the i-1
+        # everywhere below.
+
+        for i in range(1,n-1):  # range(a,b) gives numbers from a to b-1.
+            
+            # Same starting configuration for each point
+            out.setSubOut('path[%d].conf'%(i-1), FileValue(start))
+
+            # One topology file per path point. These are also written by dihedral_restraints
+            # but are simply passed through from the top level topology input, with the
+            # specific .itp added as an include directive
+
             #if len(includes)==0:
             top_i=os.path.join(inp.getOutputDir(),'topol_%d.top'%i)
             out.setSubOut('path[%d].top'%(i-1), FileValue(top_i))
             #else:
             #    out.setSubOut('path[%d].top'%(i-1), FileValue(top))
             # connect includes output by write_restraints
+
+            # One restraint itp per chain in the protein
+
             for chain in range(Nchains):
                 include_i=os.path.join(inp.getOutputDir(),'dihre_%d_chain_%d.itp'%(i,chain))
                 out.setSubOut('path[%d].include[%d]'%(i-1,chain), FileValue(include_i))
-            # connect any other includes
+
+            # Connect any other includes as itp's after the chain restraint itps
+
             if len(includes)>Nchains:
                 for j in range(Nchains,len(includes)):
                     include=inp.getInput('include[%d]'%j)
@@ -104,38 +129,66 @@ def swarm(inp, out):
         
         # Create the dihedral swarm iteration instances
         for i in range(Niterations):
+            # The dihedral_swarm_iteration is completely described by the corresponding
+            # section in the _import.xml file
             out.addInstance('iter%d'%i, 'dihedral_swarm_iteration')
-            # initial inputs
+
+            # Initial input points - these are used by the reparametrize step to "stretch"
+            # the path well between the start and end points (which are fixed), as the 
+            # individual path points in between move around
             out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf'%i)
             out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg'%i)
             out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf'%i)
             out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg'%i)
+
             out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants'%i)
+
+            # Dihedral selection index
             out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
             out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
+
+            # Topology without restraints
             out.addConnection('self:ext_in.top', 'iter%d:in.top'%i)
+
+            # Topology include file with dihedral restraints
             out.addConnection('self:ext_in.include', 'iter%d:in.include'%i)
             
-            # set the various run settings
+            # Propagate the various run settings into the functions in the iteration
+
+            # Minimization
             out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
             out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
+
+            # Thermalization
             out.addConnection('self:ext_in.therm_grompp', 'iter%d:in.therm_grompp'%i)
+
+            # Equilibration
             out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
             out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
+
+            # Setup some other configuration parameters
             out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
             out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms'%i)
             out.addConnection('self:ext_in.Nchains', 'iter%d:in.Nchains'%i)
             out.addConnection('mdrun_tune:out.resources', 'iter%d:in.resources'%i)
+
+            # The refined path from each iteration is output as an array of paths
             out.addConnection('iter%d:out.path'%i, 'self:ext_out.paths[%d]'%i)
+
+            # The refined path from each iteration connects to the next iterations
+            # input, and the first iteration gets the dihedrally interpolated path as
+            # starting path
             if i>0:
                 out.addConnection('iter%d:out.path'%(i-1), 'iter%d:in.path'%i)
             else:  
                 out.addConnection('self:sub_out.path', 'iter0:in.path')
+
         iterations=1
+
     # use pers.get to pass the function args to the various subfunctions
     pers.set('iterations', iterations)
-
     pers.write()
+
 # read the input data
 inf=StringIO()
 inf.write(sys.stdin.read())
