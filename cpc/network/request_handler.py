@@ -333,6 +333,23 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
         return True
 
 
+    #overriding the method in BaseHTTPServer.BaseHTTPRequestHandler
+    def log_request(self, code='-', size='-'):
+        """Log an accepted request.
+
+        This is called by send_response().
+
+        """
+
+        self.log.log(cpc.util.log.TRACE,'"%s" %s %s',
+                         self.requestline, str(code), str(size))
+
+        #KEEPING THE ACTUALL CALL FOR FUTURE REFERENCE
+        # self.log_message('"%s" %s %s',
+        #                  self.requestline, str(code), str(size))
+
+
+
 class handlerForRequestWithNoCertReq(handler_base):
     """
     Handles request that comes from an HTTPS connection with no certificate authentication
