@@ -61,7 +61,7 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
             # NOTE: the dihedral_restraints format changed in gromacs 4.6+ or so to this. before it had
             # some other parameters as well. 
             restraint_itp.write("[ dihedral_restraints ]\n")
-            restraint_itp.write("; ai   aj   ak   al  phi  dphi  kfac\n")
+            restraint_itp.write("; ai   aj   ak   al  type phi  dphi  kfac\n")
             if len(includes)>0:
                 protein=molecule(includes[mol])
                 # replace the chain names with the chain names
@@ -84,14 +84,19 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
                       (a.atomname == 'N' or a.atomname == 'CA' or a.atomname == 'C')) or
                       (a.resnr == int(r)+1 and a.atomname == 'N')]
 
-                # write phi, psi angles
+                # write phi, psi angles and the associated k factor
+                # Note: in the Gromacs 4.5+ format, the k-factor is here. Before, it was in the .mdp as
+                # dihre_fc.
+                # Also see reparametrize.py
+                kfac = 1000.0
+
                 phi_val=startpts[r][mol][0]+(endpts[r][mol][0]-startpts[r][mol][0])/n*k
                 psi_val=startpts[r][mol][1]+(endpts[r][mol][1]-startpts[r][mol][1])/n*k
 
-                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d%5d\n"
-                                    %(phi[0].atomnr,phi[1].atomnr,phi[2].atomnr, phi[3].atomnr, 1, phi_val, 0, 1))
-                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d%5d\n"
-                                    %(psi[0].atomnr,psi[1].atomnr,psi[2].atomnr, psi[3].atomnr, 1, psi_val, 0, 1))
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                                    %(phi[0].atomnr,phi[1].atomnr,phi[2].atomnr, phi[3].atomnr, 1, phi_val, 0, kfac))
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                                    %(psi[0].atomnr,psi[1].atomnr,psi[2].atomnr, psi[3].atomnr, 1, psi_val, 0, kfac))
             restraint_itp.close()
 
 
