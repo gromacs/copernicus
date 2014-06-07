@@ -14,7 +14,8 @@ nstfout                  = 0
 ;nstcheckpoint            = 1000
 ; Output frequency for energies to log file and energy file
 nstlog                   = 100
-nstenergy                = 600
+; BW: removed this as it has to be a multiple of nstcalcenergy, which is not set here anyway (automatically tuned now)
+;nstenergy                = 600
 ; Output frequency and precision for xtc file
 nstxtcout                = 500
 xtc_precision            = 500
@@ -112,5 +113,6 @@ lincs_warnangle          = 90
 ; Convert harmonic bonds to morse potentials
 morse                    = no
 
-dihre			 = yes
-dihre_fc		 = 1000
+; BW: removed these as they are obsolete in Gromacs 4.5+. Set in the dihedral_restraints section now.
+;dihre			 = yes
+;dihre_fc		 = 1000

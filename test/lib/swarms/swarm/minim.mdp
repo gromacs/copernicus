@@ -17,5 +17,6 @@ rcoulomb	= 1.0		; Short-range electrostatic cut-off
 rvdw		= 1.0		; Short-range Van der Waals cut-off
 pbc		= xyz 		; Periodic Boundary Conditions (yes/no)
 
-dihre            = yes
-dihre_fc         = 1000
+; BW: removed these as they are obsolete in Gromacs 4.5+. Set in the dihedral_restraints section now.
+;dihre            = yes
+;dihre_fc         = 1000
