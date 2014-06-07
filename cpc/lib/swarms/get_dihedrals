@@ -44,9 +44,14 @@ class FEError(cpc.dataflow.ApplicationError):
 def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
-    # ensure that the mdruns are finished and call g_rama multi
+
+    # TODO: use the new gromacs lib g_rama function? The code below will fail for installs with for example
+    # g_rama_mpi only ?
+
     ramas=pers.get('ramas')
     if ramas is None or ramas<1:
+
+        # The confs[] input array is complete-flagged so when we get here, it should be filled in
 
         confs=inp.getInput('confs')
         tpr=inp.getInput('tpr')
