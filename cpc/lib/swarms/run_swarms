@@ -40,6 +40,9 @@ class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
+# Run a simulation *without* dihedral restraints active, to let the system explore the
+# energy landscape around the swarm path points
+
 def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
@@ -54,8 +57,8 @@ def run(inp, out):
         # now we set our own mdp settings
         steps=inp.getInput('swarm_steps')
         settings=[] 
-        settings.append(RecordValue( { 'name' : StringValue('dihre'),
-                                       'value' : StringValue('no') } ) )
+        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
+        #                               'value' : StringValue('no') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
@@ -70,19 +73,21 @@ def run(inp, out):
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstlog'),
                                        'value' : StringValue('10000') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
-                                       'value' : StringValue('120') } ) )
+        # BW: nstenergy has to be a multiple of nstcalcenergy now, which is not set here (autotuned)
+        # Check if this poses a problem for the analysis later on.
+        #settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+        #                               'value' : StringValue('120') } ) )
         out.setSubOut('swarm_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
     mdruns=pers.get('mdruns')
     if mdruns is None or mdruns<1:
         mdruns=0
-        confs=inp.getInput('conf_array_array')
+        confs=inp.getInput('swarmconfs')
         finished=True
         if confs is not None and len(confs)>0:
             for i in range(len(confs)):
-                subconfs=inp.getInput('conf_array_array[%d]'%i)
+                subconfs=inp.getInput('swarmconfs[%d]'%i)
                 if subconfs is None or len(subconfs)==0:
                     finished=False
         else: 
@@ -92,30 +97,43 @@ def run(inp, out):
         maxcores=1
         out.setSubOut('resources.max.cores', IntValue(maxcores))
         
-        
         # keep track of the mdruns
         if finished==True:
             #out.addInstance('grama', 'g_rama_multi')
+            # For each swarm
             for i in range(len(confs)):
-                    out.addInstance('runs%d'%i, 'gromacs::grompp_mdrun_multi')
-                    # connect the swarm mdp and resources
-                    out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
-                    out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
-                    out.addConnection('self:ext_in.include', 'runs%d:in.include[0]'%i)
-                    out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
-                                      'runs%d:in.cmdline_options[0]'%i)
-                    out.addConnection('self:sub_out.resources', 'runs%d:in.resources[0]'%i)
-                    out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
-                    out.addConnection('self:sub_out.swarm_settings', 
-                                      'runs%d:in.settings[0]'%i)
-                    out.addConnection('self:ext_in.conf_array_array[%d]'%i,'runs%d:in.conf'%i)
-                    #out.addConnection('runs%d:out.conf'%i,'grama:in.confs[%d]'%i)
-                    out.addConnection('runs%d:out.conf'%i,'self:ext_out.swarms[%d]'%i)
+                # Create a network instance that runs multiple grompp/mdruns in parallell
+                # For each swarm, we will run multiple runs due to the 2D array input swarmconfs
+                out.addInstance('runs%d'%i, 'gromacs::grompp_mdruns')
+
+                # Connect the swarm mdp and resources, only put in [0] to use for all runs
+                out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]'%i)
+                out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]'%i)
+                # The includes are any normal includes, not the includes with the dihedral restraints as
+                # those are not to be used here
+                out.addConnection('self:ext_in.include', 'runs%d:in.include[0]'%i)
+
+                out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                                  'runs%d:in.cmdline_options[0]'%i)
+
+                out.addConnection('self:sub_out.resources', 'runs%d:in.resources[0]'%i)
+                out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]'%i)
+                out.addConnection('self:sub_out.swarm_settings', 
+                                  'runs%d:in.settings[0]'%i)
+
+                # Connect the array of configs for this swarm to the grompp/mdruns input config array
+                out.addConnection('self:ext_in.swarmconfs[%d]'%i, 'runs%d:in.conf'%i)
+
+                #out.addConnection('runs%d:out.conf'%i,'grama:in.confs[%d]'%i)
+
+                # Connect the mdrun outputs to the module out (again, each of these is an array of configs)
+                out.addConnection('runs%d:out.conf'%i,'self:ext_out.swarms[%d]'%i)
+
+            # Mark so we don't run this part again
             mdruns=1
     pers.set('mdruns', mdruns)
     
     pers.write()
-
 
 
 # read the input data
