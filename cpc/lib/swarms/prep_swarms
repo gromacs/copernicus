@@ -40,6 +40,13 @@ class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
+# This step of the swarm pipeline generates new swarm configurations by taking confs from each 
+# written trajectory timestep of the previous equilibration step.
+#
+# So, we might input 5 equilibration trajectories into this function, and if each trajectory
+# has 10 timesteps, it means our output here "swarmconfs[]" is an array of 5 entries each of
+# which is an array of 10 configurations, so we output 50 configs in total, in a conf_array_array.
+
 def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
@@ -61,18 +68,42 @@ def run(inp, out):
     #            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
     #            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
     #            # we don't want the 0 time point
-    #            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.in_swarms[%d]'%i)
+    #            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.swarmconfs[%d]'%i)
     #        trjconvs=1
+
+    # This code depends on that the length of the in.trrs array is correct, that is, fully
+    # created, by the time this script is first run. It does not matter if it's not fully
+    # populated though as each trjconv_split is a separate instance with a separate in/out.
+    # 
+    # Since the previous step, equilibration (run_restrained) creates all the connections
+    # to its output restrained_trrs[] at the same time, and this is connected to our trrs[]
+    # input, the length will be correct by the time this script is run, and our instances
+    # and connections will then not depend on if the entries in the array are ready at
+    # start.
+    #
+    # NB: we could also just set the complete flag on the trrs[] input and hence make a barrier
+    # here but that seems unnecessary.
 
     trjconvs=pers.get('trjconvs')
     trrs=inp.getInput('trrs')
     if trjconvs is None or trjconvs==0:
         for i in range(len(trrs)):
+
+            # trjconv_split splits an input trajectory into its component configurations (.gros)
             out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+
+            # Trajectory inputs are from our trrs[] input array
             out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+
+            # The input topology tpr is connected to all trjconvs
             out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+
+            # The trjconv output, an array of configurations, is output on the swarmconfs[]
+            # array. Note that this means the output is a conf *array* for each trrs[] *entry*.
             out.addConnection('conv%d:out.confs'%i, 
-                              'self:ext_out.in_swarms[%d]'%i)
+                              'self:ext_out.swarmconfs[%d]'%i)
+
+            # Mark so we don't run this script again
             trjconvs=1
    
     pers.set('trjconvs', trjconvs)
@@ -83,17 +114,18 @@ def run(inp, out):
     #    #if confs is not None and len(confs)>0:
     #    finished=True
     #    for i in range(len(trrs)):
-    #        confs_i=inp.getSubnetInput('in_swarms[%d]'%i)
+    #        confs_i=inp.getSubnetInput('swarmconfs[%d]'%i)
     #        if confs_i is None or len(confs_i)==0:
     #            finished=False
                 
     #    if finished==True:
-    #        out.setOut('in_swarms', inp.getSubnetInputValue('in_swarms'))
+    #        out.setOut('swarmconfs', inp.getSubnetInputValue('swarmconfs'))
             #for i in range(len(trrs)):
             #    for j in range(len(confs_i)):
-            #            conf=inp.getSubnetInputValue('in_swarms[%d][%d]'%(i,j))
+            #            conf=inp.getSubnetInputValue('swarmconfs[%d][%d]'%(i,j))
                                 #if conf.value is not None and conf.isUpdated():
-                        out.setOut('in_swarms[%d][%d]'%(i,j), conf)
+            #            out.setOut('swarmconfs[%d][%d]'%(i,j), conf)
+                     
 # read the input data
 inf=StringIO()
 inf.write(sys.stdin.read())
