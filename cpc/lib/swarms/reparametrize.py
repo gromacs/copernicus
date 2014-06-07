@@ -148,8 +148,9 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
             moltop=in_itp.split('[ dihedral_restraints ]')[0]
             restraint_itp.write('%s'%moltop)
             sys.stderr.write("Writing restraints for interpolant point %d chain %d\n"%(k,chain))
+            # Note: this format is for Gromacs 4.5+. Before, there was a "label" and no B-morph possibility (optional)
             restraint_itp.write("[ dihedral_restraints ]\n")
-            restraint_itp.write("; ai   aj   ak   al  type  label  phi  dphi  kfac  power\n")
+            restraint_itp.write("; ai   aj   ak   al  type     phi    dphi    kfac   phiB    dphiB    kfacB\n")
             pathpoint=adjusted[k] # just a list of phi/psi angles
             if Nchains==1:
                 protein=molecule(top)
@@ -171,12 +172,14 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                     phi_val=pathpoint[pos+chain]
                     psi_val=pathpoint[pos+chain+1]
                     
-                    
-                    # write phi, psi angles
-                    restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
-                                        %(phi[0],phi[1],phi[2],phi[3],1,1,phi_val,0,1,2))
-                    restraint_itp.write("%5d%5d%5d%5d%5d%5d %8.4f%5d%5d%5d\n"
-                                        %(psi[0],psi[1],psi[2],psi[3],1,1,psi_val,0,1,2))
+                    # write phi, psi angles and k-factor
+                    # Note: in the Gromacs 4.5+ format, the k-factor is here. Before, it was in the .mdp as
+                    # dihre_fc.
+                    kfac = 1000.0   # from grompp.mdp... 
+                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                                        %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0,kfac))
+                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                                        %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
 
 
                     # delete the already added values from the stack
