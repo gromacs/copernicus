@@ -297,12 +297,12 @@
             </field>
         </inputs>
         <outputs>
-            <field type="conf_array_array" id="in_swarms">
+            <field type="conf_array_array" id="swarmconfs">
                     <desc>Initial swarm confs.</desc>
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="conf_array_array" id="in_swarms">
+            <field type="conf_array_array" id="swarmconfs">
             </field>
         </subnet-inputs>
         <controller log="true" executable="prep_swarms" 
@@ -321,7 +321,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_array_array" id="conf_array_array" >
+            <field type="conf_array_array" id="swarmconfs" >
                     <desc>Initial swarm confs.</desc>
             </field>
             <field type="int" id="swarm_steps">
@@ -337,6 +337,7 @@
                     .itp files containing the new set of dihedral restraint
                     values for the next iteration. </desc>
             </field>-->
+            <!-- TODO: does complete make sense on output values at all? -->
             <field type="conf_array_array" id="swarms" complete="true">
                 <desc>The structures from unrestrained simulations</desc>
             </field>
@@ -558,8 +559,8 @@
                         dest="prep_swarms:in.tpr"/>
 
             <!-- connect prep_swarms to run_swarms-->
-            <connection src="prep_swarms:out.in_swarms"
-                        dest="swarms:in.conf_array_array"/>
+            <connection src="prep_swarms:out.swarmconfs"
+                        dest="swarms:in.swarmconfs"/>
             <connection src="self:ext_in.swarm_steps"
                         dest="swarms:in.swarm_steps"/>
             <connection src="self:ext_in.equi_grompp.mdp"
