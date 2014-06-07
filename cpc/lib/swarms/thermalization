@@ -39,9 +39,11 @@ from cpc.dataflow import FileValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
-# Thermalize the system and relax it with the new constaints
+# Thermalize the system and relax it with the new constraints
 # short integration timestep is employed to properly evolve the
 # initially unstable system
+
+# TODO: sets dihrefc 100 below, but the .itp file has the k-fac now under gromacs 4.5+
 
 def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),"persistent.dat"))
@@ -54,10 +56,10 @@ def run(inp, out):
         out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
         # thermalize for 5000 steps
         settings=[] 
-        settings.append(RecordValue( { 'name' : StringValue('dihre'),
-                                       'value' : StringValue('yes') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('dihrefc'),
-                                       'value' : StringValue('100') } ) )
+        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
+        #                               'value' : StringValue('yes') } ) )
+        #settings.append(RecordValue( { 'name' : StringValue('dihrefc'),
+        #                               'value' : StringValue('100') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('dt'),
@@ -70,8 +72,10 @@ def run(inp, out):
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstlog'),
                                        'value' : StringValue('10000') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
-                                       'value' : StringValue('120') } ) )
+        # BW: nstenergy has to be a multiple of nstcalcenergy now, which is not set here (autotuned)
+        # Check if this poses a problem for the analysis later on.
+        #settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+        #                               'value' : StringValue('120') } ) )
         out.setSubOut('restrained_settings', ArrayValue(settings))
     pers.set('merge', merge)
 

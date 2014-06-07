@@ -39,6 +39,8 @@ from cpc.dataflow import FileValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
+# Run an energy-minimization with dihedral restraints active
+
 
 def run(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
@@ -56,8 +58,8 @@ def run(inp, out):
         # dihedral restraints are necessary, but the other settings are flexible 
         tol=inp.getInput('em_tolerance')
         settings=[]
-        settings.append(RecordValue( { 'name' : StringValue('dihre'),
-                                       'value' : StringValue('yes') } ) )
+        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
+        #                               'value' : StringValue('yes') } ) )
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('steep') } ) )
         settings.append(RecordValue( { 'name' : StringValue('emtol'),
@@ -72,8 +74,10 @@ def run(inp, out):
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstlog'),
                                        'value' : StringValue('10000') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
-                                       'value' : StringValue('120') } ) )
+        # BW: nstenergy has to be a multiple of nstcalcenergy now, which is not set here (autotuned)
+        # Check if this poses a problem for the analysis later on.
+        #settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
+        #                               'value' : StringValue('120') } ) )
         out.setSubOut('minimization_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
@@ -120,6 +124,9 @@ def run(inp, out):
             # It is important that these are immediately propagated here on the first run of the function,
             # since the path[] array elements have to be created, otherwise the "complete" flag which is set for
             # path in the _import.xml definition will not halt the pipeline until we have all the path[].conf's.
+            # Note: this is probably not true. It is enough to set the complete flag, all array elements will
+            # be created here the first time this fn is run anyway even if none of the top/include/conf 
+            # elements are filled in. So the complete-flag will wait for the entire array to be filled.
             out.addConnection('self:ext_in.path[%d].top'%i,'self:ext_out.path[%d].top'%i)
             out.addConnection('self:ext_in.path[%d].include'%i,'self:ext_out.path[%d].include'%i)
 
