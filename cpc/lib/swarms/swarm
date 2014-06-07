@@ -130,7 +130,7 @@ def swarm(inp, out):
         # Create the dihedral swarm iteration instances
         for i in range(Niterations):
             # The dihedral_swarm_iteration is completely described by the corresponding
-            # section in the _import.xml file
+            # section in the _import.xml file, as a network function with sub-instances.
             out.addInstance('iter%d'%i, 'dihedral_swarm_iteration')
 
             # Initial input points - these are used by the reparametrize step to "stretch"
