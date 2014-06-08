@@ -14,5 +14,6 @@ rcoulomb	= 1.0		; Short-range electrostatic cut-off
 rvdw		= 1.0		; Short-range Van der Waals cut-off
 pbc		= xyz 		; Periodic Boundary Conditions (yes/no)
 
-dihre       = yes
-dihre_fc    = 1000
+;BW: obsolete in newer Gromacs
+;dihre       = yes
+;dihre_fc    = 1000

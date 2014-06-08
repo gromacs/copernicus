@@ -121,8 +121,9 @@ orire-fc                 = 0
 orire-tau                = 0
 orire-fitgrp             = 
 nstorireout              = 100
-dihre                    = yes
-dihre-fc                 = 1000
+;BW: obsolete in newer Gromacs
+;dihre                    = yes
+;dihre-fc                 = 1000
 free_energy              = no
 init_lambda              = 0
 delta_lambda             = 0
