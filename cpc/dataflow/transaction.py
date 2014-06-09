@@ -216,8 +216,8 @@ class Transaction(run.FunctionRunOutput):
                         self._makeConn(newConnection)
                     self.activeNetwork.findConnectionSrcDest(
                                                         newConnection.conn, 
-                                                        affectedOutputAIs,
-                                                        affectedInputAIs)
+                                                        affectedInputAIs,
+                                                        affectedOutputAIs)
             if self.setValues is not None:
                 for val in self.setValues:
                     log.debug("Setting new value %s"%(val.itemName))
