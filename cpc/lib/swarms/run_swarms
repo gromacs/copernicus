@@ -57,8 +57,7 @@ def run(inp, out):
         # now we set our own mdp settings
         steps=inp.getInput('swarm_steps')
         settings=[] 
-        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
-        #                               'value' : StringValue('no') } ) )
+        # Note: in older Gromacs, the dihre options were controlled from here too.
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),

@@ -59,8 +59,7 @@ def run(inp, out):
         Nswarms=inp.getInput('Nswarms')
         output_timing=steps/(Nswarms-1)
         settings=[] 
-        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
-        #                               'value' : StringValue('yes') } ) )
+        # Note: in older Gromacs, the dihre options were controlled from here too.
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),

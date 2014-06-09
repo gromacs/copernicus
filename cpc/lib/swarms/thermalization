@@ -56,10 +56,10 @@ def run(inp, out):
         out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
         # thermalize for 5000 steps
         settings=[] 
-        #settings.append(RecordValue( { 'name' : StringValue('dihre'),
-        #                               'value' : StringValue('yes') } ) )
-        #settings.append(RecordValue( { 'name' : StringValue('dihrefc'),
-        #                               'value' : StringValue('100') } ) )
+        # Note: in older Gromacs, the dihre options were controlled from here too.
+        # TODO: the dihedral restraints here could maybe be allowed to be more relaxed
+        # than in the minimization and equilibration (?). But since the dihre_kfac option is
+        # no more, we have to then generate a separate dihedral restraints .itp file for this step.
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('dt'),
