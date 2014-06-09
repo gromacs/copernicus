@@ -2,7 +2,9 @@
 # Grant Rotskoff, 11 July 2012
 # write the initial topology file for restrained simulations 
 # in swarm free energy calculations
-# usage: ./dihedral_restraints conf.gro topol.top numsteps index.ndx
+# Appended by Bjorn Wesen 2014
+
+# Note: the start/end xvg's are created from the conf's by g_rama -s topol.tpr -f a.gro -o a.xvg
 
 import sys
 import re
@@ -19,7 +21,6 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
     selection=res_selection.res_select(start,ndx)
     n=int(n)
 
-
     # create the path
     startpts={}
     endpts={}
@@ -27,14 +28,18 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
         startpts[r]=[]
         chain=0
         for line in start_xvg:
-            if re.search(r'\-%s$'%r,line):
+            # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
+            # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
+            # the headers with -180.
+            if re.search(r'\S+\-%s$'%r,line):
                 startpts[r].append([float(line.split()[0]),float(line.split()[1])])
                 chain+=1
     for r in selection:
         endpts[r]=[]
         chain=0
         for line in end_xvg:
-            if re.search(r'\-%s$'%r,line):
+            # See comment above.
+            if re.search(r'\S+\-%s$'%r,line):
                 endpts[r].append([float(line.split()[0]),float(line.split()[1])])
                 chain+=1
     
@@ -85,7 +90,7 @@ def write_restraints(start, end, start_xvg, end_xvg, top, includes, n, ndx, Ncha
                       (a.resnr == int(r)+1 and a.atomname == 'N')]
 
                 # write phi, psi angles and the associated k factor
-                # Note: in the Gromacs 4.5+ format, the k-factor is here. Before, it was in the .mdp as
+                # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
                 # dihre_fc.
                 # Also see reparametrize.py
                 kfac = 1000.0

@@ -91,7 +91,10 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
             for r in rsel:
                 xvg=open(diheds[pathpt][i],'r')
                 for line in xvg:
-                     if re.search(r'\-%d\n'%r,line):
+                     # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
+                     # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
+                     # the headers with -180.
+                     if re.search(r'\S+\-%d\n'%r,line):
                          phi_val = float(line.split()[0])
                          psi_val = float(line.split()[1])
                          zpt+=[phi_val,psi_val]
@@ -105,7 +108,7 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     for r in rsel:
             xvg = open(start_xvg,'r')
             for line in xvg:
-                    if re.search(r'\-%d\n'%r,line):
+                    if re.search(r'\S+\-%d\n'%r,line):
                             phi_val = float(line.split()[0])
                             psi_val = float(line.split()[1])
                             initpt+=[phi_val,psi_val]
@@ -114,7 +117,7 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     for r in rsel:
             xvg = open(end_xvg,'r')
             for line in xvg:
-                    if re.search(r'\-%d\n'%r,line):
+                    if re.search(r'\S+\-%d\n'%r,line):
                             phi_val = float(line.split()[0])
                             psi_val = float(line.split()[1])
                             targetpt+=[phi_val,psi_val]
@@ -180,7 +183,6 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                                         %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0,kfac))
                     restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
                                         %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
-
 
                     # delete the already added values from the stack
                     pos+=2*Nchains
