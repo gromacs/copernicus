@@ -62,7 +62,7 @@ def swarm(inp, out):
         end=inp.getInput('end_conf')
         end_xvg=inp.getInput('end_xvg')
         n=inp.getInput('Ninterpolants')
-        ndx=inp.getInput('res_index')
+        ndx=inp.getInput('res_index')         # what residues to use for the dihedral interpolation
         tpr=inp.getInput('tpr')
         Nchains=inp.getInput('Nchains')
 
@@ -82,6 +82,8 @@ def swarm(inp, out):
         
         # Interpolate the dihedral coordinates between the given start and end
         # structures and write out as dihedral restraint include files dihre_N_chain_Y.itp
+        #
+        # ndx is the residue list to use for dihedrals
 
         dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, 
                                              top, includes, n, ndx, Nchains)
