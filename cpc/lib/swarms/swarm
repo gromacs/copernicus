@@ -68,6 +68,7 @@ def swarm(inp, out):
 
         out.addInstance('mdrun_tune','gromacs::mdrun_tune')
         out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
+        # The tuning run uses the equilibration settings
         out.addConnection('self:ext_in.equi_grompp.mdp', 'mdrun_tune:in.mdp')
         out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
         out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
@@ -149,10 +150,10 @@ def swarm(inp, out):
             out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
             out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
 
-            # Topology without restraints
+            # Topology 
             out.addConnection('self:ext_in.top', 'iter%d:in.top'%i)
 
-            # Topology include file with dihedral restraints
+            # Topology include files
             out.addConnection('self:ext_in.include', 'iter%d:in.include'%i)
             
             # Propagate the various run settings into the functions in the iteration
@@ -164,9 +165,13 @@ def swarm(inp, out):
             # Thermalization
             out.addConnection('self:ext_in.therm_grompp', 'iter%d:in.therm_grompp'%i)
 
-            # Equilibration
+            # Equilibration (and used for the swarm production runs as well)
             out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp'%i)
             out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps'%i)
+
+            # Note: Minimization, thermalization and equilibration uses quite hard dihedral restraints, 
+            # especially the minimization step has to do this to force the structure into the new iterations
+            # configuration. The swarm production run has no dihedral restraints.
 
             # Setup some other configuration parameters
             out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
