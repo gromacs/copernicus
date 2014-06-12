@@ -81,6 +81,9 @@
                       for the minimization with restraints.
                 </desc>
             </field>
+            <field type="int" id="minim_doubleprec" opt="true">
+                <desc>Set to 1 to use double-precision during minimization (needed for some cases). </desc>
+            </field>
              <field type="float" id="em_tolerance">
                 <desc>The number of steps of minimization to perform.</desc>
             </field>
@@ -190,6 +193,9 @@
             </field>
             <field type="float" id="em_tolerance">
                 <desc>The minimization tolerance to use.</desc>
+            </field>
+            <field type="int" id="double" opt="true">
+                <desc>Set to 1 to use double-precision minimization</desc>
             </field>
         </inputs>
         <outputs>
@@ -473,6 +479,9 @@
                 <desc>The number of minimization steps for the swarm iteration.
                 </desc>
             </field>
+            <field type="int" id="minim_doubleprec" opt="true">
+                <desc>Set to 1 to use double-precision minimization</desc>
+            </field>
             <field type="int" id="restrained_steps">
                 <desc>The number of steps of restrained equilibration.</desc>
             </field>
@@ -523,6 +532,8 @@
                         dest="minimization:in.grompp"/>
             <connection src="self:ext_in.em_tolerance"
                         dest="minimization:in.em_tolerance"/>
+            <connection src="self:ext_in.minim_doubleprec"
+                        dest="minimization:in.double"/>
             <connection src="self:ext_in.path"
                         dest="minimization:in.path"/>
             <connection src="self:ext_in.resources"

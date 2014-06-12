@@ -92,6 +92,8 @@ def run(inp, out):
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
+        # Double-precision selector
+        out.addConnection('self:ext_in.double', 'runs:in.double')
         # Connect the resources from the tuning run
         out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
 
