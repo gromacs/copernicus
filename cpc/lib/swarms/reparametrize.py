@@ -83,13 +83,14 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     
     # calculate average drift in collective variables space
     #sys.stderr.write('Residue selection: %s' %rsel)
-    newpts=[]
+    newpts = []
     for pathpt in range(len(diheds)):
-        swarmpts=[]
+        swarmpts = []
         for i in range(len(diheds[pathpt])):
-            zpt=[]
+            zpt = []
             for r in rsel:
-                xvg=open(diheds[pathpt][i],'r')
+                # TODO: scope order of open
+                xvg = open(diheds[pathpt][i],'r')
                 for line in xvg:
                      # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
                      # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
@@ -98,29 +99,36 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                          phi_val = float(line.split()[0])
                          psi_val = float(line.split()[1])
                          zpt+=[phi_val,psi_val]
+                xvg.close()
             swarmpts.append(zpt)
         zptsum=reduce(mapadd,swarmpts)
         avgdrift=scale((1/float(Nswarms)),zptsum)
         newpts.append(avgdrift)
 
     # extract initial and target dihedral values
+    # TODO: fix scope ordering. opens a LOT of files unnecessarily here
+    # (probably have to read into a list first then and not depend on the implicit reader)
+
     initpt = []
     for r in rsel:
-            xvg = open(start_xvg,'r')
+            xvg = open(start_xvg, 'r')
             for line in xvg:
                     if re.search(r'\S+\-%d\n'%r,line):
                             phi_val = float(line.split()[0])
                             psi_val = float(line.split()[1])
-                            initpt+=[phi_val,psi_val]
+                            initpt += [phi_val, psi_val]
+            xvg.close()
 
     targetpt = []
     for r in rsel:
-            xvg = open(end_xvg,'r')
+            xvg = open(end_xvg, 'r')
             for line in xvg:
                     if re.search(r'\S+\-%d\n'%r,line):
                             phi_val = float(line.split()[0])
                             psi_val = float(line.split()[1])
-                            targetpt+=[phi_val,psi_val]
+                            targetpt += [phi_val, psi_val]
+            xvg.close()
+
     # something with 1 indexing makes this padding necessary.
     paddingpt=[0]*len(initpt)
     newpts.insert(0,initpt)
