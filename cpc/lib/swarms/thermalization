@@ -65,7 +65,7 @@ def run(inp, out):
         settings.append(RecordValue( { 'name' : StringValue('dt'),
                                        'value' : StringValue('0.0005') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
-                                       'value' : StringValue('5000') } ) )
+                                       'value' : StringValue('1000') } ) )   # 5000, just testing
         settings.append(RecordValue( { 'name' : StringValue('nstfout'),
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
