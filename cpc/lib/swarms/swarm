@@ -43,28 +43,29 @@ from subprocess import Popen
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
+# TODO: let start_xvg and end_xvg be opt, and if not given, calculate them from start and end_conf by g_rama
 
 def swarm(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(), "persistent.dat"))
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(), "persistent.dat"))
     
     # TODO allow additional iterations to be set by having each iteration within pers object
     
-    iterations=pers.get('iterations')
+    iterations = pers.get('iterations')
     if iterations is None or iterations<1:
-        Niterations=inp.getInput('Niterations')
+        Niterations = inp.getInput('Niterations')
         # Niterations is an optional input, path converge may also be 
         #used to monitor iterations
         # BW: Note, removed opt flag on Niterations as this is not implemented here anyway now.
     #if Niterations is not None:
 
-        start=inp.getInput('start_conf')
-        start_xvg=inp.getInput('start_xvg')
-        end=inp.getInput('end_conf')
-        end_xvg=inp.getInput('end_xvg')
-        n=inp.getInput('Ninterpolants')
-        ndx=inp.getInput('res_index')         # what residues to use for the dihedral interpolation
-        tpr=inp.getInput('tpr')
-        Nchains=inp.getInput('Nchains')
+        start = inp.getInput('start_conf')
+        start_xvg = inp.getInput('start_xvg')
+        end = inp.getInput('end_conf')
+        end_xvg = inp.getInput('end_xvg')
+        n = inp.getInput('Ninterpolants')
+        ndx = inp.getInput('res_index')         # what residues to use for the dihedral interpolation
+        tpr = inp.getInput('tpr')
+        Nchains = inp.getInput('Nchains')
 
         out.addInstance('mdrun_tune','gromacs::mdrun_tune')
         out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
@@ -73,23 +74,39 @@ def swarm(inp, out):
         out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
         out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
         
-        includes=[]
-        inc_array=inp.getInput('include')
+        includes = []
+        inc_array = inp.getInput('include')
         if inc_array is not None:
             for i in range(len(inc_array)):
                 includes.append(inp.getInput('include[%d]'%i))
         # if the include array is none, the single chain is in topol.top
-        top=inp.getInput('top')
+        top = inp.getInput('top')
         
-        # Interpolate the dihedral coordinates between the given start and end
-        # structures and write out as dihedral restraint include files dihre_N_chain_Y.itp
-        #
-        # ndx is the residue list to use for dihedrals
+        # If the initial_confs list of .gro's is given, use that as the initial string,
+        # otherwise we interpolate from the start and end confs also given.
 
-        dihedral_restraints.write_restraints(start, end, start_xvg, end_xvg, 
-                                             top, includes, n, ndx, Nchains)
+        # Note - we assume that if the list is given, it should be of Ninterpolants (n)
+        # length. We could also simply set that to be opt, and if not given, use this
+        # length as an alternative.
+
+        initial_confs = []
+        initial_confs_array = inp.getInput('initial_confs')
+        if initial_confs_array is not None:
+            for i in range(len(initial_confs_array)):
+                initial_confs.append(inp.getInput('initial_confs[%d]' % i))
+
+        # Write out dihedral restraint include files dihre_N_chain_Y.itp and rewrite the
+        # topology and topology includes to include these.
+        #
+        # The angles to use for each point come from an interpolation from start_xvg to end_xvg
+        # if the initial_confs are empty, otherwise from the states in those confs.
+        #
+        # ndx is the residue list to use for the dihedral restraints
+
+        dihedral_restraints.write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, 
+                                             tpr, top, includes, n, ndx, Nchains)
         
-        # Setup the subnet's path output with a config, top and itp.
+        # Setup the subnet's path output with a config, top and itp for each string point.
         # 
         # Use these dihedral restraint includes to set as include inputs for the
         # configs of the initial path. These are set through a subnet, which is connected
@@ -97,13 +114,24 @@ def swarm(inp, out):
         #
         # Since we don't move the start and end points, we are really going to process
         # only the path points 1 to n-2 (if n is the total number of points and we start at 0).
-        # Let i reflect the "true" point index, but the arrays have to start at 0, hence the i-1
-        # everywhere below.
+        # Let i reflect the "true" point index, but the arrays start at 0, hence the i-1
+        # in most places below.
 
         for i in range(1,n-1):  # range(a,b) gives numbers from a to b-1.
-            
-            # Same starting configuration for each point
-            out.setSubOut('path[%d].conf'%(i-1), FileValue(start))
+
+            # Set a starting configuration for every point
+            #
+            # Check initial_confs[] and use that if given, otherwise use the same start_conf for all
+            # (the interpolated dihedral restraints will be used in the minimization step to force the
+            #  start_conf into the intermediate states, which will work in some setups)
+            #
+            # path[] starts at 0 for the first intermediate state after start_conf, but initial_confs include
+            # the start/end confs so that is why we use i there and not i-1.
+
+            if len(initial_confs) > 0:
+                out.setSubOut('path[%d].conf'%(i-1), FileValue(initial_confs[i]))
+            else:
+                out.setSubOut('path[%d].conf'%(i-1), FileValue(start))
 
             # One topology file per path point. These are also written by dihedral_restraints
             # but are simply passed through from the top level topology input, with the
@@ -144,10 +172,12 @@ def swarm(inp, out):
             out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf'%i)
             out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg'%i)
 
+            # Number of string points in total (including start and end confs)
             out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants'%i)
 
             # Dihedral selection index
             out.addConnection('self:ext_in.res_index', 'iter%d:in.resindex'%i)
+            # A run-file used by g_rama for setup data, will not actually be mdrun'ed
             out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr'%i)
 
             # Topology 

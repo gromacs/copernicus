@@ -78,7 +78,7 @@
         <inputs>
             <field type="grompp_input" id="minim_grompp">
                 <desc>A full set of input values for grompp 
-                      for the minimization with restraints.
+                      for the minimization with dihedral restraints.
                 </desc>
             </field>
             <field type="int" id="minim_doubleprec" opt="true">
@@ -115,10 +115,17 @@
                 <desc>The end configuration of the path.</desc>
             </field>
              <field type="file" id="start_xvg">
-                <desc>The start configuration of the path.</desc>
+                <desc>The start configuration dihedrals of the path, from g_rama</desc>
             </field>
             <field type="file" id="end_xvg">
-                <desc>The end configuration of the path.</desc>
+                <desc>The end configuration dihedrals of the path, from g_rama</desc>
+            </field>
+            <field type="conf_array" id="initial_confs" opt="true">
+              <desc>Initial configurations for the entire string. If not given, the string is 
+                    interpolated linearly in dihedral space from the start and end confs.
+                    The length of this array has to match Ninterpolants and should include the
+                    start and end conf.
+              </desc>
             </field>
             <field type="file" id="res_index">
                 <desc>The index file with one group that determines the phi/psi 
@@ -165,7 +172,7 @@
         </outputs>
         <subnet-outputs>
             <field type="conf_path" id="path">
-                <desc>A dihedrally interpolated path as the initial path</desc>
+                <desc>The initial path to start with, dihedrally interpolated or explicitly given</desc>
             </field>
             <field type="conf_path_array" id="paths">
             </field>
