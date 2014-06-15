@@ -176,6 +176,9 @@
             </field>
             <field type="conf_path_array" id="paths">
             </field>
+            <field type="resource::run_desc" id="resources">
+                <desc>This is used when mdrun_tune is bypassed</desc>
+            </field>
         </subnet-outputs>
         <subnet-inputs>
              <field type="resource::run_desc" id="resources">

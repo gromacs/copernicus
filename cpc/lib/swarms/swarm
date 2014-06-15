@@ -67,13 +67,20 @@ def swarm(inp, out):
         tpr = inp.getInput('tpr')
         Nchains = inp.getInput('Nchains')
 
-        out.addInstance('mdrun_tune','gromacs::mdrun_tune')
-        out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
+        # BW: temporarily disable mdrun_tune here
+        #out.addInstance('mdrun_tune','gromacs::mdrun_tune')
+        #out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
         # The tuning run uses the equilibration settings
-        out.addConnection('self:ext_in.equi_grompp.mdp', 'mdrun_tune:in.mdp')
-        out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
-        out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
+        #out.addConnection('self:ext_in.equi_grompp.mdp', 'mdrun_tune:in.mdp')
+        #out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
+        #out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
         
+        # Set explicitly the min/max core usage for the min/therm/equil runs
+        mincores=1
+        maxcores=8
+        out.setSubOut('resources.min.cores', IntValue(mincores))
+        out.setSubOut('resources.max.cores', IntValue(maxcores))
+
         includes = []
         inc_array = inp.getInput('include')
         if inc_array is not None:
@@ -208,7 +215,9 @@ def swarm(inp, out):
             out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps'%i)
             out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms'%i)
             out.addConnection('self:ext_in.Nchains', 'iter%d:in.Nchains'%i)
-            out.addConnection('mdrun_tune:out.resources', 'iter%d:in.resources'%i)
+
+            out.addConnection('self:sub_out.resources', 'iter%d:in.resources'%i)
+            #out.addConnection('mdrun_tune:out.resources', 'iter%d:in.resources'%i)
 
             # The refined path from each iteration is output as an array of paths
             out.addConnection('iter%d:out.path'%i, 'self:ext_out.paths[%d]'%i)
