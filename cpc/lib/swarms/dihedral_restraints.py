@@ -68,56 +68,57 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
             xvg_i = os.path.join(inp.getOutputDir(), '0%3d.xvg' % i)
             # Which we will read back in and parse like above
             ramaproc.wait()
-            xvg_f = open(xvg_i, 'r')
-            # Read the entire file into a list so we can scan it multiple times
-            xvg = xvg_f.readlines()
-            for r in selection:
-                # Support many chains so the last level will be a list of phi,psi lists
-                stringpts[i][r] = []
-                for line in xvg:
-                    if re.search(r'\S+\-%d\n' % r, line):
-                        stringpts[i][r].append([float(line.split()[0]), float(line.split()[1])])
-
-            xvg_f.close()
+            with open(xvg_i, 'r') as xvg_f:
+                # Read the entire file into a list so we can scan it multiple times
+                xvg = xvg_f.readlines()
+                for r in selection:
+                    # Support many chains so the last level will be a list of phi,psi lists
+                    stringpts[i][r] = []
+                    for line in xvg:
+                        if re.search(r'\S+\-%d\n' % r, line):
+                            stringpts[i][r].append([float(line.split()[0]), float(line.split()[1])])
 
     # Rewrite the topology to include the dihre.itp files instead of the original per-chain itps (if any)
     # There will be one topol_x.top per intermediate string point
 
     sys.stderr.write('%s' % includes)
     for k in range(1,n-1):
-        in_top=open(top).read()       
-        for mol in range(Nchains):
-            if len(includes)>0:
-                includename=includes[mol].split('/')[-1]
-                in_top=re.sub(includename,'dihre_%d_chain_%d.itp'%(k,mol),in_top)
-        out_top=open('topol_%d.top'%k,'w')
-       # sys.stderr.write('%s'%in_top)
-        out_top.write(in_top)   
-            
+        with open(top) as in_topf:
+            in_top = in_topf.read()       
+            for mol in range(Nchains):
+                if len(includes) > 0:
+                    includename = includes[mol].split('/')[-1]
+                    in_top = re.sub(includename, 'dihre_%d_chain_%d.itp'%(k, mol), in_top)
+            with open('topol_%d.top'%k,'w') as out_top:
+                # sys.stderr.write('%s'%in_top)
+                out_top.write(in_top)   
+
     # Generate/copy and write-out the dihedrals for each intermediate point (not for the start/end points)
     for k in range(1,n-1):
         for mol in range(Nchains):
-            restraint_itp=open('dihre_%d_chain_%d.itp'%(k,mol),'w')
-            if Nchains>1:
-                moltop=open(includes[mol]).read()
-                restraint_itp.write(moltop)
+            # TODO: use with statement for restraint_itp as well
+            restraint_itp = open('dihre_%d_chain_%d.itp'%(k,mol),'w')
+            if Nchains > 1:
+                with open(includes[mol]) as moltop_f:
+                    moltop = moltop_f.read()
+                    restraint_itp.write(moltop)
             # write the initial part of the topology file
             # NOTE: the dihedral_restraints format changed in gromacs 4.6+ or so to this. before it had
             # some other parameters as well. 
             restraint_itp.write("[ dihedral_restraints ]\n")
             restraint_itp.write("; ai   aj   ak   al  type phi  dphi  kfac\n")
-            if len(includes)>0:
-                protein=molecule(includes[mol])
+            if len(includes) > 0:
+                protein = molecule(includes[mol])
                 # replace the chain names with the chain names
             else:
-                out_top=open('topol_%d.top'%k,'w')
-                protein=molecule(top)
-                in_itp=open(top,'r').read().split('; Include Position restraint file')
-                out_top.write(in_itp[0])
-                out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
-                #out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
-                out_top.write(in_itp[1])
-                out_top.close()
+                with open('topol_%d.top' % k, 'w') as out_top:
+                    protein = molecule(top)
+                    with open(top,'r') as in_itp_f:
+                        in_itp = in_itp_f.read().split('; Include Position restraint file')
+                        out_top.write(in_itp[0])
+                        out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
+                        #out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
+                        out_top.write(in_itp[1])
 
             for r in selection:
                 # Get the atom numbers to use for the phi and psi dihedrals (4 atoms each)
