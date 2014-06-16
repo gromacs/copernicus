@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, Bjorn Wesen and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -42,29 +42,42 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
-    # TODO: use the new gromacs lib g_rama function? The code below will fail for installs with for example
-    # g_rama_mpi only ?
+    # TODO: make sure this works with installs with only g_rama_mpi 
 
-    ramas=pers.get('ramas')
-    if ramas is None or ramas<1:
+    # Run once
+    ramas = pers.get('ramas')
+
+    if ramas is None or ramas < 1:
 
         # The confs[] input array is complete-flagged so when we get here, it should be filled in
 
-        confs=inp.getInput('confs')
-        tpr=inp.getInput('tpr')
-        for i in range(len(confs)):
-            subconfs=inp.getInput('confs[%d]'%i)
-            for j in range(len(subconfs)):
-                conf=inp.getInput('confs[%d][%d]'%(i,j))
-                Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '0%3d_0%3d.xvg'%(i,j)])
-                xvg_i_j=os.path.join(inp.getOutputDir(), '0%3d_0%3d.xvg'%(i,j))
-                out.setOut('xvgs[%d][%d]'%(i,j),FileValue(xvg_i_j))
+        confs = inp.getInput('confs')
+        tpr = inp.getInput('tpr')
 
-        ramas=1
-    ramas=pers.set('ramas', ramas)
+        # Start all g_rama's in parallel
+        ramaprocs = []
+        FNULL = open(os.devnull, 'w') # dont generate spam from g_rama
+        for i in range(len(confs)):
+            subconfs = inp.getInput('confs[%d]' % i)
+            for j in range(len(subconfs)):
+                conf = inp.getInput('confs[%d][%d]' % (i, j))
+                ramaprocs.append(Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '0%3d_0%3d.xvg' % (i, j)], stdout=FNULL, stderr=FNULL))
+
+        # Wait for each process to complete, and set the output file correctly
+        q = 0
+        for i in range(len(confs)):
+            subconfs = inp.getInput('confs[%d]' % i)
+            for j in range(len(subconfs)):
+                ramaprocs[q].communicate()
+                q += 1
+                xvg_i_j = os.path.join(inp.getOutputDir(), '0%3d_0%3d.xvg' % (i, j))
+                out.setOut('xvgs[%d][%d]' % (i, j), FileValue(xvg_i_j))
+
+        ramas = 1
+    ramas = pers.set('ramas', ramas)
 
     pers.write()
 
