@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # Write the initial topology file for restrained simulations in swarm free energy calculations
 # Grant Rotskoff, 11 July 2012
-# Rewritten by Bjorn Wesen 2014
+# Rewritten by Bjorn Wesen in June 2014
 
 # This function can do two things - either get a start and end config and associated xvg's, and then interpolate 
 # n states between them and write out to .itp files, or get a whole array of configs, extract dihedrals from them
@@ -59,15 +59,28 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
     else:
         # Have to generate the dihedrals ourselves
         # TODO: assert that len(initial_confs) == n otherwise?
-        # Use g_rama on each intermediate conf (not start/end) and output to a temporary .xvg
+
+        ramaprocs = {}
+
+        # Run g_rama (in parallel) on each intermediate conf (not start/end) and output to a temporary .xvg
+        FNULL = open(os.devnull, 'w') # dont generate spam from g_rama 
+        for i in range(1, n-1):
+            # TODO: check for and use g_rama_mpi.. like everywhere else
+            ramaprocs[i] = Popen(['g_rama', '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i], stdout=FNULL, stderr=FNULL)
+
+        # Go through the output from the rama sub-processes and read the xvg outputs
+
         stringpts = {}  # Will have 4 levels: stringpoint, residue, chain, phi/psi value
-        for i in range(1,n-1):
+
+        for i in range(1, n-1):
             # Start array indexed by residue
             stringpts[i] = {}
-            ramaproc = Popen(['g_rama', '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i])  # TODO: g_rama_mpi.. like everywhere else
             xvg_i = os.path.join(inp.getOutputDir(), '0%3d.xvg' % i)
-            # Which we will read back in and parse like above
-            ramaproc.wait()
+            # Make sure the corresponding g_rama task has ended
+            ramaprocs[i].communicate()
+            # Read back and parse like for the start/end_xvg above
+            # Note: the g_rama invocation above is quite fast when parallelized but this readback is
+            # quite slow.
             with open(xvg_i, 'r') as xvg_f:
                 # Read the entire file into a list so we can scan it multiple times
                 xvg = xvg_f.readlines()
@@ -120,15 +133,31 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                         #out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
                         out_top.write(in_itp[1])
 
+            dih_atoms = {}
+
+            # Create a lookup-table for the protein topology that maps residue to dihedrally relevant
+            # backbone atom indices for N, CA and C.
+
+            for a in protein:
+                # Those atoms always come in the same order in the topology per residue: N, CA, C.
+                # So they will be added to the list per dih_atoms entry in that order too.
+                if (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C'):
+                    try:
+                        dih_atoms[a.resnr].append(a.atomnr)
+                    except KeyError:
+                        dih_atoms[a.resnr] = [ a.atomnr ]
+
+            # Use the lookup-table built above and get the dihedral specification atoms needed for each
+            # residue in the selection. This is O(n) in residues, thanks to the dih_atoms table.
+
             for r in selection:
                 # Get the atom numbers to use for the phi and psi dihedrals (4 atoms each)
-                phi = [a for a in protein if (a.resnr == int(r) and
-                      (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C')) or
-                      (a.resnr == int(r)-1 and a.atomname == 'C')]
 
-                psi = [a for a in protein if (a.resnr == int(r) and
-                      (a.atomname == 'N' or a.atomname == 'CA' or a.atomname == 'C')) or
-                      (a.resnr == int(r)+1 and a.atomname == 'N')]
+                # phi is C on the previous residue, and N, CA, C on this
+                phi = [ dih_atoms[r - 1][2], dih_atoms[r][0], dih_atoms[r][1], dih_atoms[r][2] ]
+
+                # psi is N, CA and C on this residue and N on the next
+                psi = [ dih_atoms[r][0], dih_atoms[r][1], dih_atoms[r][2], dih_atoms[r + 1][0] ]
 
                 # Write phi, psi angles and the associated k factor into a row in the restraint file
                 # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
@@ -145,9 +174,9 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                     psi_val = stringpts[k][r][mol][1]
 
                 restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                    %(phi[0].atomnr,phi[1].atomnr,phi[2].atomnr, phi[3].atomnr, 1, phi_val, 0, kfac))
+                                    %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0, kfac))
                 restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                    %(psi[0].atomnr,psi[1].atomnr,psi[2].atomnr, psi[3].atomnr, 1, psi_val, 0, kfac))
+                                    %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0, kfac))
 
             restraint_itp.close()
 
