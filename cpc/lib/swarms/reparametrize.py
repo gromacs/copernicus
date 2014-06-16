@@ -1,5 +1,7 @@
 #!/usr/bin/python
 # Grant Rotskoff, 12 July 2012
+# Loops rewritten by Bjorn Wesen, June 2014
+#
 # inputs: 
 #	swarm structure dihedral angles (.xvg)
 #	topology file (.itp)
@@ -88,18 +90,18 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
         swarmpts = []
         for i in range(len(diheds[pathpt])):
             zpt = []
-            for r in rsel:
-                # TODO: scope order of open
-                xvg = open(diheds[pathpt][i],'r')
-                for line in xvg:
-                     # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
-                     # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
-                     # the headers with -180.
-                     if re.search(r'\S+\-%d\n'%r,line):
-                         phi_val = float(line.split()[0])
-                         psi_val = float(line.split()[1])
-                         zpt+=[phi_val,psi_val]
-                xvg.close()
+            with open(diheds[pathpt][i], 'r') as xvg_f:
+                    xvg = xvg_f.readlines()
+                    for r in rsel:
+                            for line in xvg:
+                                    # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
+                                    # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
+                                    # the headers with -180.
+                                    if re.search(r'\S+\-%d\n' % r, line):
+                                            phi_val = float(line.split()[0])
+                                            psi_val = float(line.split()[1])
+                                            zpt += [phi_val, psi_val]
+
             swarmpts.append(zpt)
         zptsum=reduce(mapadd,swarmpts)
         avgdrift=scale((1/float(Nswarms)),zptsum)
@@ -110,24 +112,24 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
     # (probably have to read into a list first then and not depend on the implicit reader)
 
     initpt = []
-    for r in rsel:
-            xvg = open(start_xvg, 'r')
-            for line in xvg:
-                    if re.search(r'\S+\-%d\n'%r,line):
-                            phi_val = float(line.split()[0])
-                            psi_val = float(line.split()[1])
-                            initpt += [phi_val, psi_val]
-            xvg.close()
+    with open(start_xvg, 'r') as xvg_f:
+            xvg = xvg_f.readlines()
+            for r in rsel:
+                    for line in xvg:
+                            if re.search(r'\S+\-%d\n' % r, line):
+                                    phi_val = float(line.split()[0])
+                                    psi_val = float(line.split()[1])
+                                    initpt += [phi_val, psi_val]
 
     targetpt = []
-    for r in rsel:
-            xvg = open(end_xvg, 'r')
-            for line in xvg:
-                    if re.search(r'\S+\-%d\n'%r,line):
-                            phi_val = float(line.split()[0])
-                            psi_val = float(line.split()[1])
-                            targetpt += [phi_val, psi_val]
-            xvg.close()
+    with open(end_xvg, 'r') as xvg_f:
+            xvg = xvg_f.readlines()
+            for r in rsel:
+                    for line in xvg:
+                            if re.search(r'\S+\-%d\n' % r, line):
+                                    phi_val = float(line.split()[0])
+                                    psi_val = float(line.split()[1])
+                                    targetpt += [phi_val, psi_val]
 
     # something with 1 indexing makes this padding necessary.
     paddingpt=[0]*len(initpt)
@@ -167,21 +169,37 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                 protein=molecule(top)
             else:
                 protein=molecule('%s'%includes[k-1][chain])
+
             # keep track of the position in the path point
             pos=0
-            for r in rsel:
-                    # there may be multiple residues matching the resnr, e.g., dimers
-                    phi = [a.atomnr for a in protein if (a.resnr == int(r) and
-                          (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C')) or
-                          (a.resnr == int(r)-1 and a.atomname == 'C')]
 
-                    psi = [a.atomnr for a in protein if (a.resnr == int(r) and
-                          (a.atomname == 'N' or a.atomname == 'CA' or a.atomname == 'C')) or
-                          (a.resnr == int(r)+1 and a.atomname == 'N')]
+            # Create a lookup-table for the protein topology that maps residue to dihedrally relevant
+            # backbone atom indices for N, CA and C.
+
+            dih_atoms = {}
+
+            for a in protein:
+                if (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C'):
+                    try:
+                        dih_atoms[a.resnr][a.atomname] = a.atomnr;
+                    except KeyError:
+                        dih_atoms[a.resnr] = { a.atomname: a.atomnr }
+
+            # Use the lookup-table built above and get the dihedral specification atoms needed for each
+            # residue in the selection. This is O(n) in residues, thanks to the dih_atoms table.
+
+            for r in rsel:
+                    # Get the atom numbers to use for the phi and psi dihedrals (4 atoms each)
+                    
+                    # phi is C on the previous residue, and N, CA, C on this
+                    phi = [ dih_atoms[r - 1]['C'], dih_atoms[r]['N'], dih_atoms[r]['CA'], dih_atoms[r]['C'] ]
+                    
+                    # psi is N, CA and C on this residue and N on the next
+                    psi = [ dih_atoms[r]['N'], dih_atoms[r]['CA'], dih_atoms[r]['C'], dih_atoms[r + 1]['N'] ]
 
                     # get phi and psi values from the reparametrization vector
-                    phi_val=pathpoint[pos+chain]
-                    psi_val=pathpoint[pos+chain+1]
+                    phi_val = pathpoint[pos + chain]
+                    psi_val = pathpoint[pos + chain + 1]
                     
                     # write phi, psi angles and k-factor
                     # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
@@ -193,6 +211,7 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                                         %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
 
                     # delete the already added values from the stack
-                    pos+=2*Nchains
+                    pos += 2 * Nchains
+
             restraint_itp.close()
 
