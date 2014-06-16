@@ -84,6 +84,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
             with open(xvg_i, 'r') as xvg_f:
                 # Read the entire file into a list so we can scan it multiple times
                 xvg = xvg_f.readlines()
+                # TODO: reverse this so the xvg is only traversed once.
                 for r in selection:
                     # Support many chains so the last level will be a list of phi,psi lists
                     stringpts[i][r] = []
@@ -133,19 +134,17 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                         #out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
                         out_top.write(in_itp[1])
 
-            dih_atoms = {}
-
             # Create a lookup-table for the protein topology that maps residue to dihedrally relevant
             # backbone atom indices for N, CA and C.
 
+            dih_atoms = {}
+
             for a in protein:
-                # Those atoms always come in the same order in the topology per residue: N, CA, C.
-                # So they will be added to the list per dih_atoms entry in that order too.
                 if (a.atomname == 'CA' or a.atomname == 'N' or a.atomname == 'C'):
                     try:
-                        dih_atoms[a.resnr].append(a.atomnr)
+                        dih_atoms[a.resnr][a.atomname] = a.atomnr;
                     except KeyError:
-                        dih_atoms[a.resnr] = [ a.atomnr ]
+                        dih_atoms[a.resnr] = { a.atomname: a.atomnr }
 
             # Use the lookup-table built above and get the dihedral specification atoms needed for each
             # residue in the selection. This is O(n) in residues, thanks to the dih_atoms table.
@@ -154,10 +153,10 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                 # Get the atom numbers to use for the phi and psi dihedrals (4 atoms each)
 
                 # phi is C on the previous residue, and N, CA, C on this
-                phi = [ dih_atoms[r - 1][2], dih_atoms[r][0], dih_atoms[r][1], dih_atoms[r][2] ]
-
+                phi = [ dih_atoms[r - 1]['C'], dih_atoms[r]['N'], dih_atoms[r]['CA'], dih_atoms[r]['C'] ]
+                
                 # psi is N, CA and C on this residue and N on the next
-                psi = [ dih_atoms[r][0], dih_atoms[r][1], dih_atoms[r][2], dih_atoms[r + 1][0] ]
+                psi = [ dih_atoms[r]['N'], dih_atoms[r]['CA'], dih_atoms[r]['C'], dih_atoms[r + 1]['N'] ]
 
                 # Write phi, psi angles and the associated k factor into a row in the restraint file
                 # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
