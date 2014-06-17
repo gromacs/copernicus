@@ -42,10 +42,10 @@ fi
 ./cpcc  set-file run:in.equi_grompp.mdp test/lib/swarms/swarm/grompp.mdp
 ./cpcc  set-file run:in.equi_grompp.top test/lib/swarms/swarm/topol.top
 ./cpcc  set-file run:in.equi_grompp.ndx test/lib/swarms/swarm/index.ndx
-./cpcc  set run:in.restrained_steps 5000
+./cpcc  set run:in.restrained_steps 1000
 ./cpcc  set run:in.swarm_steps 50
-./cpcc  set run:in.Nswarms 10
-./cpcc  set run:in.Ninterpolants 5
+./cpcc  set run:in.Nswarms 5
+./cpcc  set run:in.Ninterpolants 3
 
 # the residue index
 ./cpcc  set-file run:in.res_index test/lib/swarms/swarm/res.ndx
@@ -57,7 +57,7 @@ fi
 ./cpcc  set-file run:in.top test/lib/swarms/swarm/topol.top
 
 ./cpcc  set run:in.Nchains 1
-./cpcc  set run:in.Niterations 10
+./cpcc  set run:in.Niterations 3
 # and commit this set of updates
 ./cpcc  commit
 
