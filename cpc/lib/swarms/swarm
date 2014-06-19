@@ -159,10 +159,10 @@ def swarm(inp, out):
 
             # Connect any other includes as itp's after the chain restraint itps
 
-            if len(includes)>Nchains:
+            if len(includes) > Nchains:
                 for j in range(Nchains,len(includes)):
-                    include=inp.getInput('include[%d]'%j)
-                    out.setSubOut('path[%d].include[%d]'%(i-1,j),
+                    include = inp.getInput('include[%d]' % j)
+                    out.setSubOut('path[%d].include[%d]' % (i - 1, j),
                                               FileValue(include))
         
         # Create the dihedral swarm iteration instances
@@ -196,9 +196,15 @@ def swarm(inp, out):
             # Propagate the various run settings into the functions in the iteration
 
             # Minimization
-            out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp'%i)
-            out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance'%i)
-            out.addConnection('self:ext_in.minim_doubleprec', 'iter%d:in.minim_doubleprec'%i)
+            out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp' % i)
+            out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance' % i)
+            # When given initial_confs, we don't need double precision in the minimization
+            # step (actually we should make an option to bypass minimization, thermalization
+            # and equilibration for the first iteration and go directly to the swarms, but
+            # this requires a rewrite of the iteration function as the connections are hard-
+            # coded in the xml file currently)
+            if i > 0 or len(initial_confs) == 0:
+                out.addConnection('self:ext_in.minim_doubleprec', 'iter%d:in.minim_doubleprec' % i)
 
             # Thermalization
             out.addConnection('self:ext_in.therm_grompp', 'iter%d:in.therm_grompp'%i)
