@@ -221,6 +221,9 @@
             <field type="gromacs::conf_array" id="confs" />
             <field type="gromacs::top_array" id="tops" />
             <field type="gromacs::grompp_include_array_array" id="includes" />
+            <field type="conf_path" id="path">
+                <desc>Conf path for the minimization runs which includes the correct dihre force constant</desc>
+            </field>
         </subnet-outputs>    
         <controller log="true" executable="run_minimization" 
                     persistent_dir="true" />
@@ -252,6 +255,9 @@
             <field type="gromacs::conf_array" id="confs" />
             <field type="gromacs::top_array" id="tops" />
             <field type="gromacs::mdp_array" id="restrained_settings" />
+            <field type="conf_path" id="path">
+                <desc>Conf path for the thermalization runs which includes the correct dihre force constant</desc>
+            </field>
         </subnet-outputs>  
         <controller log="true" executable="thermalization" 
                     persistent_dir="true" />
@@ -297,6 +303,9 @@
             <field type="gromacs::top_array" id="tops" />
             <field type="gromacs::mdp_array" id="restrained_settings" />
             <field type="gromacs::trr_array" id="trrs" />
+            <field type="conf_path" id="path">
+                <desc>Conf path for the equilibration run which includes the correct dihre force constant</desc>
+            </field>
         </subnet-outputs>  
         <controller log="true" executable="run_restrained" 
                     persistent_dir="true" />

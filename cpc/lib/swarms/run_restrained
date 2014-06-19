@@ -105,33 +105,68 @@ def run(inp, out):
         # Link the entire output trr[] array to a subnet input (WHY?)
         out.addConnection('runs:out.trr', 'self:sub_in.trrs')
 
-        in_confs=inp.getInput('path')
+        in_confs = inp.getInput('path')
         for i in range(len(in_confs)):
-            outconf=inp.getOutput
+            #outconf=inp.getOutput
             #itp=inp.getInput('path[%d].itp'%i)
             #out.setSubOut('includes[%d][0]'%i, FileValue(itp))
 
-            # The inputs that are unique for each mdruns instance.
+            # If there are .itp's, some of them will have dihedral restraints with place-holder
+            # force constants (KFAC) which we now need to search/replace into a new set of files
+            # with the kfac we want in this stage (this is due to the now-removed global dihre_fc
+            # multiplier from the .mdp which was there before and could have been used for this..)
+
+            inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
+            if inc_array is not None:
+                kfac = 750.0
+                for j in range(len(inc_array)):
+                    in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
+                    # Since we don't rewrite the .top file which includes these files, we have
+                    # to generate exactly the same output filenames here. TODO: split this from
+                    # the in_itpfn to make sure there can be no mixups due to ordering.
+                    out_itpfn = 'dihre_%d_chain_%d.itp' % (i + 1, j)
+                    # Do the search/replace
+                    with open(in_itpfn, 'r') as in_itpf:
+                        with open(out_itpfn, 'w') as out_itpf:
+                            for line in in_itpf:
+                                out_itpf.write(line.replace('KFAC', '%8.4f' % kfac))
+                    # Set the result in the path to use for the run
+                    out.setSubOut('path[%d].include[%d]' % (i, j), 
+                                  FileValue(os.path.join(inp.getOutputDir(), out_itpfn)))
+
+            # Setup the topology and configuration parts of the subnet path point
             # NOTE: the .gro (conf) for each path point is taken from the confs[]
             # array instead of from the path[].conf member. What does this help?
-            out.addConnection('self:ext_in.confs[%d]'%i,'runs:in.conf[%d]'%i)
-            out.addConnection('self:ext_in.path[%d].top'%i,'runs:in.top[%d]'%i)
-            out.addConnection('self:ext_in.path[%d].include'%i,'runs:in.include[%d]'%i)
+            out.setSubOut('path[%d].conf' % i, FileValue(inp.getInput('confs[%d]' % i)))
+            out.setSubOut('path[%d].top' % i, FileValue(inp.getInput('path[%d].top' % i)))
+            
+            # The inputs that are unique for each mdruns instance.
+            # Use the subnet path setup above
+            out.addConnection('self:sub_out.path[%d].conf' % i, 'runs:in.conf[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].top' % i, 'runs:in.top[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].include' % i, 'runs:in.include[%d]' % i)
+
+            # Not used now, when we have to do the include manipulation above using the subnet
+            # NOTE: the .gro (conf) for each path point is taken from the confs[]
+            # array instead of from the path[].conf member. What does this help?
+            #out.addConnection('self:ext_in.confs[%d]'%i,'runs:in.conf[%d]'%i)
+            #out.addConnection('self:ext_in.path[%d].top'%i,'runs:in.top[%d]'%i)
+            #out.addConnection('self:ext_in.path[%d].include'%i,'runs:in.include[%d]'%i)
 
             # The output .gro goes to this functions confs[] output array..
-            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.confs[%d]'%i)
+            out.addConnection('runs:out.conf[%d]' % i, 'self:ext_out.confs[%d]' % i)
 
             # The input top/include for each path point are simply passed through to the
             # path output. NOTE: path[].conf seems to be unused, it should be the conf that
             # now is put in the confs[] array above..
-            out.addConnection('self:ext_in.path[%d].top'%i,'self:ext_out.path[%d].top'%i)
-            out.addConnection('self:ext_in.path[%d].include'%i,'self:ext_out.path[%d].include'%i)
+            out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
 
             # The output .trr goes to the restrained_trrs[] output array
             out.addConnection('runs:out.trr[%d]'%i, 'self:ext_out.restrained_trrs[%d]'%i)
 
         # Mark so we don't run this function again
-        mdruns=1
+        mdruns = 1
     pers.set('mdruns', mdruns)
 
     pers.write()
