@@ -204,11 +204,19 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                     # write phi, psi angles and k-factor
                     # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
                     # dihre_fc.
-                    kfac = 1000.0   # from grompp.mdp... 
-                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                        %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0,kfac))
-                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                        %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
+
+                    # Since we need different force constants in different stages, we need to put
+                    # a searchable placeholder in the file here and replace it later
+                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
+                                        %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0))
+                    restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
+                                        %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0))
+
+                    #kfac = 1000.0
+                    #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                    #                    %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0,kfac))
+                    #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                    #                    %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
 
                     # delete the already added values from the stack
                     pos += 2 * Nchains

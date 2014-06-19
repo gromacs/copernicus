@@ -163,8 +163,6 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                 # dihre_fc.
                 # Also see reparametrize.py
 
-                kfac = 1000.0
-
                 if use_interpolation:
                     phi_val = startpts[r][mol][0] + (endpts[r][mol][0] - startpts[r][mol][0]) / n * k
                     psi_val = startpts[r][mol][1] + (endpts[r][mol][1] - startpts[r][mol][1]) / n * k
@@ -172,10 +170,18 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                     phi_val = stringpts[k][r][mol][0]
                     psi_val = stringpts[k][r][mol][1]
 
-                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                    %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0, kfac))
-                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                                    %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0, kfac))
+                # Since we need different force constants in different stages, we need to put
+                # a searchable placeholder in the file here and replace it later
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
+                                    %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0))
+                restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
+                                    %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0))
+
+                #kfac = 1000.0
+                #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                #                    %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0, kfac))
+                #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
+                #                    %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0, kfac))
 
             restraint_itp.close()
 
