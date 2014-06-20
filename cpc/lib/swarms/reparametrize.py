@@ -103,8 +103,8 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                                             zpt += [phi_val, psi_val]
 
             swarmpts.append(zpt)
-        zptsum=reduce(mapadd,swarmpts)
-        avgdrift=scale((1/float(Nswarms)),zptsum)
+        zptsum = reduce(mapadd, swarmpts)
+        avgdrift = scale((1 / float(Nswarms)), zptsum)
         newpts.append(avgdrift)
 
     # extract initial and target dihedral values
@@ -132,46 +132,48 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                                     targetpt += [phi_val, psi_val]
 
     # something with 1 indexing makes this padding necessary.
-    paddingpt=[0]*len(initpt)
-    newpts.insert(0,initpt)
+    paddingpt = [0] * len(initpt)
+    newpts.insert(0, initpt)
     newpts.append(targetpt)
     newpts.append(paddingpt)
-    adjusted=rep_pts(newpts)
+
+    # Do the actual reparameterization
+    adjusted = rep_pts(newpts)
+
     # TODO implement a dist_treshold=1.0
-    iters=[adjusted]
+    iters = [adjusted]
     for i in range(100):
         iters.append(rep_pts(iters[i]))
 
-    adjusted=iters[-1]
+    adjusted = iters[-1]
     # delete the padding point
-    adjusted=adjusted[:-1]
+    adjusted = adjusted[:-1]
     #sys.stderr.write('The adjusted pts:\n %s'%adjusted)
     # calculate reparam distance
 
-    sys.stderr.write('Length of the adjusted vector: %d'%len(adjusted))
+    sys.stderr.write('Length of the adjusted vector: %d\n' % len(adjusted))
     # TODO Nchains should depend on the specific residue
-    Nchains=len(initpt)/(2*len(rsel))
+    Nchains = len(initpt)/(2*len(rsel))
     # TODO measure distance
     # write the topology for the next iteration
     for k in range(1,len(adjusted)-1):
         for chain in range(Nchains):
-            restraint_itp=open('dihre_%d_chain_%d.itp'%(k,chain),'w')
+            restraint_itp = open('dihre_%d_chain_%d.itp'%(k,chain),'w')
+            with open(includes[k-1][chain], 'r') as in_itpf:
+                in_itp = in_itpf.read()
+            moltop = in_itp.split('[ dihedral_restraints ]')[0]
+            restraint_itp.write('%s' % moltop)
 
-            in_itp=open(includes[k-1][chain], 'r').read()
-            moltop=in_itp.split('[ dihedral_restraints ]')[0]
-            restraint_itp.write('%s'%moltop)
             sys.stderr.write("Writing restraints for interpolant point %d chain %d\n"%(k,chain))
             # Note: this format is for Gromacs 4.6+. Before, there was a "label" and no B-morph possibility (optional)
             restraint_itp.write("[ dihedral_restraints ]\n")
             restraint_itp.write("; ai   aj   ak   al  type     phi    dphi    kfac   phiB    dphiB    kfacB\n")
-            pathpoint=adjusted[k] # just a list of phi/psi angles
-            if Nchains==1:
-                protein=molecule(top)
-            else:
-                protein=molecule('%s'%includes[k-1][chain])
+            pathpoint = adjusted[k] # just a list of phi/psi angles
 
-            # keep track of the position in the path point
-            pos=0
+            if Nchains == 1:
+                protein = molecule(top)
+            else:
+                protein = molecule('%s' % includes[k - 1][chain])
 
             # Create a lookup-table for the protein topology that maps residue to dihedrally relevant
             # backbone atom indices for N, CA and C.
@@ -188,6 +190,8 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
             # Use the lookup-table built above and get the dihedral specification atoms needed for each
             # residue in the selection. This is O(n) in residues, thanks to the dih_atoms table.
 
+            pos = 0
+
             for r in rsel:
                     # Get the atom numbers to use for the phi and psi dihedrals (4 atoms each)
                     
@@ -200,6 +204,9 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                     # get phi and psi values from the reparametrization vector
                     phi_val = pathpoint[pos + chain]
                     psi_val = pathpoint[pos + chain + 1]
+
+                    # Go to the next residue (phi,phi vals * number of chains apart)
+                    pos += 2 * Nchains
                     
                     # write phi, psi angles and k-factor
                     # Note: in the Gromacs 4.6+ format, the k-factor is here. Before, it was in the .mdp as
@@ -218,8 +225,6 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                     #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
                     #                    %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
 
-                    # delete the already added values from the stack
-                    pos += 2 * Nchains
 
             restraint_itp.close()
 
