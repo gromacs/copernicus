@@ -87,6 +87,15 @@
              <field type="float" id="em_tolerance">
                 <desc>The number of steps of minimization to perform.</desc>
             </field>
+             <field type="float" id="minim_dihforce" opt="true">
+                <desc>Force constant to use for minimization dihedral restraints</desc>
+            </field>
+             <field type="float" id="therm_dihforce" opt="true">
+                <desc>Force constant to use for thermalization dihedral restraints</desc>
+            </field>
+             <field type="float" id="equil_dihforce" opt="true">
+                <desc>Force constant to use for equilibration dihedral restraints</desc>
+            </field>
             <field type="file" id="top">
                 <desc>The topology include file describing the protein to be
                       sampled</desc> 
@@ -204,6 +213,9 @@
             <field type="float" id="em_tolerance">
                 <desc>The minimization tolerance to use.</desc>
             </field>
+             <field type="float" id="dihforce" opt="true">
+                <desc>Force constant to use for the dihedral restraints</desc>
+            </field>
             <field type="int" id="double" opt="true">
                 <desc>Set to 1 to use double-precision minimization</desc>
             </field>
@@ -236,10 +248,13 @@
             <field type="grompp_input" id="grompp">
                 <desc>Restrained run mdp file</desc>
             </field>
+             <field type="float" id="dihforce" opt="true">
+                <desc>Force constant to use for the dihedral restraints</desc>
+            </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_path" id="path" complete="true">
+            <field type="conf_path" id="path" complete="true" >
                 <desc>Output structures of the minimization and their
                       restraint parameters.</desc>
             </field>
@@ -270,6 +285,9 @@
             <field type="grompp_input" id="grompp">
                 <desc>Restrained run mdp file</desc>
             </field>
+             <field type="float" id="dihforce" opt="true">
+                <desc>Force constant to use for the dihedral restraints</desc>
+            </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
@@ -282,7 +300,7 @@
                       restrained trajectory will output this number of
                       frames. </desc>
             </field>
-            <field type="conf_path" id="path" complete="true">
+            <field type="conf_path" id="path" complete="true" >
                 <desc>Output structures of the thermalization and their
                       restraint parameters.</desc>
             </field>
@@ -314,7 +332,7 @@
     <function id="prep_swarms" type="external">
         <desc>Generate inputs for swarm trajectories.</desc>
         <inputs>
-            <field type="trr_array" id="trrs">
+            <field type="trr_array" id="trrs" complete="true">
                     <desc>Output of the restrained simulations.</desc>
             </field>
             <field type="file" id="tpr">
@@ -346,7 +364,7 @@
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
             </field>
-            <field type="conf_array_array" id="swarmconfs" >
+            <field type="conf_array_array" id="swarmconfs" complete="true">
                     <desc>Initial swarm confs.</desc>
             </field>
             <field type="int" id="swarm_steps">
@@ -362,8 +380,8 @@
                     .itp files containing the new set of dihedral restraint
                     values for the next iteration. </desc>
             </field>-->
-            <!-- TODO: does complete make sense on output values at all? -->
-            <field type="conf_array_array" id="swarms" complete="true">
+            <!-- TODO: does complete make sense on output values at all? Removed to test. -->
+            <field type="conf_array_array" id="swarms" >
                 <desc>The structures from unrestrained simulations</desc>
             </field>
         </outputs>
@@ -412,6 +430,7 @@
                 restraint values for the next iteration.
         </desc>
         <inputs>
+          <!-- It is enough that this is complete-flagged, as it has to be complete for the others to be -->
             <field type="xvg_path_array" id="dihedrals" complete="true">
                 <desc>The swarm trajectory output, sent to
                         g_rama to get points in z-space.</desc>
@@ -450,7 +469,7 @@
             </field>
         </inputs>
         <outputs>
-            <field type="conf_path" id="path" complete="true">
+            <field type="conf_path" id="path" >
                 <desc>Output confs from restrained simulation together with
                     .itp files containing the new set of dihedral restraint
                     values for the next iteration. </desc>
@@ -495,11 +514,19 @@
                 <desc>A full set of structures along the path so far.</desc>
             </field>
             <field type="float" id="em_tolerance">
-                <desc>The number of minimization steps for the swarm iteration.
-                </desc>
+                <desc>The number of minimization steps for the swarm iteration.</desc>
             </field>
             <field type="int" id="minim_doubleprec" opt="true">
                 <desc>Set to 1 to use double-precision minimization</desc>
+            </field>
+             <field type="float" id="minim_dihforce" opt="true">
+                <desc>Force constant to use for minimization dihedral restraints</desc>
+            </field>
+             <field type="float" id="therm_dihforce" opt="true">
+                <desc>Force constant to use for thermalization dihedral restraints</desc>
+            </field>
+             <field type="float" id="equil_dihforce" opt="true">
+                <desc>Force constant to use for equilibration dihedral restraints</desc>
             </field>
             <field type="int" id="restrained_steps">
                 <desc>The number of steps of restrained equilibration.</desc>
@@ -553,6 +580,8 @@
                         dest="minimization:in.em_tolerance"/>
             <connection src="self:ext_in.minim_doubleprec"
                         dest="minimization:in.double"/>
+            <connection src="self:ext_in.minim_dihforce"
+                        dest="minimization:in.dihforce"/>
             <connection src="self:ext_in.path"
                         dest="minimization:in.path"/>
             <connection src="self:ext_in.resources"
@@ -563,6 +592,8 @@
                         dest="thermalization:in.path"/>
             <connection src="self:ext_in.therm_grompp"
                         dest="thermalization:in.grompp"/>
+            <connection src="self:ext_in.therm_dihforce"
+                        dest="thermalization:in.dihforce"/>
             <connection src="self:ext_in.resources"
                         dest="thermalization:in.resources"/>
 
@@ -575,6 +606,8 @@
                         dest="equilibration:in.confs"/>
             <connection src="self:ext_in.equi_grompp"
                         dest="equilibration:in.grompp"/>
+            <connection src="self:ext_in.equil_dihforce"
+                        dest="equilibration:in.dihforce"/>
             <connection src="self:ext_in.Nswarms"
                         dest="equilibration:in.Nswarms"/>
             <connection src="equilibration:out.confs"
