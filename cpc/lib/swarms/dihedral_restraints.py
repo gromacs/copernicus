@@ -19,6 +19,8 @@ import os
 from subprocess import Popen
 import argparse
 import res_selection
+import readxvg
+
 from molecule import molecule
 #import cpc.dataflow
 #from cpc.dataflow import FileValue
@@ -37,25 +39,8 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
     if initial_confs is None or len(initial_confs) == 0:
         use_interpolation = True
         # Read the starting and ending dihedrals for later interpolation
-        # Read the entire file into a list so we can scan it multiple times
-        startxvg = open(start_xvg,'r').readlines()
-        endxvg = open(end_xvg,'r').readlines()
-        startpts = {}
-        endpts = {}
-        for r in selection:
-            # There will be an array for each residue dihedral, over the chains (they are looping in the xvg)
-            startpts[r] = [] # list of phi/psi pairs for each chain
-            for line in startxvg:
-                # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
-                # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
-                # the headers with -180.
-                if re.search(r'\S+\-%s$'%r, line):
-                    startpts[r].append([float(line.split()[0]), float(line.split()[1])])
-        for r in selection:
-            endpts[r] = []
-            for line in endxvg:
-                if re.search(r'\S+\-%s$'%r, line):
-                    endpts[r].append([float(line.split()[0]), float(line.split()[1])])
+        startpts = readxvg.readxvg(start_xvg, selection)
+        endpts = readxvg.readxvg(end_xvg, selection)
     else:
         # Have to generate the dihedrals ourselves
         # TODO: assert that len(initial_confs) == n otherwise?
@@ -64,39 +49,28 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
 
         # Run g_rama (in parallel) on each intermediate conf (not start/end) and output to a temporary .xvg
         FNULL = open(os.devnull, 'w') # dont generate spam from g_rama 
-        for i in range(1, n-1):
+        for i in range(1, n - 1):
             # TODO: check for and use g_rama_mpi.. like everywhere else
-            ramaprocs[i] = Popen(['g_rama', '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i], stdout=FNULL, stderr=FNULL)
+            ramaprocs[i] = Popen(['g_rama', '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i], 
+                                 stdout=FNULL, stderr=FNULL)
 
         # Go through the output from the rama sub-processes and read the xvg outputs
 
         stringpts = {}  # Will have 4 levels: stringpoint, residue, chain, phi/psi value
 
-        for i in range(1, n-1):
+        for i in range(1, n - 1):
             # Start array indexed by residue
-            stringpts[i] = {}
             xvg_i = os.path.join(inp.getOutputDir(), '0%3d.xvg' % i)
             # Make sure the corresponding g_rama task has ended
             ramaprocs[i].communicate()
             # Read back and parse like for the start/end_xvg above
-            # Note: the g_rama invocation above is quite fast when parallelized but this readback is
-            # quite slow.
-            with open(xvg_i, 'r') as xvg_f:
-                # Read the entire file into a list so we can scan it multiple times
-                xvg = xvg_f.readlines()
-                # TODO: reverse this so the xvg is only traversed once.
-                for r in selection:
-                    # Support many chains so the last level will be a list of phi,psi lists
-                    stringpts[i][r] = []
-                    for line in xvg:
-                        if re.search(r'\S+\-%d\n' % r, line):
-                            stringpts[i][r].append([float(line.split()[0]), float(line.split()[1])])
+            stringpts[i] = readxvg.readxvg(xvg_i, selection)
 
     # Rewrite the topology to include the dihre.itp files instead of the original per-chain itps (if any)
     # There will be one topol_x.top per intermediate string point
 
     sys.stderr.write('%s' % includes)
-    for k in range(1,n-1):
+    for k in range(1, n - 1):
         with open(top) as in_topf:
             in_top = in_topf.read()       
             for mol in range(Nchains):
@@ -108,7 +82,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                 out_top.write(in_top)   
 
     # Generate/copy and write-out the dihedrals for each intermediate point (not for the start/end points)
-    for k in range(1,n-1):
+    for k in range(1, n - 1):
         for mol in range(Nchains):
             # TODO: use with statement for restraint_itp as well
             restraint_itp = open('dihre_%d_chain_%d.itp'%(k,mol),'w')
@@ -171,17 +145,12 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                     psi_val = stringpts[k][r][mol][1]
 
                 # Since we need different force constants in different stages, we need to put
-                # a searchable placeholder in the file here and replace it later
+                # a searchable placeholder in the file here and replace it later. KFAC is normally 
+                # a %8.4f number.
                 restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
                                     %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0))
                 restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
                                     %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0))
-
-                #kfac = 1000.0
-                #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                #                    %(phi[0], phi[1], phi[2], phi[3], 1, phi_val, 0, kfac))
-                #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                #                    %(psi[0], psi[1], psi[2], psi[3], 1, psi_val, 0, kfac))
 
             restraint_itp.close()
 
