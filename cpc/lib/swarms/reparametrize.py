@@ -16,6 +16,7 @@ import sys
 import re
 import os
 import res_selection
+import readxvg
 from molecule import molecule
 
 # helper functions
@@ -80,56 +81,31 @@ def rep_pts(newpts):
     return adjusted
 
 def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, top, includes): 
+
     Nswarms = len(diheds[0])
-    rsel = res_selection.res_select('%s'%start_conf,'%s'%selection)
+
+    rsel = res_selection.res_select('%s' % start_conf, '%s' % selection)
     
-    # calculate average drift in collective variables space
+    # Calculate the average drift in collective variables (dihedral) space
     #sys.stderr.write('Residue selection: %s' %rsel)
+
     newpts = []
     for pathpt in range(len(diheds)):
-        swarmpts = []
-        for i in range(len(diheds[pathpt])):
-            zpt = []
-            with open(diheds[pathpt][i], 'r') as xvg_f:
-                    xvg = xvg_f.readlines()
-                    for r in rsel:
-                            for line in xvg:
-                                    # Match the "ASP-178" etc. residue names at the ends of the lines, for the residue index r.
-                                    # Have to have the \S there (non-whitespace at least 1 char) otherwise we match stuff like
-                                    # the headers with -180.
-                                    if re.search(r'\S+\-%d\n' % r, line):
-                                            phi_val = float(line.split()[0])
-                                            psi_val = float(line.split()[1])
-                                            zpt += [phi_val, psi_val]
 
+        swarmpts = []
+
+        for i in range(len(diheds[pathpt])):
+
+            zpt = readxvg.readxvg_flat(diheds[pathpt][i], rsel)
             swarmpts.append(zpt)
+
         zptsum = reduce(mapadd, swarmpts)
         avgdrift = scale((1 / float(Nswarms)), zptsum)
         newpts.append(avgdrift)
 
     # extract initial and target dihedral values
-    # TODO: fix scope ordering. opens a LOT of files unnecessarily here
-    # (probably have to read into a list first then and not depend on the implicit reader)
-
-    initpt = []
-    with open(start_xvg, 'r') as xvg_f:
-            xvg = xvg_f.readlines()
-            for r in rsel:
-                    for line in xvg:
-                            if re.search(r'\S+\-%d\n' % r, line):
-                                    phi_val = float(line.split()[0])
-                                    psi_val = float(line.split()[1])
-                                    initpt += [phi_val, psi_val]
-
-    targetpt = []
-    with open(end_xvg, 'r') as xvg_f:
-            xvg = xvg_f.readlines()
-            for r in rsel:
-                    for line in xvg:
-                            if re.search(r'\S+\-%d\n' % r, line):
-                                    phi_val = float(line.split()[0])
-                                    psi_val = float(line.split()[1])
-                                    targetpt += [phi_val, psi_val]
+    initpt = readxvg.readxvg_flat(start_xvg, rsel)
+    targetpt = readxvg.readxvg_flat(end_xvg, rsel)
 
     # something with 1 indexing makes this padding necessary.
     paddingpt = [0] * len(initpt)
@@ -153,7 +129,7 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
 
     sys.stderr.write('Length of the adjusted vector: %d\n' % len(adjusted))
     # TODO Nchains should depend on the specific residue
-    Nchains = len(initpt)/(2*len(rsel))
+    Nchains = len(initpt) / (2 * len(rsel))
     # TODO measure distance
     # write the topology for the next iteration
     for k in range(1,len(adjusted)-1):
@@ -218,13 +194,6 @@ def reparametrize(diheds, selection, start_conf, start_xvg, end_conf, end_xvg, t
                                         %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0))
                     restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  KFAC\n"
                                         %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0))
-
-                    #kfac = 1000.0
-                    #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                    #                    %(phi[0],phi[1],phi[2],phi[3],1,phi_val,0,kfac))
-                    #restraint_itp.write("%5d%5d%5d%5d%5d %8.4f%5d  %8.4f\n"
-                    #                    %(psi[0],psi[1],psi[2],psi[3],1,psi_val,0,kfac))
-
 
             restraint_itp.close()
 
