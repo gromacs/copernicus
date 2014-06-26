@@ -43,12 +43,12 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
-                                               "persistent.dat"))
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                                 "persistent.dat"))
 
     # first create the right mdp file
     # dihedral restraints are on
-    merge=pers.get('merge')
+    merge = pers.get('merge')
     if merge is None or merge==0:
         merge = 1
         out.addInstance('merge', 'gromacs::merge_mdp')
@@ -120,7 +120,9 @@ def run(inp, out):
 
             inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
             if inc_array is not None:
-                kfac = 1000.0
+                kfac = inp.getInput('dihforce')
+                if kfac is None:
+                    kfac = 500.0
                 for j in range(len(inc_array)):
                     in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
                     # Since we don't rewrite the .top file which includes these files, we have

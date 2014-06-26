@@ -43,29 +43,25 @@ class FEError(cpc.dataflow.ApplicationError):
 # short integration timestep is employed to properly evolve the
 # initially unstable system
 
-# TODO: sets dihrefc 100 below, but the .itp file has the k-fac now under gromacs 4.5+
-
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),"persistent.dat"))
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),"persistent.dat"))
 
-    merge=pers.get('merge')
-    if merge is None or merge==0:
-        merge=1
+    merge = pers.get('merge')
+    if merge is None or merge == 0:
+        merge = 1
         out.addInstance('merge', 'gromacs::merge_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
         out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
         # thermalize for 5000 steps
-        settings=[] 
-        # Note: in older Gromacs, the dihre options were controlled from here too.
-        # TODO: the dihedral restraints here could maybe be allowed to be more relaxed
-        # than in the minimization and equilibration (?). But since the dihre_kfac option is
-        # no more, we have to then generate a separate dihedral restraints .itp file for this step.
+        settings = [] 
+        # Note: dihre_fc is not set in the .mdp anymore. The dihedral force is instead set
+        # through the .itp file which is adjusted further below.
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('dt'),
-                                       'value' : StringValue('0.0005') } ) )
-        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
-                                       'value' : StringValue('1200') } ) )   # 5000, just testing
+        #settings.append(RecordValue( { 'name' : StringValue('dt'),
+        #                               'value' : StringValue('0.0005') } ) )
+        #settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+        #                               'value' : StringValue('1200') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstfout'),
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
@@ -79,7 +75,7 @@ def run(inp, out):
         out.setSubOut('restrained_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
-    mdruns=pers.get('mdruns')
+    mdruns = pers.get('mdruns')
     if mdruns is None or mdruns==0:
         # Create a network instance that runs multiple grompp/mdruns in parallell
         out.addInstance('runs', 'gromacs::grompp_mdruns')
@@ -124,7 +120,9 @@ def run(inp, out):
 
             inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
             if inc_array is not None:
-                kfac = 100.0
+                kfac = inp.getInput('dihforce')
+                if kfac is None:
+                    kfac = 100.0
                 for j in range(len(inc_array)):
                     in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
                     # Since we don't rewrite the .top file which includes these files, we have
@@ -169,7 +167,7 @@ def run(inp, out):
             out.addConnection('self:ext_in.path[%d].include'%i,'self:ext_out.path[%d].include'%i)
 
         # mark that we created the mdruns fn and connections
-        mdruns=1
+        mdruns = 1
     pers.set('mdruns', mdruns)
 
     pers.write()
