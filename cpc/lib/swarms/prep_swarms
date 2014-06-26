@@ -48,8 +48,8 @@ class FEError(cpc.dataflow.ApplicationError):
 # which is an array of 10 configurations, so we output 50 configs in total, in a conf_array_array.
 
 def run(inp, out):
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
-                                               "persistent.dat"))
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                                 "persistent.dat"))
     # the multiple restrained trjconvs
     #trjconvs=pers.get('trjconvs')
     #if trjconvs is None or trjconvs==0:
@@ -84,27 +84,26 @@ def run(inp, out):
     # NB: we could also just set the complete flag on the trrs[] input and hence make a barrier
     # here but that seems unnecessary.
 
-    trjconvs=pers.get('trjconvs')
-    trrs=inp.getInput('trrs')
-    if trjconvs is None or trjconvs==0:
+    trjconvs = pers.get('trjconvs')
+    trrs = inp.getInput('trrs')
+    if trjconvs is None or trjconvs == 0:
         for i in range(len(trrs)):
 
             # trjconv_split splits an input trajectory into its component configurations (.gros)
-            out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+            out.addInstance('conv%d' % i, 'gromacs::trjconv_split')
 
             # Trajectory inputs are from our trrs[] input array
-            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+            out.addConnection('self:ext_in.trrs[%d]' % i, 'conv%d:in.traj' % i)
 
             # The input topology tpr is connected to all trjconvs
-            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr' % i)
 
             # The trjconv output, an array of configurations, is output on the swarmconfs[]
             # array. Note that this means the output is a conf *array* for each trrs[] *entry*.
-            out.addConnection('conv%d:out.confs'%i, 
-                              'self:ext_out.swarmconfs[%d]'%i)
+            out.addConnection('conv%d:out.confs' % i, 'self:ext_out.swarmconfs[%d]' % i)
 
             # Mark so we don't run this script again
-            trjconvs=1
+            trjconvs = 1
    
     pers.set('trjconvs', trjconvs)
     pers.write()
