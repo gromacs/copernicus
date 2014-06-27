@@ -2,11 +2,12 @@
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2012, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Magnus Lundborg Erik Lindahl,
+# and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -36,24 +37,12 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FileValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
+from cpc.dataflow import BoolValue
+from utils import findClosest
 
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
-
-
-def findClosest(path_lambdas, lam):
-    """Find the index of the closest lambda value."""
-    mindif=2
-    mini=-1
-    i=0
-    for plam in path_lambdas:
-        dif=(plam-lam)*(plam-lam) #math.fabs(plam-lam)
-        if dif < mindif:
-            mini=i
-            mindif=dif
-        i+=1     
-    return mini
 
 def fe_iteration(inp, out):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
@@ -65,41 +54,52 @@ def fe_iteration(inp, out):
     for i in xrange(len(fe_path)):
         path_lambdas.append(inp.getInput('path.lambdas[%d].lambda'%i))
 
-    # by default, the lambdas are the same as the path lambdas
-    lambdas=path_lambdas
+    # by default, the lambdas are the same as the path lambdas. Make a copy to keep the original.
+    lambdas=list(path_lambdas)
 
-    lambdas_in=inp.getInput('lambdas')
-    if (lambdas_in is not None) and (len(lambdas_in) > 0):
-        lambdas=[]
-        for i in xrange(len(lambdas_in)):
-            lambdas.append(inp.getInput('lambdas[%d]'%i))
+    # If optimizeLambdas is False lambdas will not be optimized.
+    # If optimizeLambdas is True (or not set) lambdas might be optimized (after this iteration).
+    optimizeLambdas=inp.getInput('optimize_lambdas')
+    if optimizeLambdas is None:
+        optimizeLambdas = True
+
+    selfRunIndex=3-inp.getInput('priority')
 
     calc_path=pers.get('calc_path')
     g_bar=pers.get('g_bar')
     if g_bar is None:
         g_bar=1
         out.addInstance('g_bar', 'gromacs::g_bar')
-        out.addInstance('calc_path', 'calc_path')
         out.addConnection('g_bar:out.dG', 'self:sub_in.dG')
-        #out.addConnection('g_bar:out.bar_values', 'self:sub_in.bar_values')
-        out.addConnection('g_bar:out.bar_values', 'calc_path:in.bar_values')
-        out.addConnection('calc_path:out.lambdas', 'self:sub_in.new_lambdas')
-        # for backward compatibility
-        calc_path=1
-        pers.set('calc_path', calc_path)
-    pers.set('g_bar', g_bar)
+        out.addConnection('self:ext_in.n_blocks_min', 'g_bar:in.n_blocks_min')
+        out.addConnection('self:ext_in.n_blocks_max', 'g_bar:in.n_blocks_max')
 
+        if calc_path is None:
+            out.addInstance('calc_path', 'calc_path')
+            out.addConnection('g_bar:out.bar_values', 'calc_path:in.bar_values')
+            out.addConnection('calc_path:out.lambdas', 'self:sub_in.new_lambdas')
+            out.addConnection('self:ext_in.stddev_spacing', 'calc_path:in.stddev_spacing')
+            out.addConnection('self:ext_in.dl_power', 'calc_path:in.dl_power')
+
+            # for backward compatibility
+            calc_path=1
+            pers.set('calc_path', calc_path)
+
+        pers.set('g_bar', g_bar)
+
+    nLambdas=len(lambdas)
 
     mdruns=pers.get('mdruns')
     if mdruns is None:
         mdruns=0
         # these are the multiple runs
+        sys.stderr.write('Adding mdrun instance\n')
         out.addInstance('runs', 'gromacs::grompp_mdruns')
         # connect the mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
         out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
-        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
         out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
         out.addConnection('self:ext_in.priority', 'runs:in.priority[0]')
@@ -107,21 +107,66 @@ def fe_iteration(inp, out):
         out.addConnection('self:sub_out.settings_array', 'runs:in.settings')
         out.addConnection('self:ext_in.path.a', 'self:ext_out.path.a')
         out.addConnection('self:ext_in.path.b', 'self:ext_out.path.b')
-        out.addConnection('self:ext_in.path.molecule_name', 
+        out.addConnection('self:ext_in.path.molecule_name',
                           'self:ext_out.path.molecule_name')
-        out.addConnection('runs:out.conf', 'self:sub_in.confs')
 
-    sys.stderr.write('Nlambdas=%d\n'%len(lambdas))
-    sys.stderr.write('lambdas=%s\n'%lambdas)
+        lambdasAllToAll = inp.getInput('lambdas_all_to_all') or False
 
-    if mdruns != len(lambdas):
-        foreignLambdas=""
-        for lmb in lambdas:
-            foreignLambdas += "%g "%lmb
         settings_array=[]
-        i=0
-        for lam in lambdas:
+        for i in xrange(nLambdas):
+            lam=lambdas[i]
             mdp=[]
+
+            # Make a list of lambdas
+            foreignLambdas=''
+            if lambdasAllToAll:
+                for j in xrange(nLambdas):
+                    if j == i:
+                        continue
+                    foreignLambdas += '%g ' % lambdas[j]
+            else:
+                if i > 0:
+                    prv = lambdas[i-1]
+                else:
+                    prv = None
+                if i < nLambdas - 1:
+                    nxt = lambdas[i+1]
+                else:
+                    nxt = None
+                if prv is not None:
+                    foreignLambdas += '%g ' % prv
+                if nxt is not None:
+                    foreignLambdas += '%g ' % nxt
+
+
+                # Temporary special case for 41 lambdas to have neighbouring lambdas to be able
+                # to derive 21 and 11 lambdas from the simulations.
+                if not optimizeLambdas and nLambdas == 41:
+                    prvprv = None
+                    prvprvprv = None
+                    nxtnxt = None
+                    nxtnxtnxt = None
+                    if i % 2 == 0:
+                        if i > 1:
+                            prvprv = lambdas[i-2]
+                        if i < nLambdas - 2:
+                            nxtnxt = lambdas[i+2]
+                    if i % 4 == 0:
+                        if i > 3:
+                            prvprvprv = lambdas[i-4]
+                        if i < nLambdas - 4:
+                            nxtnxtnxt = lambdas[i+4]
+
+                    if prvprv is not None:
+                        if prvprvprv is not None:
+                            foreignLambdas += '%g ' % prvprvprv
+                        foreignLambdas += '%g ' % prvprv
+                    if nxtnxt is not None:
+                        if nxtnxtnxt is not None:
+                            foreignLambdas += '%g ' % nxtnxtnxt
+                        foreignLambdas += '%g ' % nxtnxt
+                # End of special case
+
             mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
                                       'value' : StringValue('%g'%lam)}))
             nsteps=inp.getInput('nsteps')
@@ -129,75 +174,144 @@ def fe_iteration(inp, out):
                                       'value' : StringValue('%d'%nsteps) }))
             mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
                                       'value' : StringValue(foreignLambdas)}))
+            initStep = inp.getInput('init_step')
+            if initStep:
+                mdp.append(RecordValue( { 'name' : StringValue('init-step'),
+                                          'value' : StringValue('%d'%initStep) }))
             settings_array.append(ArrayValue(mdp))
-            i+=1
-        for i in xrange(mdruns, len(lambdas)):
+
+        # Include edr files from earlier iterations
+        additionalEdrFiles=inp.getInput('edr_files')
+        if additionalEdrFiles:
+            nAdditionalEdrFiles=len(additionalEdrFiles)
+            # Do this only once
+            if not mdruns:
+                for i in xrange(nAdditionalEdrFiles):
+                    out.addConnection('self:ext_in.edr_files[%d]'%i, 'g_bar:in.edr[%d]'%i)
+        else:
+            nAdditionalEdrFiles=0
+        for i in xrange(mdruns, nLambdas):
             lam=lambdas[i]
-            #sys.stderr.write("lambda %d: %g\n"%(i, lam))
+            #sys.stderr.write('Finding lambda closest to %g\n.' % lam)
             lami=findClosest(path_lambdas, lam)
+            #sys.stderr.write('Found %g (index %d)\n.' % (path_lambdas[lami], lami))
             out.addConnection('self:ext_in.path.lambdas[%d].conf'%lami,
                               'runs:in.conf[%d]'%i)
-            out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%i)
-            #out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
-        out.setSubOut('settings_array', ArrayValue(settings_array))
-        mdruns=len(lambdas)
-    pers.set('mdruns', mdruns)
+            out.addConnection('runs:out.edr[%d]'%i, 'g_bar:in.edr[%d]'%(i+nAdditionalEdrFiles))
+            out.addConnection('runs:out.edr[%d]'%i, 'self:ext_out.own_edr_files[%d]'%i)
+            out.addConnection('runs:out.conf[%d]'%i, 'self:sub_in.confs[%d]'%i)
 
-    if inp.getSubnetInputValue('dG').isUpdated():
+        out.setSubOut('settings_array', ArrayValue(settings_array))
+        mdruns=nLambdas
+
+    pers.set('mdruns', mdruns)
+    sys.stderr.write('Nlambdas=%d\n'%nLambdas)
+    sys.stderr.write('lambdas=%s\n'%lambdas)
+    sys.stderr.write('N mdruns=%d\n'%mdruns)
+
+    new_lambda_values = 0
+
+    doneOptimization = pers.get('done_optimization')
+    alreadyDoneOptimization = doneOptimization
+    dGVal = inp.getSubnetInput('dG.value')
+    if dGVal is not None:
+        if optimizeLambdas:
+            if doneOptimization is None:
+                nv=inp.getSubnetInputValue('new_lambdas')
+                if nv is not None and nv.isUpdated():
+                    N=len(inp.getSubnetInput('new_lambdas'))
+                    new_lambdas = []
+                    for i in range(N):
+                        l2 = inp.getSubnetInput('new_lambdas[%d]'%i)
+                        new_lambdas.append(l2)
+
+                    tolerance = inp.getInput('optimization_tolerance')
+                    if tolerance == None:
+                        tolerance = 20
+                    tolerance = min(tolerance, 100)
+                    tolerance = max(tolerance, 0)
+                    toleranceFactor = 1 + tolerance/100.0
+
+                    sys.stderr.write('Optimization at this stage would give %s lambda points instead of %s.\n' % (N, nLambdas))
+
+                    # If the number of lambda points has changed by more than the optimization_tolerance
+                    # use the new lambda point distribution.
+                    # Otherwise check if there is a large difference in the lambda distributions.
+                    sys.stderr.write('toleranceFactor = %s, N*toleranceFactor = %s, nLambdas*toleranceFactor = %s\n' %
+                                     (toleranceFactor, N*toleranceFactor, nLambdas*toleranceFactor))
+                    if N*toleranceFactor < nLambdas or N > nLambdas*toleranceFactor:
+                        new_lambda_values = N
+                    else:
+                        nLargeDiff = 0
+                        j = 1
+                        for i in xrange(1, nLambdas):
+                            l1 = lambdas[i]
+                            # Find the lambda in new_lambdas that is closest to l1.
+                            # Since the number of lambdas can be different i and j
+                            # are not necessarily the same.
+                            while j < N - 1:
+                                if abs(l1-new_lambdas[j]) > abs(l1-new_lambdas[j+1]):
+                                    j += 1
+                                else:
+                                    break
+                            l2 = new_lambdas[j]
+
+                            diff1 = l1 - lambdas[i-1]
+                            diff2 = l2 - new_lambdas[j-1]
+                            fDiff = max(abs(diff1/diff2), abs(diff2/diff1))
+                            sys.stderr.write('fDiff: %s, l1: %s, l2: %s\n' % (fDiff, l1, l2))
+                            if fDiff > toleranceFactor:
+                                nLargeDiff += 1
+
+                        sys.stderr.write('%s lambda intervals (out of %s) changed more than %s%%.\n' % (nLargeDiff, nLambdas-1, tolerance))
+                        # If the difference is larger in N intervals where
+                        # N > tolerance (in percent) fraction of the total number of intervals
+                        # Use the optimized set of lambdas.
+                        if float(nLargeDiff)/(nLambdas-1) > tolerance/100.0:
+                            new_lambda_values = N
+                            sys.stderr.write('Lambda difference large enough to do reoptimization.\n')
+
+                    if new_lambda_values:
+                        lambdas = new_lambdas
+                        nLambdas = len(lambdas)
+                        doneOptimization = True
+                    else:
+                        doneOptimization = False
+
+                    sys.stderr.write('new_lambda_values: %s, lambdas: %s\n' % (new_lambda_values, lambdas))
+
+                else:
+                    doneOptimization = None
+                pers.set('done_optimization', doneOptimization)
+                out.setOut('done_reoptimization', BoolValue(doneOptimization))
+
+        else:
+            doneOptimization = False
+            pers.set('done_optimization', doneOptimization)
+            out.setOut('done_reoptimization', BoolValue(doneOptimization))
+
+    # Only set the output if it was not done before, but is done now.
+    sys.stderr.write('doneOptimization: %s\n' % doneOptimization)
+    if alreadyDoneOptimization is None and doneOptimization is not None:
         dgVal=inp.getSubnetInput('dG.value')
         dgErr=inp.getSubnetInput('dG.error')
-        if dgVal is not None: 
+        if dgVal is not None:
             out.setOut('dG.value', FloatValue(dgVal))
             out.setOut('dG.error', FloatValue(dgErr))
-    #if inp.getSubnetInputValue('bar_values').isUpdated():
-    #    pass
 
-    new_lambda_values=pers.get('new_lambda_values')
-    new_lambda_values=0
-    nv=inp.getSubnetInputValue('new_lambdas')
-    if nv is not None and nv.isUpdated():
-        N=len(inp.getSubnetInput('new_lambdas'))
-        newLambdas=[]
-        new_lambda_values=N
-        for i in xrange(N):
-            lam=inp.getSubnetInput('new_lambdas[%d]'%i)
-            #newLambdas.append(lam)
-            #lami=findClosest(path_lambdas, lam)
-            out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
-    pers.set('new_lambda_values', new_lambda_values)
-
-    confs=pers.get('confs')
-    if confs is None:
-        confs=0
-    if calc_path is not None:
-        if new_lambda_values > 0 and new_lambda_values != confs:
-            for i in xrange(new_lambda_values):
-                if pers.get('conf_%d'%i) is None:
-                    lami=findClosest(path_lambdas, 
-                                     inp.getSubnetInput('new_lambdas[%d]'%i))
-                    confi=inp.getSubnetInput('confs[%d]'%lami)
+            for i in range(nLambdas):
+                lam=lambdas[i]
+                out.setOut('path.lambdas[%d].lambda'%i, FloatValue(lam))
+                #sys.stderr.write('lambda: %s\n' % lam)
+                lami=findClosest(path_lambdas,
+                                 lam)
+#                sys.stderr.write('closest index in input lambda list: %s\n' % lami)
+                confi=inp.getSubnetInput('confs[%d]'%lami)
+                if confi is not None:
+                    confi=FileValue(confi)
                     if confi is not None:
                         pers.set('conf_%d'%i, lami)
-                        out.setOut('path.lambdas[%d].conf'%i, FileValue(confi))
-                        confs+=1
-    else:
-        # for older projects, we keep backward compatiblity
-        # now compare the outputs to the inputs
-        if inp.getSubnetInput('confs') is not None:
-            lnInConfs=len(inp.getSubnetInput('confs'))
-            sys.stderr.write('lnINcofs=%d\n'%lnInConfs)
-            #lnInConfs=len(self.getOutput('confs'))
-            for i in xrange(lnInConfs):
-                inConf=inp.getSubnetInput('confs[%d]'%i)
-                sys.stderr.write('Inconf[%d]=%s\n'%(i,inConf))
-                if inConf is not None:
-                    #outConf=inp.getOutput('path.lambdas[%d].conf'%i)
-                    outConf=pers.get('conf_%d'%i)
-                    sys.stderr.write('outconf[%d]=%s\n'%(i,outConf))
-                    if inConf != outConf:
-                        out.setOut('path.lambdas[%d].conf'%i, FileValue(inConf))
-                        pers.set('conf_%d'%i, inConf)
-    pers.set('confs', confs)
+                        out.setOut('path.lambdas[%d].conf'%i, confi)
 
     pers.write()
     return out
@@ -218,7 +332,6 @@ if inp.testing():
     cpc.util.plugin.testCommand("grompp -version")
     cpc.util.plugin.testCommand("trjconv -version")
     cpc.util.plugin.testCommand("gmxdump -version")
-    # try to import msmproject and thereby msmbuilder
     sys.exit(0)
 
 
