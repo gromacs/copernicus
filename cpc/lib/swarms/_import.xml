@@ -671,7 +671,7 @@
             <connection src="thermalization:out.path"
                         dest="reparametrize:in.path"/>
 
-            <!--connect reparam output.top-->
+            <!--connect reparam output. the actual confs here come directly from the restrained_confs input from the equil step -->
             <connection src="reparametrize:out.path"
                         dest="self:ext_out.path"/>
         </network>
