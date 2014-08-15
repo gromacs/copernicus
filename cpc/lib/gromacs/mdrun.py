@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -62,8 +63,58 @@ def extractConf(tprFile, confFile):
     proc.communicate(None)
     if proc.returncode != 0:
         raise GromacsError("Error running editconf: %s"%
-                           (open(stdoutfn,'r').read()))
+                           proc.stdout)
 
+
+def runGmxCheckGap(fileTypeFlag, checkFile):
+
+    cmd=['gmxcheck', fileTypeFlag, checkFile]
+    proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+    #noMatchLine=re.compile(r'Timesteps at.*don\'t match.*\(([0-9.]+),\s([0-9.]+)\)')
+
+    stdExpected = None
+
+    for line in proc.stdout:
+        #m = noMatchLine.match(line)
+        #if m:
+        if 'Timesteps at t=' in line:
+            log.debug("%s, %s", checkFile, line)
+            parts = line.split()
+            thisExpected = float(parts[5][1:-1])
+            thisActual = float(parts[6][:-1])
+            if stdExpected == None:
+                stdExpected = thisExpected
+            if thisActual > stdExpected:
+                log.debug("Discarding %s due to a gap in the file" % checkFile)
+                return False
+
+    return True
+
+def checkConfoutDir(path):
+
+    xtcso = sorted(glob.glob(os.path.join(path, "traj.part*.xtc")))
+    trrso = sorted(glob.glob(os.path.join(path, "traj.part*.trr")))
+    edrso = sorted(glob.glob(os.path.join(path, "traj.part*.edr")))
+
+    xtcs = []
+    trrs = []
+    edrs = []
+
+    for f in xtcso:
+        if runGmxCheckGap('-f', f):
+            xtcs.append(f)
+    for f in trrso:
+        if runGmxCheckGap('-f', f):
+            trrs.append(f)
+    for f in edrso:
+        if runGmxCheckGap('-e', f):
+            edrs.append(f)
+
+    if xtcs or trrs or edrs:
+        return True
+
+    return False
 
 class TrajFileCollection(object):
     def __init__(self, persDir):
@@ -80,26 +131,9 @@ class TrajFileCollection(object):
             try:
                 st=os.stat(currundir)
                 if st.st_mode & stat.S_IFDIR:
-                    lastfound=True
-                    lastrundir=currundir
-                    cpt=os.path.join(lastrundir, "state.cpt")
-                    if os.path.exists(cpt):
-                        # and check the size
-                        st=os.stat(cpt)
-                        if st.st_size>0:
-                            self.lastcpt=cpt
-                    # now check if this has produced trajectories
-                    trajl=dict()
-                    xtc = glob.glob(os.path.join(lastrundir, "traj.part*.xtc"))
-                    trr = glob.glob(os.path.join(lastrundir, "traj.part*.trr"))
-                    edr = glob.glob(os.path.join(lastrundir, "ener.part*.edr"))
-                    trajl['xtc']=None
-                    if len(xtc) > 0:
-                        trajl['xtc']=xtc[-1]
-                    if len(trr) > 0:
-                        trajl['trr']=trr[-1]
-                    if len(edr) > 0:
-                        trajl['edr']=edr[-1]
+                    lastfound = True
+                    lastrundir = currundir
+                    trajl = self.checkResults(lastrundir)
                     self.trajlist.append(trajl)
             except OSError:
                 pass
@@ -127,6 +161,43 @@ class TrajFileCollection(object):
     def getTrajList(self):
         """Return the list of trajectories (a list of lists)."""
         return self.trajlist
+
+    def checkResults(self, rundir):
+        """Runs gmx check on the expected output files to see that they
+           are OK. Returns a dictionary of output files if successful. """
+        trajl = dict()
+
+        # Check if this has produced trajectories
+        xtc = glob.glob(os.path.join(rundir, "traj.part*.xtc"))
+        trr = glob.glob(os.path.join(rundir, "traj.part*.trr"))
+        edr = glob.glob(os.path.join(rundir, "ener.part*.edr"))
+
+        for f in reversed(xtc):
+            if os.path.isfile(f) and runGmxCheckGap('-f', f):
+                trajl['xtc'] = f
+                break
+
+        for f in reversed(trr):
+            if os.path.isfile(f) and runGmxCheckGap('-f', f):
+                trajl['trr'] = f
+                break
+
+        for f in reversed(edr):
+            if os.path.isfile(f) and runGmxCheckGap('-e', f):
+                trajl['edr'] = f
+                break
+
+        # Only consider this the last checkpoint if valid (no gaps) output files
+        # were produced.
+        if trajl.get('xtc') or trajl.get('trr') or trajl.get('edr'):
+            cpt=os.path.join(rundir, "state.cpt")
+            if os.path.exists(cpt):
+                # and check the size
+                st=os.stat(cpt)
+                if st.st_size>0:
+                    self.lastcpt=cpt
+
+        return trajl
 
     def _extractLastTrajNr(self):
         """Return the trajectory number of the last run (or None if there
@@ -281,18 +352,21 @@ def extractData(confout, outDir, persDir, fo):
     # cull empty files and duplicate trajectory names
     xtcs=[]
     xtcbase=[]
-    for file in xtcso:
-        st=os.stat(file)
-        base=os.path.split(file)[1]
-        if st.st_size>0:
-            if base not in xtcbase:
-                xtcs.append(file)
-                xtcbase.append(base)
-            else:
-                # there already was a file with this name. Overwrite
-                # it because mdrun wasn't aware of it when writing.
-                ind=xtcbase.index(base)
-                xtcs[ind]=file
+    try:
+        for file in xtcso:
+            st=os.stat(file)
+            base=os.path.split(file)[1]
+            if st.st_size>0:
+                if base not in xtcbase:
+                    xtcs.append(file)
+                    xtcbase.append(base)
+                else:
+                    # there already was a file with this name. Overwrite
+                    # it because mdrun wasn't aware of it when writing.
+                    ind=xtcbase.index(base)
+                    xtcs[ind]=file
+    except OSError:
+        pass
 
     # concatenate them
     xtcoutname=os.path.join(outDir, "traj.xtc")
@@ -311,18 +385,21 @@ def extractData(confout, outDir, persDir, fo):
     # cull empty files and duplicate trajectory names
     trrs=[]
     trrbase=[]
-    for file in trrso:
-        st=os.stat(file)
-        base=os.path.split(file)[1]
-        if st.st_size>0:
-            if base not in trrbase:
-                trrs.append(file)
-                trrbase.append(base)
-            else:
-                # there already was a file with this name. Overwrite
-                # it because mdrun wasn't aware of it when writing.
-                ind=trrbase.index(base)
-                trrs[ind]=file
+    try:
+        for file in trrso:
+            st=os.stat(file)
+            base=os.path.split(file)[1]
+            if st.st_size>0:
+                if base not in trrbase:
+                    trrs.append(file)
+                    trrbase.append(base)
+                else:
+                    # there already was a file with this name. Overwrite
+                    # it because mdrun wasn't aware of it when writing.
+                    ind=trrbase.index(base)
+                    trrs[ind]=file
+    except OSError:
+        pass
     # concatenate them
     trroutname=os.path.join(outDir, "traj.trr")
     if len(trrs) > 0:
@@ -339,19 +416,25 @@ def extractData(confout, outDir, persDir, fo):
     # cull empty files and duplicate trajectory names
     edrs=[]
     edrbase=[]
-    for file in edrso:
-        st=os.stat(file)
-        base=os.path.split(file)[1]
-        if st.st_size>0:
-            if base not in edrbase:
-                edrs.append(file)
-                edrbase.append(base)
-            else:
-                # there already was a file with this name. Overwrite
-                # it because mdrun wasn't aware of it when writing.
-                ind=edrbase.index(base)
-                edrs[ind]=file
+    try:
+        for file in edrso:
+            st=os.stat(file)
+            base=os.path.split(file)[1]
+            if st.st_size>0:
+                if base not in edrbase:
+                    edrs.append(file)
+                    edrbase.append(base)
+                else:
+                    # there already was a file with this name. Overwrite
+                    # it because mdrun wasn't aware of it when writing.
+                    ind=edrbase.index(base)
+                    log.debug("Overwriting existing edr file %s with %s" % (edrs[ind], file))
+                    edrs[ind]=file
+    except OSError:
+        pass
     edroutname=os.path.join(outDir, "ener.edr")
+    if len(edrs) > 1:
+        log.debug("Concatenating edr files: %s" % edrs)
     # concatenate them
     if len(edrs) > 0:
         cmd=["eneconv", "-f"]
@@ -361,6 +444,7 @@ def extractData(confout, outDir, persDir, fo):
         sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
         sp.communicate(None)
         stdo.close()
+        log.debug("Setting edr output to %s" % edroutname)
         fo.setOut('edr', FileValue(edroutname))
     # do the stdout
     stdouto = glob.glob(os.path.join(persDir, "run_???", "stdout"))
@@ -412,7 +496,7 @@ def mdrun(inp):
     rsrc=Resources(inp.getInputValue("resources"))
     rsrcFilename=os.path.join(persDir, 'rsrc.dat')
     # check whether we need to reinit
-    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+    pers=cpc.dataflow.Persistence(os.path.join(persDir,
                                                "persistent.dat"))
     init=False
     lasttpr=pers.get('lasttpr')
@@ -429,13 +513,13 @@ def mdrun(inp):
             backupDir=os.path.join(persDir, "backup")
             try:
                 os.mkdir(backupDir)
-            except:
+            except OSError:
                 pass
             for conf in confout:
                 try:
                     os.rename(conf, os.path.join(backupDir,
                                                  os.path.split(conf)[-1]))
-                except:
+                except OSError:
                     pass
         init=True
         pers.set('lasttpr', lasttpr)
@@ -458,17 +542,22 @@ def mdrun(inp):
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
-        log.debug("Extracting data. ")
-        # confout exists. we're finished. Concatenate all the runs if
-        # we need to, but first create the output dict
-        extractData(confout, outDir, persDir, fo)
-        return fo
-    else:
-        tfc=TrajFileCollection(persDir)
-        # first check whether we got an error code back
-        if (inp.cmd is not None) and inp.cmd.getReturncode()!=0:
-            # there was a problem. Check the log
-            stde=os.path.join(tfc.getLastDir(), "stderr")
+        confoutDir = os.path.abspath(confout[0])
+        hasFinalData = checkConfoutDir(confoutDir)
+        if hasFinalData:
+            log.debug("Extracting data. ")
+            # confout exists. we're finished. Concatenate all the runs if
+            # we need to, but first create the output dict
+            extractData(confout, outDir, persDir, fo)
+            return fo
+
+    tfc=TrajFileCollection(persDir)
+    lastDir = tfc.getLastDir()
+    # first check whether we got an error code back
+    if (inp.cmd is not None) and inp.cmd.getReturncode()!=0:
+        # there was a problem. Check the log
+        if lastDir:
+            stde=os.path.join(lastDir, "stderr")
             if checkErr(stde, rsrc, newtpr, persDir):
                 if os.path.exists(stde):
                     stdef=open(stde, 'r')
@@ -476,16 +565,19 @@ def mdrun(inp):
                     stdef.close()
                     raise MdrunError("Error running mdrun: %s"%errmsg)
         else:
-            # now check whether any of the last 4 iterations produced
-            # trajectories
-            trajlist=tfc.getTrajList()
-            if len(trajlist) > 4:
-                ret=False
-                for j in range(4):
-                    haveTraj=(len(trajlist[-j-1]) > 0)
-                    ret=ret or haveTraj  #prevtraj[-j-1]
-                if not ret:
-                    stde=os.path.join(tfc.getLastDir(), "stderr")
+            log.debug("An error has occured, but no lastDir was found.")
+
+        # now check whether any of the last 4 iterations produced
+        # trajectories
+        trajlist=tfc.getTrajList()
+        if len(trajlist) > 4:
+            ret=False
+            for j in range(4):
+                haveTraj=(len(trajlist[-j-1]) > 0)
+                ret=ret or haveTraj  #prevtraj[-j-1]
+            if not ret:
+                if lastDir:
+                    stde=os.path.join(lastDir, "stderr")
                     if os.path.exists(stde):
                         stdef=open(stde, 'r')
                         errmsg=unicode(stdef.read(), errors='ignore')
@@ -493,85 +585,90 @@ def mdrun(inp):
                     else:
                         errmsg=""
                     raise MdrunError("Error running mdrun. No trajectories: %s"%
-                                     errmsg)
-        # Make a new directory with the continuation of this run
-        #newdirname=currundir #"run_%03d"%(i+1)
-        newdirname=tfc.getNewRunDir()
-        try:
-            os.mkdir(newdirname)
-        except OSError:
-            pass
-        tpr=newtpr
-        src=os.path.join(inp.getBaseDir(), tpr)
-        dst=os.path.join(newdirname,"topol.tpr")
-        shutil.copy(src,dst)
-        # handle command line inputs
-        if inp.getInput('cmdline_options') is not None:
-            cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
-        else:
-            cmdlineOpts=[]
-        if inp.getInput('priority') is not None:
-            prio=inp.getInput('priority')
-        else:
-            prio=0
-        lastcpt=tfc.getLastCpt()
-        # copy the checkpoint to the new cmd dir
-        if lastcpt is not None:
-            shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
-        # now add to the priority if this run has already been started
-        completed=tfc.getFractionCompleted(tpr)
-        if completed > 0:
-            log.debug("Fraction completed: %s" % completed)
-            # Already finished, but no confout.gro?
-            if completed >= 1:
-                log.debug("Iteration finished, but the final coordinates were not written.")
-                if tfc.trajlist[-1].get('edr') or tfc.trajlist[-1].get('xtc') or tfc.trajlist[-1].get('trr'):
-                    log.debug("Last run produced output files (but no confout.gro). Generating coordinates from checkpoint.")
-                    confout=tfc.checkpointToConfout()
-                    if confout:
-                        log.debug("Extracting data.")
-                        extractData([confout], outDir, persDir, fo)
-                        return fo
+                                    errmsg)
                 else:
-                    log.debug("Last run did not produce any output files. Cannot generate coordinates from checkpoint.")
-            # now the priority ranges from 1 to 4, depending on how
-            # far along the simulation is.
-            prio += 1+int(3*(completed))
-            log.debug("Setting new priority to %d because it's in progress"%
-                      prio)
-        # we can always add state.cpt, even if it doesn't exist.
-        args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt",
-               "-rcon", "0.7"  ]
-        args.extend(cmdlineOpts)
-        # for the new neighbor search scheme in Gromacs 4.6, set this env
-        # variable
-        if lastcpt is not None:
-            shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
-        # any expected output files.
-        newFileNr=tfc.getLastTrajNr()+1
-        outputFiles=[ "traj.part%04d.xtc"%newFileNr,
-                      "traj.part%04d.trr"%newFileNr,
-                      "confout.part%04d.gro"%newFileNr,
-                      "ener.part%04d.edr"%newFileNr,
-                      "dhdl.part%04d.xvg"%newFileNr,
-                      "pullx.part%04d.xvg"%newFileNr,
-                      "pullf.part%04d.xvg"%newFileNr,
-                      "md.part%04d.log"%newFileNr,
-                      "state.cpt", "state_prev.cpt" ]
-        log.debug("Expected output files: %s"%outputFiles)
-        cmd=cpc.command.Command(newdirname, "gromacs/mdrun",args,
-                                minVersion=cpc.command.Version("4.5"),
-                                addPriority=prio,
-                                outputFiles=outputFiles)
-        if inp.hasInput("resources") and inp.getInput("resources") is not None:
-            #log.debug("resources is %s"%(inp.getInput("resources")))
-            #rsrc=Resources(inp.getInputValue("resources"))
-            rsrc.updateCmd(cmd)
-        log.debug("Adding command")
-        fo.addCommand(cmd)
-        if inp.getInputValue('tpr').isUpdated() and inp.cmd is not None:
-            log.debug("Canceling commands")
-            fo.cancelPrevCommands()
+                    raise MdrunError("Error running mdrun. No trajectories and no lastDir was found.")
+    # Make a new directory with the continuation of this run
+    #newdirname=currundir #"run_%03d"%(i+1)
+    newdirname=tfc.getNewRunDir()
+    log.debug("Making a new directory for this run: %s" % newdirname)
+    try:
+        os.mkdir(newdirname)
+    except OSError:
+        log.debug("Directory already exists.")
+        pass
+    tpr=newtpr
+    src=os.path.join(inp.getBaseDir(), tpr)
+    dst=os.path.join(newdirname,"topol.tpr")
+    shutil.copy(src,dst)
+    # handle command line inputs
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    if inp.getInput('priority') is not None:
+        prio=inp.getInput('priority')
+    else:
+        prio=0
+    lastcpt=tfc.getLastCpt()
+    # copy the checkpoint to the new cmd dir
+    if lastcpt is not None:
+        shutil.copy(lastcpt, os.path.join(newdirname,"state.cpt"))
+        log.debug("Continuing from checkpoint")
+    # now add to the priority if this run has already been started
+    completed=tfc.getFractionCompleted(tpr)
+    if completed > 0:
+        log.debug("Fraction completed: %s" % completed)
+        # Already finished, but no confout.gro?
+        if completed >= 1:
+            log.debug("Iteration finished, but the final coordinates were not written.")
+            if tfc.trajlist[-1].get('edr') or tfc.trajlist[-1].get('xtc') or tfc.trajlist[-1].get('trr'):
+                log.debug("Last run produced output files without gaps (but no confout.gro). Generating coordinates from checkpoint.")
+                confout=tfc.checkpointToConfout()
+                if confout:
+                    log.debug("Extracting data.")
+                    extractData([confout], outDir, persDir, fo)
+                    return fo
+            else:
+                log.debug("Last run did not produce any output files. Cannot generate coordinates from checkpoint.")
+        # now the priority ranges from 1 to 4, depending on how
+        # far along the simulation is.
+        prio += 1+int(3*(completed))
+        log.debug("Setting new priority to %d because it's in progress"%
+                  prio)
+    # we can always add state.cpt, even if it doesn't exist.
+    args=["-quiet", "-s", "topol.tpr", "-noappend", "-cpi", "state.cpt",
+           "-rcon", "0.7"  ]
+    args.extend(cmdlineOpts)
+    # for the new neighbor search scheme in Gromacs 4.6, set this env
+    # variable
+
+    # any expected output files.
+    newFileNr=tfc.getLastTrajNr()+1
+    outputFiles=[ "traj.part%04d.xtc"%newFileNr,
+                  "traj.part%04d.trr"%newFileNr,
+                  "confout.part%04d.gro"%newFileNr,
+                  "ener.part%04d.edr"%newFileNr,
+                  "dhdl.part%04d.xvg"%newFileNr,
+                  "pullx.part%04d.xvg"%newFileNr,
+                  "pullf.part%04d.xvg"%newFileNr,
+                  "md.part%04d.log"%newFileNr,
+                  "state.cpt", "state_prev.cpt" ]
+    log.debug("Expected output files: %s"%outputFiles)
+    cmd=cpc.command.Command(newdirname, "gromacs/mdrun",args,
+                            minVersion=cpc.command.Version("4.5"),
+                            addPriority=prio,
+                            outputFiles=outputFiles)
+    if inp.hasInput("resources") and inp.getInput("resources") is not None:
+        #log.debug("resources is %s"%(inp.getInput("resources")))
+        #rsrc=Resources(inp.getInputValue("resources"))
+        rsrc.updateCmd(cmd)
+    log.debug("Adding command")
+    fo.addCommand(cmd)
+    if inp.getInputValue('tpr').isUpdated() and inp.cmd is not None:
+        log.debug("Canceling commands")
+        fo.cancelPrevCommands()
+
     # and save for further invocations
     rsrc.save(rsrcFilename)
     pers.write()
