@@ -31,7 +31,7 @@ from molecule import molecule
 
 def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, top, includes, n, ndx, Nchains):
     
-    selection = res_selection.res_select(start,ndx)
+    selection = res_selection.res_select(start, ndx)
     n = int(n)  # number of points in the string, including start and end point
 
     use_interpolation = False
@@ -66,7 +66,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
             # Read back and parse like for the start/end_xvg above
             stringpts[i] = readxvg.readxvg(xvg_i, selection)
 
-    # Rewrite the topology to include the dihre.itp files instead of the original per-chain itps (if any)
+    # Rewrite the topology to include the res itp files instead of the original per-chain itps (if any)
     # There will be one topol_x.top per intermediate string point
 
     sys.stderr.write('%s' % includes)
@@ -76,7 +76,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
             for mol in range(Nchains):
                 if len(includes) > 0:
                     includename = includes[mol].split('/')[-1]
-                    in_top = re.sub(includename, 'dihre_%d_chain_%d.itp'%(k, mol), in_top)
+                    in_top = re.sub(includename, 'res_%d_chain_%d.itp'%(k, mol), in_top)
             with open('topol_%d.top'%k,'w') as out_top:
                 # sys.stderr.write('%s'%in_top)
                 out_top.write(in_top)   
@@ -85,7 +85,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
     for k in range(1, n - 1):
         for mol in range(Nchains):
             # TODO: use with statement for restraint_itp as well
-            restraint_itp = open('dihre_%d_chain_%d.itp'%(k,mol),'w')
+            restraint_itp = open('res_%d_chain_%d.itp'%(k,mol),'w')
             if Nchains > 1:
                 with open(includes[mol]) as moltop_f:
                     moltop = moltop_f.read()
@@ -104,8 +104,8 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                     with open(top,'r') as in_itp_f:
                         in_itp = in_itp_f.read().split('; Include Position restraint file')
                         out_top.write(in_itp[0])
-                        out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
-                        #out_top.write('#include "dihre_%d_chain_%d.itp"\n'%(k,mol))
+                        out_top.write('#include "res_%d_chain_%d.itp"\n'%(k,mol))
+                        #out_top.write('#include "res_%d_chain_%d.itp"\n'%(k,mol))
                         out_top.write(in_itp[1])
 
             # Create a lookup-table for the protein topology that maps residue to dihedrally relevant

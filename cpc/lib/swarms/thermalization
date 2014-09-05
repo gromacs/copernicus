@@ -113,14 +113,13 @@ def run(inp, out):
         in_confs = inp.getInput('path')
         for i in range(len(in_confs)):
 
-            # If there are .itp's, some of them will have dihedral restraints with place-holder
+            # If there are .itp's, some of them will have restraints (dihedral or posres) with place-holder
             # force constants (KFAC) which we now need to search/replace into a new set of files
-            # with the kfac we want in this stage (this is due to the now-removed global dihre_fc
-            # multiplier from the .mdp which was there before and could have been used for this..)
+            # with the kfac we want in this stage
 
             inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
             if inc_array is not None:
-                kfac = inp.getInput('dihforce')
+                kfac = inp.getInput('restrforce')
                 if kfac is None:
                     kfac = 100.0
                 for j in range(len(inc_array)):
@@ -128,7 +127,7 @@ def run(inp, out):
                     # Since we don't rewrite the .top file which includes these files, we have
                     # to generate exactly the same output filenames here. TODO: split this from
                     # the in_itpfn to make sure there can be no mixups due to ordering.
-                    out_itpfn = 'dihre_%d_chain_%d.itp' % (i + 1, j)
+                    out_itpfn = 'res_%d_chain_%d.itp' % (i + 1, j)
                     # Do the search/replace
                     with open(in_itpfn, 'r') as in_itpf:
                         with open(out_itpfn, 'w') as out_itpf:
@@ -141,6 +140,8 @@ def run(inp, out):
             # Setup the topology and configuration parts of the subnet path point
             out.setSubOut('path[%d].conf' % i, FileValue(inp.getInput('path[%d].conf' % i)))
             out.setSubOut('path[%d].top' % i, FileValue(inp.getInput('path[%d].top' % i)))
+            # The position restraint coordinates, if posres mode (will be None otherwise)
+            out.setSubOut('path[%d].resconf' % i, FileValue(inp.getInput('path[%d].resconf' % i)))
 
             # Split the input path element and connect input configuration, topology and topology-include to 
             # grompp/mdruns (separate for each swarm point)
@@ -149,6 +150,7 @@ def run(inp, out):
             out.addConnection('self:sub_out.path[%d].conf' % i, 'runs:in.conf[%d]' % i)
             out.addConnection('self:sub_out.path[%d].top' % i, 'runs:in.top[%d]' % i)
             out.addConnection('self:sub_out.path[%d].include' % i, 'runs:in.include[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].resconf' % i, 'runs:in.resconf[%d]' % i)
 
             # Not used now, when we have to do the include manipulation above using the subnet
             #out.addConnection('self:ext_in.path[%d].conf'%i,'runs:in.conf[%d]'%i)
@@ -156,15 +158,16 @@ def run(inp, out):
             #out.addConnection('self:ext_in.path[%d].include'%i,'runs:in.include[%d]'%i)
 
             # The output configuration goes to the proper entry in the output array
-            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.path[%d].conf'%i)
+            out.addConnection('runs:out.conf[%d]' % i, 'self:ext_out.path[%d].conf' % i)
             # TODO: we can probably remove the confs array as that is redundant (why was it there?)
-            out.addConnection('runs:out.conf[%d]'%i, 'self:ext_out.confs[%d]'%i)
-            # The topologies are bypassed from the input to the output
+            out.addConnection('runs:out.conf[%d]' % i, 'self:ext_out.confs[%d]' % i)
+            # All other parts of the swarmpoint are bypassed from the input to the output
             # It is important that these are immediately propagated here on the first run of the function,
             # since the path[] array elements have to be created, otherwise the "complete" flag which is set for
             # path in the _import.xml definition will not halt the pipeline until we have all the path[].conf's.
-            out.addConnection('self:ext_in.path[%d].top'%i,'self:ext_out.path[%d].top'%i)
-            out.addConnection('self:ext_in.path[%d].include'%i,'self:ext_out.path[%d].include'%i)
+            out.addConnection('self:ext_in.path[%d].top' % i,'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i,'self:ext_out.path[%d].include' % i)
+            out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
 
         # mark that we created the mdruns fn and connections
         mdruns = 1

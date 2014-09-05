@@ -65,7 +65,7 @@ def read_dihres_flat(dihfn):
 
 # Read the dihedral restraint sections from .itp files (one per chain) and return the angles in
 # a format similar to the readxvg above
-# dihfn_base is "../dihre_15_chain_" or similar, and will be extended with 0.xvg, 1.xvg etc
+# dihfn_base is "../res_15_chain_" or similar, and will be extended with 0.xvg, 1.xvg etc
 
 def read_dihres(dihfn_base, rsel, Nchains):
 

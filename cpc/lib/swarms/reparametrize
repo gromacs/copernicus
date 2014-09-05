@@ -44,67 +44,107 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 def rep(inp, out):
-    diheds=inp.getInput('dihedrals')
-    ndx_file=inp.getInput('res_index')
-    start_conf=inp.getInput('start_conf')
-    start_xvg=inp.getInput('start_xvg')
-    end_conf=inp.getInput('end_conf')
-    end_xvg=inp.getInput('end_xvg')
-    Nswarms=inp.getInput('Nswarms')
-    Ninterpolants=inp.getInput('Ninterpolants')
-    Nchains=inp.getInput('Nchains')
-    # create a python object from the xvg_array_array
-    dihedrals=[]
-    for i in range(len(diheds)):
-        dih_i=[]
-        xvgs=inp.getInput('dihedrals[%d]'%i)
-        for j in range(len(xvgs)):
-            xvg=inp.getInput('dihedrals[%d][%d]'%(i,j))
-            if xvg is not None:
-                dih_i.append(inp.getInput('dihedrals[%d][%d]'%(i,j)))
-            else:
-                sys.stderr.write('Swarm trajectory %d %d failed\n'%(i,j))
-                sys.stderr.write('The xvg is: %s %s\n'%(xvg,FileValue(xvg)))
-        dihedrals.append(dih_i)
-    # call the external python script
-    top=inp.getInput('path[0].top')
-    includes=[]
-    path=inp.getInput('path')
-    for i in range(len(path)):
-        inc_array=inp.getInput('path[%d].include'%i)
-        if inc_array is not None:
-            subincludes=[]
-            for j in range(len(inc_array)):
-                inc_ij=inp.getInput('path[%d].include[%d]'%(i,j))
-                subincludes.append(inc_ij)
-            includes+=[subincludes]
-    # TODO get previous path points and measure distance of displacment 
-    reparametrize.reparametrize(dihedrals, ndx_file, start_conf, start_xvg, end_conf, end_xvg, top, includes)
-    conf_path=inp.getInput('path')
-    confs=inp.getInput('restrained_confs')
-    for i in range(len(conf_path)):
-        top=FileValue(inp.getInput('path[%d].top'%i))
-        out.setOut('path[%d].top'%i,top)
-        conf=FileValue(inp.getInput('restrained_confs[%d]'%i))
-        out.setOut('path[%d].conf'%i,conf)
-        # connect the reparametrized includes
-        for j in range(Nchains):
-            include=os.path.join(inp.getOutputDir(),'dihre_%d_chain_%d.itp'%(i+1,j))
-            out.setOut('path[%d].include[%d]'%(i,j),FileValue(include))
-        # connect any additional include files
-        if len(includes[0])>Nchains:
-            for j in range(Nchains,len(includes[0])):
-                include=inp.getInput('path[%d].include[%d]'%(i,j))
-                out.setOut('path[%d].include[%d]'%(i,j),FileValue(include))
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    # Run once
+    repa = pers.get('repa')
 
+    if repa is not None and repa > 0:
+        return
+
+    ndx_file = inp.getInput('cv_index')
+    start_conf = inp.getInput('start_conf')
+    start_xvg = inp.getInput('start_xvg')
+    end_conf = inp.getInput('end_conf')
+    end_xvg = inp.getInput('end_xvg')
+    Nswarms = inp.getInput('Nswarms')
+    Ninterpolants = inp.getInput('Ninterpolants')
+    Nchains = inp.getInput('Nchains')
+
+    # Figure out if we are going to use position or dihedral restraints for the swarm controls
+    if inp.getInput('use_posres') is not None and inp.getInput('use_posres') > 0:
+        use_posres = 1
+    else:
+        use_posres = 0
+
+    # Create a python object from the cv_array_array in cvs
+    cv_array = []
+    cvs = inp.getInput('cvs')
+    for i in range(len(cvs)):   # for each point i
+        cv_i = []
+        cvs_point = inp.getInput('cvs[%d]' % i)  # one point in the string
+        for j in range(len(cvs_point)):  # for each swarm-member j
+            cv = inp.getInput('cvs[%d][%d]' % (i, j))  # one swarm result in one point
+            if cv is not None:
+                cv_i.append(cv)
+            else:
+                sys.stderr.write('Swarm trajectory %d %d failed CV pre-processing\n' % (i, j))
+                # sys.stderr.write('The file is: %s %s\n' % (cv, FileValue(cv)))  <-- pointless if cv is None!
+        cv_array.append(cv_i)
+
+    top = inp.getInput('path[0].top')
+    includes = []
+    path = inp.getInput('path')
+    last_resconfs = []  # build the python list of the incoming CV coordinate files (update for the posres case)
+    for i in range(len(path)):  # for each path point i
+        last_resconfs += [ inp.getInput('path[%d].resconf' % i) ] # can be None, for the dihedral case
+        inc_array = inp.getInput('path[%d].include' % i)
+        if inc_array is not None:
+            subincludes = []
+            for j in range(len(inc_array)):
+                inc_ij = inp.getInput('path[%d].include[%d]' % (i, j))
+                subincludes.append(inc_ij)
+            includes += [ subincludes ]
+
+    # call the external python script
+    # TODO get previous path points and measure distance of displacement 
+    reparametrize.reparametrize(use_posres, cv_array, ndx_file, Nchains, 
+                                start_conf, start_xvg, end_conf, end_xvg, last_resconfs, 
+                                top, includes)
+
+    confs = inp.getInput('restrained_confs') # Note: these are not the restraint confs. these are outputs from equilibration...
+    # TODO: for the position res string, we should still pass along the restrained_confs to the next iteration, but
+    # instead of replacing the res_chain.itp files, we should pass them along unaltered but replace the path[].resconf's
+    # instead with the new coordinates written by the reparametrizer above.
+    for i in range(len(path)):
+        top = FileValue(inp.getInput('path[%d].top' % i))
+        out.setOut('path[%d].top' % i, top)
+        conf = FileValue(inp.getInput('restrained_confs[%d]' % i))
+        out.setOut('path[%d].conf' % i, conf)
+        # Connect the includes, which are either newly reparametrized dihedrals or just force constants (in the posres case)
+        if use_posres == 1:
+            # Position CVs
+            # Copy the in path[].include to the out path
+            inc_array = inp.getInput('path[%d].include' % i)
+            if inc_array is not None:
+                for j in range(len(inc_array)):
+                    inc_ij = inp.getInput('path[%d].include[%d]' % (i, j))
+                    out.setOut('path[%d].include[%d]' % (i, j), FileValue(inc_ij))
+            # For the position restraints we also have to replace the output path[].resconf with the reparametrized atom positions
+            resconf = os.path.join(inp.getOutputDir(), 'rep_resconf_%d.gro' % (i + 1))   # 0 is the starting conf, which is not part of the reparam
+            out.setOut('path[%d].resconf' % i, FileValue(resconf))
+        else:
+            # Dihedral CVs, replace the first Nchains number of itp files with the reparametrized angles, then copy the rest
+            for j in range(Nchains):
+                include = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i + 1, j))
+                out.setOut('path[%d].include[%d]' % (i, j), FileValue(include))
+            # Copy any additional include files
+            if len(includes[0]) > Nchains:
+                for j in range(Nchains, len(includes[0])):
+                    include = inp.getInput('path[%d].include[%d]' % (i, j))
+                    out.setOut('path[%d].include[%d]' % (i, j), FileValue(include))
+
+    repa = 1
+    repa = pers.set('repa', repa)
+    pers.write()
 
 # read the input data
-inf=StringIO()
+inf = StringIO()
 inf.write(sys.stdin.read())
 inf.seek(0)
 sys.stderr.write("\n-----> Starting\n")
 inf.seek(0)
-inp=cpc.dataflow.readInput(inf)
+inp = cpc.dataflow.readInput(inf)
 
 if inp.testing():
     # TODO: make it possible for sub-functions to be checked now.
