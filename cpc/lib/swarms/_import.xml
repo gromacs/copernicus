@@ -39,6 +39,9 @@
             <desc>The protein topology include file with dihedral restraints 
                   for this point in the path</desc>
         </field>
+        <field type="file" id="resconf" opt="true">
+            <desc>The position-restrained configuration at this point in the path, if posres mode is used</desc>
+        </field>
         <!--<field type="z_point">
             <desc>The point in z-space being represented</desc>
         </field>-->
@@ -63,55 +66,50 @@
     <type id="trr_array" base="array" member-type="file">
         <desc>An array of trajectory files</desc>
     </type>
-    <type id="xvg_array" base="array" member-type="file">
-        <desc>An array of xvg (xmgrace) files</desc>
+    <type id="cv_array" base="array" member-type="file">
+        <desc>An array of either xvg (xmgrace) or gro files, used for CV reporting</desc>
     </type>
-    <type id="xvg_path_array" base="array" member-type="xvg_array">
-        <desc>An array of arrays of xvg (xmgrace) files</desc>
+    <type id="cv_path_array" base="array" member-type="cv_array">
+        <desc>An array of the cv_arrays</desc>
     </type>
 
     <!-- functions -->
 
-    <function id="dihedral_swarm" type="external">
-        <desc>Sets up a swarm-based string method simulation with a set of 
-              dihedrals as the tracking (z-)space of the path</desc>
+    <function id="swarm_string" type="external">
+        <desc>Sets up a swarm-based string method simulation</desc>
         <inputs>
+            <field type="int" id="use_posres" opt="true">
+                <desc>Set to 1 to use position restraints instead of dihedral restraints</desc>
+            </field>
             <field type="grompp_input" id="minim_grompp">
-                <desc>A full set of input values for grompp 
-                      for the minimization with dihedral restraints.
-                </desc>
+                <desc>Minimization grompp parameters</desc>
             </field>
             <field type="int" id="minim_doubleprec" opt="true">
-                <desc>Set to 1 to use double-precision during minimization (needed for some cases). </desc>
+                <desc>Set to 1 to use double-precision during minimization (needed for some cases)</desc>
             </field>
              <field type="float" id="em_tolerance">
-                <desc>The number of steps of minimization to perform.</desc>
+                <desc>Max residual energy allowed for the energy-minimization</desc>
             </field>
-             <field type="float" id="minim_dihforce" opt="true">
-                <desc>Force constant to use for minimization dihedral restraints</desc>
+             <field type="float" id="minim_restrforce" opt="true">
+                <desc>Force constant to use for minimization restraints</desc>
             </field>
-             <field type="float" id="therm_dihforce" opt="true">
-                <desc>Force constant to use for thermalization dihedral restraints</desc>
+             <field type="float" id="therm_restrforce" opt="true">
+                <desc>Force constant to use for thermalization restraints</desc>
             </field>
-             <field type="float" id="equil_dihforce" opt="true">
-                <desc>Force constant to use for equilibration dihedral restraints</desc>
+             <field type="float" id="equil_restrforce" opt="true">
+                <desc>Force constant to use for equilibration restraints</desc>
             </field>
             <field type="file" id="top">
-                <desc>The topology include file describing the protein to be
-                      sampled</desc> 
+                <desc>The top-level topology describing the system</desc> 
             </field>
             <field type="file" id="tpr">
-                <desc>A tpr file for g_rama runs</desc>
+                <desc>A tpr file for g_rama, trjconv and other structure ops. Also describes the protein canonical conformation for fitting.</desc>
             </field>
             <field type="grompp_input" id="therm_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                </desc>
+                <desc>Thermalization grompp parameters</desc>
             </field>
             <field type="grompp_input" id="equi_grompp">
-                <desc>A full set of input values for grompp (except 
-                      configuration).
-                </desc>
+                <desc>Equilibration grompp parameters</desc>
             </field>
             <!--<field type="file" id="restraint_top">
                 <desc>The topology include file describing the protein to be
@@ -123,22 +121,29 @@
             <field type="file" id="end_conf">
                 <desc>The end configuration of the path.</desc>
             </field>
-             <field type="file" id="start_xvg">
+             <field type="file" id="start_xvg" opt="true">
                 <desc>The start configuration dihedrals of the path, from g_rama</desc>
             </field>
-            <field type="file" id="end_xvg">
+            <field type="file" id="end_xvg" opt="true">
                 <desc>The end configuration dihedrals of the path, from g_rama</desc>
             </field>
             <field type="conf_array" id="initial_confs" opt="true">
               <desc>Initial configurations for the entire string. If not given, the string is 
-                    interpolated linearly in dihedral space from the start and end confs.
+                    interpolated linearly in dihedral or position space from the start and end confs.
                     The length of this array has to match Ninterpolants and should include the
                     start and end conf.
               </desc>
             </field>
-            <field type="file" id="res_index">
-                <desc>The index file with one group that determines the phi/psi 
-                      dihedrals to use for the z space. </desc>
+            <field type="file" id="cv_index">
+                <desc>The index file with exactly one group that determines the atoms to use for either position
+                restraints or the phi/psi dihedrals to use as collective variables</desc>
+            </field>
+            <field type="conf_array" id="initial_resconfs" opt="true">
+              <desc>Initial restraint-configurations for the string, except start and end. These are used to continue
+              a set of iterations from another swarm simulation, whose last iteration's swarm step generated a new
+              set of restraints (in resconf) which should be input on the starting iteration of the new simulation.
+              Only used for the position restraint strings.
+              </desc>
             </field>
             <field type="int" id="Ninterpolants">
                 <desc>The number of steps of interpolation between the initial
@@ -150,14 +155,14 @@
                 </desc>
             </field>
             <field type="int" id="swarm_steps">
-                <desc>The number of steps to run in a free simulation for the 
+                <desc>The number of steps to run in the free simulation for the 
                       swarm runs.</desc>
             </field>
             <field type="int" id="Nswarms">
-                <desc>The number of swarm simulations to run.</desc>
+                <desc>The number of simulations in a swarm.</desc>
             </field>
             <field type="int" id="Niterations">  <!-- opt true was here, but is not working without anyway right now -->
-                <desc>The number of swarm simulations to run.</desc>
+                <desc>The number of swarm iterations.</desc>
             </field>
             <field type="int" id="Nchains" opt="true">
                 <desc>The number of chains of the protein.</desc>
@@ -167,7 +172,7 @@
             </field>
             <field type="float" id="convergence_distance" opt="true">
                 <desc>Desired maximum displacement in dihedrals between
-                      iterations.</desc>
+                      iterations. Not implemented yet.</desc>
             </field>
         </inputs>
         <outputs>
@@ -181,7 +186,7 @@
         </outputs>
         <subnet-outputs>
             <field type="conf_path" id="path">
-                <desc>The initial path to start with, dihedrally interpolated or explicitly given</desc>
+                <desc>The initial path to start with, interpolated or explicitly given</desc>
             </field>
             <field type="conf_path_array" id="paths">
             </field>
@@ -198,8 +203,7 @@
     </function>
 
     <function id="run_minimization" type="external">
-        <desc>Minimize the interpolated structures for restrained simulations.
-        </desc>
+        <desc>Minimize the system into the new restraints.</desc>
         <inputs>
             <field type="grompp_input" id="grompp">
                 <desc>Minimization mdp file</desc>
@@ -213,8 +217,8 @@
             <field type="float" id="em_tolerance">
                 <desc>The minimization tolerance to use.</desc>
             </field>
-             <field type="float" id="dihforce" opt="true">
-                <desc>Force constant to use for the dihedral restraints</desc>
+             <field type="float" id="restrforce" opt="true">
+                <desc>Force constant to use for the restraints</desc>
             </field>
             <field type="int" id="double" opt="true">
                 <desc>Set to 1 to use double-precision minimization</desc>
@@ -234,7 +238,7 @@
             <field type="gromacs::top_array" id="tops" />
             <field type="gromacs::grompp_include_array_array" id="includes" />
             <field type="conf_path" id="path">
-                <desc>Conf path for the minimization runs which includes the correct dihre force constant</desc>
+                <desc>Conf path for the minimization runs which includes the correct restraint force constant</desc>
             </field>
         </subnet-outputs>    
         <controller log="true" executable="run_minimization" 
@@ -242,14 +246,14 @@
     </function>
 
     <function id="thermalization" type="external">
-        <desc>Simulations generating conformations for swarm trajectories.
+        <desc>Thermalize the minimized system from 0 to the desired temperature, using restraints.
         </desc>
         <inputs>
             <field type="grompp_input" id="grompp">
                 <desc>Restrained run mdp file</desc>
             </field>
-             <field type="float" id="dihforce" opt="true">
-                <desc>Force constant to use for the dihedral restraints</desc>
+             <field type="float" id="restrforce" opt="true">
+                <desc>Force constant to use for the restraints</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
@@ -271,7 +275,7 @@
             <field type="gromacs::top_array" id="tops" />
             <field type="gromacs::mdp_array" id="restrained_settings" />
             <field type="conf_path" id="path">
-                <desc>Conf path for the thermalization runs which includes the correct dihre force constant</desc>
+                <desc>Conf path for the thermalization runs which includes the correct restraint force constant</desc>
             </field>
         </subnet-outputs>  
         <controller log="true" executable="thermalization" 
@@ -279,14 +283,14 @@
     </function>
 
     <function id="run_restrained" type="external">
-        <desc>Simulations generating conformations for swarm trajectories.
+        <desc>Equilibration of the thermalized system, using restraints.
         </desc>
         <inputs>
             <field type="grompp_input" id="grompp">
                 <desc>Restrained run mdp file</desc>
             </field>
-             <field type="float" id="dihforce" opt="true">
-                <desc>Force constant to use for the dihedral restraints</desc>
+             <field type="float" id="restrforce" opt="true">
+                <desc>Force constant to use for the restraints</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
@@ -322,7 +326,7 @@
             <field type="gromacs::mdp_array" id="restrained_settings" />
             <field type="gromacs::trr_array" id="trrs" />
             <field type="conf_path" id="path">
-                <desc>Conf path for the equilibration run which includes the correct dihre force constant</desc>
+                <desc>Conf path for the equilibration run which includes the correct restraint force constant</desc>
             </field>
         </subnet-outputs>  
         <controller log="true" executable="run_restrained" 
@@ -330,10 +334,10 @@
     </function>
 
     <function id="prep_swarms" type="external">
-        <desc>Generate inputs for swarm trajectories.</desc>
+        <desc>Generate starting points for the swarm simulations from the equilibration trajectories</desc>
         <inputs>
             <field type="trr_array" id="trrs" complete="true">
-                    <desc>Output of the restrained simulations.</desc>
+                    <desc>Output of the restrained equilibration simulations.</desc>
             </field>
             <field type="file" id="tpr">
                     <desc>The tpr file for trjconv</desc>
@@ -368,7 +372,15 @@
                     <desc>Initial swarm confs.</desc>
             </field>
             <field type="int" id="swarm_steps">
-                    <desc>Number of steps to run of unbiased simulation.</desc>
+                <desc>The number of steps for the unrestrained swarm simulation</desc>
+            </field>
+            <field type="int" id="Ninterpolants">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
+            </field>
+            <field type="int" id="Nswarms">
+                <desc>The number of steps of interpolation between the initial
+                      and target conformations.</desc>
             </field>
             <field type="gromacs::grompp_include_array" id="include" opt="true">
                 <desc>.itp files describing a multi-chain protien.</desc>
@@ -382,16 +394,12 @@
             </field>-->
             <!-- TODO: does complete make sense on output values at all? Removed to test. -->
             <field type="conf_array_array" id="swarms" >
-                <desc>The structures from unrestrained simulations</desc>
+                <desc>The structures from the unrestrained swarm simulations</desc>
             </field>
         </outputs>
         <subnet-inputs>
-            <field type="conf_array" id="swarms_out">
-                <desc>The structures from unrestrained simulations</desc>
-            </field>
-            <field type="xvg_path_array" id="xvgs">
-                    <desc>Output phi/psi angles of unrestrained simulations.
-                    </desc>
+            <field type="conf_array_array" id="out_swarms">
+                <desc>The structures from the unrestrained swarm simulations</desc>
             </field>
         </subnet-inputs>
         <subnet-outputs>
@@ -405,22 +413,26 @@
                     persistent_dir="true" />
     </function>
 
-    <function id="get_dihedrals" type="external">
-        <desc>Call g_rama to get the dihedral angles of the swarm confs</desc>
+    <function id="get_cvs" type="external">
+        <desc>Preprocess the swarm results into a form which reparametrize can use to extract collective variables from</desc>
         <inputs>
+            <field type="int" id="use_posres" opt="true">
+                <desc>Set to 1 to use position restraints instead of dihedral restraints</desc>
+            </field>
             <field type="conf_array_array" id="confs" complete="true">
-                <desc>Input confs</desc>
+                <desc>Input confs, a number of swarm confs for each string point</desc>
             </field>
             <field type="file" id="tpr">
+                <desc>A structure file to use for g_rama or trjconv fitting</desc>
             </field>
         </inputs>
         <outputs>
-            <field type="xvg_path_array" id="xvgs">
+            <field type="cv_path_array" id="cvs">
             </field>
         </outputs>
         <subnet-inputs>
         </subnet-inputs>
-        <controller log="true" executable="get_dihedrals" 
+        <controller log="true" executable="get_cvs" 
                     persistent_dir="true" />
     </function>
    
@@ -430,10 +442,12 @@
                 restraint values for the next iteration.
         </desc>
         <inputs>
+            <field type="int" id="use_posres" opt="true">
+                <desc>Set to 1 to use position restraints instead of dihedral restraints</desc>
+            </field>
           <!-- It is enough that this is complete-flagged, as it has to be complete for the others to be -->
-            <field type="xvg_path_array" id="dihedrals" complete="true">
-                <desc>The swarm trajectory output, sent to
-                        g_rama to get points in z-space.</desc>
+            <field type="cv_path_array" id="cvs" complete="true">
+                <desc>The get_cvs processed CV base files, either dihedrals or atom positions</desc>
             </field>
             <field type="int" id="Nswarms">
                 <desc>To check for a full populated array</desc>
@@ -456,16 +470,15 @@
             <field type="file" id="end_conf">
                 <desc>The end conformation (state B)</desc>
             </field>
-            <field type="file" id="start_xvg">
+            <field type="file" id="start_xvg" opt="true">
                 <desc>The start conformation (state A)</desc>
             </field>
-            <field type="file" id="end_xvg">
+            <field type="file" id="end_xvg" opt="true">
                 <desc>The end conformation (state B)</desc>
             </field>
-
-            <field type="file" id="res_index">
-                <desc>The index file with a single group that determines the phi/psi 
-                        dihedrals to use for the z space. </desc>
+            <field type="file" id="cv_index">
+                <desc>The index file with exactly one group that determines the atoms to use for either position
+                restraints or the phi/psi dihedrals to use as collective variables</desc>
             </field>
         </inputs>
         <outputs>
@@ -480,19 +493,22 @@
     </function>
 
 
-    <function id="dihedral_swarm_iteration" type="network">
+    <function id="swarm_iteration" type="network">
         <desc>A single iteration of the swarm-based string method</desc>
         <inputs>
+            <field type="int" id="use_posres" opt="true">
+                <desc>Type of CVs. Set to 1 to use position restraints, otherwise dihedral restraints</desc>
+            </field>
             <field type="file" id="start_conf">
                 <desc>The start conformation (state A)</desc>
             </field>
-            <field type="file" id="start_xvg">
+            <field type="file" id="start_xvg" opt="true">
                 <desc>The start point (state A)</desc>
             </field>
             <field type="file" id="end_conf">
                 <desc>The end conformation (state B)</desc>
             </field>
-            <field type="file" id="end_xvg">
+            <field type="file" id="end_xvg" opt="true">
                 <desc>The end point in z-space (state B)</desc>
             </field>
             <field type="file" id="top">
@@ -507,8 +523,8 @@
             <field type="grompp_input" id="equi_grompp">
                 <desc>Restrained equilibration mdp settings</desc>
             </field>
-            <field type="file" id="resindex">
-                <desc>Dihedral selection.</desc>
+            <field type="file" id="cv_index">
+                <desc>Index file of the atoms to be used for the position or dihedral collective variables and restraints</desc>
             </field>
             <field type="conf_path" id="path" complete="true">
                 <desc>A full set of structures along the path so far.</desc>
@@ -519,13 +535,13 @@
             <field type="int" id="minim_doubleprec" opt="true">
                 <desc>Set to 1 to use double-precision minimization</desc>
             </field>
-             <field type="float" id="minim_dihforce" opt="true">
+             <field type="float" id="minim_restrforce" opt="true">
                 <desc>Force constant to use for minimization dihedral restraints</desc>
             </field>
-             <field type="float" id="therm_dihforce" opt="true">
+             <field type="float" id="therm_restrforce" opt="true">
                 <desc>Force constant to use for thermalization dihedral restraints</desc>
             </field>
-             <field type="float" id="equil_dihforce" opt="true">
+             <field type="float" id="equil_restrforce" opt="true">
                 <desc>Force constant to use for equilibration dihedral restraints</desc>
             </field>
             <field type="int" id="restrained_steps">
@@ -570,7 +586,7 @@
             <instance id="equilibration" function="run_restrained"/>
             <instance id="prep_swarms" function="prep_swarms"/>
             <instance id="swarms" function="run_swarms"/>
-            <instance id="get_dihedrals" function="get_dihedrals"/>
+            <instance id="get_cvs" function="get_cvs"/>
             <instance id="reparametrize" function="reparametrize"/>
 
             <!-- connections from the input to minimization -->
@@ -580,8 +596,8 @@
                         dest="minimization:in.em_tolerance"/>
             <connection src="self:ext_in.minim_doubleprec"
                         dest="minimization:in.double"/>
-            <connection src="self:ext_in.minim_dihforce"
-                        dest="minimization:in.dihforce"/>
+            <connection src="self:ext_in.minim_restrforce"
+                        dest="minimization:in.restrforce"/>
             <connection src="self:ext_in.path"
                         dest="minimization:in.path"/>
             <connection src="self:ext_in.resources"
@@ -592,8 +608,8 @@
                         dest="thermalization:in.path"/>
             <connection src="self:ext_in.therm_grompp"
                         dest="thermalization:in.grompp"/>
-            <connection src="self:ext_in.therm_dihforce"
-                        dest="thermalization:in.dihforce"/>
+            <connection src="self:ext_in.therm_restrforce"
+                        dest="thermalization:in.restrforce"/>
             <connection src="self:ext_in.resources"
                         dest="thermalization:in.resources"/>
 
@@ -606,8 +622,8 @@
                         dest="equilibration:in.confs"/>
             <connection src="self:ext_in.equi_grompp"
                         dest="equilibration:in.grompp"/>
-            <connection src="self:ext_in.equil_dihforce"
-                        dest="equilibration:in.dihforce"/>
+            <connection src="self:ext_in.equil_restrforce"
+                        dest="equilibration:in.restrforce"/>
             <connection src="self:ext_in.Nswarms"
                         dest="equilibration:in.Nswarms"/>
             <connection src="equilibration:out.confs"
@@ -641,19 +657,23 @@
             <connection src="self:ext_in.include"
                         dest="swarms:in.include"/>
             
-            <!-- connect run_swarms to get_dihedrals-->
+            <!-- connect run_swarms to get_cvs -->
             <connection src="self:ext_in.tpr"
-                        dest="get_dihedrals:in.tpr"/>
+                        dest="get_cvs:in.tpr"/>
             <connection src="swarms:out.swarms"
-                        dest="get_dihedrals:in.confs"/>
+                        dest="get_cvs:in.confs"/>
+            <connection src="self:ext_in.use_posres"
+                        dest="get_cvs:in.use_posres"/>
 
-            <!-- connect get_dihedrals to reparametrize-->
-            <connection src="get_dihedrals:out.xvgs"
-                        dest="reparametrize:in.dihedrals"/>
+            <!-- connect get_cvs to reparametrize-->
+            <connection src="self:ext_in.use_posres"
+                        dest="reparametrize:in.use_posres"/>
+            <connection src="get_cvs:out.cvs"
+                        dest="reparametrize:in.cvs"/>
             <!--<connection src="self:ext_in.restraint_top"
                         dest="reparametrize:in.restraint_top"/>-->
-            <connection src="self:ext_in.resindex"
-                        dest="reparametrize:in.res_index"/>
+            <connection src="self:ext_in.cv_index"
+                        dest="reparametrize:in.cv_index"/>
             <connection src="self:ext_in.start_conf"
                         dest="reparametrize:in.start_conf"/>
             <connection src="self:ext_in.start_xvg"
