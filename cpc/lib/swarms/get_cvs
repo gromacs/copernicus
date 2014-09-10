@@ -1,0 +1,177 @@
+#!/usr/bin/env python
+#
+# Get Collective Variables
+# 
+# Take the resulting confs (.gro's) from the swarm iteration step (number of swarms * number of string points)
+# and pre-process into a form that the reparametrize step can use.
+#
+# For dihedral swarms, this amounts to using the Gromacs tool g_rama to extract the phi/psi dihedrals from the
+# .gro's into .xvg's.
+#
+# For position-restraint swarms, we use trjconv to fit the possibly drifted swarm results into the reference structure
+# in the top-level provided tpr, and output only the Protein data into new .gro's which reparametrize can read directly.
+# Note that the total protein-drift from the swarm step is probably very marginal, but the specified initial and end
+# structures are supposed to stay locked. 
+# Can this pose a problem if the energy gradient DOES in fact want to shift/rotate the protein as a whole? I guess this
+# can't be a part of the string optimization since it would mean bad equilibration of the protein membrane embedding
+# or similar.
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, Bjorn Wesen and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import subprocess
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+def run(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+
+    # TODO: make sure this works with installs with only g_rama_mpi 
+
+    # Run once
+    getcvs = pers.get('getcvs')
+
+    if getcvs is None or getcvs < 1:
+
+        # Figure out if we are going to use position or dihedral restraints for the swarm controls
+        if inp.getInput('use_posres') is not None and inp.getInput('use_posres') > 0:
+            use_posres = 1
+        else:
+            use_posres = 0
+
+        # The confs[] input array is complete-flagged so when we get here, it should be filled in
+
+        confs = inp.getInput('confs')
+        tpr = inp.getInput('tpr')
+
+        if use_posres == 1:
+            # CVs are atom positions, use trjconv fitting to fit the protein and output the Protein atom coordinates
+            # Start all trjconv's in parallel
+            trjprocs = []
+            FNULL = open(os.devnull, 'w') # sink for output spam
+            for i in range(len(confs)):
+                subconfs = inp.getInput('confs[%d]' % i)
+                for j in range(len(subconfs)):
+                    conf = inp.getInput('confs[%d][%d]' % (i, j))
+                    # Can't use pbc cluster or mol even with rot+trans fitting, but should not be necessary if the 
+                    # reference tpr is centered and whole, and we have supershort swarmruns
+                    trjprocs.append(subprocess.Popen([
+                                'trjconv', '-f', conf, '-s', tpr, '-o', '0%03d_0%03d.gro' % (i, j), 
+                                '-pbc', 'none', '-fit', 'rot+trans' ], 
+                                          stdin=subprocess.PIPE, stdout=FNULL, stderr=FNULL))  # stdin specified below during communicate
+
+            # Wait for each process to complete, and set the output file correctly
+            q = 0
+            for i in range(len(confs)):
+                subconfs = inp.getInput('confs[%d]' % i)
+                for j in range(len(subconfs)):
+                    # Note: this probably removes the gain of starting the trjconv in parallel, since communicate 
+                    # blocks and wait, but trjconv doesn't start the bulk of its work until it gets the stdin input..
+                    # Rewrite using Thread
+                    # https://docs.python.org/2/library/threading.html#thread-objects
+                    # http://stackoverflow.com/questions/11954021/how-to-run-parallel-programs-in-python
+                    # Note2: additionally, it takes a lot of memory to keep 800 trjconvs alive. If there isn't a huge amount
+                    # of memory on the server, this will swap like crazy probably.
+                    writeStdin = StringIO()
+                    writeStdin.write("Backbone\n")   # structure to use for fit, use the protein backbone
+                    writeStdin.write("Protein\n")       # output selection (Backbone is enough for CA CVs but might want more later)
+                    trjprocs[q].communicate(writeStdin.getvalue())
+                    q += 1
+                    cv_i_j = os.path.join(inp.getOutputDir(), '0%03d_0%03d.gro' % (i, j))
+                    out.setOut('cvs[%d][%d]' % (i, j), FileValue(cv_i_j))
+
+        else:
+            # CVs are dihedral restraints, produce xvg files describing the phi/psi angles for the selected residues
+            # Start all g_rama's in parallel
+            ramaprocs = []
+            FNULL = open(os.devnull, 'w') # sink for output spam
+            for i in range(len(confs)):
+                subconfs = inp.getInput('confs[%d]' % i)
+                for j in range(len(subconfs)):
+                    conf = inp.getInput('confs[%d][%d]' % (i, j))
+                    ramaprocs.append(subprocess.Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '0%03d_0%03d.xvg' % (i, j)], 
+                                                      stdout=FNULL, stderr=FNULL))
+
+            # Wait for each process to complete, and set the output file correctly
+            q = 0
+            for i in range(len(confs)):
+                subconfs = inp.getInput('confs[%d]' % i)
+                for j in range(len(subconfs)):
+                    ramaprocs[q].communicate()
+                    q += 1
+                    cv_i_j = os.path.join(inp.getOutputDir(), '0%03d_0%30d.xvg' % (i, j))
+                    out.setOut('cvs[%d][%d]' % (i, j), FileValue(cv_i_j))
+
+            FNULL.close()
+
+        getcvs = 1
+
+    getcvs = pers.set('getcvs', getcvs)
+
+    pers.write()
+
+# read the input data
+inf = StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp = cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+# prepare the output data
+out = inp.getFunctionOutput()
+
+run(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+
