@@ -76,10 +76,32 @@ def rep_pts(newpts):
             #print('The swarm point %d is: %s'%(i,newpts[i-1]))
             #sys.stderr.write('The reparametrized point %d is: %s\n'%(i,reppt))
             #print('The reparametrized point %d is: %s\n'%(i,reppt))
-    #i=0 
-    #for i in range(len(newpts)-1):
-    #    print dist(adjusted[i],adjusted[i+1])
-    return adjusted
+
+    # Calculate the CV distance between the stringpoints (this is the thing we're trying to equalize
+    # during the reparametrization) and the average distance
+    dists = []
+    avgdist = 0.0
+    # Note: there is a zeroed padding-point appended on the end here, which we shouldn't
+    # consider (TODO: check if this is necessary due to the iterations above or why...)
+    for i in range(len(newpts) - 2):
+            d = dist(adjusted[i], adjusted[i + 1])
+            dists += [ d ]
+            avgdist += d
+            #sys.stderr.write('%d to %d: dist %f\n' % (i, i+1, d))
+    avgdist = avgdist / (len(newpts) - 1)
+
+    # Another pass to check the spread against the average, remember the largest diff
+    # Same note as above, re padding point
+    maxspread = 0.0
+    for i in range(len(newpts) - 2):
+            spread = abs(dists[i] - avgdist)   # L1 
+            if spread > maxspread:
+                    maxspread = spread
+
+    #sys.stderr.write('  => minspread is %f (average dist %f)\n' % (minspread, avgdist))
+
+    # Return the max spread and the adjusted points as elements in a list
+    return [ maxspread, adjusted ]
 
 # start/end_xvg will be None for the posres case
 # last_resconfs[] will be None for dihedrals. It also begins at index 0, corresponding to the path point 1.
@@ -147,19 +169,35 @@ def reparametrize(use_posres, cvs, ndx_file, Nchains, start_conf, start_xvg, end
     newpts.append(paddingpt)
 
     # Do the actual reparameterization
+    # newpts is a 2D list, first level is one per stringpoint, second is the linear list of CVs
+
+    # rep_pts returns the maximum spread of the CV distances between points in [0] and the adjusted
+    # points in [1]
 
     # Initial iteration
-    adjusted = rep_pts(newpts)
+    rep_it1 = rep_pts(newpts)
+    adjusted = rep_it1[1]   # get the points only
 
-    # Keep iterating 100 times, feeding the result of the previous result into rep_pts again
-    # TODO implement a dist_treshold=1.0
-    # Changed to 35 now, with long CV vectors (> 4000 dimensions) 100 iterations takes forever
-    # (at least 45 min for 25 iterations).
-    iters = [adjusted]
-    for i in range(35):
-            sys.stderr.write('Rep iter %d\n' % i)
+    # Keep iterating, feeding the result of the previous result into rep_pts again
+    # Note that with long CV vectors (> 4000 dimensions) iterations takes a long time
+    # (at least 45 min for 25 iterations on a single-core 3.5 GHz)
+    # We can abort early when the maximum spread between points in the updated string goes
+    # below a threshold
+    iters = [ adjusted ]
+    i = 0
+    maxspread = 100.0
+    # Do max 50 iterations even if we don't reach our goal
+    while i < 50 and maxspread > 0.014:
+            sys.stderr.write('Rep iter %d: \n' % i)
             sys.stderr.flush()
-            iters.append(rep_pts(iters[i]))
+            rep_it = rep_pts(iters[i])
+            maxspread = rep_it[0]
+            sys.stderr.write('  maxspread was %f\n' % maxspread)
+            # Remember the adjusted points
+            iters.append(rep_it[1])
+            i = i + 1
+
+    sys.stderr.write('Final maximum spread %f after %d iterations.\n' % (maxspread, i))
 
     # Get the final iteration's result
     adjusted = iters[-1]
