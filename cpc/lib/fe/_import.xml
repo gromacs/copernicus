@@ -211,6 +211,9 @@
                       Default 1. Suggested alternatives: 1.5 or 2.
                 </desc>
             </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
             <field type="int" id="n_blocks_min" opt="true">
                 <desc>Minimum number of blocks for error estimation for BAR.
                       Optional and defaults to 5. Recommended value is 4.
@@ -229,6 +232,19 @@
             </field>
             <field type="lambda_array" id="lambdas_lj" opt="true">
                 <desc>Optional list of lambda values for Lennard-Jones decoupling.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="bool" id="simultaneous_decoupling" opt="true">
+                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                      Default False.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones.
+                      Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
                 </desc>
@@ -259,10 +275,13 @@
         <subnet-inputs>
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
+            <field type="meas_array" id="dG_ljq_array"/>
             <field type="fe_path_array" id="path_q" />
             <field type="fe_path_array" id="path_lj" />
+            <field type="fe_path_array" id="path_ljq" />
             <field type="bool_list" id="done_reoptimization_list_q" />
             <field type="bool_list" id="done_reoptimization_list_lj" />
+            <field type="bool_list" id="done_reoptimization_list_ljq" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
@@ -359,6 +378,9 @@
                       Default 1. Suggested alternatives: 1.5 or 2.
                 </desc>
             </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
             <field type="int" id="n_blocks_min" opt="true">
                 <desc>Minimum number of blocks for error estimation for BAR.
                       Optional and defaults to 5. Recommended value is 4.
@@ -384,6 +406,19 @@
             <field type="int" id="n_repetitions">
                 <desc>The number of times to repeat the solvation free energy
                       calculations.</desc>
+            </field>
+            <field type="bool" id="simultaneous_decoupling" opt="true">
+                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                      Default False.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
             </field>
         </inputs>
         <outputs>
@@ -512,6 +547,9 @@
                       Default 1. Suggested alternatives: 1.5 or 2.
                 </desc>
             </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
             <field type="int" id="n_blocks_min" opt="true">
                 <desc>Minimum number of blocks for error estimation for BAR.
                       Optional and defaults to 5. Recommended value is 4.
@@ -520,6 +558,31 @@
             <field type="int" id="n_blocks_max" opt="true">
                 <desc>Maximum number of blocks for error estimation for BAR.
                       Optional and defaults to 5. Recommended value is 7.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="bool" id="simultaneous_decoupling" opt="true">
+                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                      Default False.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
                 </desc>
             </field>
         </inputs>
@@ -623,6 +686,9 @@
                       will be set to this input.
                 </desc>
             </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="fe_path" id="path">
@@ -697,6 +763,9 @@
                       raise deltaLambda to dl_power.
                       Default 1. Suggested alternatives: 1.5 or 2.
                 </desc>
+            </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
             </field>
             <field type="int" id="n_blocks_min" opt="true">
                 <desc>Minimum number of blocks for error estimation for BAR.
@@ -852,6 +921,9 @@
                       Default 1. Suggested alternatives: 1.5 or 2.
                 </desc>
             </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
             <field type="int" id="n_blocks_min" opt="true">
                 <desc>Minimum number of blocks for error estimation for BAR.
                       Optional and defaults to 5.
@@ -878,8 +950,10 @@
         <subnet-inputs>
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
+            <field type="meas_array" id="dG_ljq_array"/>
             <field type="fe_path_array" id="path_q" />
             <field type="fe_path_array" id="path_lj" />
+            <field type="fe_path_array" id="path_ljq" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>

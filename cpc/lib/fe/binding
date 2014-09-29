@@ -95,6 +95,8 @@ def fe_binding(inp, out):
                           'solv:in.stddev_spacing')
         out.addConnection('self:ext_in.dl_power',
                           'solv:in.dl_power')
+        out.addConnection('self:ext_in.sc_alpha',
+                          'solv:in.sc_alpha')
     pers.set('run_solv', run_solv)
 
     run_bound=pers.get('run_bound')
@@ -119,6 +121,8 @@ def fe_binding(inp, out):
                           'bound:in.stddev_spacing')
         out.addConnection('self:ext_in.dl_power',
                           'bound:in.dl_power')
+        out.addConnection('self:ext_in.sc_alpha',
+                          'bound:in.sc_alpha')
     pers.set('run_bound', run_bound)
 
     boundfValue=inp.getSubnetInputValue('dG_bound')
