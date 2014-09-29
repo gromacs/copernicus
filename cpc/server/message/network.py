@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -130,8 +130,7 @@ class SCConnectionParamUpdate(ServerCommand):
                               "is not a neigbouring node "%newParams[
                                                            'serverId'],
                                                            status="ERROR")
-            log.error("Failed updating connection params for %s"%newParams
-            .serverId)
+            log.error("Failed updating connection params for %s"%newParams['serverId'])
 
 
 class ScAddNode(ServerCommand):
@@ -172,7 +171,7 @@ class ScAddNode(ServerCommand):
             response.add(errorMessage, status="ERROR")
             log.info(errorMessage)
 
-        
+
 
 class ScAddNodeRequest(ServerCommand):
     """ Receives a connnection request from a server """
@@ -356,11 +355,11 @@ class ScAddNodeAccepted(ServerCommand):
             openssl.addCa(node.key)
             sentConnectRequests.removeNode(node.getId())
             conf.set('sent_node_connect_requests', sentConnectRequests)
-            # need to send back a status in the data notifying ok 
+            # need to send back a status in the data notifying ok
             response.add('Connection to node %s established'%node.toString())
 
             log.info("Node connection accepted")
-            #add it to the node list         
+            #add it to the node list
         else:
             response.add('No previous node request sent for host %s' %node
             .toString())
@@ -369,7 +368,7 @@ class ScAddNodeAccepted(ServerCommand):
 
 
 #servers can ask if they are in the nodes list of this server
-# this will be performed in case ScAddNodeAccept message could not send back a message to 
+# this will be performed in case ScAddNodeAccept message could not send back a message to
 #the requesting server due to firewall issues etc
 class ScAddNodeIsAccepted(ServerCommand):
     pass
