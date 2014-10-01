@@ -2,11 +2,11 @@
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -67,9 +67,13 @@ opts = {}
 # workdir is None (to get it from the conf) or a value set with -wd
 workdir=None
 
-# quitMinutes is the number of minutes after which to quit if there is no work 
+# quitMinutes is the number of minutes after which to quit if there is no work
 # (set with -q)
 quitMinutes=None
+
+# sharedWorker is a flag to indicate if the worker shares the machine resources
+# or if the resources are exclusive to the worker (sharedWorker=False)
+sharedWorker=False
 
 debug=False
 # first parse common options
@@ -108,6 +112,9 @@ while len(args)>0:
             quitMinutes=float(minutesString)
         except ValueError:
             sys.stderr.write("'%s' is not a number."%minutesString)
+    elif args[0]=='-sh':
+        option = args.pop(0)
+        sharedWorker = True
     elif args[0]=='-d':
         args.pop(0)
         debug=True
@@ -121,7 +128,7 @@ while len(args)>0:
 
 
 def getArg(argnr, name):
-    try: 
+    try:
         ret=args[argnr]
     except IndexError:
         raise ClientError("Missing argument: %s"%name)
@@ -153,7 +160,7 @@ try:
         restargs=[]
         for i in range(1, len(args)):
             restargs.append(args[i])
-        worker=cpc.worker.Worker(cf, opts, type, restargs, workdir, quitMinutes)
+        worker=cpc.worker.Worker(cf, opts, type, restargs, workdir, quitMinutes, sharedWorker)
         worker.run()
         worker.cleanup()
 except ClientError as e:

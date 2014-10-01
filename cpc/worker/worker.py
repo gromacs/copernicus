@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -80,7 +80,7 @@ def signalHandlerAddWorker(worker):
 class Worker(object):
     """The worker class creates a worker client that contacts a server
        and asks for tasks."""
-    def __init__(self, cf, opts, type, args, workdir, quitMinutes):
+    def __init__(self, cf, opts, type, args, workdir, quitMinutes, sharedWorker=False):
         """Initialize the object as a client, given a configuration.
            cf =  the configuration class
 		   opts = dictionary with options
@@ -94,9 +94,10 @@ class Worker(object):
         self.type=type
         self.args=args
         self.quit=False
+        self.isShared=sharedWorker
         self.id="%s-%d"%(self.conf.getHostName(), os.getpid())
         # the number of seconds after which to quit if there is no work:
-        self.quitSeconds=None 
+        self.quitSeconds=None
         if quitMinutes is not None:
             self.quitSeconds=60*quitMinutes
         log.info("Worker ID: %s."%self.id)
@@ -137,7 +138,7 @@ class Worker(object):
                 absn=""
             else:
                 absn="in the current working directory"
-            log.error("Can't create the directory '%s' %s."% (self.mainDir, 
+            log.error("Can't create the directory '%s' %s."% (self.mainDir,
                                                               absn))
             log.error(
                    "cpc-worker must be able to write in a temporary directory")
@@ -280,7 +281,7 @@ class Worker(object):
             # the amount of time we waited.
             if len(self.workloads) == 0:
                 noWorkSeconds += stopWaitingTime-startWaitingTime
-                if ( ( self.quitSeconds is not None ) and 
+                if ( ( self.quitSeconds is not None ) and
                      ( noWorkSeconds > self.quitSeconds ) ):
                     with self.runCondVar:
                         # signal quit.
