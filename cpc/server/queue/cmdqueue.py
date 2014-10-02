@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -36,7 +36,7 @@ class QueueableItem(object):
 
     def deactivate(self):
         self.active=False
-            
+
     def activate(self):
         self.active=True
         if self.cmdQueue is not None:
@@ -49,13 +49,13 @@ class QueueableItem(object):
 
 
 class CmdQueue(object):
-    PRIO_LOW_BOUND = -12 #Constant
-    PRIO_HIGH_BOUND = 12 #Constant
+    PRIO_LOW_BOUND = -30 #Constant
+    PRIO_HIGH_BOUND = 30 #Constant
 
     def __init__(self):
-        self.data = [] 
-        # this is a list of deques with the highest priority queue first. 
-        self.queue = [ deque() for x in xrange(CmdQueue.PRIO_LOW_BOUND-1, 
+        self.data = []
+        # this is a list of deques with the highest priority queue first.
+        self.queue = [ deque() for x in xrange(CmdQueue.PRIO_LOW_BOUND-1,
                                                CmdQueue.PRIO_HIGH_BOUND)]
         # TODO: finer grained locks. For now we have a single global lock.
         self.lock=Lock()
@@ -76,23 +76,23 @@ class CmdQueue(object):
                                 and minimum priorities).
            returns: a deque. """
         if prio < CmdQueue.PRIO_LOW_BOUND:
-            prio = CmdQueue.PRIO_LOW_BOUND 
+            prio = CmdQueue.PRIO_LOW_BOUND
         if prio > CmdQueue.PRIO_HIGH_BOUND:
             prio = CmdQueue.PRIO_HIGH_BOUND
         # the highest priority queue is first
-        p= (CmdQueue.PRIO_HIGH_BOUND - prio) 
+        p= (CmdQueue.PRIO_HIGH_BOUND - prio)
         return self.queue[p]
 
     def add(self,command):
         """
-            description:  puts a command in the queue  
+            description:  puts a command in the queue
             required: Command:command
-            result : command put in queue, queue sorted in priority order of 
+            result : command put in queue, queue sorted in priority order of
                      commands, return true
-        """    
+        """
         ret=False
         # an ID lives for as long as a command is queued/running
-        command.tryGenID() 
+        command.tryGenID()
         with self.lock:
             if command.active:
                 prio=command.getFullPriority()
@@ -126,14 +126,14 @@ class CmdQueue(object):
                     dq.rotate(-1)
             #if nremoved > 0:
             #    return
-       
+
     def get(self):
-        """ description: gets a single element with the highest priority from 
+        """ description: gets a single element with the highest priority from
             the queue
             result: return Command:command
-        
+
             alternate result: if no commands in queue return None
-            """    
+            """
         #find element with the highest priority
         with self.lock:
             for dq in self.queue:
@@ -147,16 +147,16 @@ class CmdQueue(object):
             return None
 
     def getUntil(self, fn, parm):
-        """Get a number of items from the queue, based on the output of a 
+        """Get a number of items from the queue, based on the output of a
            function (given as parameter).
            fn = the function to test each item with. Should return a tuple of
                 two booleans: the first decides whether to continue the function
-                              and the second decides whether to remove the 
+                              and the second decides whether to remove the
                               current item from the queue.
            parm = a parameter for the function fn. It will be called with
                     fn(parm, queueItem), where queueItem is the queued item
                     being looked at.
-           returns: the list of items removed from the queue.""" 
+           returns: the list of items removed from the queue."""
         ret=[]
         cont=True
         with self.lock:
@@ -185,23 +185,23 @@ class CmdQueue(object):
 
     def _exists(self, commandID):
         # non-locking version of public exists()
-        #NOTE could be slow 
+        #NOTE could be slow
         for value in self.queue.itervalues():
             for it in value:
-                if(it.id == commandID): 
+                if(it.id == commandID):
                     return True
         # check the inactive items
         for it in self.inactiveItems:
-            if(it.id == commandID): 
+            if(it.id == commandID):
                 return True
-        return False    
-        
+        return False
+
     def exists(self,commandID):
-        """Check whether commandID exists in the queue. 
+        """Check whether commandID exists in the queue.
            NOTE: this is an O(N) operation for N=number of items in the queue"""
         with self.lock:
             return self._exists(commandID)
-  
+
     def list(self):
         """Return a list with all active queued items."""
         ret=[]
@@ -218,7 +218,7 @@ class CmdQueue(object):
         n=len(queue)
         nremoved=0
         for i in xrange(n):
-            if queue[0].task.project == project: 
+            if queue[0].task.project == project:
                 nremoved+=1
                 queue[0].setQueue(None, None)
                 queue.popleft()
@@ -229,7 +229,7 @@ class CmdQueue(object):
     def deleteByProject(self, project):
         """Delete all commands related to a project. Returns number of commands
            deleted.
-            
+
            NOTE: this is an O(N) operation for N=number of items in the queue"""
         nremoved=0
         with self.lock:
@@ -243,7 +243,7 @@ class CmdQueue(object):
         if command.queue == self.inactiveItems:
             with self.lock:
                 self.inactiveItems.remove(command)
-            self.add(command)        
+            self.add(command)
 
     #Helper function for unit tests
     def indexOfCommand(self,command):
@@ -251,9 +251,9 @@ class CmdQueue(object):
         with self.lock:
             for dq in self.queue:
                 for item in self.dq:
-                    if(item == command): 
+                    if(item == command):
                         return i
-                    i+=1      
-        return None    
-        
-    
+                    i+=1
+        return None
+
+
