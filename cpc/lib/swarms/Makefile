@@ -1,3 +1,3 @@
 
 rep: rep.cc
-	gcc -O2 -o rep -lm rep.cc
+	g++ -O2 -o rep rep.cc
