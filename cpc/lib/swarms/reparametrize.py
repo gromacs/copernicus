@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Grant Rotskoff, 12 July 2012
-# Bjorn Wesen, June 2014
+# Bjorn Wesen, June-Oct 2014
 #
 # inputs: 
 #	swarm structure CVs (dihedral angles .xvg or atom positions .gro)
@@ -18,6 +18,13 @@ import res_selection
 import readxvg
 import rwgro
 from molecule import molecule
+
+# These are needed for the external C-based rep helper
+import subprocess
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 # helper functions
 def add(x, y): return x + y
@@ -103,6 +110,64 @@ def rep_pts(newpts):
     # Return the max spread and the adjusted points as elements in a list
     return [ maxspread, adjusted ]
 
+# Version of the rep_pts() function which uses an external C-program for the inner loop, speeding
+# up the iteration severely.
+
+def ext_rep_pts(newpts):
+        FNULL = open(os.devnull, 'w') # sink for output spam
+        # Have to locate the C-helper executable which is in the same dir as this python file (but the
+        # actual current working dir is somewhere else!)
+        # Don't forget to do a make in the dir so rep.cc compiles to rep.
+        prochandle = subprocess.Popen([ '%s/rep' % (os.path.dirname(os.path.realpath(__file__))) ], 
+                                      stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=FNULL)
+        numpts = len(newpts)
+        numcvs = len(newpts[0])
+        #sys.stderr.write('  sending %d pts of %d cvs to the rep\n' % (numpts, numcvs))
+        writeStdin = StringIO()
+        writeStdin.write('%d %d\n' % (numpts, numcvs))
+        for p in range(0, numpts):  # python range() is exclusive on the end
+                point = newpts[p]
+                for i in range(0, numcvs):
+                        writeStdin.write('%f\n' % point[i])
+        repres = prochandle.communicate(writeStdin.getvalue())  # returns a (stdout,stderr) tuple
+        # stdout will be the flattened reparametrized array, in the same order as the flattened input we
+        # just created, with \n between each value. split and re-create as an adjusted[] array.
+        flatres = repres[0].split()
+        fidx = 0
+        adjusted = [ ]
+        for p in range(0, numpts):
+                point = [ ]
+                for i in range(0, numcvs):
+                        point += [ float(flatres[fidx]) ]
+                        fidx += 1
+                adjusted += [ point ]
+
+        # Calculate the CV distance between the stringpoints (this is the thing we're trying to equalize
+        # during the reparametrization) and the average distance
+        dists = []
+        avgdist = 0.0
+        # Note: there is a zeroed padding-point appended on the end here, which we shouldn't
+        # consider (TODO: check if this is necessary due to the iterations above or why...)
+        for i in range(len(newpts) - 2):
+                d = dist(adjusted[i], adjusted[i + 1])
+                dists += [ d ]
+                avgdist += d
+                #sys.stderr.write('%d to %d: dist %f\n' % (i, i+1, d))
+        avgdist = avgdist / (len(newpts) - 1)
+
+        # Another pass to check the spread against the average, remember the largest diff
+        # Same note as above, re padding point
+        maxspread = 0.0
+        for i in range(len(newpts) - 2):
+                spread = abs(dists[i] - avgdist)   # L1
+                if spread > maxspread:
+                        maxspread = spread
+
+        #sys.stderr.write('  => maxspread is %f (average dist %f)\n' % (maxspread, avgdist))
+
+        # Return the max spread and the adjusted points as elements in a list
+        return [ maxspread, adjusted ]
+
 # start/end_xvg will be None for the posres case
 # last_resconfs[] will be None for dihedrals. It also begins at index 0, corresponding to the path point 1.
 
@@ -175,7 +240,7 @@ def reparametrize(use_posres, cvs, ndx_file, Nchains, start_conf, start_xvg, end
     # points in [1]
 
     # Initial iteration
-    rep_it1 = rep_pts(newpts)
+    rep_it1 = ext_rep_pts(newpts)
     adjusted = rep_it1[1]   # get the points only
 
     # Keep iterating, feeding the result of the previous result into rep_pts again
@@ -190,7 +255,7 @@ def reparametrize(use_posres, cvs, ndx_file, Nchains, start_conf, start_xvg, end
     while i < 50 and maxspread > 0.014:
             sys.stderr.write('Rep iter %d: \n' % i)
             sys.stderr.flush()
-            rep_it = rep_pts(iters[i])
+            rep_it = ext_rep_pts(iters[i])
             maxspread = rep_it[0]
             sys.stderr.write('  maxspread was %f\n' % maxspread)
             # Remember the adjusted points
@@ -212,7 +277,6 @@ def reparametrize(use_posres, cvs, ndx_file, Nchains, start_conf, start_xvg, end
     # Given as function argument now.
     #Nchains = len(initpt) / (2 * len(rsel))
 
-    # TODO measure distance
     # write the CV control data for the next iteration
 
     # The output file expected for the posres case is rep_resconf_%d.gro for each stringpoint.
