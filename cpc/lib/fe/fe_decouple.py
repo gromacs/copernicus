@@ -270,7 +270,10 @@ def addEquilibration(name, i, inp, out, pers, optimize):
         # connect the previous iteration
         out.addConnection('%s:out.path'%(prevname), '%s:in.path' % iname)
 
-    out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
+    if name == 'q':
+        out.addConnection(None, '%s:in.sc_alpha' % iname, FloatValue(0))
+    else:
+        out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
 
     doOptimize = BoolValue(optimize)
     # connect the outputs
@@ -338,7 +341,10 @@ def addIteration(name, i, initStep, inp, out, pers, optimize, isOptIter=False):
         # connect the previous iteration
         out.addConnection('%s:out.path'%(prevname), '%s:in.path' % iname)
 
-    out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
+    if name == 'q':
+        out.addConnection(None, '%s:in.sc_alpha' % iname, FloatValue(0))
+    else:
+        out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
 
     # connect the outputs
     out.addConnection('%s:out.dG'%iname, 'self:sub_in.dG_%s_array[%d]' % (name, i))
@@ -484,8 +490,10 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
             out.addConnection('self:ext_in.molecule_name', 'init_%s:in.molecule_name' % tp)
             out.addConnection('self:sub_out.n_lambdas_init', 'init_%s:in.n_lambdas' % tp)
             out.addConnection('self:ext_in.lambdas_%s' % tp, 'init_%s:in.lambdas' % tp)
-            out.addConnection('self:ext_in.sc_alpha', 'init_%s:in.sc_alpha' % tp)
-
+            if tp == 'q':
+                out.addConnection(None, 'init_%s:in.sc_alpha' % tp, FloatValue(0))
+            else:
+                out.addConnection('self:ext_in.sc_alpha', 'init_%s:in.sc_alpha' % tp)
 
         if simultaneousDecoupling:
             out.addConnection('self:sub_out.endpoint_array[0]', 'init_ljq:in.a')
