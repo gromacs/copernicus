@@ -16,6 +16,12 @@
 # can't be a part of the string optimization since it would mean bad equilibration of the protein membrane embedding
 # or similar.
 
+# Notes:
+# https://docs.python.org/2/library/threading.html#thread-objects
+# http://stackoverflow.com/questions/11954021/how-to-run-parallel-programs-in-python
+# Note2: it takes a lot of memory to keep 500 trjconvs alive. If there isn't a huge amount
+# of memory on the server, this will swap like crazy probably.
+
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
@@ -80,40 +86,55 @@ def run(inp, out):
         tpr = inp.getInput('tpr')
 
         if use_posres == 1:
-            # CVs are atom positions, use trjconv fitting to fit the protein and output the Protein atom coordinates
-            # Start all trjconv's in parallel
-            trjprocs = []
+            # CVs are protein atom positions
+            # Cluster and fit the incoming system and output the Protein index only to save space
+            # Run all trjconv's in parallel using Popen and the shell
+
+            # Since we can't cluster and fit at the same time, and we can't use named pipes or bash process
+            # substitution due to the fact that trjconv tries to autodetect the output type by looking at the output
+            # filename, we have to run two separate sets of trjconvs, the first pass doing clustering of all systems
+            # and the second pass doing the fitting
+
             FNULL = open(os.devnull, 'w') # sink for output spam
+
+            # Cluster pass
+            trjprocs_clustering = []
+            clustering_intermediaries = []
             for i in range(len(confs)):
                 subconfs = inp.getInput('confs[%d]' % i)
                 for j in range(len(subconfs)):
                     conf = inp.getInput('confs[%d][%d]' % (i, j))
-                    # Can't use pbc cluster or mol even with rot+trans fitting, but should not be necessary if the 
-                    # reference tpr is centered and whole, and we have supershort swarmruns
-                    trjprocs.append(subprocess.Popen([
-                                'trjconv', '-f', conf, '-s', tpr, '-o', '0%03d_0%03d.gro' % (i, j), 
-                                '-pbc', 'none', '-fit', 'rot+trans' ], 
-                                          stdin=subprocess.PIPE, stdout=FNULL, stderr=FNULL))  # stdin specified below during communicate
+                    # First choice trjconv asks for is what to cluster (=> Protein), second choice is what to output (=> System)
+                    # We need to output the whole system here as that is what the tpr file specifies, and the same tpr is used
+                    # for the second trjconv pass that gets the output from here as input
+                    # Remember the temporary file used so we can remove them easily when we're done
+                    clustering_intermediaries.append('0%03d_0%03d_clustered.gro' % (i, j))
+                    trjprocs_clustering.append(subprocess.Popen([ 'echo -e "Protein\nSystem\n" | trjconv -f %s -s %s -o %s -pbc cluster' % (conf, tpr, clustering_intermediaries[-1]) ], stdout=FNULL, stderr=FNULL))
 
-            # Wait for each process to complete, and set the output file correctly
+            # Wait for completion of the clustering trjconvs
+            for i in range(len(trjprocs_clustering)):
+                    trjprocs_clustering[i].communicate()
+
+            # Fitting pass, and set the output names (does not matter that they are not ready yet, the setOut only writes
+            # a setting command to this script's XML output which is parsed after the script as a whole is done)
+
+            trjprocs_fitting = []
             q = 0
             for i in range(len(confs)):
-                subconfs = inp.getInput('confs[%d]' % i)
                 for j in range(len(subconfs)):
-                    # Note: this probably removes the gain of starting the trjconv in parallel, since communicate 
-                    # blocks and wait, but trjconv doesn't start the bulk of its work until it gets the stdin input..
-                    # Rewrite using Thread
-                    # https://docs.python.org/2/library/threading.html#thread-objects
-                    # http://stackoverflow.com/questions/11954021/how-to-run-parallel-programs-in-python
-                    # Note2: additionally, it takes a lot of memory to keep 800 trjconvs alive. If there isn't a huge amount
-                    # of memory on the server, this will swap like crazy probably.
-                    writeStdin = StringIO()
-                    writeStdin.write("Backbone\n")   # structure to use for fit, use the protein backbone
-                    writeStdin.write("Protein\n")       # output selection (Backbone is enough for CA CVs but might want more later)
-                    trjprocs[q].communicate(writeStdin.getvalue())
+                    outfile = '0%03d_0%03d.gro' % (i, j)
+                    # First choice trjconv asks for is what to fit against (=> Backbone), second choice is what to output (=> Protein)
+                    # Set pbc none so we don't destroy the clustering we just did
+                    trjprocs_fitting.append(subprocess.Popen([ 'echo -e "Backbone\nProtein\n" | trjconv -f %s -s %s -o %s -pbc none -fit rot+trans' % (clustering_intermediaries[q], tpr, outfile) ], stdout=FNULL, stderr=FNULL))
                     q += 1
-                    cv_i_j = os.path.join(inp.getOutputDir(), '0%03d_0%03d.gro' % (i, j))
+                    cv_i_j = os.path.join(inp.getOutputDir(), outfile)
                     out.setOut('cvs[%d][%d]' % (i, j), FileValue(cv_i_j))
+
+            # Wait for completion of the fitting trjconvs
+            for i in range(len(trjprocs_fitting)):
+                    trjprocs_fitting[i].communicate()
+                    # Can now also remove the associated intermediary
+                    os.remove(clustering_intermediaries[i])
 
         else:
             # CVs are dihedral restraints, produce xvg files describing the phi/psi angles for the selected residues
