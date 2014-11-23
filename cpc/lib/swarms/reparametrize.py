@@ -251,8 +251,8 @@ def reparametrize(use_posres, cvs, ndx_file, Nchains, start_conf, start_xvg, end
     iters = [ adjusted ]
     i = 0
     maxspread = 100.0
-    # Do max 50 iterations even if we don't reach our goal
-    while i < 50 and maxspread > 0.014:
+    # Do max 150 iterations even if we don't reach our goal
+    while i < 150 and maxspread > 0.012:
             sys.stderr.write('Rep iter %d: \n' % i)
             sys.stderr.flush()
             rep_it = ext_rep_pts(iters[i])
