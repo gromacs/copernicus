@@ -97,10 +97,12 @@ def run(inp, out):
 
             FNULL = open(os.devnull, 'w') # sink for output spam
 
-            # Cluster pass
-            trjprocs_clustering = []
-            clustering_intermediaries = []
+            # Run the points sequentially but all sub-confs (nbr swarms) in parallel, which is more easy on the computer
+            # than all out parallel which creates like 500 threads that can go OOM if you're unlucky
             for i in range(len(confs)):
+                # Cluster pass
+                trjprocs_clustering = []
+                clustering_intermediaries = []
                 subconfs = inp.getInput('confs[%d]' % i)
                 for j in range(len(subconfs)):
                     conf = inp.getInput('confs[%d][%d]' % (i, j))
@@ -111,30 +113,27 @@ def run(inp, out):
                     clustering_intermediaries.append('0%03d_0%03d_clustered.gro' % (i, j))
                     trjprocs_clustering.append(subprocess.Popen([ 'echo -e "Protein\nSystem\n" | trjconv -f %s -s %s -o %s -pbc cluster' % (conf, tpr, clustering_intermediaries[-1]) ], stdout=FNULL, stderr=FNULL, shell=True))
 
-            # Wait for completion of the clustering trjconvs
-            for i in range(len(trjprocs_clustering)):
-                    trjprocs_clustering[i].communicate()
+                # Wait for completion of the clustering trjconvs
+                for j in range(len(trjprocs_clustering)):
+                    trjprocs_clustering[j].communicate()
 
-            # Fitting pass, and set the output names (does not matter that they are not ready yet, the setOut only writes
-            # a setting command to this script's XML output which is parsed after the script as a whole is done)
+                # Fitting pass, and set the output names (does not matter that they are not ready yet, the setOut only writes
+                # a setting command to this script's XML output which is parsed after the script as a whole is done)
 
-            trjprocs_fitting = []
-            q = 0
-            for i in range(len(confs)):
+                trjprocs_fitting = []
                 for j in range(len(subconfs)):
                     outfile = '0%03d_0%03d.gro' % (i, j)
                     # First choice trjconv asks for is what to fit against (=> Backbone), second choice is what to output (=> Protein)
                     # Set pbc none so we don't destroy the clustering we just did
-                    trjprocs_fitting.append(subprocess.Popen([ 'echo -e "Backbone\nProtein\n" | trjconv -f %s -s %s -o %s -pbc none -fit rot+trans' % (clustering_intermediaries[q], tpr, outfile) ], stdout=FNULL, stderr=FNULL, shell=True))
-                    q += 1
+                    trjprocs_fitting.append(subprocess.Popen([ 'echo -e "Backbone\nProtein\n" | trjconv -f %s -s %s -o %s -pbc none -fit rot+trans' % (clustering_intermediaries[j], tpr, outfile) ], stdout=FNULL, stderr=FNULL, shell=True))
                     cv_i_j = os.path.join(inp.getOutputDir(), outfile)
                     out.setOut('cvs[%d][%d]' % (i, j), FileValue(cv_i_j))
 
-            # Wait for completion of the fitting trjconvs
-            for i in range(len(trjprocs_fitting)):
-                    trjprocs_fitting[i].communicate()
+                # Wait for completion of the fitting trjconvs
+                for j in range(len(trjprocs_fitting)):
+                    trjprocs_fitting[j].communicate()
                     # Can now also remove the associated intermediary
-                    os.remove(clustering_intermediaries[i])
+                    os.remove(clustering_intermediaries[j])
 
         else:
             # CVs are dihedral restraints, produce xvg files describing the phi/psi angles for the selected residues
