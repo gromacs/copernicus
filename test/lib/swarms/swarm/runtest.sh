@@ -11,7 +11,7 @@ fi
 # import the gromacs module with grompp and mdrun functions
 ./cpcc  import swarms
 # add the grompp and mdrun function instances
-./cpcc  instance swarms::dihedral_swarm run
+./cpcc  instance swarms::swarm_string run
 # activate the function instance
 ./cpcc  activate
 
@@ -47,8 +47,8 @@ fi
 ./cpcc  set run:in.Nswarms 10
 ./cpcc  set run:in.Ninterpolants 5
 
-# the residue index
-./cpcc  set-file run:in.res_index test/lib/swarms/swarm/res.ndx
+# the residue (collective variable) index
+./cpcc  set-file run:in.cv_index test/lib/swarms/swarm/res.ndx
 
 # include a tpr file for g_rama runs
 ./cpcc  set-file run:in.tpr test/lib/swarms/swarm/topol.tpr
