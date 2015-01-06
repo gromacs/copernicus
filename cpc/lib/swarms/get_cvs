@@ -154,7 +154,7 @@ def run(inp, out):
                 for j in range(len(subconfs)):
                     ramaprocs[q].communicate()
                     q += 1
-                    cv_i_j = os.path.join(inp.getOutputDir(), '0%03d_0%30d.xvg' % (i, j))
+                    cv_i_j = os.path.join(inp.getOutputDir(), '0%03d_0%03d.xvg' % (i, j))
                     out.setOut('cvs[%d][%d]' % (i, j), FileValue(cv_i_j))
 
             FNULL.close()
