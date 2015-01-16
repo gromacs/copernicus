@@ -85,7 +85,7 @@ def setupDatabase(rootpass):
     with db_handler.getCursor() as c:
         c.execute("create table users(id integer primary key autoincrement,"
         "user TEXT unique, password TEXT, level INTEGER)")
-        c.execute(query, ('root', hashed_pass, UserLevel.SUPERUSER))
+        c.execute(query, ('cpc-admin', hashed_pass, UserLevel.SUPERUSER))
         c.execute("create table users_project(user INTEGER, project TEXT)")
 
 
