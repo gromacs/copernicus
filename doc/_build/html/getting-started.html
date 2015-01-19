@@ -1,0 +1,354 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Getting Started &mdash; Copernicus 2.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Copernicus 2.1 documentation" href="index.html"/>
+        <link rel="next" title="Tutorials" href="tutorials/index.html"/>
+        <link rel="prev" title="Welcome to Copernicus’s documentation!" href="index.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="index.html" class="fa fa-home"> Copernicus</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#downloading-copernicus">Downloading Copernicus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#server-setup">Server Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#client-setup">Client Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#worker-setup">Worker Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/index.html">Tutorials</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/md-tutorial.html">Molecular Dynamics Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/msm-tutorial.html">MSM Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/swarms-tutorial.html">Swarms Tutorial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="network/index.html">Copernicus overlay network</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="network/server.html">Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="network/worker.html">Worker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="network/client.html">Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="network/advanced-network-setups.html">Advanced Network setups</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="developers/index.html">Developer Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="developers/submitting-pull-requests.html">Submitting Pull requetsts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="developers/writing-docs.html">Writing Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="index.html">Copernicus</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+      
+    <li>Getting Started</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="_sources/getting-started.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <span class="target" id="getting-started"></span><div class="section" id="id1">
+<h1>Getting Started<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h1>
+<p>This section covers the steps required to setup Copernicus.
+After going through the instructions below you will have a running copernicus
+server with a connected worker.</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>Before we start installing there are some basic prerequisites that
+has to be met. Apart from these listed below the server and the worker have some
+additional prerequisites which we will cover in the setup sections for
+the server and the worker.</p>
+<div class="section" id="python">
+<h3>Python<a class="headerlink" href="#python" title="Permalink to this headline">¶</a></h3>
+<p>Copernicus requires python 2.7 to be installed.
+The installation must also include openssl.
+On *nix systems python is usually preinstalled with openssl.
+running the command <tt class="docutils literal"><span class="pre">python</span> <span class="pre">--version</span></tt> will show you what version is installed.</p>
+</div>
+<div class="section" id="network-ports">
+<h3>Network Ports<a class="headerlink" href="#network-ports" title="Permalink to this headline">¶</a></h3>
+<p>The default network ports that Copernicus communicates via is 14807 for HTTP and
+13807 for HTTPS. Please ensure that these ports are open in the network.
+These must be open for both inward and outward communication on any machine that
+is running the client, worker or server. If these ports cannot be used it is
+possible to specify other ports when setting up the server.</p>
+</div>
+<div class="section" id="git">
+<h3>Git<a class="headerlink" href="#git" title="Permalink to this headline">¶</a></h3>
+<p>Git is a tool to download software from a source code repository.
+To see if it is installed try to run the command <tt class="docutils literal"><span class="pre">git</span></tt> from a terminal.
+If an installation is needed please download it from <a class="reference external" href="http://git-scm.com/download">http://git-scm.com/download</a></p>
+</div>
+<p>If an installation is needed please download it from <a class="reference external" href="http://git-scm.com/download">http://git-scm.com/download</a></p>
+</div>
+<div class="section" id="downloading-copernicus">
+<h2>Downloading Copernicus<a class="headerlink" href="#downloading-copernicus" title="Permalink to this headline">¶</a></h2>
+<p>Copernicus can be downloaded from our public git repository. To download the source
+, use the following command <tt class="docutils literal"><span class="pre">https://github.com/gromacs/copernicus.git</span></tt></p>
+<p>Set the <em>CPC_HOME</em> environment variable to the location where copernicus is installed</p>
+<ul class="simple">
+<li>On UNIX/Linux systems this is usually done with <tt class="docutils literal"><span class="pre">export</span> <span class="pre">CPC_HOME=path/to/cpc</span></tt></li>
+<li>Now add <em>CPC_HOME</em> to your <em>PATH</em> variable. On UNIX/Linux systems this is
+usually done with <tt class="docutils literal"><span class="pre">export</span> <span class="pre">PATH=$PATH:$CPC_HOME</span></tt></li>
+</ul>
+<p>You should preferably but this in the startup file of your shell. Otherwise you will
+have to do this everytime you open up a terminal.</p>
+<p>You should now be able to run the following three commands</p>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">`cpcc</span> <span class="pre">-h`</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">`cpc-server</span> <span class="pre">-h`</span></tt></li>
+<li><tt class="docutils literal"><span class="pre">`cpc-worker</span> <span class="pre">-h`</span></tt></li>
+</ul>
+</div>
+<div class="section" id="server-setup">
+<h2>Server Setup<a class="headerlink" href="#server-setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="additional-prerequisites">
+<h3>Additional prerequisites<a class="headerlink" href="#additional-prerequisites" title="Permalink to this headline">¶</a></h3>
+<p>The server has some additional prerequisites.
+if you are planning to run the prepackaged workflows GROMACS must be installed
+and accessible for the server. The easiest way is if GROMACS is accessible from the path.
+For other ways to specify this please refer to the section <a class="reference internal" href="network/server.html#server"><em>Server</em></a>.</p>
+<p>Optionally, if you will use the MSM workflow
+you will need to make sure that scipy, numpy and py-tables are installed.
+You will also need to fetch the MSMbuilder source from <a class="reference external" href="https://simtk.org/home/msmbuilder">https://simtk.org/home/msmbuilder</a>.</p>
+</div>
+<div class="section" id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h3>
+<p>To install the server run the command</p>
+<blockquote>
+<div><tt class="docutils literal"><span class="pre">cpc-server</span> <span class="pre">setup</span> <span class="pre">&lt;PROJECT_DIR&gt;</span></tt></div></blockquote>
+<p>where <tt class="docutils literal"><span class="pre">PROJECT_DIR</span></tt> is the directory where the server will store project data
+for all the projects that it will run. Make sure to specify the <tt class="docutils literal"><span class="pre">PROJECT_DIR</span></tt>
+in a writable location. Note that <tt class="docutils literal"><span class="pre">PROJECT_DIR</span></tt> is only specified during setup,
+however the creation of the directory occurs when we first create a project.
+During the setup, the server will ask for a password to the cpc-admin user (super user).
+You will also notice that a directory named .copernicus is created in your home directory. This is where Copernicus will store its settings.</p>
+<p>To ensure that the server is properly installed, call the command</p>
+<p><tt class="docutils literal"><span class="pre">cpc-server</span> <span class="pre">start</span></tt></p>
+<p>The server is will now run as a background process.
+For the worker to be able to communicate with
+the server a connection bundle must be created: this is a file with a description
+of how to connect to a server together with a key pair.
+During the server setup a bundle is alredy created and put under the .copernicus folder.
+When we later on start a worker it will look for a connection bundle in the .copernicus folder,
+unless a bundle is specified</p>
+<p>If you need to create additional bundles you can create them with the command</p>
+<p><tt class="docutils literal"><span class="pre">cpc-server</span> <span class="pre">bundle</span></tt></p>
+<p>Which generates the bundle, with the name client.cnx.
+This file can then be used on any machine to communicate with the server.</p>
+</div>
+<div class="section" id="optmizing-the-server">
+<h3>Optmizing the server<a class="headerlink" href="#optmizing-the-server" title="Permalink to this headline">¶</a></h3>
+<p>For larger workflows with thousands of jobs the load on the server can be rather heavy.
+To optimize the code execution it is more efficient to not run those parts as ordinary
+Python code
+If you have Cython installed you can run the bash script <tt class="docutils literal"><span class="pre">compileLibraries.sh</span></tt>
+that is located in the  Copernicus installation folder:
+This will generate C code from Python files that will then be compiled to shared libraries. The other Python files will automatically use these shared libraries instead of the corresponding Python code, which improves the server efficiency. Remember that if you modify any Python file in Copernicus it is best to rerun the script to regenerate the shared libraries if any of the relevant files have changed. There is no further optimization used when generating the C code from the Python code.</p>
+</div>
+</div>
+<div class="section" id="client-setup">
+<h2>Client Setup<a class="headerlink" href="#client-setup" title="Permalink to this headline">¶</a></h2>
+<p>To use the client, a server to connect to must first be specified. T
+o specify a server, use the <tt class="docutils literal"><span class="pre">add-server</span></tt> command:</p>
+<p><tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">add-server</span> <span class="pre">my.serverhostname.com</span></tt></p>
+<p><tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">add-server</span> <span class="pre">my.serverhostname.com</span> <span class="pre">14807</span></tt></p>
+<div class="section" id="logging-in">
+<h3>Logging in<a class="headerlink" href="#logging-in" title="Permalink to this headline">¶</a></h3>
+<p>To start sending commands to the server you need to first login.
+<tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">login</span> <span class="pre">cpc-admin</span></tt></p>
+<p>Then type the password you set for the user cpc-admin during setup.
+After logging in you and will be able to send commands to the server.</p>
+<p>To verify that you are logged in try the command <tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">server-info</span></tt>.
+This should display the server name and version.</p>
+</div>
+</div>
+<div class="section" id="worker-setup">
+<h2>Worker Setup<a class="headerlink" href="#worker-setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id2">
+<h3>Prerequisites<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>The worker has 2 prerequisites</p>
+<ul class="simple">
+<li>A client.cnx file, If you are running the worker on a different machine than the server you probably do not have a .copernicus folder in you home directory. However you can create one manually and drop in the client.cnx file there. If you wish you can also specify the file manually as we will later below.</li>
+<li>GROMACS must be installed and accessible for the worker. The easiest way is if GROMACS is accessible from the path. For other ways to specify this please refer to the section <a class="reference internal" href="network/worker.html#worker"><em>Worker</em></a>.</li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h3>Installation<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>Workers do not need any specific project directory. Provided that the prerequisites
+are met no installation procedure is needed.
+To verify that the worker can connect to a server start it with</p>
+<p><tt class="docutils literal"><span class="pre">cpc-worker</span> <span class="pre">smp</span></tt></p>
+<p>this command that there is a connection bundle located in .copernicus</p>
+<p>you can also specify which bundle to use</p>
+<p><tt class="docutils literal"><span class="pre">cpc-worker</span> <span class="pre">-c</span> <span class="pre">client.cnx</span> <span class="pre">smp</span></tt></p>
+<p>When started the worker will output its Worker Id, available executables and then start
+requesting work from the server.
+An example output is shown below</p>
+<div class="highlight-none"><div class="highlight"><pre>INFO, cpc.worker: Worker ID: 130-229-12-163-dhcp.wlan.ki.se-26108.
+Available executables for platform smp:
+gromacs/mdrun 4.5.3
+INFO, cpc.worker: Got 0 commands.
+INFO, cpc.worker: Have free resources. Waiting 30 seconds
+</pre></div>
+</div>
+<p>you will notice the parameter <tt class="docutils literal"><span class="pre">smp</span></tt> in the above command. This means that we
+start the worker with the platform type smp. We will cover this in greater detail
+in the section <a class="reference internal" href="network/worker.html#platformtypes"><em>Platform types</em></a>.</p>
+<p>In case you try to connect with the wrong connection bundle the following
+error message will be displayed.</p>
+<div class="highlight-none"><div class="highlight"><pre>ERROR: [Errno 1] _ssl.c:503:error:14090086:
+SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="summary">
+<h2>Summary<a class="headerlink" href="#summary" title="Permalink to this headline">¶</a></h2>
+<p>After going throught the the installation process you should have one running
+server with one worker connected to it.</p>
+<p>you can check the status of the server with <tt class="docutils literal"><span class="pre">cpc-server</span> <span class="pre">status</span></tt>
+which will show you that the server is up and running and has one worker connected
+to it.</p>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="tutorials/index.html" class="btn btn-neutral float-right" title="Tutorials"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral" title="Welcome to Copernicus’s documentation!"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Sander Pronk, Iman Pouya, Erik Lindahl and others.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'./',
+            VERSION:'2.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="_static/jquery.js"></script>
+      <script type="text/javascript" src="_static/underscore.js"></script>
+      <script type="text/javascript" src="_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
