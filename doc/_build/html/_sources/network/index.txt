@@ -9,4 +9,3 @@ Copernicus overlay network
 
    server.rst
    worker.rst
-   client.rst
