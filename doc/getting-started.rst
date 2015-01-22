@@ -137,8 +137,10 @@ This will generate C code from Python files that will then be compiled to shared
 ------------
 Client Setup
 ------------
-To use the client, a server to connect to must first be specified. T
-o specify a server, use the ``add-server`` command:
+The client is a command line tool use to send commands to the server.
+it can be run directly from your laptop. But before sending commands to a server
+it needs to know its address
+This is done with the``add-server`` command:
 
 ``cpcc add-server my.serverhostname.com``
 
@@ -181,9 +183,8 @@ To verify that the worker can connect to a server start it with
 
 ``cpc-worker smp``
 
-this command that there is a connection bundle located in .copernicus
-
-you can also specify which bundle to use
+By default the worker looks in .copernicus for the connection bundle. however you can also specify
+the location onf the connection bundle.
 
 ``cpc-worker -c client.cnx smp``
 
@@ -204,6 +205,7 @@ you will notice the parameter ``smp`` in the above command. This means that we
 start the worker with the platform type smp. We will cover this in greater detail
 in the section :ref:`platformtypes`.
 
+Shut down the worker simply hit ``CTRL-C``
 
 In case you try to connect with the wrong connection bundle the following
 error message will be displayed.

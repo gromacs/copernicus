@@ -137,8 +137,10 @@ This will generate C code from Python files that will then be compiled to shared
 ------------
 Client Setup
 ------------
-To use the client, a server to connect to must first be specified. T
-o specify a server, use the ``add-server`` command:
+The client is a command line tool use to send commands to the server.
+it can be run directly from your laptop. But before sending commands to a server
+it needs to know its address
+This is done with the``add-server`` command:
 
 ``cpcc add-server my.serverhostname.com``
 
