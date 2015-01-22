@@ -77,3 +77,26 @@ of the run of a project in case things have gone wrong or if you want to test an
 
 Workflow components can actually be any type program. And with the plugin utilites
 in copernicus you can define these programs as workflow items, also known as functions.
+
+
+-------
+Authors
+-------
+
+Head authors & project leaders
+-------------------------------
+Sander Pronk |br|
+Iman Pouya (Royal Institute of Technology, Sweden) |br|
+Peter Kasson (University of Virginia, USA) |br|
+Erik Lindahl (Royal Institute of Technology, Sweden)
+
+
+Other current developers
+-------------------------
+Magnus Lundborg (Royal Institute of Technology, Sweden) |br|
+Björn Wesen (Royal Institute of Technology,Sweden)
+
+Previous developers and contributors
+------------------------------------
+Patrik Falkman |br|
+Grant Rotskoff ( University of California, Berkley, US )

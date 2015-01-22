@@ -1,3 +1,20 @@
-Copernicus is a system that aims to take the scope of computer simulations from the level of individual simulation runs to one focused on obtaining results by  allowing the user to specify these end results rather than a detailed prescription of how to obtain them. It is then up to the Copernicus run-time system to break these desired end-results up into specific tasks and to run these tasks as efficiently as possible on the available computational resources.
+Copernicus is an open source platform that lets you automate problems that require more computing power than your single workstation provide. Using the platform you can consolidate you’re desktop machines, supercomputing cluster and cloud instances and use them all at once to solve distributed computing problems.
+It was first developed with the support of ERC project 209825 and and is now continued in the Scalalife and Cresta projects.
 
-For usage instructions, see doc/usage/guide.html.
+Head authors & project leaders
+-------------------------------
+Sander Pronk
+Iman Pouya (Royal Institute of Technology, Sweden)
+Peter Kasson (University of Virginia, USA)
+Erik Lindahl (Royal Institute of Technology, Sweden)
+
+
+Other current developers
+-------------------------
+Magnus Lundborg (Royal Institute of Technology, Sweden)
+Björn Wesen (RoyL Institute of Technology,Sweden)
+
+Previous Developers and contributors
+------------------------------------
+Patrik Falkman
+Grant Rotskoff ( University of California, Berkley, US )
