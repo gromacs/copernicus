@@ -169,7 +169,7 @@
             </field>
             <field type="int" id="num_microstates">
                 <desc>number of microstates (should be ~ 1/10th of 
-                      the number of configurations in each generation)</desc>
+                      the number of configurations in each  generation)</desc>
             </field>
             <field type="float" id="lag_time" opt="true">
                 <desc>Optional Markov model lag time in ns. If not set, will 

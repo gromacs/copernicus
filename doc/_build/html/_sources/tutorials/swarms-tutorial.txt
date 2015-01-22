@@ -1,0 +1,5 @@
+.. _swarmstutorial:
+
+***************
+Swarms Tutorial
+***************

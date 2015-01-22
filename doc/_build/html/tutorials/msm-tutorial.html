@@ -1,0 +1,336 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>MSM Tutorial &mdash; Copernicus 2.1 documentation</title>
+  
+
+  
+  
+
+  
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  
+
+  
+    <link rel="top" title="Copernicus 2.1 documentation" href="../index.html"/>
+        <link rel="up" title="Tutorials" href="index.html"/>
+        <link rel="next" title="Swarms Tutorial" href="swarms-tutorial.html"/>
+        <link rel="prev" title="Introductory Tutorial" href="md-tutorial.html"/> 
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/modernizr/2.6.2/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-nav-search">
+        <a href="../index.html" class="fa fa-home"> Copernicus</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+        
+        
+            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting-started.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#downloading-copernicus">Downloading Copernicus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#server-setup">Server Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#client-setup">Client Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#worker-setup">Worker Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting-started.html#summary">Summary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../network/index.html">Copernicus overlay network</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../network/server.html">Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../network/worker.html">Worker</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Tutorials</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="md-tutorial.html">Introductory Tutorial</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">MSM Tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swarms-tutorial.html">Swarms Tutorial</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../developers/index.html">Developer Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../developers/submitting-pull-requests.html">Submitting Pull requetsts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../developers/writing-docs.html">Writing Documentation</a></li>
+</ul>
+</li>
+</ul>
+
+        
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../index.html">Copernicus</a>
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+      
+          <li><a href="index.html">Tutorials</a> &raquo;</li>
+      
+    <li>MSM Tutorial</li>
+      <li class="wy-breadcrumbs-aside">
+        
+          <a href="../_sources/tutorials/msm-tutorial.txt" rel="nofollow"> View page source</a>
+        
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            
+  <div class="section" id="msm-tutorial">
+<span id="msmtutorial"></span><h1>MSM Tutorial<a class="headerlink" href="#msm-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we will try out the MSM workflow of Copernicus. Markov State models (MSM).
+This tutorial includes two examples where we fold proteins. The first one is Alanine dipeptide which
+is a very small system that can be run on pretty much an modern machine within a reasonable time.
+The second is fs-peptide which might take about 24 hours depending on the computing resources used.</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>Make sure you have <a class="reference external" href="http://www.gromacs.org">Gromacs</a> and <a class="reference external" href="http://MSMBuilder.org">MSMBuilder</a> installed.
+MSMBuilder needs to be installed on the same system that the server is running on.
+For unix machines there is an already prepared instance under examples/msm/msmbuilder-known-good.tar.gz</p>
+<p>Gromacs needs to be installed on the system that the server is running on and all machines
+where you will run workers.</p>
+</div>
+<div class="section" id="learning-the-method">
+<h2>Learning the method<a class="headerlink" href="#learning-the-method" title="Permalink to this headline">¶</a></h2>
+<p>Although Copernicus automates MSM:s it will not automatically find the optimal parameters for you
+That is where you the user need to have a solid understanding of the method.</p>
+</div>
+<div class="section" id="overview-of-the-workflow">
+<h2>Overview of the workflow<a class="headerlink" href="#overview-of-the-workflow" title="Permalink to this headline">¶</a></h2>
+<p>The MSM workflow starts by spawning simulations from a set of provided starting conformations.
+Simulations continue until enough data is gatehered to start building MSM:s.
+The MSM building starts by first clustering all conformations using a hybrid K-means,
+K-medoids algorithm[REF]. The clustering metric used Is RMSD. After this a microstate MSM is built
+and then a macrostate MSM. At each MSM generation it is possible to view at the current macrostates.
+This process continues as many times as specified by the user. Usually it should be run until the MSM
+converges toward a state.</p>
+<p>The MSM workflow is built using gromacs modules and MSMBuilder.
+At the moment it supports gromacs 4.6,gromacs 5.0 and MSMBuilder 2.0.
+To start the workflow the following input is neecessary.</p>
+</div>
+<div class="section" id="settings">
+<h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
+<p><strong>num_microstates</strong> (int) The number of microstates.</p>
+<p><strong>num_macrostates</strong> (int) The number of macrostates.</p>
+<p><strong>lag_time</strong> (int) The lag time of the Markov state model</p>
+<p><strong>grpname</strong> (string)  Defines what part of the system to use during clustering. Gromacs selection syntax is
+used here.</p>
+<p><strong>recluster</strong> (int) The reclustering frequency. Determines how often clustering should be done.
+Defined in nanoseconds. As simulation time has summed up to this amount a new generation of MSM
+building will take place.</p>
+<p><strong>num_generations</strong> (int) Number of MSM generations. After the defined amount of generations the workflow
+will finish.</p>
+<p><strong>num_sim</strong> (int) Number of parallel that will be run at each generation</p>
+<p><strong>confs</strong> (gro files) A set of starting conformations to use as initial seeds. If the number of
+simulations are higher than the starting conformations the workflow will simply choose starting
+conformation in a cyclic fashion.</p>
+<p><strong>grompp</strong> A collection of settings needed for grompp. The required parameters are the following:</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>mdp</strong> A gromacs mdp file</li>
+<li><strong>top</strong> A gromacs topology file</li>
+</ul>
+</div></blockquote>
+<p>The optional parameters are the following</p>
+<blockquote>
+<div><ul class="simple">
+<li><strong>include</strong> array of additional files. For example if the top file includes other files these have to be included here.</li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="how-to-determine-what-parameters-to-set">
+<h2>How to determine what parameters to set?<a class="headerlink" href="#how-to-determine-what-parameters-to-set" title="Permalink to this headline">¶</a></h2>
+<p>Number of microstates, macrostates and Lag time will be very specific depending on the system that
+you are analyzing.  To determine what might work for your system you need to have a good understanding
+of the method. Other things that might affect the quality if the MSM is the simulation length and
+output frequency.</p>
+<div class="section" id="example-1-alanine-dipeptide">
+<h3>Example 1: Alanine dipeptide<a class="headerlink" href="#example-1-alanine-dipeptide" title="Permalink to this headline">¶</a></h3>
+<p>Alanine dipeptide is a very small system that is possible to run on pretty much any computer.
+In this example we will build an MSM that will find the folded state of this peptide</p>
+<p>For this tutorial we need some example files that are located under examples/msm-test in the
+Copernicus source.
+A set of files are prepared in this bundle. It includes the following.</p>
+<ol class="arabic simple">
+<li>4 starting conformations equil0.gro,equil1.gro,equil2.gro,equil3.gro</li>
+<li>Simulation settings in the file grompp.mdp.</li>
+<li>A topology file.</li>
+<li>The script runtest.sh. It includes a short script with all the commands necessary to get the project up and running. Each of the commands will be explained below.</li>
+</ol>
+<p>We will first start a project</p>
+<div class="highlight-none"><div class="highlight"><pre>cpcc start alanine-dipeptide-msm
+</pre></div>
+</div>
+<p>We then need to import the msm module, create a new instance of it and activate it.</p>
+<div class="highlight-none"><div class="highlight"><pre>cpcc import msm
+cpcc instance msm:msm_gmx_adaptive msm
+cpcc activate
+</pre></div>
+</div>
+<p>Now we are going to provide all the necessary input. The workflow will start running as soon as
+all necessary input is provided. Since there is no lower limit on the number of starting
+conformations, it will start running as soon as it has at least one. In this case we do not want
+this. We want to provide 4 starting conformations thus we need to tell the workflow to wait until
+told to start.
+This is done with the transact command.</p>
+<div class="highlight-none"><div class="highlight"><pre>cpcc transact
+</pre></div>
+</div>
+<p>Now we provide all the necessary input</p>
+<div class="highlight-none"><div class="highlight"><pre>cpcc setf msm:in.grompp.top examples/msm-test/topol.top
+cpcc setf msm:in.grompp.mdp examples/msm-test/grompp.mdp
+
+cpcc setf msm:in.confs[+] examples/msm-test/equil0.gro
+cpcc setf msm:in.confs[+] examples/msm-test/equil1.gro
+cpcc setf msm:in.confs[+] examples/msm-test/equil2.gro
+cpcc setf msm:in.confs[+] examples/msm-test/equil3.gro
+
+cpcc set msm:in.recluster 1.0
+cpcc set msm:in.num_sim 20
+
+cpcc set msm:in.num_microstates 100
+cpcc set msm:in.num_macrostates 10
+cpcc set msm:in.lag_time 2
+
+cpcc set msm:in.grpname  Protein
+cpcc set msm:in.num_generations 6
+</pre></div>
+</div>
+<p>We finally commit the transact block.</p>
+<div class="highlight-none"><div class="highlight"><pre>cpcc commit
+</pre></div>
+</div>
+<p>Copernicus will now start spawning simulations and put them on the queue.</p>
+<p>Check the status of the project with <tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">status</span></tt>. This will inform you on the state of the project
+and how many jobs are in the queue and how many are currently running. If you want to see in detail
+what jobs are in the queue use the command <tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">queue</span></tt>.</p>
+<p>After a short while (specify time) enough simulation data has been collected and MSM building will
+start</p>
+<p>If you run the command <tt class="docutils literal"><span class="pre">cpcc</span> <span class="pre">ls</span> <span class="pre">msm</span></tt> you will see a new function instance <tt class="docutils literal"><span class="pre">build_msm_0</span></tt>. Traverse it and
+you will be able to fetch the macrostates and also a current max state which is the most likely end
+state for the system at the moment.</p>
+<p>After a little longer you will notice that more build_msm instances will show up.
+Looking at the max states of these you will notice that after about 4 iterations  we end up in the
+same state, meaning a folded state of the peptide has been found.</p>
+</div>
+<div class="section" id="example-2-fs-peptide">
+<h3>Example 2: fs-peptide<a class="headerlink" href="#example-2-fs-peptide" title="Permalink to this headline">¶</a></h3>
+<p>Fs-peptide is a little larger bit larger system that can be folded. However it might take a couple
+of days depending on the computing resources you have.
+For example on 4 32 core machines with 2 GPUS each it took about 24 hours to reach a folded state.</p>
+<p>All the necessary files for fs-peptide can be found under examples/msm/msm-fs-peptide</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="swarms-tutorial.html" class="btn btn-neutral float-right" title="Swarms Tutorial"/>Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="md-tutorial.html" class="btn btn-neutral" title="Introductory Tutorial"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2015, Sander Pronk, Iman Pouya, Erik Lindahl and others.
+    </p>
+  </div>
+
+  <a href="https://github.com/snide/sphinx_rtd_theme">Sphinx theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../',
+            VERSION:'2.1',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true
+        };
+    </script>
+      <script type="text/javascript" src="../_static/jquery.js"></script>
+      <script type="text/javascript" src="../_static/underscore.js"></script>
+      <script type="text/javascript" src="../_static/doctools.js"></script>
+      <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
