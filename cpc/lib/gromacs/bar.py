@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -48,8 +48,8 @@ class GromacsError(cpc.util.CpcError):
 
 class res:
     """A FE result object"""
-    def __init__(self, lambda_A, lambda_B, 
-                 dG_kT, dG_kT_err, 
+    def __init__(self, lambda_A, lambda_B,
+                 dG_kT, dG_kT_err,
                  s_A, s_A_err, s_B, s_B_err,
                  stdev, stdev_err):
         self.lambda_A=lambda_A
@@ -69,18 +69,18 @@ class res:
 
     def getValue(self):
         """Return a Value object."""
-        lambda_A=FloatValue(self.lambda_A) 
-        lambda_B=FloatValue(self.lambda_B) 
+        lambda_A=FloatValue(self.lambda_A)
+        lambda_B=FloatValue(self.lambda_B)
         dG=FloatValue(self.dG)
-        dG_err=FloatValue(self.dG_err) 
-        dG_kT=FloatValue(self.dG_kT) 
-        dG_kT_err=FloatValue(self.dG_kT_err) 
-        s_A=FloatValue(self.s_A) 
-        s_A_err=FloatValue(self.s_A_err) 
-        s_B=FloatValue(self.s_B) 
-        s_B_err=FloatValue(self.s_B_err) 
-        stdev=FloatValue(self.stdev) 
-        stdev_err=FloatValue(self.stdev_err) 
+        dG_err=FloatValue(self.dG_err)
+        dG_kT=FloatValue(self.dG_kT)
+        dG_kT_err=FloatValue(self.dG_kT_err)
+        s_A=FloatValue(self.s_A)
+        s_A_err=FloatValue(self.s_A_err)
+        s_B=FloatValue(self.s_B)
+        s_B_err=FloatValue(self.s_B_err)
+        stdev=FloatValue(self.stdev)
+        stdev_err=FloatValue(self.stdev_err)
 
         dG_dict={}
         dG_dict["value"]=dG
@@ -114,16 +114,20 @@ class res:
         res_dict["stdev"]=stdev_val
         return RecordValue(res_dict)
 
-        
+
 
 def g_bar(inp):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("g_bar -version")
-        return 
+        return
     fo=inp.getFunctionOutput()
     outDir=inp.getOutputDir()
     nedrfiles=len(inp.getInput('edr'))
+    begin=inp.getInput('begin_time')
+    end=inp.getInput('end_time')
+    nBlocksMin=inp.getInput('n_blocks_min')
+    nBlocksMax=inp.getInput('n_blocks_max')
     baroutname=os.path.join(outDir, "bar.xvg")
     histoutname=os.path.join(outDir, "histogram.xvg")
     #item=inp.getInput('item')
@@ -135,6 +139,18 @@ def g_bar(inp):
             return fo
         cmdline.append(inp.getInput('edr[%d]'%i))
     cmdline.extend( [ "-o", baroutname, "-oh", histoutname ] )
+    if begin and begin > 0:
+        cmdline.extend( [ "-b", "%g" % begin ] )
+    if end and end > 0:
+        cmdline.extend( [ "-e", "%g" % end ] )
+
+    if nBlocksMin:
+        if not nBlocksMax or nBlocksMin <= nBlocksMax:
+            cmdline.extend( [ "-nbmin", "%d" % nBlocksMin ] )
+    if nBlocksMax:
+        if not nBlocksMin or nBlocksMin <= nBlocksMax:
+            cmdline.extend( [ "-nbmax", "%d" % nBlocksMax ] )
+    
     proc=subprocess.Popen(cmdline,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
@@ -175,7 +191,7 @@ def g_bar(inp):
                         s_B_err=    float(spl[7])
                         stdev=      float(spl[8])
                         stdev_err=  float(spl[9])
-                        rs=res(lam_A, lam_B, dG, dG_err, s_A, s_A_err, s_B, 
+                        rs=res(lam_A, lam_B, dG, dG_err, s_A, s_A_err, s_B,
                                s_B_err, stdev, stdev_err)
                         results.append(rs)
                     except ValueError:

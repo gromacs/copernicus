@@ -279,6 +279,8 @@ def establishOutboundConnection(node):
             #The node is not reachable at this moment,
             # no need to throw an exception since we are marking the node
             # as unreachable in ServerConnection
+            log.log(cpc.util.log.TRACE, "Exception when establishing "
+                                        "outgoing connections: %s " % e)
             break
 
     if node.isConnectedOutbound():
@@ -316,6 +318,8 @@ def establishInboundConnection(node, serverState):
             #The node is not reachable at this moment,
             # no need to throw an exception since we are marking the node
             # as unreachable ins ServerConnectionHandler
+            log.log(cpc.util.log.TRACE, "Exception when establishing "
+                                        "inbound connections: %s " % e)
             break
 
     if node.isConnectedInbound():

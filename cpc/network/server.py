@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -60,8 +60,8 @@ class HTTPSServerWithCertAuthentication(CopernicusServer):
 
         CopernicusServer.__init__(self,handler_class,conf,serverState)
 
-        #https part              
-        fpem = conf.getPrivateKey()                    
+        #https part
+        fpem = conf.getPrivateKey()
         fcert = conf.getCertFile()
         ca = conf.getCaChainFile()
         sock = socket.socket(self.address_family,self.socket_type)
@@ -69,7 +69,7 @@ class HTTPSServerWithCertAuthentication(CopernicusServer):
         try:
             self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
                                            cert_reqs = ssl.CERT_REQUIRED,
-                                           ssl_version=ssl.PROTOCOL_SSLv23,
+                                           ssl_version=ssl.PROTOCOL_SSLv3,
                                            ca_certs=ca
                                            )
             self.server_bind()
@@ -106,7 +106,7 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
         try:
             self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
                                            cert_reqs = ssl.CERT_NONE,
-                                           ssl_version=ssl.PROTOCOL_SSLv23,
+                                           ssl_version=ssl.PROTOCOL_SSLv3,
                                            ca_certs=ca)
             self.server_bind()
             self.server_activate()
@@ -117,7 +117,7 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
             print "HTTPS port %s already taken"%conf.getServerSecurePort()
             serverState.doQuit()
 
-   
+
 
 def serveHTTPSWithCertAuthentication(serverState):
     try:
@@ -182,14 +182,14 @@ def runServer(logLevel=None,doFork=True):
 
     pid=0
     try:
-        # First fork so the parent can exit. 
+        # First fork so the parent can exit.
         if doFork:
             pid=os.fork()
     except OSError, e:
         raise Error, "%s [%d]"%(e.strerror, e.errno)
 
     if pid==0:
-        # become the session leader so that we won't have a controlling 
+        # become the session leader so that we won't have a controlling
         # terminal.
         try:
             if doFork:
@@ -203,7 +203,7 @@ def runServer(logLevel=None,doFork=True):
                 pid=os.fork()
         except OSError, e:
             raise Error, "%s [%d]" % (e.strerror, e.errno)
-    
+
         if pid==0: # we're the child
             # go to the root directory to  make sure we're not interfering
             # with unmount fses etc.

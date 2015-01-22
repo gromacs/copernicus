@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -52,12 +52,12 @@ def g_energy(inp):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("g_energy -version")
-        return 
+        return
     edrfile=inp.getInput('edr')
     item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xvgoutname=os.path.join(outDir, "energy.xvg")
-    proc=subprocess.Popen(["g_energy", "-f", edrfile, "-o", xvgoutname], 
+    proc=subprocess.Popen(["g_energy", "-f", edrfile, "-o", xvgoutname],
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -93,7 +93,7 @@ def g_energy(inp):
     fo.setOut('rmsd', FloatValue(rmsd))
     fo.setOut('drift', FloatValue(drift))
     fo.setOut('unit', StringValue(unit))
-    return fo 
+    return fo
 
 
 def checkUpdated(inp, items):
@@ -107,14 +107,14 @@ def _trjconv(inp, fo, split):
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         cpc.util.plugin.testCommand("trjconv -version")
-        return 
+        return
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
     if pers.get('init') is None:
         init=True
         pers.set('init', 1)
     else:
-        inpItems=[ 'traj', 'tpr', 'ndx', 'dt', 'skip', 'dump', 'pbc', 'ur', 
+        inpItems=[ 'traj', 'tpr', 'ndx', 'dt', 'skip', 'dump', 'pbc', 'ur',
                    'center', 'fit', 'fit_type', 'cmdline_options' ]
         if not checkUpdated(inp, inpItems):
             return
@@ -126,7 +126,7 @@ def _trjconv(inp, fo, split):
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
     grooutname=os.path.join(outDir, "out.gro")
-    cmdline=["trjconv", '-s', tprfile, '-f', trajfile] 
+    cmdline=["trjconv", '-s', tprfile, '-f', trajfile]
     if not split:
         cmdline.extend(['-o', xtcoutname])
     else:
@@ -193,7 +193,7 @@ def _trjconv(inp, fo, split):
         fo.setOut('xtc', FileValue(xtcoutname))
     else:
         i=0
-        # iterate as long as there are files with anme 'out%d.gro' for 
+        # iterate as long as there are files with anme 'out%d.gro' for
         # increasing i
         while True:
             filename=os.path.join(outDir, 'out%d.gro'%i)
@@ -207,10 +207,79 @@ def trjconv(inp):
     fo=inp.getFunctionOutput()
     _trjconv(inp, fo, False)
     return fo
- 
+
 def trjconv_split(inp):
     fo=inp.getFunctionOutput()
     _trjconv(inp, fo, True)
+    return fo
+
+def _eneconv(inp, fo):
+    """Internal implementation of eneconv"""
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("eneconv -version")
+        return
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    if pers.get('init') is None:
+        init=True
+        pers.set('init', 1)
+    else:
+        inpItems=[ 'edr_files', 'scalefac', 'dt', 'offset', 'cmdline_options' ]
+        if not checkUpdated(inp, inpItems):
+            return
+        init=False
+    writeStdin=StringIO()
+
+    edrFilesList=inp.getInput('edr_files')
+
+    outDir=inp.getOutputDir()
+    edrOutname=os.path.join(outDir, "fixed.edr")
+    #cmdline=["eneconv", '-f', edrFiles, '-o', edrOutname]
+    cmdline=["eneconv", '-f']
+    for i in xrange(len(edrFilesList)):
+        cmdline.append(inp.getInput('edr_files[%d]' % i))
+
+    cmdline.extend(['-o', edrOutname])
+
+    first_frame_ps=inp.getInput('first_frame_ps')
+    if first_frame_ps is not None:
+        cmdline.extend(['-b', "%g"%first_frame_ps] )
+    last_frame_ps=inp.getInput('last_frame_ps')
+    if last_frame_ps is not None:
+        cmdline.extend(['-e', "%g"%last_frame_ps] )
+    dt=inp.getInput('dt')
+    if dt is not None:
+        cmdline.extend(['-dt', "%g"%dt] )
+    offset=inp.getInput('offset')
+    if offset is not None:
+        cmdline.extend(['-offset', "%g"%offset] )
+    scaleF=inp.getInput('scalefac')
+    if scaleF is not None:
+        cmdline.extend(['-scalefac', "%g"%scalefac] )
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline.extend(cmdlineOpts)
+    log.debug(cmdline)
+
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.getOutputDir(),
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(writeStdin.getvalue())
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: eneconv returned %s"%(stdout))
+    fo.setOut('edr', FileValue(edrOutname))
+
+    pers.write()
+
+def eneconv(inp):
+    fo=inp.getFunctionOutput()
+    _eneconv(inp, fo)
     return fo
 
 def pdb2gmx(inp):
@@ -254,4 +323,4 @@ def pdb2gmx(inp):
     for i in xrange(len(itpfiles)):
         fo.setOut('include[%d]'%(i),itpfiles[i])
     return fo
- 
+
