@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -39,15 +39,14 @@ from cpc.dataflow import FileValue
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
-# Run an energy-minimization with dihedral restraints active
+# Run an energy-minimization with restraints active
 
 
 def run(inp, out):
     pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                  "persistent.dat"))
 
-    # first create the right mdp file
-    # dihedral restraints are on
+    # First create the right mdp file by fixing some of the parameters
     merge = pers.get('merge')
     if merge is None or merge==0:
         merge = 1
@@ -64,9 +63,7 @@ def run(inp, out):
         settings.append(RecordValue( { 'name' : StringValue('emtol'),
                                        'value' : StringValue("%g"%tol) } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
-#                                       'value' : StringValue('500') } ) )
                                        'value' : StringValue('10000') } ) )
-#                                       'value' : StringValue('20000') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstxout'),
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstvout'),
@@ -75,15 +72,17 @@ def run(inp, out):
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstlog'),
                                        'value' : StringValue('10000') } ) )
-        # BW: nstenergy has to be a multiple of nstcalcenergy now, which is not set here (autotuned)
-        # Check if this poses a problem for the analysis later on.
-        #settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
-        #                               'value' : StringValue('120') } ) )
         out.setSubOut('minimization_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
     mdruns = pers.get('mdruns')
     if mdruns is None or mdruns == 0:
+
+        if inp.getInput('fix_endpoints') is not None and inp.getInput('fix_endpoints') > 0:
+            fix_endpoints = 1
+        else:
+            fix_endpoints = 0
+
         # Create a network instance that runs multiple grompp/mdruns in parallell
         out.addInstance('runs', 'gromacs::grompp_mdruns')
 
@@ -115,8 +114,18 @@ def run(inp, out):
         in_confs = inp.getInput('path')
         if len(in_confs) == 0:
             sys.stderr.write("run_minimization ran despite path of len 0\n")
+
         for i in range(len(in_confs)):
             
+            # For the fixed endpoints case, we can skip running anything for the first and last point
+            if fix_endpoints == 1 and (i == 0 or i == (len(in_confs) - 1)):
+                # Just pass-through the path-state
+                out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+                out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+                out.addConnection('self:ext_in.path[%d].conf' % i, 'self:ext_out.path[%d].conf' % i)
+                out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+                continue
+
             # If there are .itp's, some of them might have restraints (dihedral or posres)  with place-holder
             # force constants (KFAC) which we now need to search/replace into a new set of files
             # with the kfac we want in this stage
@@ -125,13 +134,13 @@ def run(inp, out):
             if inc_array is not None:
                 kfac = inp.getInput('restrforce')
                 if kfac is None:
-                    kfac = 500.0
+                    kfac = 500.0  # Default to something sane
                 for j in range(len(inc_array)):
                     in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
                     # Since we don't rewrite the .top file which includes these files, we have
                     # to generate exactly the same output filenames here. TODO: split this from
                     # the in_itpfn to make sure there can be no mixups due to ordering.
-                    out_itpfn = 'res_%d_chain_%d.itp' % (i + 1, j)
+                    out_itpfn = 'res_%d_chain_%d.itp' % (i, j)
                     # Do the search/replace
                     with open(in_itpfn, 'r') as in_itpf:
                         with open(out_itpfn, 'w') as out_itpf:

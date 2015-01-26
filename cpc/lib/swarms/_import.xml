@@ -81,6 +81,9 @@
             <field type="int" id="use_posres" opt="true">
                 <desc>Set to 1 to use position restraints instead of dihedral restraints</desc>
             </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
+            </field>
             <field type="grompp_input" id="minim_grompp">
                 <desc>Minimization grompp parameters</desc>
             </field>
@@ -223,6 +226,9 @@
             <field type="int" id="double" opt="true">
                 <desc>Set to 1 to use double-precision minimization</desc>
             </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
+            </field>
         </inputs>
         <outputs>
             <field type="conf_path" id="path">
@@ -254,6 +260,9 @@
             </field>
              <field type="float" id="restrforce" opt="true">
                 <desc>Force constant to use for the restraints</desc>
+            </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
@@ -291,6 +300,9 @@
             </field>
              <field type="float" id="restrforce" opt="true">
                 <desc>Force constant to use for the restraints</desc>
+            </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
             </field>
             <field type="resource::run_desc" id="resources" opt="true">
                 <desc>The run resources for a typical run</desc>
@@ -445,6 +457,9 @@
             <field type="int" id="use_posres" opt="true">
                 <desc>Set to 1 to use position restraints instead of dihedral restraints</desc>
             </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
+            </field>
           <!-- It is enough that this is complete-flagged, as it has to be complete for the others to be -->
             <field type="cv_path_array" id="cvs" complete="true">
                 <desc>The get_cvs processed CV base files, either dihedrals or atom positions</desc>
@@ -498,6 +513,9 @@
         <inputs>
             <field type="int" id="use_posres" opt="true">
                 <desc>Type of CVs. Set to 1 to use position restraints, otherwise dihedral restraints</desc>
+            </field>
+            <field type="int" id="fix_endpoints" opt="true">
+                <desc>Set to 1 to fix the string start and end, otherwise they are moving just like all the other stringpoints</desc>
             </field>
             <field type="file" id="start_conf">
                 <desc>The start conformation (state A)</desc>
@@ -590,6 +608,8 @@
             <instance id="reparametrize" function="reparametrize"/>
 
             <!-- connections from the input to minimization -->
+            <connection src="self:ext_in.fix_endpoints"
+                        dest="minimization:in.fix_endpoints"/>
             <connection src="self:ext_in.minim_grompp"
                         dest="minimization:in.grompp"/>
             <connection src="self:ext_in.em_tolerance"
@@ -606,6 +626,8 @@
             <!-- connections to thermalization -->
             <connection src="minimization:out.path"
                         dest="thermalization:in.path"/>
+            <connection src="self:ext_in.fix_endpoints"
+                        dest="thermalization:in.fix_endpoints"/>
             <connection src="self:ext_in.therm_grompp"
                         dest="thermalization:in.grompp"/>
             <connection src="self:ext_in.therm_restrforce"
@@ -620,6 +642,8 @@
                         dest="equilibration:in.path"/>
             <connection src="thermalization:out.confs"
                         dest="equilibration:in.confs"/>
+            <connection src="self:ext_in.fix_endpoints"
+                        dest="equilibration:in.fix_endpoints"/>
             <connection src="self:ext_in.equi_grompp"
                         dest="equilibration:in.grompp"/>
             <connection src="self:ext_in.equil_restrforce"
@@ -668,6 +692,8 @@
             <!-- connect get_cvs to reparametrize-->
             <connection src="self:ext_in.use_posres"
                         dest="reparametrize:in.use_posres"/>
+            <connection src="self:ext_in.fix_endpoints"
+                        dest="reparametrize:in.fix_endpoints"/>
             <connection src="get_cvs:out.cvs"
                         dest="reparametrize:in.cvs"/>
             <!--<connection src="self:ext_in.restraint_top"

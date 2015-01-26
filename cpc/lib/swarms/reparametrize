@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -67,7 +67,15 @@ def rep(inp, out):
     else:
         use_posres = 0
 
+    if inp.getInput('fix_endpoints') is not None and inp.getInput('fix_endpoints') > 0:
+        fix_endpoints = 1
+    else:
+        fix_endpoints = 0
+
     # Create a python object from the cv_array_array in cvs
+    # NOTE: the cvs array will contain data from get_cvs for all points we did run swarms on, which
+    # will vary depending on the fix_endpoints option. If it's 1, the cvs array will not contain the
+    # data for the start or end point and we have to consider this further below.
     cv_array = []
     cvs = inp.getInput('cvs')
     for i in range(len(cvs)):   # for each point i
@@ -97,36 +105,48 @@ def rep(inp, out):
             includes += [ subincludes ]
 
     # call the external python script
-    # TODO get previous path points and measure distance of displacement 
-    reparametrize.reparametrize(use_posres, cv_array, ndx_file, Nchains, 
+    reparametrize.reparametrize(use_posres, fix_endpoints, cv_array, ndx_file, Nchains, 
                                 start_conf, start_xvg, end_conf, end_xvg, last_resconfs, 
                                 top, includes)
 
-    confs = inp.getInput('restrained_confs') # Note: these are not the restraint confs. these are outputs from equilibration...
     # TODO: for the position res string, we should still pass along the restrained_confs to the next iteration, but
     # instead of replacing the res_chain.itp files, we should pass them along unaltered but replace the path[].resconf's
     # instead with the new coordinates written by the reparametrizer above.
     for i in range(len(path)):
+
+        # For the start/end points, if they are to be kept fixed, we didn't write any new .itp's in the 
+        # reparametrize call above and here we can simply bypass them
+        if fix_endpoints == 1 and (i == 0 or i == (len(path) - 1)):
+            out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+            out.addConnection('self:ext_in.restrained_confs[%d]' % i, 'self:ext_out.path[%d].conf' % i)
+            out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+            continue
+
         top = FileValue(inp.getInput('path[%d].top' % i))
         out.setOut('path[%d].top' % i, top)
-        conf = FileValue(inp.getInput('restrained_confs[%d]' % i))
-        out.setOut('path[%d].conf' % i, conf)
+
+        conf = FileValue(inp.getInput('restrained_confs[%d]' % i))  # this is the result from the equilibration stage
+        out.setOut('path[%d].conf' % i, conf) # and it is what will go as starting conf for the next iteration
+
         # Connect the includes, which are either newly reparametrized dihedrals or just force constants (in the posres case)
         if use_posres == 1:
             # Position CVs
             # Copy the in path[].include to the out path
+            # TODO: could have done: out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
             inc_array = inp.getInput('path[%d].include' % i)
             if inc_array is not None:
                 for j in range(len(inc_array)):
                     inc_ij = inp.getInput('path[%d].include[%d]' % (i, j))
                     out.setOut('path[%d].include[%d]' % (i, j), FileValue(inc_ij))
+
             # For the position restraints we also have to replace the output path[].resconf with the reparametrized atom positions
-            resconf = os.path.join(inp.getOutputDir(), 'rep_resconf_%d.gro' % (i + 1))   # 0 is the starting conf, which is not part of the reparam
+            resconf = os.path.join(inp.getOutputDir(), 'rep_resconf_%d.gro' % i)
             out.setOut('path[%d].resconf' % i, FileValue(resconf))
         else:
             # Dihedral CVs, replace the first Nchains number of itp files with the reparametrized angles, then copy the rest
             for j in range(Nchains):
-                include = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i + 1, j))
+                include = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i, j))
                 out.setOut('path[%d].include[%d]' % (i, j), FileValue(include))
             # Copy any additional include files
             if len(includes[0]) > Nchains:
