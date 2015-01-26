@@ -19,13 +19,11 @@
 # Notes:
 # https://docs.python.org/2/library/threading.html#thread-objects
 # http://stackoverflow.com/questions/11954021/how-to-run-parallel-programs-in-python
-# Note2: it takes a lot of memory to keep 500 trjconvs alive. If there isn't a huge amount
-# of memory on the server, this will swap like crazy probably.
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, Bjorn Wesen and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Bjorn Wesen, Erik Lindahl and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -100,6 +98,7 @@ def run(inp, out):
             # Run the points sequentially but all sub-confs (nbr swarms) in parallel, which is more easy on the computer
             # than all out parallel which creates like 500 threads that can go OOM if you're unlucky
             for i in range(len(confs)):
+
                 # Cluster pass
                 trjprocs_clustering = []
                 clustering_intermediaries = []

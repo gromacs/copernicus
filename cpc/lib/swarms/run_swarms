@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -57,7 +57,6 @@ def run(inp, out):
         # now we set our own mdp settings
         steps = inp.getInput('swarm_steps')
         settings = [] 
-        # Note: in older Gromacs, the dihre options were controlled from here too.
         settings.append(RecordValue( { 'name' : StringValue('integrator'),
                                        'value' : StringValue('sd') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nsteps'),
@@ -72,15 +71,12 @@ def run(inp, out):
                                        'value' : StringValue('0') } ) )
         settings.append(RecordValue( { 'name' : StringValue('nstlog'),
                                        'value' : StringValue('10000') } ) )
-        # BW: nstenergy has to be a multiple of nstcalcenergy now, which is not set here (autotuned)
-        # Check if this poses a problem for the analysis later on.
-        #settings.append(RecordValue( { 'name' : StringValue('nstenergy'),
-        #                               'value' : StringValue('120') } ) )
         out.setSubOut('swarm_settings', ArrayValue(settings))
     pers.set('merge', merge)
 
     mdruns = pers.get('mdruns')
     if mdruns is None or mdruns < 1:
+
         mdruns = 0
         confs = inp.getInput('swarmconfs')
         finished = True
@@ -92,7 +88,7 @@ def run(inp, out):
         else: 
             finished = False
                
-        # we ALWAYS run swarms on one core
+        # we ALWAYS run swarms on one core only
         maxcores = 1
         out.setSubOut('resources.max.cores', IntValue(maxcores))
         
