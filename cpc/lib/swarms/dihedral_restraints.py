@@ -12,6 +12,24 @@
 # start and end without updating the actual configs (I'm not sure this use-case is relevant at all, if it isn't, we can
 # simply remove the start/end_xvg inputs)
 
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
 import sys
 import re
 import random
@@ -25,7 +43,7 @@ from molecule import molecule
 #import cpc.dataflow
 #from cpc.dataflow import FileValue
 
-# If initial_confs is None or zero length, use start/end etc to interpolate, otherwise use the structures in intial_confs
+# If initial_confs is None or zero length, use start/end etc to interpolate, otherwise use the structures in initial_confs
 #
 # Note: if initial_confs are given, they should include the start and end configs as well (the complete string)
 
@@ -47,14 +65,16 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
         startpts = readxvg.readxvg(start_xvg, selection)
         endpts = readxvg.readxvg(end_xvg, selection)
     else:
-        # Have to generate the dihedrals ourselves
+        # Have to generate the dihedrals ourselves from the given initial structures
+        # Note: when we get an initial_confs[] array, we use it for all points and 
+        # the start/end input parameters are completely ignored
         # TODO: assert that len(initial_confs) == n otherwise?
 
         ramaprocs = {}
 
-        # Run g_rama (in parallel) on each intermediate conf (not start/end) and output to a temporary .xvg
+        # Run g_rama (in parallel) on each structure and output to a temporary .xvg
         FNULL = open(os.devnull, 'w') # dont generate spam from g_rama 
-        for i in range(1, n - 1):
+        for i in range(n):
             # TODO: check for and use g_rama_mpi.. like everywhere else
             ramaprocs[i] = Popen(['g_rama', '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i], 
                                  stdout=FNULL, stderr=FNULL)
@@ -63,7 +83,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
 
         stringpts = {}  # Will have 4 levels: stringpoint, residue, chain, phi/psi value
 
-        for i in range(1, n - 1):
+        for i in range(n):
             # Start array indexed by residue
             xvg_i = os.path.join(inp.getOutputDir(), '0%3d.xvg' % i)
             # Make sure the corresponding g_rama task has ended
@@ -72,32 +92,31 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
             stringpts[i] = readxvg.readxvg(xvg_i, selection)
 
     # Rewrite the topology to include the res itp files instead of the original per-chain itps (if any)
-    # There will be one topol_x.top per intermediate string point
+    # There will be one topol_x.top per string point
 
     sys.stderr.write('%s' % includes)
-    for k in range(1, n - 1):
+    for k in range(n):
         with open(top) as in_topf:
             in_top = in_topf.read()       
             for mol in range(Nchains):
                 if len(includes) > 0:
                     includename = includes[mol].split('/')[-1]
-                    in_top = re.sub(includename, 'res_%d_chain_%d.itp'%(k, mol), in_top)
-            with open('topol_%d.top'%k,'w') as out_top:
+                    in_top = re.sub(includename, 'res_%d_chain_%d.itp' % (k, mol), in_top)
+            with open('topol_%d.top' % k,'w') as out_top:
                 # sys.stderr.write('%s'%in_top)
                 out_top.write(in_top)   
 
-    # Generate/copy and write-out the dihedrals for each intermediate point (not for the start/end points)
-    for k in range(1, n - 1):
+    # Generate/copy and write-out the dihedrals for each point
+    for k in range(n):
         for mol in range(Nchains):
             # TODO: use with statement for restraint_itp as well
-            restraint_itp = open('res_%d_chain_%d.itp'%(k,mol),'w')
+            restraint_itp = open('res_%d_chain_%d.itp' % (k, mol), 'w')
             if Nchains > 1:
                 with open(includes[mol]) as moltop_f:
                     moltop = moltop_f.read()
                     restraint_itp.write(moltop)
             # write the initial part of the topology file
-            # NOTE: the dihedral_restraints format changed in gromacs 4.6+ or so to this. before it had
-            # some other parameters as well. 
+            # Note: gromacs 4.6+ required
             restraint_itp.write("[ dihedral_restraints ]\n")
             restraint_itp.write("; ai   aj   ak   al  type phi  dphi  kfac\n")
             if len(includes) > 0:
@@ -109,8 +128,7 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                     with open(top,'r') as in_itp_f:
                         in_itp = in_itp_f.read().split('; Include Position restraint file')
                         out_top.write(in_itp[0])
-                        out_top.write('#include "res_%d_chain_%d.itp"\n'%(k,mol))
-                        #out_top.write('#include "res_%d_chain_%d.itp"\n'%(k,mol))
+                        out_top.write('#include "res_%d_chain_%d.itp"\n' % (k, mol))
                         out_top.write(in_itp[1])
 
             # Create a lookup-table for the protein topology that maps residue to dihedrally relevant
@@ -143,9 +161,11 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
                 # Also see reparametrize.py
 
                 if use_interpolation:
-                    phi_val = startpts[r][mol][0] + (endpts[r][mol][0] - startpts[r][mol][0]) / n * k
-                    psi_val = startpts[r][mol][1] + (endpts[r][mol][1] - startpts[r][mol][1]) / n * k
+                    # k is from 0 to n-1, so map it so we get a factor from 0 to 1
+                    phi_val = startpts[r][mol][0] + k * (endpts[r][mol][0] - startpts[r][mol][0]) / (n - 1)
+                    psi_val = startpts[r][mol][1] + k * (endpts[r][mol][1] - startpts[r][mol][1]) / (n - 1)
                 else:
+                    # Use the values extracted from the initial_confs[] structures above
                     phi_val = stringpts[k][r][mol][0]
                     psi_val = stringpts[k][r][mol][1]
 

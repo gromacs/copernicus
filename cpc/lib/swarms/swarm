@@ -3,7 +3,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Erik Lindahl, Bjorn Wesen and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -85,6 +85,7 @@ def swarm(inp, out):
         
         # Set explicitly the min/max core usage for the min/therm/equil runs
         mincores=1
+#        maxcores=2
         maxcores=8
         out.setSubOut('resources.min.cores', IntValue(mincores))
         out.setSubOut('resources.max.cores', IntValue(maxcores))
@@ -113,7 +114,7 @@ def swarm(inp, out):
         # If the initial_resconfs[] array is given, use as starting point for the restraints in the first
         # minimization step of the first iteration. Used to continue a string simulation from a previous
         # run, where we extract the last reparametrized resconfs.
-        # Only used for the position-restraint mode.
+        # Only used for the position-restraint mode currently.
 
         initial_resconfs = []
         initial_resconfs_array = inp.getInput('initial_resconfs')
@@ -131,8 +132,8 @@ def swarm(inp, out):
         # ndx is the atom list to use for the restraints (for dihedrals, the residues affected are used)
 
         if use_posres == 1:
-            # NOTE: interpolation not supported here yet.
-            position_restraints.write_restraints(inp, initial_confs, initial_resconfs, start, end, 
+            # NOTE: interpolation not supported here yet, TODO
+            position_restraints.write_restraints(inp, initial_confs, start, end, 
                                                  tpr, top, includes, n, ndxfn, Nchains)
         else:
             dihedral_restraints.write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, 
@@ -144,30 +145,24 @@ def swarm(inp, out):
         # configs of the initial path. These are set through a subnet, which is connected
         # to the first iteration iter0 further below (sub_out.path -> iter0:in.path)
         #
-        # Since we don't move the start and end points, we are really going to process
-        # only the path points 1 to n-2 (if n is the total number of points and we start at 0).
-        # Let i reflect the "true" point index, but the arrays start at 0, hence the i-1
-        # in most places below.
+        # We create a string path with all points included even the start and end points, but
+        # depending on the "fix_endpoints" mode, we then don't actually simulate and update the start/end indices
+        # if they are to be kept fixed.
 
-        for i in range(1, n - 1):  # range(a,b) gives numbers from a to b-1.
+        for i in range(n):
 
             # Set a starting configuration for every point
             #
             # Check initial_confs[] and use that if given, otherwise use the same start_conf for all
             # (the interpolated restraints will be used in the minimization step to force the
             #  start_conf into the intermediate states, which will work in some setups)
-            #
-            # path[] starts at 0 for the first intermediate state after start_conf, but initial_confs include
-            # the start/end confs so that is why we use i there and not i-1.
 
             if len(initial_confs) > 0:
-                out.setSubOut('path[%d].conf' % (i - 1), FileValue(initial_confs[i]))
+                out.setSubOut('path[%d].conf' % i, FileValue(initial_confs[i]))
                 # We also extract the starting restraint coordinates from the initial conf for this stringpoint, unless
-                # it is given in the initial_resconfs[] array.
+                # it is given in the initial_resconfs[] array (as would be the case for continuing a run)
                 if len(initial_resconfs) > 0:
-                    # Note that initial_resconfs do NOT include the start/end configs like initial_confs does, hence the
-                    # indexing of i - 1 
-                    out.setSubOut('path[%d].resconf' % (i - 1), FileValue(initial_resconfs[i - 1]))
+                    out.setSubOut('path[%d].resconf' % i, FileValue(initial_resconfs[i]))
                 else:
                     # Basically we just use trjconv to output the Protein group from the input system.
                     # It is not strictly necessary for the first iteration, as grompp without the resconf input defaults to
@@ -187,10 +182,10 @@ def swarm(inp, out):
                     trjproc.communicate(writeStdin.getvalue())
                     FNULL.close()
                     # Use the generated file as resconf in the initial path[]
-                    out.setSubOut('path[%d].resconf' % (i - 1), FileValue(os.path.join(inp.getOutputDir(), resfn)))
+                    out.setSubOut('path[%d].resconf' % i, FileValue(os.path.join(inp.getOutputDir(), resfn)))
             else:
                 # Set the same initial conf to all starting structures
-                out.setSubOut('path[%d].conf' % (i - 1), FileValue(start))
+                out.setSubOut('path[%d].conf' % i, FileValue(start))
 
             # One topology file per path point. These are also written by dihedral_restraints
             # but are simply passed through from the top level topology input, with the
@@ -198,7 +193,7 @@ def swarm(inp, out):
 
             #if len(includes)==0:
             top_i = os.path.join(inp.getOutputDir(), 'topol_%d.top' % i)
-            out.setSubOut('path[%d].top' % (i - 1), FileValue(top_i))
+            out.setSubOut('path[%d].top' % i, FileValue(top_i))
             #else:
             #    out.setSubOut('path[%d].top'%(i-1), FileValue(top))
             # connect includes output by write_restraints
@@ -208,14 +203,14 @@ def swarm(inp, out):
             for chain in range(Nchains):
                 # These are written to our output dir by the write_restraints fn above
                 include_i = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i, chain))
-                out.setSubOut('path[%d].include[%d]' % (i - 1, chain), FileValue(include_i))
+                out.setSubOut('path[%d].include[%d]' % (i, chain), FileValue(include_i))
 
             # Connect any other includes as itp's after the chain restraint itps
 
             if len(includes) > Nchains:
                 for j in range(Nchains,len(includes)):
                     include = inp.getInput('include[%d]' % j)
-                    out.setSubOut('path[%d].include[%d]' % (i - 1, j),
+                    out.setSubOut('path[%d].include[%d]' % (i, j),
                                               FileValue(include))
         
         # Create the swarm iteration instances
@@ -226,9 +221,11 @@ def swarm(inp, out):
             
             # Mode of CVs, dihedrals or position restraints
             out.addConnection('self:ext_in.use_posres', 'iter%d:in.use_posres' % i)
+            # If the start/end points are allowed to drift or not
+            out.addConnection('self:ext_in.fix_endpoints', 'iter%d:in.fix_endpoints' % i)
 
             # Initial input points - these are used by the reparametrize step to "stretch"
-            # the path well between the start and end points (which are fixed), as the 
+            # the path well between the start and end points as the 
             # individual path points in between move around
             out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf' % i)
             out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg' % i)

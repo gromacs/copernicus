@@ -20,6 +20,25 @@
 # path[].resconf unset, and grompp won't use the -r option and it will take the restraint positions
 # from the starting conf.
 
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
 import sys
 import re
 import random
@@ -36,7 +55,7 @@ from molecule import molecule
 #
 # Note: if initial_confs are given, they should include the start and end configs as well (the complete string)
 
-def write_restraints(inp, initial_confs, initial_resconfs, start, end, tpr, top, includes, n, ndxfn, Nchains):
+def write_restraints(inp, initial_confs, start, end, tpr, top, includes, n, ndxfn, Nchains):
     
     n = int(n)  # number of points in the string, including start and end point
 
@@ -54,7 +73,7 @@ def write_restraints(inp, initial_confs, initial_resconfs, start, end, tpr, top,
     # There will be one topol_x.top per intermediate string point
 
     sys.stderr.write('%s' % includes)
-    for k in range(1, n - 1):
+    for k in range(n):
         with open(top) as in_topf:
             in_top = in_topf.read()       
             for mol in range(Nchains):
@@ -65,10 +84,10 @@ def write_restraints(inp, initial_confs, initial_resconfs, start, end, tpr, top,
                 # sys.stderr.write('%s'%in_top)
                 out_top.write(in_top)   
 
-    # Generate/copy and write-out the restraint atom and force spec  for each intermediate point
+    # Generate/copy and write-out the restraint atom and force spec for each intermediate point
     # This is really unnecessary here since the restraint positions are not in these files so they are the same
     # for all points and chains. TODO
-    for k in range(1, n - 1):
+    for k in range(n):
         for mol in range(Nchains):
             with open('res_%d_chain_%d.itp' % (k, mol), 'w') as restraint_itp:
                 if Nchains > 1:
@@ -82,10 +101,10 @@ def write_restraints(inp, initial_confs, initial_resconfs, start, end, tpr, top,
                 else:
                     with open('topol_%d.top' % k, 'w') as out_top:
                         protein = molecule(top)
-                        with open(top,'r') as in_itp_f:
+                        with open(top, 'r') as in_itp_f:
                             in_itp = in_itp_f.read().split('; Include Position restraint file')
                             out_top.write(in_itp[0])
-                            out_top.write('#include "res_%d_chain_%d.itp"\n'%(k,mol))
+                            out_top.write('#include "res_%d_chain_%d.itp"\n' % (k, mol))
                             out_top.write(in_itp[1])
 
                 # Go through the atoms in the selection index and write one row for each one with the KFAC
@@ -95,6 +114,6 @@ def write_restraints(inp, initial_confs, initial_resconfs, start, end, tpr, top,
                 restraint_itp.write("; atom  type      fx      fy      fz\n")
 
                 for a in ndx_atoms:
-                    if a < 5566:  # only write one chain, and do it relative atom 1 since the .itp maps to the topology molecule.
+                    if a < 5566:  # GLIC HACK: only write one chain, and do it relative atom 1 since the .itp maps to the topology molecule.
                         restraint_itp.write("%6d     1  KFAC  KFAC  KFAC\n" % int(a))
 
