@@ -5,7 +5,6 @@
     <import name="gromacs" />
     <import name="meas" />
     <import name="int" />
-    <import name="coord" />
 
     <type id="grompp_input" base="record">
         <desc>Partial grompp input</desc>
@@ -111,8 +110,8 @@
         <field type="string" id="resname">
             <desc>Name of residue to restrain to.</desc>
         </field>
-        <field type="coord::coord_3d" id="pos">
-            <desc>Relative location to restrain to.</desc>
+        <field type="float" id="distance">
+            <desc>Distance to residue to restrain to (in nm).</desc>
         </field>
         <field type="float" id="strength">
             <desc>Coupling strength (in kJ/mol/nm).</desc>
@@ -187,7 +186,7 @@
                 <desc>The tolerance (percent) for deciding when the difference
                       between a lambda value in two subsequent runs is so large
                       that the new lambda values are kept (lambda values are
-                      (optimized). If set to 0 lambda values will be optimized
+                      optimized). If set to 0 lambda values will be optimized
                       each iteration. Default is 20.
                 </desc>
             </field>
@@ -237,7 +236,7 @@
                 </desc>
             </field>
             <field type="bool" id="simultaneous_decoupling" opt="true">
-                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                <desc>Decouple Coulomb and Lennard-Jones at the same time.
                       Default False.
                 </desc>
             </field>
@@ -403,10 +402,6 @@
                       point optimization.
                 </desc>
             </field>
-            <field type="int" id="n_repetitions">
-                <desc>The number of times to repeat the solvation free energy
-                      calculations.</desc>
-            </field>
             <field type="bool" id="simultaneous_decoupling" opt="true">
                 <desc>Decouple Coulomb and Lennard Jones at the same time.
                       Default False.
@@ -419,6 +414,10 @@
                       If specifying a lambda array there will be no lambda
                       point optimization.
                 </desc>
+            </field>
+            <field type="int" id="n_repetitions">
+                <desc>The number of times to repeat the solvation free energy
+                      calculations.</desc>
             </field>
         </inputs>
         <outputs>
@@ -491,6 +490,47 @@
                       each iteration. Default is 20.
                 </desc>
             </field>
+            <field type="int" id="solvation_n_lambdas_init" opt="true">
+                <desc>The number of lambda points from which to start
+                      lambda optimizations for solvation.
+                      If optimizations are disabled
+                      this number of lambda points will be evenly distributed
+                      between lambda 0 and 1.
+                </desc>
+            </field>
+            <field type="int" id="binding_n_lambdas_init" opt="true">
+                <desc>The number of lambda points from which to start
+                      lambda optimizations for binding.
+                      If optimizations are disabled
+                      this number of lambda points will be evenly distributed
+                      between lambda 0 and 1.
+                </desc>
+            </field>
+            <field type="float" id="stddev_spacing" opt="true">
+                <desc>Optional per-sample standard deviation spacing of
+                      lambda points in kT for lambda point spacing
+                      optimization. If not set, will use 1 kT.
+                </desc>
+            </field>
+            <field type="float" id="dl_power" opt="true">
+                <desc>Optional parameter. When optimizing the lambda path
+                      raise deltaLambda to dl_power.
+                      Default 1. Suggested alternatives: 1.5 or 2.
+                </desc>
+            </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
+            <field type="int" id="n_blocks_min" opt="true">
+                <desc>Minimum number of blocks for error estimation for BAR.
+                      Optional and defaults to 5. Recommended value is 4.
+                </desc>
+            </field>
+            <field type="int" id="n_blocks_max" opt="true">
+                <desc>Maximum number of blocks for error estimation for BAR.
+                      Optional and defaults to 5. Recommended value is 7.
+                </desc>
+            </field>
             <field type="grompp_input" id="grompp_bound">
                 <desc>A full set of input values for grompp (except
                       configuration) for the situation where the ligand is
@@ -535,39 +575,16 @@
                       This time should not be too short, but can be too long.
                       A value of 0.1 ns should be good for water.</desc>
             </field>
-            <field type="float" id="stddev_spacing" opt="true">
-                <desc>Optional per-sample standard deviation spacing of
-                      lambda points in kT for lambda point spacing
-                      optimization. If not set, will use 1 kT.
-                </desc>
-            </field>
-            <field type="float" id="dl_power" opt="true">
-                <desc>Optional parameter. When optimizing the lambda path
-                      raise deltaLambda to dl_power.
-                      Default 1. Suggested alternatives: 1.5 or 2.
-                </desc>
-            </field>
-            <field type="float" id="sc_alpha" opt="true">
-                <desc>Soft-core alpha parameter for the mdruns.</desc>
-            </field>
-            <field type="int" id="n_blocks_min" opt="true">
-                <desc>Minimum number of blocks for error estimation for BAR.
-                      Optional and defaults to 5. Recommended value is 4.
-                </desc>
-            </field>
-            <field type="int" id="n_blocks_max" opt="true">
-                <desc>Maximum number of blocks for error estimation for BAR.
-                      Optional and defaults to 5. Recommended value is 7.
-                </desc>
-            </field>
-            <field type="lambda_array" id="lambdas_q" opt="true">
-                <desc>Optional list of lambda values for electrostatic decoupling.
+            <field type="lambda_array" id="solvation_lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling
+                      for solvation.
                       If specifying a lambda array there will be no lambda
                       point optimization.
                 </desc>
             </field>
-            <field type="lambda_array" id="lambdas_lj" opt="true">
-                <desc>Optional list of lambda values for Lennard-Jones decoupling.
+            <field type="lambda_array" id="solvation_lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling
+                      for solvation.
                       If specifying a lambda array there will be no lambda
                       point optimization.
                 </desc>
@@ -577,9 +594,31 @@
                       Default False.
                 </desc>
             </field>
-            <field type="lambda_array" id="lambdas_ljq" opt="true">
+            <field type="lambda_array" id="solvation_lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
-                      of Coulomb and Lennard-Jones.
+                      of Coulomb and Lennard-Jones for solvation.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling
+                      for binding.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling
+                      for binding.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones for binding.
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
@@ -628,6 +667,213 @@
     </function>
 
 
+    <function id="binding_repeat" type="external">
+        <desc>Calculate repeated runs to calculate a free energy of binding:
+              the free energy difference between a molecule (ligand) bound
+              to another molecule (receptor), and the same molecules unbound,
+              and solvated separately: F_binding = F_bound - F_unbound
+
+              This function takes two configurations: one with a ligand bound
+              to the receptor, and one with the ligand solvated. Two
+              calculations then proceed: one where the free energy of
+              decoupling the ligand from the receptor is calculated, and one
+              where the free energy of solvation of the ligand is calculated.
+              The difference in is the free energy of binding. For both
+              caculations, the Bennett acceptance ratio method is used.
+        </desc>
+        <inputs>
+            <field type="string" id="ligand_name">
+                <desc>The name/group number of the ligand.  </desc>
+            </field>
+            <field type="string" id="receptor_name">
+                <desc>The name/group number of the receptor.  </desc>
+            </field>
+            <field type="float" id="precision" opt="true">
+                <desc>Desired precision in kJ/mol. defaults to 1 kJ/mol if
+                not set.</desc>
+            </field>
+            <field type="int" id="min_iterations" opt="true">
+                <desc>Minimum number of iterations performed for van der Waals
+                    and electrostatic calculations respectively.</desc>
+            </field>
+            <field type="bool" id="optimize_lambdas" opt="true">
+                <desc>Whether to optimize lambda points or not. Lambda values
+                      are calculated after each run anyhow, but if optimize_lambdas
+                      is True the new values will be used for the next run, if there
+                      are more or fewer lambda points in the new set or if any of the
+                      lambda points differ in value more than optimization_tolerance
+                      allows. Default is True.
+                </desc>
+            </field>
+            <field type="bool" id="lambdas_all_to_all" opt="true">
+                <desc>Calculate delta H to all lambda values for each lambda value.
+                    Default is False.
+                </desc>
+            </field>
+            <field type="float" id="optimization_tolerance" opt="true">
+                <desc>The tolerance (percent) for deciding when the difference
+                      between a lambda value in two subsequent runs is so large
+                      that the new lambda values are kept (lambda values are
+                      (optimized). If set to 0 lambda values will be optimized
+                      each iteration. Default is 20.
+                </desc>
+            </field>
+            <field type="int" id="solvation_n_lambdas_init" opt="true">
+                <desc>The number of lambda points from which to start
+                      lambda optimizations for solvation.
+                      If optimizations are disabled
+                      this number of lambda points will be evenly distributed
+                      between lambda 0 and 1.
+                </desc>
+            </field>
+            <field type="int" id="binding_n_lambdas_init" opt="true">
+                <desc>The number of lambda points from which to start
+                      lambda optimizations for binding.
+                      If optimizations are disabled
+                      this number of lambda points will be evenly distributed
+                      between lambda 0 and 1.
+                </desc>
+            </field>
+            <field type="float" id="stddev_spacing" opt="true">
+                <desc>Optional per-sample standard deviation spacing of
+                      lambda points in kT for lambda point spacing
+                      optimization. If not set, will use 1 kT.
+                </desc>
+            </field>
+            <field type="float" id="dl_power" opt="true">
+                <desc>Optional parameter. When optimizing the lambda path
+                      raise deltaLambda to dl_power.
+                      Default 1. Suggested alternatives: 1.5 or 2.
+                </desc>
+            </field>
+            <field type="float" id="sc_alpha" opt="true">
+                <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
+            <field type="int" id="n_blocks_min" opt="true">
+                <desc>Minimum number of blocks for error estimation for BAR.
+                      Optional and defaults to 5. Recommended value is 4.
+                </desc>
+            </field>
+            <field type="int" id="n_blocks_max" opt="true">
+                <desc>Maximum number of blocks for error estimation for BAR.
+                      Optional and defaults to 5. Recommended value is 7.
+                </desc>
+            </field>
+            <field type="grompp_input" id="grompp_bound">
+                <desc>A full set of input values for grompp (except
+                      configuration) for the situation where the ligand is
+                      bound to the receptor.
+                </desc>
+            </field>
+            <field type="file" id="conf_bound">
+                <desc>A configuration with the ligand bound to the receptor.
+                </desc>
+            </field>
+            <field type="resource::run_desc" id="resources_bound" opt="true">
+                <desc>The run resources for a typical run in the bound
+                      state</desc>
+            </field>
+            <field type="restraint_array" id="restraints_bound" opt="true">
+                <desc>Restraints on the ligand position relative to the
+                      center of mass of residues in the receptor.</desc>
+            </field>
+            <field type="int" id="binding_relaxation_time">
+                <desc>Estimate for the relaxation time for binding (i.e. of
+                      the bound configuration) in simulation time steps.
+                      This time should not be too short, but can be too long.
+                      A value of 10 ns should be good for water.</desc>
+            </field>
+
+            <field type="grompp_input" id="grompp_solv">
+                <desc>A full set of input values for grompp (except
+                      configuration) for the situation where the ligand is
+                      solvated.
+                </desc>
+            </field>
+            <field type="file" id="conf_solv">
+                <desc>A configuration of the ligand in the solvent.</desc>
+            </field>
+            <field type="resource::run_desc" id="resources_solv" opt="true">
+                <desc>The run resources for a typical run in the solvated
+                      state</desc>
+            </field>
+            <field type="int" id="solvation_relaxation_time">
+                <desc>Estimate for the relaxation time for solvation (i.e. of
+                      the solvent configuration) in simulation time steps.
+                      This time should not be too short, but can be too long.
+                      A value of 0.1 ns should be good for water.</desc>
+            </field>
+            <field type="lambda_array" id="solvation_lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling
+                      for solvation.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="solvation_lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling
+                      for solvation.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="bool" id="simultaneous_decoupling" opt="true">
+                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                      Default False.
+                </desc>
+            </field>
+            <field type="lambda_array" id="solvation_lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones for solvation.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling
+                      for binding.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling
+                      for binding.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones for binding.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="int" id="n_repetitions">
+                <desc>The number of times to repeat the solvation free energy
+                      calculations.</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="meas::meas" id="delta_f">
+                <desc>The average free energy difference with error estimate
+                (this is a Helmholtz free energy if pressure coupling is off
+                 in the mdp parameters, and a Gibbs free energy if pressure
+                 coupling is on). The delta_f value is the average of the
+                 results from the repeated calculations. The error estimate
+                 is the standard deviation based on the population variance of the
+                 repetitions.
+                 </desc>
+            </field>
+        </outputs>
+        <subnet-inputs>
+            <field type="meas_array" id="repetition_results"/>
+        </subnet-inputs>
+        <controller log="true" executable="binding_repeat" persistent_dir="true" />
+    </function>
 
     <!-- internal functions -->
 
@@ -934,6 +1180,31 @@
                       Optional and defaults to 5.
                 </desc>
             </field>
+            <field type="lambda_array" id="lambdas_q" opt="true">
+                <desc>Optional list of lambda values for electrostatic decoupling.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_lj" opt="true">
+                <desc>Optional list of lambda values for Lennard-Jones decoupling.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
+            <field type="bool" id="simultaneous_decoupling" opt="true">
+                <desc>Decouple Coulomb and Lennard Jones at the same time.
+                      Default False.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_ljq" opt="true">
+                <desc>Optional list of lambda values for simultaneous decoupling
+                      of Coulomb and Lennard-Jones.
+                      Only used if simultaneous_decoupling=True.
+                      If specifying a lambda array there will be no lambda
+                      point optimization.
+                </desc>
+            </field>
         </inputs>
         <outputs>
             <field type="meas::meas" id="delta_f">
@@ -954,11 +1225,16 @@
             <field type="fe_path_array" id="path_q" />
             <field type="fe_path_array" id="path_lj" />
             <field type="fe_path_array" id="path_ljq" />
+            <field type="bool_list" id="done_reoptimization_list_q" />
+            <field type="bool_list" id="done_reoptimization_list_lj" />
+            <field type="bool_list" id="done_reoptimization_list_ljq" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
             <field type="int" id="n_lambdas_init"/>
             <field type="int" id="nsteps"/>
+            <field type="int" id="nsteps_equil"/>
+            <field type="int" id="nsteps_optiter"/>
             <field type="int" id="nsteps_init"/>
             <field type="priority_array" id="priority"/>
         </subnet-outputs>

@@ -1,8 +1,8 @@
-#include "ffoplsaa.itp"
+#include "oplsaa.ff/forcefield.itp"
 
 #include "ana.itp"
 
-#include "spce.itp"
+#include "oplsaa.ff/spce.itp"
 
 [ system ]
 AA
