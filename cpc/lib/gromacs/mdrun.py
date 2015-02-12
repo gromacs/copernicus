@@ -542,7 +542,7 @@ def mdrun(inp):
     # try to find out whether the run has already finished
     confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
     if len(confout) > 0:
-        confoutDir = os.path.abspath(confout[0])
+        confoutDir = os.path.dirname(confout[0])
         hasFinalData = checkConfoutDir(confoutDir)
         if hasFinalData:
             log.debug("Extracting data. ")
