@@ -3,6 +3,7 @@
 import subprocess
 import re
 import sys
+import shlex
 
 def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     # try and report on a gromacs command. Assumes the '-version' flag
@@ -14,7 +15,8 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     version=None
 
     try:
-        np=subprocess.Popen([cmd, "-version"], stdin=None, 
+        cmdargs = shlex.split(cmd)
+        np=subprocess.Popen(cmdargs+["-version"], stdin=None,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         for line in np.stdout:
             if (re.match(r"Version:", line, re.IGNORECASE) or
@@ -38,6 +40,7 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                 if line.split()[-1] != "disabled":
                     OpenMP=True
         np.communicate(None)
+
         if np.returncode == 0:
             if MPI:
                 outf.write(
@@ -68,12 +71,28 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
 
 sys.stdout.write('<?xml version="1.0"?>\n')
 sys.stdout.write('<executable-list>\n')
-try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
-try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
-# and the post/preprocessing commands
-try_report_command(sys.stdout, "grompp", "grompp")
-try_report_command(sys.stdout, "trjconv", "trjconv")
-try_report_command(sys.stdout, "trjcat", "trjcat")
-try_report_command(sys.stdout, "g_energy", "g_energy")
+
+#as of gromacs 5.0 all commands are unified under the gmx command
+#we first try to run this command
+
+#current version supports both gmx and the old commands but we make sure to only detect one of them
+if (try_report_command(sys.stdout, "mdrun", "gmx mdrun", "-cpt 10 -maxh 1 -x traj.xtc",True)
+    or try_report_command(sys.stdout, "mdrun", "gmx mdrun_mpi","-cpt 10 -maxh 1 -x traj.xtc", True)):
+    try_report_command(sys.stdout, "grompp", "grompp")
+    try_report_command(sys.stdout, "trjconv", "trjconv")
+    try_report_command(sys.stdout, "trjcat", "trjcat")
+    try_report_command(sys.stdout, "g_energy", "g_energy")
+
+
+
+else:
+    try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
+    try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
+    # and the post/preprocessing commands
+    try_report_command(sys.stdout, "grompp", "grompp")
+    try_report_command(sys.stdout, "trjconv", "trjconv")
+    try_report_command(sys.stdout, "trjcat", "trjcat")
+    try_report_command(sys.stdout, "g_energy", "g_energy")
+
 sys.stdout.write('</executable-list>\n')
 
