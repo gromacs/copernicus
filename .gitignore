@@ -12,3 +12,5 @@ test.tar.gz
 MANIFEST
 build
 dist
+cpc-worker-workload/*
+doc/_build
