@@ -86,6 +86,11 @@ while len(args) > 0:
     elif args[0] == '-d':
         args.pop(0)
         debug = cpc.util.log.MODE_DEBUG
+
+    #can only handle the flag here and we do not want to completely rewrite the cmd line parsing logic at the moment
+    elif args[0]=='-h':
+        print_usage()
+        exit(0)
     else:
         sys.stdout.write("ERROR: no command or faulty global option '%s'\n" %
                          args[0])
