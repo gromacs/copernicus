@@ -211,7 +211,7 @@ A set of files are prepared in this bundle. It includes the following.
 
 If running the script itself it must be executed from the copernicus root directory, e.g.
 
-..code-block:: none
+.. code-block:: none
 
     test/lib/fe/runtest.sh <projectname>
 
@@ -227,7 +227,7 @@ We then need to import the fe module, create a new instance of it and activate i
 .. code-block:: none
 
     cpcc import fe
-    cpcc instance fe:solvation fe
+    cpcc instance fe::solvation fe
     cpcc activate
 
 
@@ -306,10 +306,7 @@ A set of files are prepared in this bundle. It includes the following.
 
 If running the script itself it must be executed from the copernicus root directory, e.g.
 
-..code-block:: none
-
     test/lib/fe/binding/runtest.sh <projectname>
-
 
 We first start a project with the name specified by the input argument to the script.
 
@@ -322,7 +319,7 @@ We then need to import the fe module, create a new instance of it and activate i
 .. code-block:: none
 
     cpcc import fe
-    cpcc instance fe:binding fe
+    cpcc instance fe::binding fe
     cpcc activate
 
 
@@ -340,8 +337,6 @@ to enable short iterations in order to make it possible to view the output soone
 otherwise be possible.
 
 .. code-block:: none
-
-    cpcc transact
 
     cpcc set fe:in.ligand_name  ethanol
     cpcc set fe:in.receptor_name  ethanol2

@@ -9,9 +9,8 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-
-   fe-tutorial.rst
    md-tutorial.rst
    msm-tutorial.rst
+   fe-tutorial.rst
    swarms-tutorial.rst
 

@@ -2,11 +2,12 @@
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2015, Sander Pronk, Magnus Lundborg, Iman Pouya,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -62,15 +63,15 @@ def add_restraints(inp, out):
         out.addConnection('self:sub_out.settings', 'merge:in.settings')
         out.addConnection('self:ext_in.grompp.top', 'self:ext_out.grompp.top')
         out.addConnection('self:ext_in.grompp.ndx', 'self:ext_out.grompp.ndx')
-        out.addConnection('self:ext_in.grompp.include', 
+        out.addConnection('self:ext_in.grompp.include',
                           'self:ext_out.grompp.include')
-        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options', 
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'self:ext_out.grompp.mdrun_cmdline_options')
         out.addConnection('merge:out.mdp', 'self:ext_out.grompp.mdp')
         # extract the temperature
         out.addInstance('extract_mdp', 'gromacs::extract_mdp')
         out.addConnection('self:ext_in.grompp.mdp', 'extract_mdp:in.mdp')
-        out.addConnection('self:ext_in.grompp.settings', 
+        out.addConnection('self:ext_in.grompp.settings',
                           'extract_mdp:in.settings')
         out.addConnection('self:sub_out.temp_opt', 'extract_mdp:in.name')
         out.addConnection('extract_mdp:out.value', 'self:sub_in.temp_value')
@@ -92,7 +93,7 @@ def add_restraints(inp, out):
             valarray.append(RecordValue({'name' : StringValue('pull'),
                                          'value' : StringValue('umbrella')}))
             valarray.append(RecordValue({'name' : StringValue('pull_geometry'),
-                                         'value' : StringValue('position')}))
+                                         'value' : StringValue('distance')}))
             valarray.append(RecordValue({'name' : StringValue('pull_dim'),
                                          'value' : StringValue('Y Y Y')}))
             valarray.append(RecordValue({'name' : StringValue('pull_start'),
@@ -102,45 +103,69 @@ def add_restraints(inp, out):
             valarray.append(RecordValue({'name' : StringValue('pull_nstfout'),
                                          'value' : StringValue('0')}))
             valarray.append(RecordValue({'name' : StringValue('pull_ngroups'),
-                                         'value' : StringValue("%d"%N)}))
-            valarray.append(RecordValue({'name' : StringValue('pull_group0'),
-                                         'value' : 
+                                         'value' : StringValue("%d"%(N+1))}))
+#            valarray.append(RecordValue({'name' : StringValue('pull_group0'),
+#                                         'value' :
+#                                            inp.getInputValue('couple_mol')}))
+            valarray.append(RecordValue({'name' : StringValue('pull-group1-name'),
+                                         'value' :
                                             inp.getInputValue('couple_mol')}))
             # iterate over the restraints
             i=0
             for res in resval:
                 ri=i+1
-                valarray.append(RecordValue( 
-                                { 'name' : StringValue('pull_rate%d'%ri),
-                                  'value' : StringValue('0') } ))
+                #valarray.append(RecordValue(
+                                #{ 'name' : StringValue('pull_rate%d'%ri),
+                                  #'value' : StringValue('0') } ))
 
                 resname=inp.getInput('restraints[%d].resname'%i)
-                x=inp.getInput('restraints[%d].pos.x'%i)
-                y=inp.getInput('restraints[%d].pos.y'%i)
-                z=inp.getInput('restraints[%d].pos.z'%i)
+#                x=inp.getInput('restraints[%d].pos.x'%i)
+#                y=inp.getInput('restraints[%d].pos.y'%i)
+#                z=inp.getInput('restraints[%d].pos.z'%i)
+                distance=inp.getInput('restraints[%d].distance'%i)
+                if distance is None:
+                    distance = 0
                 k=inp.getInput('restraints[%d].strength'%i)
-                valarray.append(RecordValue( 
-                                { 'name' : StringValue('pull_group%d'%ri),
+#                valarray.append(RecordValue(
+#                                { 'name' : StringValue('pull_group%d'%ri),
+#                                  'value' : StringValue(resname) } ))
+#                valarray.append(RecordValue(
+#                                { 'name' : StringValue('pull_init%d'%ri),
+#                                  'value' : StringValue('%g %g %g'%(x,y,z))}))
+#                valarray.append(RecordValue(
+#                                { 'name' : StringValue('pull_k%d'%ri),
+#                                  'value' : StringValue('%g'%(k))}))
+                valarray.append(RecordValue(
+                                { 'name' : StringValue('pull-group%d-name'%(ri+1)),
                                   'value' : StringValue(resname) } ))
-                valarray.append(RecordValue( 
-                                { 'name' : StringValue('pull_init%d'%ri),
-                                  'value' : StringValue('%g %g %g'%(x,y,z))}))
-                valarray.append(RecordValue( 
-                                { 'name' : StringValue('pull_k%d'%ri),
+#                valarray.append(RecordValue(
+#                                { 'name' : StringValue('pull_init%d'%ri),
+#                                  'value' : StringValue('%g %g %g'%(x,y,z))}))
+#                valarray.append(RecordValue(
+#                                { 'name' : StringValue('pull_k%d'%ri),
+#                                  'value' : StringValue('%g'%(k))}))
+                valarray.append(RecordValue(
+                                { 'name' : StringValue('pull-coord%d-init'%ri),
+                                  'value' : StringValue('%g'%(distance))}))
+                valarray.append(RecordValue(
+                                { 'name' : StringValue('pull-coord%d-k'%ri),
                                   'value' : StringValue('%g'%(k))}))
-                i+=1  
+                valarray.append(RecordValue(
+                                { 'name' : StringValue('pull-coord%d-groups'%ri),
+                                  'value' : StringValue('1 %d' % (ri+1))}))
+                i+=1
         out.setSubOut('settings', ArrayValue(valarray))
     pers.set('settings', settings)
 
-    
-    dg=pers.get('dg') 
-    if ( (inp.getSubnetInput('temp_value') is not None) and 
+
+    dg=pers.get('dg')
+    if ( (inp.getSubnetInput('temp_value') is not None) and
          (settings is not None) and
          (dg is None or inp.getInputValue('restraints').isUpdated())):
         tempstring=inp.getSubnetInput('temp_value')
         sys.stderr.write('tempstring="%s"\n'%tempstring)
         spl=tempstring.split()
-        if len(spl) > 0: 
+        if len(spl) > 0:
             try:
                 T=float(tempstring.split()[0])
                 #kT=1.3806488e-23*T # Boltzmann's constant
