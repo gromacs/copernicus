@@ -139,6 +139,7 @@ try:
         cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)
     elif cmd == "setup":
+        print "IMAN in setup"
     # the -c option will be ignored here.
         rundir = None
         altHostName = None
@@ -184,7 +185,7 @@ try:
                             altHostName)
         if rootpass is None:
             #setup database
-            rootpass = getpass("\nPlease enter password for the root copernicus account:")
+            rootpass = getpass("\nA user named cpc-admin will be created.\nPlease enter a password for the cpc-admin account:")
         try:
             database.setupDatabase(rootpass)
         except Exception as e:
@@ -199,7 +200,7 @@ try:
         os.system(cmd)
 
         print "\nInstallation succeeded.\nYou can now start the server with cpc-server start"
-        print "After starting the the server you can login to the server using the copernicus root user (cpcc login root)"
+        print "After starting the the server you can login to the server using the cpc-admin user (cpcc login cpc-admin)"
 
 
         sys.exit(0)
