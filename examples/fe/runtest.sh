@@ -18,7 +18,7 @@ projectname=$1
 # import the gromacs module with grompp and mdrun functions
 ./cpcc import fe
 # add the grompp and mdrun function instances
-./cpcc instance fe::solvation fe
+./cpcc instance fe:solvation fe
 # activate the function instance
 ./cpcc activate
 
@@ -35,7 +35,7 @@ projectname=$1
 
 ./cpcc set fe:in.molecule_name  ethanol
 ./cpcc set fe:in.solvation_relaxation_time 500
-./cpcc set fe:in.precision 0.1
+./cpcc set fe:in.precision 0.25
 
 # and commit this set of updates
 ./cpcc commit

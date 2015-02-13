@@ -40,9 +40,7 @@ projectname=$1
 ./cpcc set-file fe:in.conf_bound test/lib/fe/binding/bound/conf.gro
 
 ./cpcc set fe:in.restraints_bound[0].resname ethanol2
-./cpcc set fe:in.restraints_bound[0].pos.x 0
-./cpcc set fe:in.restraints_bound[0].pos.y 0
-./cpcc set fe:in.restraints_bound[0].pos.z 0
+./cpcc set fe:in.restraints_bound[0].distance 0
 ./cpcc set fe:in.restraints_bound[0].strength 1000
 
 # solvated state

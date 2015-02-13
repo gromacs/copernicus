@@ -1,0 +1,151 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Magnus Lundborg Erik Lindahl,
+# and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import FloatValue
+
+
+def fe_solvation_repeat(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+
+    nRepeats=inp.getInput('n_repetitions')
+
+    for i in xrange(nRepeats):
+        run_solv=pers.get('run_solv_%d' % i)
+        if run_solv is None:
+            run_solv=1
+            out.addInstance('solv_rep_%d' % i, 'solvation')
+            out.addConnection('self:ext_in.grompp', 'solv_rep_%d:in.grompp' % i)
+            out.addConnection('self:ext_in.conf', 'solv_rep_%d:in.conf' % i)
+            out.addConnection('self:ext_in.molecule_name', 'solv_rep_%d:in.molecule_name' % i)
+            out.addConnection('self:ext_in.solvation_relaxation_time',
+                              'solv_rep_%d:in.solvation_relaxation_time' % i)
+            out.addConnection('self:ext_in.resources', 'solv_rep_%d:in.resources' % i)
+            out.addConnection('self:ext_in.precision', 'solv_rep_%d:in.precision' % i)
+            out.addConnection('self:ext_in.min_iterations', 'solv_rep_%d:in.min_iterations' % i)
+            out.addConnection('self:ext_in.stddev_spacing',
+                              'solv_rep_%d:in.stddev_spacing' % i)
+            out.addConnection('self:ext_in.dl_power',
+                              'solv_rep_%d:in.dl_power' % i)
+            out.addConnection('self:ext_in.optimize_lambdas',
+                              'solv_rep_%d:in.optimize_lambdas' % i)
+            out.addConnection('self:ext_in.lambdas_all_to_all',
+                              'solv_rep_%d:in.lambdas_all_to_all' % i)
+            out.addConnection('self:ext_in.optimization_tolerance',
+                              'solv_rep_%d:in.optimization_tolerance' % i)
+            out.addConnection('self:ext_in.n_blocks_min',
+                              'solv_rep_%d:in.n_blocks_min' % i)
+            out.addConnection('self:ext_in.n_blocks_max',
+                              'solv_rep_%d:in.n_blocks_max' % i)
+            out.addConnection('self:ext_in.n_lambdas_init',
+                              'solv_rep_%d:in.n_lambdas_init' % i)
+            out.addConnection('self:ext_in.lambdas_q',
+                              'solv_rep_%d:in.lambdas_q' % i)
+            out.addConnection('self:ext_in.lambdas_lj',
+                              'solv_rep_%d:in.lambdas_lj' % i)
+            out.addConnection('self:ext_in.simultaneous_decoupling',
+                              'solv_rep_%d:in.simultaneous_decoupling' % i)
+            out.addConnection('self:ext_in.lambdas_ljq',
+                              'solv_rep_%d:in.lambdas_ljq' % i)
+            out.addConnection('self:ext_in.sc_alpha',
+                              'solv_rep_%d:in.sc_alpha' % i)
+
+            # Link delta_f from each run to the repetition_results.
+            out.addConnection('solv_rep_%d:out.delta_f' % i, 'self:sub_in.repetition_results[%d]' % i)
+        pers.set('run_solv_%d' % i, run_solv)
+
+    sumVal=0.
+    sumVariance=0.
+    n=0
+    resArr=inp.getSubnetInput('repetition_results')
+
+    # Calculated when there are finished results.
+    if resArr is not None:
+        for i in xrange(nRepeats):
+            res = inp.getSubnetInput('repetition_results[%d].value' % i)
+            if res is not None:
+                sumVal+=res
+                n+=1
+
+        if n>0:
+            mean=sumVal/n
+            nResults = 0
+
+            for i in xrange(n):
+                res = inp.getSubnetInput('repetition_results[%d].value' % i)
+                if res is not None:
+                    val=res
+                    diff=val-mean
+                    sumVariance += diff*diff
+                    nResults += 1
+
+            out.setOut('delta_f.value', FloatValue(mean))
+
+            if nResults > 1:
+                variance=sumVariance/nResults
+                err=math.sqrt(variance)
+                out.setOut('delta_f.error', FloatValue(err))
+
+
+    pers.write()
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_solvation_repeat(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

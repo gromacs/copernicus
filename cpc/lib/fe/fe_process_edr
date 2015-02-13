@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+import sys
+import os
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+import cpc.dataflow
+
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+def fe_process_edr(inp, out):
+
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    edrFilesCollection = inp.getInput('edr_files_collection')
+
+    if edrFilesCollection is not None:
+        nEdrFilesLists = len(edrFilesCollection)
+    else:
+        nEdrFilesLists = 0
+        sys.stderr.write('No edr files as input.\n')
+        return out
+
+    nLpFiles = None
+    nLambdaFileLists = pers.get('n_lambda_file_lists')
+
+    if nLambdaFileLists:
+        return out
+
+    nLambdaFileLists = 0
+
+    for i in xrange(nEdrFilesLists):
+        edrFiles = inp.getInput('edr_files_collection[%d]' % i)
+        if edrFiles is None:
+            sys.stderr.write('No edr files in list: %d.\n' % i)
+            continue
+        thisNEdrFiles = len(edrFiles)
+        if nLpFiles == None:
+            nLpFiles = thisNEdrFiles
+        elif nLpFiles != thisNEdrFiles:
+            sys.stderr.write('Different number of edr files in list %d compared to previous lists.' % i)
+            continue
+
+        for j in xrange(nLpFiles):
+            if nLambdaFileLists <= j:
+                out.addInstance('eneconv_%d' % j, 'gromacs::eneconv')
+                nLambdaFileLists += 1
+            out.addConnection('self:ext_in.edr_files_collection[%d][%d]' % (i, j),
+                              'eneconv_%d:in.edr_files[%d]' % (j, i))
+            out.addConnection('eneconv_%d:out.edr' % j, 'self:ext_out.edr_files[%d]' % j)
+
+    pers.set('n_lambda_file_lists', nLambdaFileLists)
+    pers.write()
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("eneconv -version")
+    sys.exit(0)
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+fe_process_edr(inp, out)
+
+out.writeXML(sys.stdout)
+sys.stderr.write("-----> Finished.\n")
+
+
