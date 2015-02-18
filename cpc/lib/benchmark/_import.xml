@@ -8,6 +8,8 @@
     set of jobs to complete.
     -->
 
+    <type id="float_array" base="array" member-type="float" />
+
     <type id="timings" base="record">
         <desc>Start and end timstamps</desc>
         <field type="int" id="start_timestamp">
@@ -80,6 +82,34 @@
                     persistent_dir="true" />
     </function>
 
+    <function id="multi_add" type="python-extended">
+        <desc>Takes a list/array of floats as input and adds them together.</desc>
+        <inputs>
+            <field type="float_array" id="terms" >
+                <desc>The terms to add to get a sum</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="float" id="sum" >
+                <desc>The sum of terms added together</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.benchmark.multi_add"
+                    import="cpc.lib.benchmark"
+                    persistent_dir="true" />
+    </function>
+
+    <function id="add_benchmark" type="python-extended">
+        <desc>Sets up a number multi_add instances, the last half of which have input from the output of the first half of the instances.</desc>
+        <inputs>
+            <field type="int" id="n_instances" >
+                <desc>The number of instances to generate.</desc>
+            </field>
+        </inputs>
+        <controller function="cpc.lib.benchmark.add_benchmark"
+                    import="cpc.lib.benchmark"
+                    persistent_dir="true" />
+    </function>
 
 </cpc>
 
