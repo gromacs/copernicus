@@ -30,6 +30,9 @@ def pow(a,b):
 def exp(a):
     return { "b" : math.exp(a) }
 
+def log(a):
+    return { "c" : math.log(a) }
+
 def sin(a):
     return { "c" : math.sin(a) }
 

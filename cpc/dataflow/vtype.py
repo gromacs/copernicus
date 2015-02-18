@@ -408,12 +408,12 @@ class RecordType(Type):
                                                   complete)
     def addDescription(self, name, desc):
         """Add a description of a member to the record"""
-        self.descs[name]=desc
+        self.recordMembers[name].desc=desc
     def getMemberDesc(self, name):
         """Get a specific member description."""
         return self.recordMembers[name].desc
     def setMemberDesc(self, name, desc):
-        """Get a specific member description."""
+        """Set a specific member description."""
         self.recordMembers[name].desc=desc
 
     def jsonDescribe(self):
@@ -463,7 +463,7 @@ class RecordType(Type):
 
     def getSubItem(self, item):
         """Get a specific sub-item."""
-        return self.members[item]
+        return self.recordMembers[item]
 
     def containsBasetype(self, basetype):
         """Check whether the type or one of its members contains an instance

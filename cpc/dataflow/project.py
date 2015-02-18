@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -69,7 +69,7 @@ class Project(object):
         # The Update lock prevents multiple threads from updating values
         # in the same project. This probably has less impact on performance
         # than it sounds: Python is single-threaded at its core, and only
-        # emulates multithreading. Also: this would only be a problem if 
+        # emulates multithreading. Also: this would only be a problem if
         # updating values & scheduling tasks is the rate-limiting step.
         self.updateLock=threading.RLock()
         self.conf=conf
@@ -85,15 +85,15 @@ class Project(object):
             self.queue=queue
         self.cmdQueue=cmdQueue
         # the file list
-        self.fileList=value.FileList(basedir) 
+        self.fileList=value.FileList(basedir)
         # create the active network (the top-level network)
-        self.network=active_network.ActiveNetwork(self, None, self.queue, 
-                                                 "", self.updateLock)        
+        self.network=active_network.ActiveNetwork(self, None, self.queue,
+                                                 "", self.updateLock)
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", "", self.network)
         # create a list of function definitions
         self.functions=dict()
-        # create a list of already performed imports 
+        # create a list of already performed imports
         self.imports=lib.ImportList()
         # and this is where we can start importing builtins, etc.
         self.inputDir=os.path.join(self.basedir, "_inputs")
@@ -102,7 +102,7 @@ class Project(object):
         self.inputNr=0
         # a list of scheduled changes and its lock
         self.transactionStackLock=threading.Lock()
-        tl=transaction.Transaction(self, None, self.network, 
+        tl=transaction.Transaction(self, None, self.network,
                                    self.topLevelImport)
         self.transactionStack=[tl]
 
@@ -113,7 +113,7 @@ class Project(object):
         """Return the base directory. This is a const property"""
         return self.basedir
     def getNewInputSubDir(self):
-        """Return the name of a new input subdir to store new externally 
+        """Return the name of a new input subdir to store new externally
            set input files in.  NOTE: it won't be created."""
         with self.updateLock:
             newsub=os.path.join(self.inputDir, "%04d"%self.inputNr)
@@ -124,7 +124,7 @@ class Project(object):
         return newsub
 
     def getFileList(self):
-        """Get the project's file list. This pointer is a const property, 
+        """Get the project's file list. This pointer is a const property,
            and the file list has its own locking mechanism."""
         return self.fileList
 
@@ -159,7 +159,7 @@ class Project(object):
         with self.updateLock:
             itemlist=vtype.parseItemList(itemname)
             item=self.getSubValue(itemlist)
-            return item 
+            return item
 
 
     def _tryImmediateTransaction(self, outf):
@@ -181,7 +181,7 @@ class Project(object):
         """Add an instance of a set in the transaction schedule."""
         itemname=keywords.fixID(itemname)
         with self.transactionStackLock:
-            sv=self.transactionStack[-1].addSetValue(itemname, literal, 
+            sv=self.transactionStack[-1].addSetValue(itemname, literal,
                                                      sourceType, printName)
             if not self._tryImmediateTransaction(outf):
                 sv.describe(outf)
@@ -200,7 +200,7 @@ class Project(object):
 
     def beginTransaction(self, outf):
         """Create a new transaction list."""
-        tl=transaction.Transaction(self, None, self.network, 
+        tl=transaction.Transaction(self, None, self.network,
                                    self.topLevelImport)
         with self.transactionStackLock:
             self.transactionStack.append(tl)
@@ -278,7 +278,7 @@ class Project(object):
                         if mem.desc is not None:
                             subi["desc"]=mem.desc.get()
                         ret["subitems"].append( subi )
-                elif (tp.isSubtype(vtype.arrayType) or 
+                elif (tp.isSubtype(vtype.arrayType) or
                       tp.isSubtype(vtype.dictType)):
                     mem=tp.getMembers()
                     subi={"type" : mem.getName()}
@@ -304,7 +304,7 @@ class Project(object):
                 ret["type"]="network"
                 ret["name"]=pathname
                 ret["instances"]=item.network.getActiveInstanceList(
-                                                            False, 
+                                                            False,
                                                             False)
                 cputime=int(item.network.getCumulativeCputime())
                 if cputime > 0:
@@ -439,7 +439,7 @@ class Project(object):
         name=keywords.fixID(name)
         functionName=keywords.fixID(functionName)
         with self.updateLock:
-            func=self.imports.getFunctionByFullName(functionName, 
+            func=self.imports.getFunctionByFullName(functionName,
                                                     self.topLevelImport)
             (net, instanceName)=self.network.getContainingNetwork(name)
             nm=""
@@ -462,7 +462,7 @@ class Project(object):
         with self.updateLock:
             if not self.imports.exists(name):
                 baseFilename="%s.xml"%name.replace(keywords.ModSep, '/')
-                baseFilename2="%s/_import.xml"%name.replace(keywords.ModSep, 
+                baseFilename2="%s/_import.xml"%name.replace(keywords.ModSep,
                                                             '/')
                 filename=None
                 for pathItem in self.conf.getImportPaths():
@@ -476,7 +476,7 @@ class Project(object):
                         break
                 if filename is None:
                     raise ProjectError("Library %s not found"%name)
-                log.debug("Importing library %s with file name %s"% (name, 
+                log.debug("Importing library %s with file name %s"% (name,
                                                                      filename))
                 newlib=lib.ImportLibrary(name, filename, None)
                 reader=readxml.ProjectXMLReader(newlib, self.imports, self)
@@ -486,11 +486,11 @@ class Project(object):
             else:
                 return self.imports.get(name)
 
-    def getAllTasks(self):
-        """Get a list of all tasks to queue for execution."""
-        taskList=[]
-        self.network.getAllTasks(taskList)
-        return taskList
+    #def getAllTasks(self):
+        #"""Get a list of all tasks to queue for execution."""
+        #taskList=[]
+        #self.network.getAllTasks(taskList)
+        #return taskList
 
     def cancel(self):
         """Delete all queued commands."""
@@ -511,7 +511,7 @@ class Project(object):
                 raise ProjectError("%s is not an instance"%pathname)
 
     def deactivate(self, pathname):
-        """De-activate all active instances contained in pathname (or 
+        """De-activate all active instances contained in pathname (or
            everything if pathname is empty)."""
         pathname=keywords.fixID(pathname)
         with self.updateLock:
@@ -547,7 +547,7 @@ class Project(object):
         return self.queue
 
     def writeXML(self, outf, indent=0):
-        """Write the function definitions and top-level network description 
+        """Write the function definitions and top-level network description
            in XML to outf."""
         indstr=cpc.util.indStr*indent
         iindstr=cpc.util.indStr*(indent+1)
@@ -568,7 +568,7 @@ class Project(object):
         if os.path.exists(fname):
             log.debug("Importing project state from %s"%fname)
             with self.updateLock:
-                reader=readxml.ProjectXMLReader(self.topLevelImport, 
+                reader=readxml.ProjectXMLReader(self.topLevelImport,
                                                 self.imports,
                                                 self)
                 reader.readFile(fname, fname)
@@ -592,7 +592,7 @@ class Project(object):
             fout.write('<?xml version="1.0"?>\n')
             self.writeXML(fout, 0)
             fout.close()
-            # now we use POSIX file renaming  atomicity to make sure the state 
+            # now we use POSIX file renaming  atomicity to make sure the state
             # is always a consistent file.
             os.rename(nfname, fname)
 
@@ -605,7 +605,7 @@ class Project(object):
         return subval
 
     def getSubValue(self, itemList):
-        """Get a specific subvalue through a list of subitems, or return None 
+        """Get a specific subvalue through a list of subitems, or return None
            if not found.
            itemList = the path of the value to return"""
         if len(itemList)==0:
@@ -617,10 +617,10 @@ class Project(object):
 
     def getCreateSubValue(self, itemList, createType=None,
                           setCreateSourceTag=None):
-        """Get or create a specific subvalue through a list of subitems, or 
+        """Get or create a specific subvalue through a list of subitems, or
            return None if not found.
            itemList = the path of the value to return/create
-           if createType == a type, a subitem will be created with the given 
+           if createType == a type, a subitem will be created with the given
                             type
            if setCreateSourceTag = not None, the source tag will be set for
                                    any items that are created."""
@@ -633,8 +633,8 @@ class Project(object):
         raise ValError("Cannot create sub value of project")
 
     def getClosestSubValue(self, itemList):
-        """Get the closest relevant subvalue through a list of subitems, 
-           
+        """Get the closest relevant subvalue through a list of subitems,
+
            itemList = the path of the value to get the closest value for """
         if len(itemList)==0:
             return self
@@ -646,7 +646,7 @@ class Project(object):
     def getSubValueList(self):
         """Return a list of addressable subvalues."""
         ailist=self.network.getActiveInstanceList(False, False)
-        return ailist.keys() 
+        return ailist.keys()
 
     def getSubValueIterList(self):
         """Return an iterable list of addressable subvalues."""
@@ -666,10 +666,10 @@ class Project(object):
         return vtype.instanceType
 
     def getDesc(self):
-        """Return a 'description' of a value: an item that can be passed to 
+        """Return a 'description' of a value: an item that can be passed to
            the client describing the value."""
         ret=self.network.getActiveInstanceList(False, False)
         return ret
 
     ########################################################
- 
+

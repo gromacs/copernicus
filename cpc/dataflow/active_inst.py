@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -58,13 +58,13 @@ class ActiveInstanceState:
 class ActiveInstance(value.ValueBase):
     """An active instance is the instance and the data associated with running
        that instance. An active instance can have a subnetwork that is itself an
-       active network. 
-       
-       It is itself not an instance object because there can be many active 
-       realizations of instances (i.e. multiple instances of the same network 
+       active network.
+
+       It is itself not an instance object because there can be many active
+       realizations of instances (i.e. multiple instances of the same network
        being active at the same time causes those instances to exist multiple
        times)."""
-    
+
     __slots__=['instance', 'function', 'name', 'project', 'runSeqNr', 'cputime',
                'runLock', 'activeNetwork', 'inputVal', 'outputVal', 'subnetInputVal',
                'subnetOutputVal', 'stagedInputVal', 'stagedSubnetInputVal',
@@ -91,7 +91,7 @@ class ActiveInstance(value.ValueBase):
     def __init__(self, inst, project, activeNetwork, dirName):
         """Initialize an active instance, based on an already existing
             instance.
-    
+
             instance = the already existing instance
             project = the project this is a part of
             activeNetwork = the active network this active instance is a part of
@@ -102,10 +102,10 @@ class ActiveInstance(value.ValueBase):
         # the source active instance
         self.instance=inst
         self.function=inst.function
-        
+
         if self.function.getState() != function.Function.ok:
             raise ActiveError("Error activating function %s: %s"%
-                              (inst.getFullFnName(), 
+                              (inst.getFullFnName(),
                                self.function.getStateMsg()))
 
         # there is at least one instance linked to this active instance
@@ -114,7 +114,7 @@ class ActiveInstance(value.ValueBase):
         self.project=project
         fileList=project.getFileList()
         # counts the nubmer of times a task has been generated
-        self.runSeqNr=0 
+        self.runSeqNr=0
         # counts the number of CPU seconds that this instance has used
         # on workers. Locked with outputLock
         self.cputime=0.
@@ -136,27 +136,27 @@ class ActiveInstance(value.ValueBase):
                           selfName="%s:%s"%(self.getCanonicalName(), "out"),
                           fileList=fileList)
 
-        self.subnetInputVal=active_value.ActiveValue(None, 
+        self.subnetInputVal=active_value.ActiveValue(None,
                           inst.getSubnetInputs(),
                           parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
                           fileList=fileList)
-        self.subnetOutputVal=active_value.ActiveValue(None, 
+        self.subnetOutputVal=active_value.ActiveValue(None,
                           inst.getSubnetOutputs(),
                           parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "sub_out"),
                           fileList=fileList)
 
-        # And these are the staged versions of the inputs. 
-        # These can be updated by their sources without influencing any 
-        # running thread. Once all updates are done, the values can be copied 
+        # And these are the staged versions of the inputs.
+        # These can be updated by their sources without influencing any
+        # running thread. Once all updates are done, the values can be copied
         # to the non-staged versions with acceptNewValue()
         self.stagedInputVal=active_value.ActiveValue(None, inst.getInputs(),
                           parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(), "in"),
                           fileList=fileList)
 
-        self.stagedSubnetInputVal=active_value.ActiveValue(None, 
+        self.stagedSubnetInputVal=active_value.ActiveValue(None,
                           inst.getSubnetInputs(),
                           parent=None, owner=self,
                           selfName="%s:%s"%(self.getCanonicalName(),"sub_in"),
@@ -170,9 +170,9 @@ class ActiveInstance(value.ValueBase):
 
         fullDirName=os.path.join(project.basedir, dirName)
         # make the directory if needed
-        if ( (self.function.outputDirNeeded() or 
+        if ( (self.function.outputDirNeeded() or
               self.function.persistentDirNeeded() or
-              self.function.hasLog()) and 
+              self.function.hasLog()) and
              not os.path.exists(fullDirName)):
             os.mkdir(fullDirName)
         self.baseDir=dirName
@@ -188,53 +188,53 @@ class ActiveInstance(value.ValueBase):
         # the message object.
         self.msg=msg.ActiveInstanceMsg(self)
 
-        # an ever-increasing number to prevent outputs from overwriting 
+        # an ever-increasing number to prevent outputs from overwriting
         # each other
-        self.outputDirNr=0 
+        self.outputDirNr=0
         # whether this instance generates tasks
         self.genTasks=True
 
-        # whether any input value has changed, prompting a task run if 
+        # whether any input value has changed, prompting a task run if
         # the instance is active.
         self.updated=False
 
-        # There are three locks: lock, inputLock and outputLock. 
-        # Because updates involve multiple active instances, maintaining 
+        # There are three locks: lock, inputLock and outputLock.
+        # Because updates involve multiple active instances, maintaining
         # of locks is not done from within the active instances.
         #
-        # inputLock prevents simultaneous changes to self.inputVal, 
+        # inputLock prevents simultaneous changes to self.inputVal,
         # self.subnetInputVal, any associated listening active connection
-        # points, and the task list. Generally, multiple updates to 
+        # points, and the task list. Generally, multiple updates to
         # inputVal/subnetInputVal may be 'in flight', but only one per source
         # (connected output, or global update). These are then handled with
         # handleNewInput(source).
         # Because different sources always affected different inputs, this
         # can be done safely.
         # TODO: we now rely on the python global lock to make sure that
-        # stagedInputValues are always readable. We should probably lock 
+        # stagedInputValues are always readable. We should probably lock
         # it while doing handleNewInput or updates (we can do this on a
         # very fine-grained level).
-        # 
+        #
         # It is an rlock because a function that locks it (handleNewInput)
-        # could be called when the inputlock is already locked 
+        # could be called when the inputlock is already locked
         # (see task.handleFnOutput and project.commitChanges).
         self.inputLock=threading.RLock()
         # outputLock protects the output from being changed concurrently, and
         # the list of destinations for each output. Specifically, these are
-        # the values in self.outputVal, self.subnetOutputVal, self.seqNr, and 
+        # the values in self.outputVal, self.subnetOutputVal, self.seqNr, and
         # the destination active instances stored in their listening active
-        # connection points. 
+        # connection points.
         self.outputLock=threading.Lock()
-        # The default lock protects single-instance non-constant data such 
-        # as its state, etc. 
+        # The default lock protects single-instance non-constant data such
+        # as its state, etc.
         self.lock=threading.Lock()
-        # All network connectivity is locked with a global lock: 
+        # All network connectivity is locked with a global lock:
         # project.networkLock
         # NOTE: only when this global lock is locked, is the locking of more
         # than one instance's outputLock or inputLock allowed. In any other
         # case, only one outputLock is allowed, and simultaneously only one
         # inputLock (which must be locked after the outputLock, and unlocked
-        # before the outputLock is unlocked). 
+        # before the outputLock is unlocked).
         # When the global project.networkLock is locked, multiple outputLocks
         # may be locked, after which, multiple inputLocks may be locked.
 
@@ -245,9 +245,9 @@ class ActiveInstance(value.ValueBase):
         # activate that network if needed.
         subnet=inst.getSubnet()
         if subnet is not None:
-            self.subnet=active_network.ActiveNetwork(self.project, subnet, 
-                                                     activeNetwork.taskQueue, 
-                                                     dirName, 
+            self.subnet=active_network.ActiveNetwork(self.project, subnet,
+                                                     activeNetwork.taskQueue,
+                                                     dirName,
                                                      activeNetwork.\
                                                         getNetworkLock(),
                                                      self)
@@ -327,7 +327,7 @@ class ActiveInstance(value.ValueBase):
             self.cputime=cputime
 
     def getCumulativeCputime(self):
-        """Get the total CPU time used by active instance and its 
+        """Get the total CPU time used by active instance and its
             internal network."""
         with self.outputLock:
             cputime = self.cputime
@@ -359,7 +359,7 @@ class ActiveInstance(value.ValueBase):
         return self.msg.getLog()
 
     def getBasedir(self):
-        """Get the active instance's base directory relative to the project 
+        """Get the active instance's base directory relative to the project
             dir."""
         return self.baseDir
 
@@ -391,9 +391,9 @@ class ActiveInstance(value.ValueBase):
 
 
     def getInputACP(self, itemList):
-        """Get or make an active connection point in the input. 
+        """Get or make an active connection point in the input.
 
-           It is assumed project.networkLock is locked when using this 
+           It is assumed project.networkLock is locked when using this
            function."""
         val=self.stagedInputVal.getCreateSubValue(itemList)
         if val is None:
@@ -402,16 +402,16 @@ class ActiveInstance(value.ValueBase):
         # get the active connection point or create it if it doesn't exist
         nAcp=val.getListener()
         if nAcp is None:
-            nAcp=active_conn.ActiveConnectionPoint(val, self, 
+            nAcp=active_conn.ActiveConnectionPoint(val, self,
                                                    function_io.inputs)
             #log.debug("making new acp for %s"%val.getFullName())
             self.inputAcps.append(nAcp)
         return nAcp
 
     def getOutputACP(self, itemList):
-        """Get or make an active connection point in the output. 
+        """Get or make an active connection point in the output.
 
-           It is assumed project.networkLock is locked when using this 
+           It is assumed project.networkLock is locked when using this
            function."""
         val=self.outputVal.getCreateSubValue(itemList)
         #log.debug("->%s, %s"%(str(type(self.outputVal)), str(type(val))))
@@ -421,16 +421,16 @@ class ActiveInstance(value.ValueBase):
         # get the active connection point or create it if it doesn't exist
         nAcp=val.getListener()
         if nAcp is None:
-            nAcp=active_conn.ActiveConnectionPoint(val, self, 
+            nAcp=active_conn.ActiveConnectionPoint(val, self,
                                                    function_io.outputs)
             #log.debug("making new acp for %s"%val.getFullName())
             self.outputAcps.append(nAcp)
         return nAcp
 
     def getSubnetInputACP(self, itemList):
-        """Get or make an active connection point in the subnet input. 
+        """Get or make an active connection point in the subnet input.
 
-           It is assumed project.networkLock is locked when using this 
+           It is assumed project.networkLock is locked when using this
            function."""
         val=self.stagedSubnetInputVal.getCreateSubValue(itemList)
         if val is None:
@@ -439,16 +439,16 @@ class ActiveInstance(value.ValueBase):
         # get the active connection point or create it if it doesn't exist
         nAcp=val.getListener()
         if nAcp is None:
-            nAcp=active_conn.ActiveConnectionPoint(val, self, 
+            nAcp=active_conn.ActiveConnectionPoint(val, self,
                                                    function_io.subnetInputs)
             #log.debug("making new acp for %s"%val.getFullName())
             self.subnetInputAcps.append(nAcp)
         return nAcp
 
     def getSubnetOutputACP(self, itemList):
-        """Get or make an active connection point in the subnet output. 
+        """Get or make an active connection point in the subnet output.
 
-           It is assumed project.networkLock is locked when using this 
+           It is assumed project.networkLock is locked when using this
            function."""
         val=self.subnetOutputVal.getCreateSubValue(itemList)
         if val is None:
@@ -478,12 +478,12 @@ class ActiveInstance(value.ValueBase):
         return name+self.name
 
 
-    def _getNamedInstanceFromList(self, instancePathList):
-        """Part of the activeNetwork.getNamedInstance functionality."""
-        if len(instancePathList)>0:
-            return self.subnet._getNamedInstanceFromList(instancePathList)
-        else:
-            return self
+    #def _getNamedInstanceFromList(self, instancePathList):
+        #"""Part of the activeNetwork.getNamedInstance functionality."""
+        #if len(instancePathList)>0:
+            #return self.subnet._getNamedInstanceFromList(instancePathList)
+        #else:
+            #return self
 
     def getNet(self):
         """Get the subnet network, or None if none exists. Is a constant
@@ -498,12 +498,12 @@ class ActiveInstance(value.ValueBase):
 
     def handleTaskOutput(self, sourceTag, seqNr, output, subnetOutput,
                          warnMsg):
-        """Handle the output of a finished task that is generated from 
+        """Handle the output of a finished task that is generated from
            this active instance.
 
            NOTE: assumes that the ai is locked with self.outputLock!!!"""
         #log.debug("Handling task %s output"%self.getCanonicalName())
-        # first set things locally 
+        # first set things locally
         changedInstances=set()
         # Round 1: set the new output values
         if output is not None:
@@ -518,18 +518,18 @@ class ActiveInstance(value.ValueBase):
                 if oval is None:
                     raise ActiveError(
                               "output '%s' not found in instance %s of %s"%
-                              (out.name, self.getCanonicalName(), 
+                              (out.name, self.getCanonicalName(),
                                self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, seqNr, sourceTag)
                 #log.debug("1 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
-                # now stage all the inputs 
+                # now stage all the inputs
                 oval.propagate(sourceTag, seqNr)
         if subnetOutput is not None:
             for out in subnetOutput:
                 outItems=vtype.parseItemList(out.name)
-                oval=self.subnetOutputVal.getCreateSubValue(outItems, 
+                oval=self.subnetOutputVal.getCreateSubValue(outItems,
                                                    setCreateSourceTag=sourceTag)
                 #log.debug("Handling output for %s"%(oval.getFullName()))
                 # remember it
@@ -537,13 +537,13 @@ class ActiveInstance(value.ValueBase):
                 if oval is None:
                     raise ActiveError(
                         "subnet output '%s' not found in instance %s of %s"%
-                        (out.name, self.getCanonicalName(), 
+                        (out.name, self.getCanonicalName(),
                          self.function.getName()))
                 #log.debug("Updated value name=%s"%(oval.getFullName()))
                 oval.update(out.val, seqNr, sourceTag)
                 #log.debug("2 - Marking update for %s"%oval.getFullName())
                 oval.markUpdated(True)
-                # now stage all the inputs 
+                # now stage all the inputs
                 oval.propagate(sourceTag, seqNr)
         # Round 2: now alert the receiving active instances
         if output is not None:
@@ -558,19 +558,19 @@ class ActiveInstance(value.ValueBase):
 
     def handleNewInput(self, sourceTag, seqNr, noNewTasks=False):
         """Process new input based on the changing of values.
-           
-           sourceTag =  the source to look for 
 
-           if source is None, all the active connections that have 
+           sourceTag =  the source to look for
+
+           if source is None, all the active connections that have
            newSetValue set are updated. The seqNr is then ignored.
 
            if noNewTasks == true, no new tasks will be generated
 
-           NOTE: If sourceAI is None, this function assumes that there is 
-                 some global lock preventing concurrent updates, and 
+           NOTE: If sourceAI is None, this function assumes that there is
+                 some global lock preventing concurrent updates, and
                  that it is locked. This normally is project.networkLock.
            """
-        #log.debug("handleNewInput in %s: %s"%(self.getCanonicalName(), 
+        #log.debug("handleNewInput in %s: %s"%(self.getCanonicalName(),
         #                                      sourceTag))
         with self.inputLock:
             # first check whether we've already checked this
@@ -580,7 +580,7 @@ class ActiveInstance(value.ValueBase):
                     # this is an optimistic check: assuming there is only one
                     # thread working on an active instance at a time, it is
                     # quick. If more than one thread is doing this, it gets
-                    # less efficient. 
+                    # less efficient.
                     return
                 self.lastUpdateSource=sourceTag
                 self.lastUpdateSeqNr=seqNr
@@ -592,7 +592,7 @@ class ActiveInstance(value.ValueBase):
             upd1=self.inputVal.acceptNewValue(self.stagedInputVal,sourceTag,
                                               True)
             # also check the subnet input values
-            upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal, 
+            upd2=self.subnetInputVal.acceptNewValue(self.stagedSubnetInputVal,
                                                     sourceTag, True)
             # now merge it with whether we should already update
             self.updated = self.updated or (upd1 or upd2)
@@ -607,7 +607,7 @@ class ActiveInstance(value.ValueBase):
                 return
             if self.updated:
                 #log.debug("%s: Processing new input for %s of fn %s"%
-                #          (self.getCanonicalName(), self.instance.getName(), 
+                #          (self.getCanonicalName(), self.instance.getName(),
                 #           self.function.getName()))
                 # and make it run.
                 if self._canRun():
@@ -619,7 +619,7 @@ class ActiveInstance(value.ValueBase):
                 self.stagedSubnetInputVal.setUpdated(False)
                 self.subnetInputVal.setUpdated(False)
 
-   
+
     def resetUpdated(self):
         with self.inputLock:
             self.outputVal.setUpdated(False)
@@ -631,20 +631,20 @@ class ActiveInstance(value.ValueBase):
     #    self.updated=False
 
     def handleNewConnections(self):
-        """Process a new output connection. 
-           
+        """Process a new output connection.
+
            NOTE: This function assumes that self.outputLock is locked and
-                 that there is some global lock preventing concurrent updates, 
+                 that there is some global lock preventing concurrent updates,
                  and that it is locked. This normally is project.networkLock.
            """
         #log.debug("%s: Processing new connections"%(self.getCanonicalName()))
-        # regenerate the output listeners' list of connected active 
-        # instances and other listeners. We rely on a global network 
-        # update lock to prevent multiple threads from adding connections 
+        # regenerate the output listeners' list of connected active
+        # instances and other listeners. We rely on a global network
+        # update lock to prevent multiple threads from adding connections
         # concurrently.
         listeners=[]
         self.outputVal.findListeners(listeners)
-        #log.debug("%s: %d listeners"%(self.outputVal.getFullName(), 
+        #log.debug("%s: %d listeners"%(self.outputVal.getFullName(),
         #                              len(listeners)))
         for listener in listeners:
             listener.searchDestinations()
@@ -676,8 +676,8 @@ class ActiveInstance(value.ValueBase):
            will pick up these inputs if sourceAI == None.
 
            This function assumes that there is some kind of lock between
-           setNamedInput() and handleNewInput() so that no network-wide update 
-           from another source can take place in the mean time. 
+           setNamedInput() and handleNewInput() so that no network-wide update
+           from another source can take place in the mean time.
            Normally, this is project.networkLock
           """
         #log.debug("3 - Marking update for %s"%newVal.getFullName())
@@ -713,7 +713,7 @@ class ActiveInstance(value.ValueBase):
             with self.lock:
                 if self.state == ActiveInstance.held:
                     if self.subnet is not None:
-                        self.subnet.activateAll()            
+                        self.subnet.activateAll()
                     self.state=ActiveInstance.active
                     changed=True
             if changed:
@@ -733,7 +733,7 @@ class ActiveInstance(value.ValueBase):
                 if self.state == ActiveInstance.active:
                     changed=True
                     if self.subnet is not None:
-                        self.subnet.deactivateAll()            
+                        self.subnet.deactivateAll()
                     self.state=ActiveInstance.held
                     for task in self.tasks:
                         task.deactivateCommands()
@@ -759,10 +759,10 @@ class ActiveInstance(value.ValueBase):
             self.updated=True
         if self._canRun():
             self._genTask()
-          
+
     def cancelTasks(self, seqNr):
-        """Cancel all tasks (and commands) with sequence number before 
-           the given seqNr. 
+        """Cancel all tasks (and commands) with sequence number before
+           the given seqNr.
            Returns a list of cancelled commands."""
         with self.lock:
             tsk=copy.copy(self.tasks)
@@ -802,11 +802,11 @@ class ActiveInstance(value.ValueBase):
             log.debug("Creating output dir")
             created=False
             while not created:
-                outputDirName=os.path.join(self.baseDir, 
+                outputDirName=os.path.join(self.baseDir,
                                            "_run_%04d"%(self.outputDirNr))
                 fullOutputDirName=os.path.join(self.project.basedir,
                                                outputDirName)
-                self.outputDirNr+=1 
+                self.outputDirNr+=1
                 if not os.path.exists(fullOutputDirName):
                     os.mkdir(fullOutputDirName)
                     created=True
@@ -819,14 +819,14 @@ class ActiveInstance(value.ValueBase):
             outputs=value.Value(self.subnetOutputVal, self.outputVal.type)
         subnetOutputs=None
         if self.function.accessSubnetOutputs():
-            subnetOutputs=value.Value(self.subnetOutputVal, 
+            subnetOutputs=value.Value(self.subnetOutputVal,
                                       self.subnetOutputVal.type)
         fnInput=run.FunctionRunInput(inputs, subnetInputs,
                                      outputs, subnetOutputs,
-                                     outputDirName, self.persDir, 
-                                     None, self.function, self, self.project) 
+                                     outputDirName, self.persDir,
+                                     None, self.function, self, self.project)
         self.runSeqNr+=1
-        tsk=task.Task(self.project, self, self.function, fnInput, 0, 
+        tsk=task.Task(self.project, self, self.function, fnInput, 0,
                       self.runSeqNr)
         self.activeNetwork.taskQueue.put(tsk)
         self.tasks.append(tsk)
@@ -860,8 +860,8 @@ class ActiveInstance(value.ValueBase):
 
     def rerun(self, recursive, clearError, outf=None):
         """Force the rerun of this instance, or clear the error if in error
-           state and clearError is True. If recursive is set, 
-           do the same for any subinstances. 
+           state and clearError is True. If recursive is set,
+           do the same for any subinstances.
            Returns the number of reruns forced"""
         ret=0
         changed=False
@@ -906,7 +906,7 @@ class ActiveInstance(value.ValueBase):
                                             except Exception, e:
                                                 log.error("Error deleting persistent data file: %s" % file_path)
                                         break
-                                                
+
                 if recursive and (self.subnet is not None):
                     ret+=self.subnet.rerun(recursive, clearError, outf)
             if changed:
@@ -916,7 +916,7 @@ class ActiveInstance(value.ValueBase):
                 else:
                     log.debug("Cannot do rerun on %s"%self.getCanonicalName())
         return ret
- 
+
     def writeXML(self, outf, indent=0):
         """write out values as xml."""
         indstr=cpc.util.indStr*indent
@@ -924,7 +924,7 @@ class ActiveInstance(value.ValueBase):
         with self.lock:
             outf.write('%s<active '%indstr)
             outf.write(' id=%s state="%s" seqnr="%d" cputime="%g"'%
-                       (xml.sax.saxutils.quoteattr(self.name).encode('utf-8'), 
+                       (xml.sax.saxutils.quoteattr(self.name).encode('utf-8'),
                         str(self.state), self.runSeqNr, self.cputime) )
             if self.state==ActiveInstance.error:
                 outf.write(' errmsg=%s'%
@@ -942,7 +942,7 @@ class ActiveInstance(value.ValueBase):
             outf.write('%s<outputs>\n'%(iindstr))
             self.outputVal.writeContentsXML(outf, indent+2)
             outf.write('%s</outputs>\n'%(iindstr))
-            
+
             outf.write('%s<subnet-inputs>\n'%(iindstr))
             self.subnetInputVal.writeContentsXML(outf, indent+2)
             outf.write('%s</subnet-inputs>\n'%(iindstr))
@@ -950,7 +950,7 @@ class ActiveInstance(value.ValueBase):
             outf.write('%s<subnet-outputs>\n'%(iindstr))
             self.subnetOutputVal.writeContentsXML(outf, indent+2)
             outf.write('%s</subnet-outputs>\n'%(iindstr))
-            
+
             if self.subnet is not None:
                 self.subnet.writeXML(outf, indent+1)
             if len(self.tasks) > 0:
@@ -991,9 +991,9 @@ class ActiveInstance(value.ValueBase):
         elif self.subnet is not None:
             subval=self.subnet.tryGetActiveInstance(itemList[0])
         return subval
- 
+
     def getSubValue(self, itemList):
-        """Get a specific subvalue through a list of subitems, or return None 
+        """Get a specific subvalue through a list of subitems, or return None
            if not found.
            itemList = the path of the value to return"""
         if len(itemList)==0:
@@ -1002,13 +1002,13 @@ class ActiveInstance(value.ValueBase):
         if subval is not None:
             return subval.getSubValue(itemList[1:])
         return None
-        
+
     def getCreateSubValue(self, itemList, createType=None,
                           setCreateSourceTag=None):
-        """Get or create a specific subvalue through a list of subitems, or 
+        """Get or create a specific subvalue through a list of subitems, or
            return None if not found.
            itemList = the path of the value to return/create
-           if createType == a type, a subitem will be created with the given 
+           if createType == a type, a subitem will be created with the given
                             type
            if setCreateSourceTag = not None, the source tag will be set for
                                    any items that are created."""
@@ -1023,8 +1023,8 @@ class ActiveInstance(value.ValueBase):
         raise ValError("Cannot create sub value of active instance")
 
     def getClosestSubValue(self, itemList):
-        """Get the closest relevant subvalue through a list of subitems, 
-           
+        """Get the closest relevant subvalue through a list of subitems,
+
            itemList = the path of the value to get the closest value for """
         if len(itemList)==0:
             return self
@@ -1035,7 +1035,7 @@ class ActiveInstance(value.ValueBase):
 
     def getSubValueList(self):
         """Return a list of addressable subvalues."""
-        ret=[ function_io.inputs, function_io.outputs, 
+        ret=[ function_io.inputs, function_io.outputs,
               function_io.subnetInputs, function_io.subnetOutputs,
               keywords.Msg ]
         if self.activeNetwork is not None:
@@ -1061,7 +1061,7 @@ class ActiveInstance(value.ValueBase):
         return vtype.instanceType
 
     def getDesc(self):
-        """Return a 'description' of a value: an item that can be passed to 
+        """Return a 'description' of a value: an item that can be passed to
            the client describing the value."""
         if self.subnet is not None:
             ret=self.subnet.getActiveInstanceList(False, False)

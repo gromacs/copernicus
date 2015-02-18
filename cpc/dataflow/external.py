@@ -149,7 +149,7 @@ class ExternalFunction(atomic.AtomicFunction):
         instrio=StringIO(retstdout)
         log.debug("Reading output for function %s: %s"%(self.name, 
                                                         instrio.read()))
-        instrio.reset()
+        instrio.seek(0)
         reader.read(instrio, self.fullpath)
         return out
 

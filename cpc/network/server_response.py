@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -28,7 +28,7 @@ class ServerResponse(object):
     def __init__(self):
         #self.response = dict()
         self.headers = dict()
-        self.headers['Content-Type'] = 'text/json'  #default response format 
+        self.headers['Content-Type'] = 'text/json'  #default response format
         self.resp = []
         self.file = None
         self.mmap = None
@@ -44,7 +44,7 @@ class ServerResponse(object):
 
     def append(self, otherResponse):
         for r in otherResponse.resp:
-            self.reps.append(r)
+            self.resp.append(r)
 
     def setFile(self, file,contentTypeStr):
         """
@@ -61,18 +61,18 @@ class ServerResponse(object):
     def clearAll(self):
         del self.resp
         self.resp = []
-        
+
     #def setStatus(self,message):
     #    self.response['status'] = message
-    #    
+    #
     #def setData(self,data):
     #    self.response['data'] = data
-    
+
     def render(self):
         #TODO set response based on contenttype
-        
-        """ returns the response in JSON format """        
-        
+
+        """ returns the response in JSON format """
+
         if self.file is None:
             return json.dumps(self.resp,default = json_serializer.toJson,
                               indent=4)
@@ -80,9 +80,9 @@ class ServerResponse(object):
             self.file.seek(0)
             self.mmap= mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
             return self.mmap
-       
+
     def close(self):
         if self.mmap is not None:
             self.mmap.close()
 
-        
+

@@ -240,7 +240,7 @@ class Value(ValueBase):
                                                     index,
                                                     None)
             else:
-                raise ValError("Unknown compound type %s."%tp.getName())
+                raise ValError("Unknown compound type %s."%self.type.getName())
         if rmref is not None:
             rmref.rmRef()
 
@@ -451,9 +451,9 @@ class Value(ValueBase):
         if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
-            return self.val.keys()
+            return self.value.keys()
         elif self.type.isSubtype(vtype.dictType):
-            return self.val.keys()
+            return self.value.keys()
         else:
             return []
 
@@ -462,9 +462,9 @@ class Value(ValueBase):
         if self.type.isSubtype(vtype.recordType):
             return self.type.getMemberKeys()
         elif self.type.isSubtype(vtype.arrayType):
-            return self.val.iterkeys()
+            return self.value.iterkeys()
         elif self.type.isSubtype(vtype.dictType):
-            return self.val.iterkeys()
+            return self.value.iterkeys()
         else:
             return []
 

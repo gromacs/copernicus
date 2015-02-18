@@ -89,7 +89,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         else:
             self.dir=dir
         self.executable=executable
-        self.inputFiles=[]
+        self.files=[]
         self.outputFiles=outputFiles
         self.args=args
         self.minVersion=minVersion

@@ -19,7 +19,11 @@ class HTTPServer__base(SocketServer.ThreadingMixIn,HTTPServer):
     Provides some common methods for the HTTPx servers
     """
     def getState(self):
-        return self.serverState
+        try:
+            state = self.serverState
+        except NameError:
+            state = None
+        return state
 
     def getSCList(self):
         """Get the server command list."""

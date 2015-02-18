@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -41,10 +41,10 @@ def splitIOName(name, expectedDirection=None):
        instance-name:'in'/'out'.itemname.subItemname[subItem2name]
        (except for 'self')
 
-       Checks whether [in/out] item corresponds with expected 
+       Checks whether [in/out] item corresponds with expected
        type, if given (it can be implicit, such as instance-name.itemname.
        If expectedDirection is not given, it must be specified in name.
-      
+
        returns tuple of  instance-name, in/out/sub-in/sub-out, item-list
        """
     instance=None
@@ -62,7 +62,7 @@ def splitIOName(name, expectedDirection=None):
     else:
         fullInstance=srcp0[0]
         #fullIoItem=".%s"%srcp0[1] # TODO: fix this so it's more flexible
-        fullIoItem=srcp0[1] 
+        fullIoItem=srcp0[1]
     # now split fullInstance
     srcp1=fullInstance.rsplit(keywords.InstSep,1)
     dirnm=srcp1[-1]
@@ -106,7 +106,7 @@ def splitIOName(name, expectedDirection=None):
     else:
         if expectedDirection is None:
             raise ConnError("Item %s ambigiuous on in/out"%name)
-        elif srcp[-1]!="":
+        elif srcp1[-1]!="":
             raise ConnError("Syntax error in in/out specifier in %s"%name)
         else:
             dirstr=expectedDirection
@@ -136,24 +136,24 @@ def makeConnectionFromDesc(network, srcStr, dstStr):
     srcInstanceName, srcDir, srcItemList=splitIOName(srcStr)
     dstInstanceName, dstDir, dstItemList=splitIOName(dstStr)
 
-    return makeConnection(network, 
+    return makeConnection(network,
                           srcInstanceName, srcDir, srcItemList,
                           dstInstanceName, dstDir, dstItemList)
 
 def makeInitialValueFromDesc(network, dstStr, val):
-    """Make a connection object with an initial value, based on a network, 
+    """Make a connection object with an initial value, based on a network,
        and splitIO-ablen ame for the destination."""
     dstInstanceName, dstDir, dstItemList=splitIOName(dstStr)
     return makeInitialValue(network, dstInstanceName, dstDir, dstItemList, val)
 
 
-def makeConnection(network, 
+def makeConnection(network,
                    srcInstanceName, srcDir, srcItemList,
                    dstInstanceName, dstDir, dstItemList):
     """Make a connection object based on a network, and names for source and
        destination.
-   
-        network = the network the instance(s) belong to  
+
+        network = the network the instance(s) belong to
         srcInstanceName = the name of the source instance
         srcDir = direction (function_io.in/out/sub_in/sub_out) of source item
         srcItemName = the name of the source item
@@ -173,7 +173,7 @@ def makeConnection(network,
         srcIO=srcInst.getSubnetInputs()
     elif srcDir==function_io.subnetOutputs:
         srcIO=srcInst.getSubnetOutputs()
-    # 
+    #
     dstInst=network.getInstance(dstInstanceName)
     if dstDir==function_io.inputs:
         dstIO=dstInst.getInputs()
@@ -185,11 +185,11 @@ def makeConnection(network,
         dstIO=dstInst.getSubnetOutputs()
 
     return Connection(srcInst, srcIO, srcItemList, dstInst, dstIO, dstItemList)
-    
-def makeInitialValue(network, 
+
+def makeInitialValue(network,
                      dstInstanceName, dstDir, dstItemList,
                      val):
-    """Make a connection object with an initial value, based on a network, 
+    """Make a connection object with an initial value, based on a network,
        and names for the destination."""
 
     dstInst=network.getInstance(dstInstanceName)
@@ -215,7 +215,7 @@ def copyConnection(conn, dstNetwork):
                            conn.getDstIO().getDir(),
                            conn.getDstItemList())
     else:
-        ret=makeInitialValue(dstNetwork, 
+        ret=makeInitialValue(dstNetwork,
                              conn.getDstInstance().getName(),
                              conn.getDstIO().getDir(),
                              conn.getDstItemList(),
@@ -223,28 +223,28 @@ def copyConnection(conn, dstNetwork):
     #ret.setSubnetLoop(conn.isSubnetLoop())
     return ret
 
- 
+
 class Connection(object):
     """Describes a link between a instance output and a instance input, or
        an input's initial value (if the connection has no source instance)."""
     __slots__=['srcInstance', 'srcIO', 'srcItemList', 'dstInstance', 'dstIO',
                'dstItemList', 'initialValue', 'implicit', 'srcExternal',
                'dstExternal', 'srcAcp', 'dstAcp']
-    def __init__(self, 
-                 srcInstance, srcIO, srcItemList, 
-                 dstInstance, dstIO, dstItemList, 
+    def __init__(self,
+                 srcInstance, srcIO, srcItemList,
+                 dstInstance, dstIO, dstItemList,
                  initialValue=None):
         """Initialize a connection
 
            srcInstance = the function instance of the connection's source
                             (an output), or None
-           srcIO       = the source output item (the inputs/outputs/.. object), 
+           srcIO       = the source output item (the inputs/outputs/.. object),
                          or None
            srcItemList = the source output item list, or None
-           dstInstance = the function instance of the connection's destination 
+           dstInstance = the function instance of the connection's destination
                             (an input)
            dstItemList  = the connection's destination (input) item list.
-           srcIO        = the dest. input item (the inputs/outputs/.. object) 
+           srcIO        = the dest. input item (the inputs/outputs/.. object)
            initialValue = the connection's initial value (or None). Only
                           valid if there srcInstance is None."""
         self.srcInstance=srcInstance
@@ -262,7 +262,7 @@ class Connection(object):
         if self.srcInstance is None and self.initialValue is None:
             raise ConnError("Both source instance and initial value empty")
         if self.srcInstance is not None and self.initialValue is not None:
-            raise ConnError("Both source instance and initial value set") 
+            raise ConnError("Both source instance and initial value set")
         # whether the connection is implicit in the network. For writing
         # active.writeXML
         self.implicit=False
@@ -281,7 +281,7 @@ class Connection(object):
            when the state is written."""
         self.implicit=True
     def isImplicit(self):
-        """Check whether  this connection as implicit: it shouldn't be written 
+        """Check whether  this connection as implicit: it shouldn't be written
            out when the state is written."""
         return self.implicit
 
@@ -320,7 +320,7 @@ class Connection(object):
 
     #def isSubnetLoop(self):
     #    """Check whether this connection is a 'subnet loop': a connection
-    #       in the self instance from one of its inputs to a subnet output, 
+    #       in the self instance from one of its inputs to a subnet output,
     #       or from a subnet input to an output."""
     #    return self.subnetLoop
     #def setSubnetLoop(self, slo):
@@ -332,7 +332,7 @@ class Connection(object):
         # Normally, the connection has a source output and a destination
         # input. There is one exception: when connection 'self' inputs/outputs
         # to its subnet inputs/outputs
-        # 
+        #
         # so now we check whether the connection is from/to
         # self, and that it connects subnet to non-subnet. If it is
         # it's the above exception.
@@ -343,7 +343,7 @@ class Connection(object):
                 else:
                     raise ConnError("Trying to connect to a self.sub_out: %s"%
                                     (self.dstString()))
-        if ( (self.srcInstance is not None) and 
+        if ( (self.srcInstance is not None) and
              self.srcInstance.getName() == keywords.Self):
             if self.srcIO.direction.isInput():
                 if not self.srcIO.direction.isInSubnet():
@@ -352,13 +352,13 @@ class Connection(object):
                     raise ConnError("Trying to connect from a self.sub_in: %s"%
                                     (self.srcString()))
         if not (self.srcExternal or self.dstExternal):
-            #   
+            #
             #   ( (self.dstInstance.getName() == keywords.Self or
             #      self.srcInstance.getName() == keywords.Self) ):
             # check whether we connect an output to an input
             if not self.dstIO.direction.isInput():
                 raise ConnError("Trying to connect an input as dest: %s->%s, %s, %s"%
-                                (self.srcString(), self.dstString(), 
+                                (self.srcString(), self.dstString(),
                                 str(self.srcIO.direction.isInSubnet()),
                                 str(self.dstIO.direction.isInSubnet())))
             if self.srcInstance is not None:
@@ -412,7 +412,7 @@ class Connection(object):
             self.dstInstance.addOutputConnection(self, True)
         elif self.dstIO.direction == function_io.subnetOutputs:
             self.dstInstance.addSubnetOutputConnection(self, True)
-            
+
 
     def disconnect(self):
         """Disconnect both ends of the connection."""
@@ -444,7 +444,7 @@ class Connection(object):
                 srcDirStr=keywords.Out #str(function_io.subnetOutputs)
         else:
             srcDirStr=str(srcDir)
-        retstr="%s:%s%s"%(self.srcInstance.getName(), srcDirStr, itemStr) 
+        retstr="%s:%s%s"%(self.srcInstance.getName(), srcDirStr, itemStr)
         return retstr
 
     def dstString(self):
@@ -463,7 +463,7 @@ class Connection(object):
                 dstDirStr=keywords.Out #str(function_io.subnetOutputs)
         else:
             dstDirStr=str(dstDir)
-        retstr="%s:%s%s"%(self.dstInstance.getName(), dstDirStr, itemStr) 
+        retstr="%s:%s%s"%(self.dstInstance.getName(), dstDirStr, itemStr)
         return retstr
 
     def writeXML(self, outf, indent=0):
