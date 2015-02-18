@@ -463,7 +463,8 @@ class Conf:
 
     def confFileValid(self):
         with self.lock:
-            return self.have_conf_file
+            return False
+            #return self.have_conf_file #FIXME
 
     def getUserSettableConfigs(self):
         with self.lock:

@@ -120,7 +120,7 @@ class SimpleFunctionFunction(AtomicFunction):
                 fo.setOut( name, run.FloatValue(val) ) 
             elif isinstance(val, int):
                 fo.setOut( name, run.IntValue(val) ) 
-            elif isinstance(val, string):
+            elif isinstance(val, basestring):
                 fo.setOut( name, run.StringValue(val) ) 
         #return fo
 

@@ -32,9 +32,6 @@ import cpc.util.conf.server_conf
 from cpc.util.exception import ClientError
 from cpc.util.conf.client_conf import ClientConf, NoServerError
 
-class ConfError(cpc.util.exception.CpcError):
-    pass
-
 
 def printSortedConfigListDescriptions(configs):
     for key in sorted(configs.keys()):

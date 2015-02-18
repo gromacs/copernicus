@@ -49,7 +49,7 @@ class Description(object):
 
     def output(self, outf):
         tw=textwrap.TextWrapper(initial_indent="   ", subsequent_indent="   ")
-        outf.write(tw.wrap(desc))
+        outf.write(tw.wrap(self.desc))
 
     def get(self):
         return self.desc
@@ -60,7 +60,7 @@ class Description(object):
                                           xml.sax.saxutils.escape(self.desc)))
 
 
-class DescXMLErr(apperror.ApplicationXMLError):
+class DescXMLError(apperror.ApplicationXMLError):
     def __init__(self, msg, reader):
         loc=reader.getLocator()
         if loc is not None:

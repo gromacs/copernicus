@@ -288,10 +288,6 @@ class FunctionRunInput(object):
             self.fo=FunctionRunOutput()
         return self.fo
 
-    def setFunctionRunOutput(self, fo):
-        """Set a specific FunctionRunOutput object."""
-        self.fo=fo
-
     def _writeXML(self, outf, writeState, indent=0):
         """Write the contents of this object in XML form to a file."""
         indstr=cpc.util.indStr*indent
@@ -483,7 +479,7 @@ class FunctionRunOutput(object):
                 cancelStr=''
             outf.write('%s<commands %s>\n'%(iindstr, cancelStr))
             for cmd in self.cmds:
-                self.cmd.writeXML(outf, indent+2)
+                cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
 
         if self.errMsg is not None:
@@ -511,7 +507,7 @@ class NewInstance(object):
     def describe(self, outf):
         """Print a description of this new instance to outf."""
         outf.write('Function instance of %s, named %s\n'%
-                   (self.functionName, self.instanceName))
+                   (self.functionName, self.name))
 
 
 class NewConnection(object):
@@ -898,14 +894,14 @@ class IOReader(xml.sax.handler.ContentHandler):
                 self.valueReader.endElement(name)
         elif self.cmdReader is not None:
             if name == self.cmdReaderEndTag:
-                self.commands=extend(self.cmdReader.getCommands())
-                self.cmdReader.resetCommnands()
+                self.commands.extend(self.cmdReader.getCommands())
+                self.cmdReader.resetCommands()
                 self.setCmdReader(None, None)
                 self.section=IOReader.none
                 if self.isInput:
-                    self.inp.cmd=commands[0]
+                    self.inp.cmd=self.commands[0]
                 else:
-                    self.out.cmds=commands
+                    self.out.cmds=self.commands
             else:
                 self.cmdReader.endElement(name)
         elif (name == "inputs" or

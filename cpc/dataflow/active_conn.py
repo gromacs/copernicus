@@ -255,5 +255,5 @@ class ActiveConnectionPoint(active_value.ValueUpdateListener):
             val=""
             tp=""
         outf.write('%s<active-connection id="%s" %s/>\n'%
-                   (indstr, self.val.getFullName(), val) )
+                   (indstr, self.value.getFullName(), val) )
 

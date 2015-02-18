@@ -250,7 +250,7 @@ class CmdQueue(object):
         i=0
         with self.lock:
             for dq in self.queue:
-                for item in self.dq:
+                for item in dq:
                     if(item == command):
                         return i
                     i+=1

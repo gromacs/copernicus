@@ -93,10 +93,6 @@ class NetworkedFunction(function.Function):
     #    self.subnetOutputs[ioitem.getName()]=ioitem
     #    self._checkOutputDirNeeded()
 
-    def getSelf(self):
-        """Get the self instance."""
-        return self.selfInstance
-
     def getSubnet(self):
         return self.network
 

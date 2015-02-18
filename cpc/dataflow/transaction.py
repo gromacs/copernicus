@@ -94,11 +94,11 @@ class SetValue(object):
                                               project.fileList)
             else:
                 newVal=self.literal
-                if not (tp.isSubtype(rval.getType()) or
-                        rval.getType().isSubtype(tp) ):
+                if not (tp.isSubtype(newVal.getType()) or
+                        newVal.getType().isSubtype(tp) ):
                     raise SetError(
                               "Incompatible types in assignment: '%s' to '%s'"%
-                              (rval.getType().getName(), tp.getName()))
+                              (newVal.getType().getName(), tp.getName()))
         activeInstance.stageNamedInput(dstVal, newVal, sourceTag)
         # this should be done in the transaction:
         #dstVal.notifyOwner(sourceTag, None)

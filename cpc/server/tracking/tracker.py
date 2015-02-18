@@ -50,8 +50,8 @@ class Tracker(object):
         rundata_response = s2smsg.pullAssetRequest(cmdID, Asset.cmdOutput())
         
         if rundata_response.getType() != "application/x-tar":
-            log.error("Incorrect response type: %s, should be %"%
-                      rundata_response.getType(), 'application/x-tar')
+            log.error("Incorrect response type: %s, should be %s"%
+                      (rundata_response.getType(), 'application/x-tar'))
             if rundata_response.getType() == "text/json":
                 errormsg=rundata_response.message.read(len(rundata_response.
                                                            message))

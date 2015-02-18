@@ -61,6 +61,10 @@ class SCNetworkTopologyClient(ServerCommand):
         """
         topology = ServerToServerMessage.getNetworkTopology()
 
+        if not topology:
+            log.error("Cannot get network topology.")
+            return
+
         response.add("", topology)
         log.info("Returned network topology size %d" % topology.size())
 
