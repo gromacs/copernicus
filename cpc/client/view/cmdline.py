@@ -423,7 +423,7 @@ class CmdLine(object):
             curNode = name
             co.write('%s[label="" ,color=white]\n'%count)
             for input in inst['inputs']:
-                if(InputIsNotConnected(input,name,list['connections'])):
+                if(CmdLine.inputIsNotConnected(input,name,list['connections'])):
                     co.write("%d->%s [label=%s]\n"%(count,curNode,input))
             count+=1
 
@@ -431,7 +431,7 @@ class CmdLine(object):
             curNode = name
             co.write('%s[label="" ,color=white]\n'%count)
             for output in inst['outputs']:
-                if(outputIsNotConnected(output,name,list['connections'])):
+                if(CmdLine.outputIsNotConnected(output,name,list['connections'])):
                     co.write("%s->%d [label=%s]\n"%(curNode,count,output))
             count+=1
 
@@ -472,7 +472,9 @@ class CmdLine(object):
 #                    co.write('    %s -> %s;\n'%(src,dst))
         co.write('}\n')
         return co.getvalue()
-    def InputIsNotConnected(input,name,connections):
+
+    @staticmethod
+    def inputIsNotConnected(input,name,connections):
 
         #check if we have any connections for name
         for conn in connections:
@@ -482,6 +484,7 @@ class CmdLine(object):
 
         return True
 
+    @staticmethod
     def outputIsNotConnected(output,name,connections):
         #check if we have any connections for name
         for conn in connections:

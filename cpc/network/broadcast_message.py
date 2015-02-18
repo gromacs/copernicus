@@ -84,7 +84,10 @@ class BroadcastMessage(ServerToServerMessage):
         
         
     def broadcast(self,fields,files = [],headers=dict()):
-        topology = ServerToServerMessage.getNetworkTopology()   
+        topology = ServerToServerMessage.getNetworkTopology()
+        if not topology:
+            log.error("Cannot find network topology.")
+            return
         
         #we dont want to broadcast to ourself
         node = Node.getSelfNode(ServerConf())

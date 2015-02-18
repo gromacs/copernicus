@@ -63,6 +63,11 @@ class ServerToServerMessage(ServerConnection):
     def initialize(self,endNodeId):
 
         topology=self.getNetworkTopology()
+
+        if not topology:
+            log.error("Cannot get network topology")
+            return
+
         # this is myself:
         startNode = Node.getSelfNode(self.conf)
 

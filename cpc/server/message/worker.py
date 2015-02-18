@@ -87,16 +87,21 @@ class WorkerReadyBase(ServerCommand):
         conf=serverState.conf
         originatingServer=None
         heartbeatInterval=None
-        # check whether there is an originating server. If not, we're it
-        if self.forwarded:
-            if 'originating-server-id' in request.headers:
-                originatingServer = request.headers['originating-server-id']
-            # check the expected heartbeat time.
-            log.debug("Forwarded message")
-            if request.hasParam('heartbeat-interval'):
-                heartbeatInterval = int(request.getParam('heartbeat-interval'))
-                log.debug("Forwarded heartbeat interval is %d"%
-                          heartbeatInterval)
+        try:
+            # check whether there is an originating server. If not, we're it
+            if self.forwarded:
+                if 'originating-server-id' in request.headers:
+                    originatingServer = request.headers['originating-server-id']
+                # check the expected heartbeat time.
+                log.debug("Forwarded message")
+                if request.hasParam('heartbeat-interval'):
+                    heartbeatInterval = int(request.getParam('heartbeat-interval'))
+                    log.debug("Forwarded heartbeat interval is %d"%
+                            heartbeatInterval)
+        except NameError:
+            # self.forwarded does not exist. Treat it as if self.forwarded == False
+            pass
+
         if originatingServer is None:
             # If the originating server property has not been set,  the
             # request hasn't been forwarded, therefore we are the originating
