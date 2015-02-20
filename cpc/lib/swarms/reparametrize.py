@@ -301,8 +301,8 @@ def reparametrize(use_posres, fix_endpoints, cvs, ndx_file, Nchains,
     adjusted = adjusted[:-1]
     newpts = newpts[:-1]
 
-    sys.stderr.write('Pts before repa:\n %s\n' % newpts)
-    sys.stderr.write('The adjusted pts:\n %s\n' % adjusted)
+    #sys.stderr.write('Pts before repa:\n %s\n' % newpts)
+    #sys.stderr.write('The adjusted pts:\n %s\n' % adjusted)
 
     # Possibility to test skipping reparametrize by uncommenting the next row.
     # The stringpoints will drift along the string and probably end up in the
