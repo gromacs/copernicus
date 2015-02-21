@@ -21,15 +21,11 @@ def multi_add(inp):
     if values == []:
         return fo
 
-    log.debug("In multi_add 1")
-
     floatVals = [inp.getInput('terms[%d]' % i) for i in xrange(len(values))]
     if None in floatVals:
         return fo
     
     s = sum(floatVals)
-
-    log.debug("In multi_add 2")
 
     fo.setOut('sum', FloatValue(s))
 
@@ -50,26 +46,19 @@ def add_benchmark(inp):
     prev_inst = pers.get('n_instances') or 0
 
     # Generate all instances first
-    log.debug("In add_benchmark 1. %d instances." % n_instances)
 
     for i in range(prev_inst, n_instances):
         fo.addInstance('multi_add_%d' % i, 'multi_add')
-
-    log.debug("In add_benchmark 2")
 
     for i in range(n_instances/2, n_instances):
         for j in range(i - n_instances/2 + 1):
             fo.addConnection('multi_add_%d:out.sum' % j, 'multi_add_%d:in.terms[%d]' % (i, j))
 
-    log.debug("In add_benchmark 3")
-
-#    for i in range(n_instances/2):
-#        cnt = 0
-#        for j in range(i, i+10):
-#            fo.addConnection(None, 'multi_add_%d:in.terms[%d]' % (i, cnt), FloatValue(j))
-#            cnt += 1
-
-    log.debug("In add_benchmark 4")
+    for i in range(n_instances/2):
+        cnt = 0
+        for j in range(i, i+10):
+            fo.addConnection(None, 'multi_add_%d:in.terms[%d]' % (i, cnt), FloatValue(j))
+            cnt += 1
 
     pers.set('n_instances', n_instances)
     pers.write()
