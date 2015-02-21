@@ -33,7 +33,7 @@ log=logging.getLogger(__name__)
 import cpc.util
 import apperror
 import value
-import vtype
+#import vtype
 import cpc.command
 
 
@@ -83,30 +83,30 @@ class FunctionRunInput(object):
         return self.inputs is None
 
     # inputs
-    def hasInput(self, itemname):
-        """Check whether a particular input exists"""
-        items=vtype.parseItemList(itemname)
-        return self.inputs.hasSubValue(items)
-    def getInput(self, itemname):
-        """Get the actual value associated with an input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.inputs.getSubValue(items)
-        if retv is None:
-            return None
-        if retv is not None and retv.fileValue is not None:
-            return retv.fileValue.getAbsoluteName()
-        else:
-            # if we're running in an external function, the current directory
-            # is the base dir, so we don't need to distinguish between them
-            if retv.value is not None and retv.type.isSubtype(vtype.fileType):
-                return os.path.join(self.baseDir, retv.value)
-            else:
-                return retv.value
-    def getInputValue(self, itemname):
-        """Get the Value object associated with an input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.inputs.getSubValue(items)
-        return retv
+    #def hasInput(self, itemname):
+        #"""Check whether a particular input exists"""
+        #items=vtype.parseItemList(itemname)
+        #return self.inputs.hasSubValue(items)
+    #def getInput(self, itemname):
+        #"""Get the actual value associated with an input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.inputs.getSubValue(items)
+        #if retv is None:
+            #return None
+        #if retv is not None and retv.fileValue is not None:
+            #return retv.fileValue.getAbsoluteName()
+        #else:
+            ## if we're running in an external function, the current directory
+            ## is the base dir, so we don't need to distinguish between them
+            #if retv.value is not None and retv.type.isSubtype(vtype.fileType):
+                #return os.path.join(self.baseDir, retv.value)
+            #else:
+                #return retv.value
+    #def getInputValue(self, itemname):
+        #"""Get the Value object associated with an input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.inputs.getSubValue(items)
+        #return retv
 
     def getInputNames(self):
         return vtype.parseItemList(" ")
@@ -119,102 +119,102 @@ class FunctionRunInput(object):
         return retv.isUpdated()
 
     # subnet inputs
-    def hasSubnetInput(self, itemname):
-        """Check whether a particular input exists"""
-        items=vtype.parseItemList(itemname)
-        return self.subnetInputs.hasSubValue(items)
-    def getSubnetInput(self, itemname):
-        """Get the actual value associated with a subnet input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetInputs.getSubValue(items)
-        if retv is None:
-            return None
-        if retv.fileValue is not None:
-            return retv.fileValue.getAbsoluteName()
-        else:
-            # if we're running in an external function, the current directory
-            # is the base dir, so we don't need to distinguish between them
-            if retv.value is not None and retv.type.isSubtype(vtype.fileType):
-                return os.path.join(self.baseDir, retv.value)
-            else:
-                return retv.value
-            #return retv.value
-    def getSubnetInputValue(self, itemname):
-        """Get the Value object associated with an input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetInputs.getSubValue(items)
-        return retv
-    def isSubnetInputUpdated(self, itemname):
-        """Check whether a particular subnet input has been updated."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetInputs.getSubValue(items)
-        if retv is None:
-            return False
-        return retv.isUpdated()
+    #def hasSubnetInput(self, itemname):
+        #"""Check whether a particular input exists"""
+        #items=vtype.parseItemList(itemname)
+        #return self.subnetInputs.hasSubValue(items)
+    #def getSubnetInput(self, itemname):
+        #"""Get the actual value associated with a subnet input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetInputs.getSubValue(items)
+        #if retv is None:
+            #return None
+        #if retv.fileValue is not None:
+            #return retv.fileValue.getAbsoluteName()
+        #else:
+            ## if we're running in an external function, the current directory
+            ## is the base dir, so we don't need to distinguish between them
+            #if retv.value is not None and retv.type.isSubtype(vtype.fileType):
+                #return os.path.join(self.baseDir, retv.value)
+            #else:
+                #return retv.value
+            ##return retv.value
+    #def getSubnetInputValue(self, itemname):
+        #"""Get the Value object associated with an input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetInputs.getSubValue(items)
+        #return retv
+    #def isSubnetInputUpdated(self, itemname):
+        #"""Check whether a particular subnet input has been updated."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetInputs.getSubValue(items)
+        #if retv is None:
+            #return False
+        #return retv.isUpdated()
 
     # outputs
-    def hasOutput(self, itemname):
-        """Check whether a particular output exists"""
-        items=vtype.parseItemList(itemname)
-        if self.outputs is None:
-            return False
-        return self.outputs.hasSubValue(items)
-    def getOutput(self, itemname):
-        """Get the actual value associated with an output."""
-        items=vtype.parseItemList(itemname)
-        retv=self.outputs.getSubValue(items)
-        if retv is None:
-            return None
-        if retv is not None and retv.fileValue is not None:
-            return retv.fileValue.getAbsoluteName()
-        else:
-            # if we're running in an external function, the current directory
-            # is the base dir, so we don't need to distinguish between them
-            return retv.value
-    def getOutputValue(self, itemname):
-        """Get the Value object associated with an input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.outputs.getSubValue(items)
-        return retv
-    def isOutputUpdated(self, itemname):
-        """Check whether a particular subnet output has been updated."""
-        items=vtype.parseItemList(itemname)
-        retv=self.outputs.getSubValue(items)
-        if retv is None:
-            return False
-        return retv.isUpdated()
+    #def hasOutput(self, itemname):
+        #"""Check whether a particular output exists"""
+        #items=vtype.parseItemList(itemname)
+        #if self.outputs is None:
+            #return False
+        #return self.outputs.hasSubValue(items)
+    #def getOutput(self, itemname):
+        #"""Get the actual value associated with an output."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.outputs.getSubValue(items)
+        #if retv is None:
+            #return None
+        #if retv is not None and retv.fileValue is not None:
+            #return retv.fileValue.getAbsoluteName()
+        #else:
+            ## if we're running in an external function, the current directory
+            ## is the base dir, so we don't need to distinguish between them
+            #return retv.value
+    #def getOutputValue(self, itemname):
+        #"""Get the Value object associated with an input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.outputs.getSubValue(items)
+        #return retv
+    #def isOutputUpdated(self, itemname):
+        #"""Check whether a particular subnet output has been updated."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.outputs.getSubValue(items)
+        #if retv is None:
+            #return False
+        #return retv.isUpdated()
 
     # subnet outputs
-    def hasSubnetOutput(self, itemname):
-        """Check whether a particular output exists"""
-        items=vtype.parseItemList(itemname)
-        if self.subnetOutputs is None:
-            return False
-        return self.subnetOutputs.hasSubValue(items)
-    def getSubnetOutput(self, itemname):
-        """Get the actual value associated with a subnet output."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetOutputs.getSubValue(items)
-        if retv is None:
-            return None
-        if retv.fileValue is not None:
-            return retv.fileValue.getAbsoluteName()
-        else:
-            # if we're running in an external function, the current directory
-            # is the base dir, so we don't need to distinguish between them
-            return retv.value
-    def getSubnetOutputValue(self, itemname):
-        """Get the Value object associated with an input."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetOutputs.getSubValue(items)
-        return retv
-    def isSubnetOutputUpdated(self, itemname):
-        """Check whether a particular subnet output has been updated."""
-        items=vtype.parseItemList(itemname)
-        retv=self.subnetOutputs.getSubValue(items)
-        if retv is None:
-            return False
-        return retv.isUpdated()
+    #def hasSubnetOutput(self, itemname):
+        #"""Check whether a particular output exists"""
+        #items=vtype.parseItemList(itemname)
+        #if self.subnetOutputs is None:
+            #return False
+        #return self.subnetOutputs.hasSubValue(items)
+    #def getSubnetOutput(self, itemname):
+        #"""Get the actual value associated with a subnet output."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetOutputs.getSubValue(items)
+        #if retv is None:
+            #return None
+        #if retv.fileValue is not None:
+            #return retv.fileValue.getAbsoluteName()
+        #else:
+            ## if we're running in an external function, the current directory
+            ## is the base dir, so we don't need to distinguish between them
+            #return retv.value
+    #def getSubnetOutputValue(self, itemname):
+        #"""Get the Value object associated with an input."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetOutputs.getSubValue(items)
+        #return retv
+    #def isSubnetOutputUpdated(self, itemname):
+        #"""Check whether a particular subnet output has been updated."""
+        #items=vtype.parseItemList(itemname)
+        #retv=self.subnetOutputs.getSubValue(items)
+        #if retv is None:
+            #return False
+        #return retv.isUpdated()
 
 
     def getBaseDir(self):
@@ -287,10 +287,6 @@ class FunctionRunInput(object):
         if self.fo is None:
             self.fo=FunctionRunOutput()
         return self.fo
-
-    def setFunctionRunOutput(self, fo):
-        """Set a specific FunctionRunOutput object."""
-        self.fo=fo
 
     def _writeXML(self, outf, writeState, indent=0):
         """Write the contents of this object in XML form to a file."""
@@ -483,7 +479,7 @@ class FunctionRunOutput(object):
                 cancelStr=''
             outf.write('%s<commands %s>\n'%(iindstr, cancelStr))
             for cmd in self.cmds:
-                self.cmd.writeXML(outf, indent+2)
+                cmd.writeXML(outf, indent+2)
             outf.write('%s</commands>\n'%iindstr)
 
         if self.errMsg is not None:
@@ -511,7 +507,7 @@ class NewInstance(object):
     def describe(self, outf):
         """Print a description of this new instance to outf."""
         outf.write('Function instance of %s, named %s\n'%
-                   (self.functionName, self.instanceName))
+                   (self.functionName, self.name))
 
 
 class NewConnection(object):
@@ -719,202 +715,202 @@ class IOReader(xml.sax.handler.ContentHandler):
         if self.cmdReader is not None:
             self.cmdReader.setDocumentLocator(locator)
 
-    def startElement(self, name, attrs):
-        if self.valueReader is not None:
-            self.valueReader.startElement(name, attrs)
-            return
-        elif self.cmdReader is not None:
-            self.cmdReader.startElement(name, attrs)
-            return
-        # otherwise
-        elif name=="function-input":
-            # the top-level input tag
-            if not self.isInput:
-                raise IOReaderError("Misplaced controller-input tag", self)
-            if attrs.has_key("version"):
-                self.fileVersion=int(attrs.getValue("version"))
-            else:
-                self.fileVersion=0
-            if self.fileVersion > curVersion:
-                raise IOReaderError("function-input is from the future (%d)"%
-                                    self.fileVersion, self)
-        elif name=="function-output":
-            # the return top-level tag
-            if self.isInput:
-                raise IOReaderError("Misplaced controller-output tag", self)
-            if attrs.has_key("version"):
-                self.fileVersion=int(attrs.getValue("version"))
-            else:
-                self.fileVersion=0
-            if self.fileVersion > curVersion:
-                raise IOReaderError("function-output is from the future (%d)"%
-                                    self.fileVersion, self)
-        elif name == "env":
-            if (self.section != IOReader.none) or not self.isInput:
-                raise IOReaderError("Misplaced env tag", self)
-            self.section=IOReader.env
-            if attrs.has_key('output_dir'):
-                self.inp.outputDir=attrs.getValue('output_dir')
-            if attrs.has_key('persistent_dir'):
-                self.inp.persistentDir=attrs.getValue('persistent_dir')
-            if attrs.has_key('base_dir'):
-                self.inp.baseDir=attrs.getValue('base_dir')
-        elif name == "inputs":
-            if (self.section != IOReader.none) or not self.isInput:
-                raise IOReaderError("Misplaced inputs tag", self)
-            self.section=IOReader.inputs
-            val=value.Value(None, vtype.recordType)
-            self.setValueReader(value.ValueReader(self.filename, val,
-                                                  allowUnknownTypes=True), name)
-        elif name == "subnet-inputs":
-            if (self.section != IOReader.none) or not self.isInput:
-                raise IOReaderError("Misplaced subnet-inputs tag", self)
-            self.section=IOReader.subnetInputs
-            val=value.Value(None, vtype.recordType)
-            self.setValueReader(value.ValueReader(self.filename, val,
-                                                  allowUnknownTypes=True), name)
-        elif name == "outputs":
-            if (self.section != IOReader.none) :
-                raise IOReaderError("Misplaced outputs tag", self)
-            self.section=IOReader.outputs
-            if self.isInput:
-                # read it in as a value
-                val=value.Value(None, vtype.recordType)
-                self.setValueReader(value.ValueReader(self.filename, val,
-                                                      allowUnknownTypes=True),
-                                    name)
+    #def startElement(self, name, attrs):
+        #if self.valueReader is not None:
+            #self.valueReader.startElement(name, attrs)
+            #return
+        #elif self.cmdReader is not None:
+            #self.cmdReader.startElement(name, attrs)
+            #return
+        ## otherwise
+        #elif name=="function-input":
+            ## the top-level input tag
+            #if not self.isInput:
+                #raise IOReaderError("Misplaced controller-input tag", self)
+            #if attrs.has_key("version"):
+                #self.fileVersion=int(attrs.getValue("version"))
+            #else:
+                #self.fileVersion=0
+            #if self.fileVersion > curVersion:
+                #raise IOReaderError("function-input is from the future (%d)"%
+                                    #self.fileVersion, self)
+        #elif name=="function-output":
+            ## the return top-level tag
+            #if self.isInput:
+                #raise IOReaderError("Misplaced controller-output tag", self)
+            #if attrs.has_key("version"):
+                #self.fileVersion=int(attrs.getValue("version"))
+            #else:
+                #self.fileVersion=0
+            #if self.fileVersion > curVersion:
+                #raise IOReaderError("function-output is from the future (%d)"%
+                                    #self.fileVersion, self)
+        #elif name == "env":
+            #if (self.section != IOReader.none) or not self.isInput:
+                #raise IOReaderError("Misplaced env tag", self)
+            #self.section=IOReader.env
+            #if attrs.has_key('output_dir'):
+                #self.inp.outputDir=attrs.getValue('output_dir')
+            #if attrs.has_key('persistent_dir'):
+                #self.inp.persistentDir=attrs.getValue('persistent_dir')
+            #if attrs.has_key('base_dir'):
+                #self.inp.baseDir=attrs.getValue('base_dir')
+        #elif name == "inputs":
+            #if (self.section != IOReader.none) or not self.isInput:
+                #raise IOReaderError("Misplaced inputs tag", self)
+            #self.section=IOReader.inputs
+            #val=value.Value(None, vtype.recordType)
+            #self.setValueReader(value.ValueReader(self.filename, val,
+                                                  #allowUnknownTypes=True), name)
+        #elif name == "subnet-inputs":
+            #if (self.section != IOReader.none) or not self.isInput:
+                #raise IOReaderError("Misplaced subnet-inputs tag", self)
+            #self.section=IOReader.subnetInputs
+            #val=value.Value(None, vtype.recordType)
+            #self.setValueReader(value.ValueReader(self.filename, val,
+                                                  #allowUnknownTypes=True), name)
+        #elif name == "outputs":
+            #if (self.section != IOReader.none) :
+                #raise IOReaderError("Misplaced outputs tag", self)
+            #self.section=IOReader.outputs
+            #if self.isInput:
+                ## read it in as a value
+                #val=value.Value(None, vtype.recordType)
+                #self.setValueReader(value.ValueReader(self.filename, val,
+                                                      #allowUnknownTypes=True),
+                                    #name)
 
-        elif name == "subnet-outputs":
-            if (self.section != IOReader.none) :
-                raise IOReaderError("Misplaced subnet-outputs tag", self)
-            self.section=IOReader.subnetOutputs
-            if self.isInput:
-                # read it in as a value
-                val=value.Value(None, vtype.recordType)
-                self.setValueReader(value.ValueReader(self.filename, val,
-                                                      allowUnknownTypes=True),
-                                    name)
-        elif name == "new-instances":
-            if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-instances tag",
-                                       self)
-            self.section=IOReader.newInstances
-        elif name == "new-connections":
-            if (self.section != IOReader.none) or self.isInput:
-                raise IOReaderError("Misplaced new-connections tag", self)
-            self.section=IOReader.newConnections
-        elif name == "commands":
-            if (self.section != IOReader.none):
-                raise IOReaderError("Misplaced commands tag", self)
-            self.section=IOReader.cmd
-            cancel=cpc.util.getBooleanAttribute(attrs,"cancel_prev")
-            if cancel:
-                if self.out is not None:
-                    self.out.cancelPrevCommands()
-                else:
-                    raise IOReaderError("Can't cancel commands in input", self)
-            if self.cmdReader is None:
-                self.cmdReader=cpc.command.CommandReader()
-        elif name == "value":
-            if not attrs.has_key('id'):
-                raise IOReaderError("no id for value", self)
-            self.valueName=id=attrs.getValue("id")
-            # TODO: handle compound types
-            #val=value.Value(None, vtype.valueType)
-            self.setValueReader(value.ValueReader(self.filename, None,
-                                                  implicitTopItem=False,
-                                                  allowUnknownTypes=True), name)
-        elif name == "instance":
-            if not attrs.has_key('id'):
-                raise IOReaderError("instance has no id", self)
-            if not attrs.has_key('function'):
-                raise IOReaderError("instance has no function", self)
-            name=attrs.getValue('id')
-            fn=attrs.getValue('function')
-            if self.section == IOReader.newInstances:
-                self.out.addInstance(name, fn)
-            else:
-                raise IOReaderError("Misplaced instance tag", self)
-        elif name == "connection":
-            if not attrs.has_key('src') and not attrs.has_key('value'):
-                raise IOReaderError("connection has no src or value", self)
-            if not attrs.has_key('dst'):
-                raise IOReaderError("connection has no dst", self)
-            if self.section != IOReader.newConnections:
-                raise IOReaderError("Misplaced connection tag", self)
-            if attrs.has_key('src'):
-                self.out.addConnection(attrs.getValue('src'),
-                                       attrs.getValue('dst'))
-            else:
-                if not attrs.has_key('type'):
-                    raise IOReaderError("connection has no type", self)
-                tpname=attrs.getValue('type')
-                if ( (tpname not in vtype.basicTypes) or
-                     vtype.basicTypes[tpname].isCompound() ):
-                    raise IOReaderError(
-                                "Value connection with non-basic type %s"%
-                                tpname,self)
-                tp=vtype.basicTypes[tpname]
-                val=value.interpretLiteral(attrs.getValue('value'), tp)
-                self.out.addConnection(None, attrs.getValue('dst'), val)
-        elif name == "error":
-            if not attrs.has_key('msg'):
-                raise IOReaderError("Error has no message", self)
-            self.out.setError(xml.sax.saxutils.unescape(attrs.getValue('msg')))
-        elif name == "warning":
-            if not attrs.has_key('msg'):
-                raise IOReaderError("Warning has no message", self)
-            self.out.setWarning(xml.sax.saxutils.unescape(attrs.
-                                                          getValue('msg')))
-    def endElement(self, name):
-        if self.valueReader is not None:
-            if name == self.valueReaderEndTag:
-                if self.isInput:
-                    if name == "inputs":
-                        self.inp.inputs=self.valueReader.value
-                        self.section=IOReader.none
-                    elif name == "subnet-inputs":
-                        self.inp.subnetInputs=self.valueReader.value
-                        self.section=IOReader.none
-                    elif name == "outputs":
-                        self.inp.outputs=self.valueReader.value
-                        self.section=IOReader.none
-                    elif name == "subnet-outputs":
-                        self.inp.subnetOutputs=self.valueReader.value
-                        self.section=IOReader.none
-                else:
-                    if name == "value":
-                        if self.section==IOReader.outputs:
-                            self.out.setOut(self.valueName,
-                                            self.valueReader.value)
-                        elif self.section==IOReader.subnetOutputs:
-                            self.out.setSubOut(self.valueName,
-                                               self.valueReader.value)
-                        else:
-                            raise IOReaderError("Wrong section for value",self)
-                    self.valueName=None
-                self.setValueReader(None, None)
-            else:
-                self.valueReader.endElement(name)
-        elif self.cmdReader is not None:
-            if name == self.cmdReaderEndTag:
-                self.commands=extend(self.cmdReader.getCommands())
-                self.cmdReader.resetCommnands()
-                self.setCmdReader(None, None)
-                self.section=IOReader.none
-                if self.isInput:
-                    self.inp.cmd=commands[0]
-                else:
-                    self.out.cmds=commands
-            else:
-                self.cmdReader.endElement(name)
-        elif (name == "inputs" or
-              name == "outputs" or
-              name == "subnet-inputs" or
-              name == "subnet-outputs" or
-              name == "new-instances" or
-              name == "new-connections" or
-              name == "env"):
-            self.section=IOReader.none
+        #elif name == "subnet-outputs":
+            #if (self.section != IOReader.none) :
+                #raise IOReaderError("Misplaced subnet-outputs tag", self)
+            #self.section=IOReader.subnetOutputs
+            #if self.isInput:
+                ## read it in as a value
+                #val=value.Value(None, vtype.recordType)
+                #self.setValueReader(value.ValueReader(self.filename, val,
+                                                      #allowUnknownTypes=True),
+                                    #name)
+        #elif name == "new-instances":
+            #if (self.section != IOReader.none) or self.isInput:
+                #raise IOReaderError("Misplaced new-instances tag",
+                                       #self)
+            #self.section=IOReader.newInstances
+        #elif name == "new-connections":
+            #if (self.section != IOReader.none) or self.isInput:
+                #raise IOReaderError("Misplaced new-connections tag", self)
+            #self.section=IOReader.newConnections
+        #elif name == "commands":
+            #if (self.section != IOReader.none):
+                #raise IOReaderError("Misplaced commands tag", self)
+            #self.section=IOReader.cmd
+            #cancel=cpc.util.getBooleanAttribute(attrs,"cancel_prev")
+            #if cancel:
+                #if self.out is not None:
+                    #self.out.cancelPrevCommands()
+                #else:
+                    #raise IOReaderError("Can't cancel commands in input", self)
+            #if self.cmdReader is None:
+                #self.cmdReader=cpc.command.CommandReader()
+        #elif name == "value":
+            #if not attrs.has_key('id'):
+                #raise IOReaderError("no id for value", self)
+            #self.valueName=id=attrs.getValue("id")
+            ## TODO: handle compound types
+            ##val=value.Value(None, vtype.valueType)
+            #self.setValueReader(value.ValueReader(self.filename, None,
+                                                  #implicitTopItem=False,
+                                                  #allowUnknownTypes=True), name)
+        #elif name == "instance":
+            #if not attrs.has_key('id'):
+                #raise IOReaderError("instance has no id", self)
+            #if not attrs.has_key('function'):
+                #raise IOReaderError("instance has no function", self)
+            #name=attrs.getValue('id')
+            #fn=attrs.getValue('function')
+            #if self.section == IOReader.newInstances:
+                #self.out.addInstance(name, fn)
+            #else:
+                #raise IOReaderError("Misplaced instance tag", self)
+        #elif name == "connection":
+            #if not attrs.has_key('src') and not attrs.has_key('value'):
+                #raise IOReaderError("connection has no src or value", self)
+            #if not attrs.has_key('dst'):
+                #raise IOReaderError("connection has no dst", self)
+            #if self.section != IOReader.newConnections:
+                #raise IOReaderError("Misplaced connection tag", self)
+            #if attrs.has_key('src'):
+                #self.out.addConnection(attrs.getValue('src'),
+                                       #attrs.getValue('dst'))
+            #else:
+                #if not attrs.has_key('type'):
+                    #raise IOReaderError("connection has no type", self)
+                #tpname=attrs.getValue('type')
+                #if ( (tpname not in vtype.basicTypes) or
+                     #vtype.basicTypes[tpname].isCompound() ):
+                    #raise IOReaderError(
+                                #"Value connection with non-basic type %s"%
+                                #tpname,self)
+                #tp=vtype.basicTypes[tpname]
+                #val=value.interpretLiteral(attrs.getValue('value'), tp)
+                #self.out.addConnection(None, attrs.getValue('dst'), val)
+        #elif name == "error":
+            #if not attrs.has_key('msg'):
+                #raise IOReaderError("Error has no message", self)
+            #self.out.setError(xml.sax.saxutils.unescape(attrs.getValue('msg')))
+        #elif name == "warning":
+            #if not attrs.has_key('msg'):
+                #raise IOReaderError("Warning has no message", self)
+            #self.out.setWarning(xml.sax.saxutils.unescape(attrs.
+                                                          #getValue('msg')))
+    #def endElement(self, name):
+        #if self.valueReader is not None:
+            #if name == self.valueReaderEndTag:
+                #if self.isInput:
+                    #if name == "inputs":
+                        #self.inp.inputs=self.valueReader.value
+                        #self.section=IOReader.none
+                    #elif name == "subnet-inputs":
+                        #self.inp.subnetInputs=self.valueReader.value
+                        #self.section=IOReader.none
+                    #elif name == "outputs":
+                        #self.inp.outputs=self.valueReader.value
+                        #self.section=IOReader.none
+                    #elif name == "subnet-outputs":
+                        #self.inp.subnetOutputs=self.valueReader.value
+                        #self.section=IOReader.none
+                #else:
+                    #if name == "value":
+                        #if self.section==IOReader.outputs:
+                            #self.out.setOut(self.valueName,
+                                            #self.valueReader.value)
+                        #elif self.section==IOReader.subnetOutputs:
+                            #self.out.setSubOut(self.valueName,
+                                               #self.valueReader.value)
+                        #else:
+                            #raise IOReaderError("Wrong section for value",self)
+                    #self.valueName=None
+                #self.setValueReader(None, None)
+            #else:
+                #self.valueReader.endElement(name)
+        #elif self.cmdReader is not None:
+            #if name == self.cmdReaderEndTag:
+                #self.commands=extend(self.cmdReader.getCommands())
+                #self.cmdReader.resetCommnands()
+                #self.setCmdReader(None, None)
+                #self.section=IOReader.none
+                #if self.isInput:
+                    #self.inp.cmd=commands[0]
+                #else:
+                    #self.out.cmds=commands
+            #else:
+                #self.cmdReader.endElement(name)
+        #elif (name == "inputs" or
+              #name == "outputs" or
+              #name == "subnet-inputs" or
+              #name == "subnet-outputs" or
+              #name == "new-instances" or
+              #name == "new-connections" or
+              #name == "env"):
+            #self.section=IOReader.none
 
 

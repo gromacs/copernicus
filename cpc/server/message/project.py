@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -39,7 +39,7 @@ import cpc.util
 import cpc.server.state.projectlist
 from cpc.server.state.user_handler import UserHandler, UserError
 import cpc.util.exception
-from cpc.dataflow.vtype import instanceType
+#from cpc.dataflow.vtype import instanceType
 
 
 log=logging.getLogger(__name__)
@@ -121,7 +121,7 @@ class SCProjectDelete(ProjectServerCommand):
         msg = " and its directory %s"%prj.getBasedir() if delDir else ""
         serverState.getProjectList().delete(prj, delDir)
         UserHandler().wipeAccessToProject(name)
-        if ( ( 'default_project_name' in request.session ) and 
+        if ( ( 'default_project_name' in request.session ) and
              ( name == request.session['default_project_name'] ) ):
             request.session['default_project_name'] = None
         del prj
@@ -222,12 +222,12 @@ class SCProjectRerun(ProjectServerCommand):
             item=request.getParam('item')
         else:
             item=""
-        if ( request.hasParam('recursive') and 
+        if ( request.hasParam('recursive') and
              int(request.getParam('recursive')) == 1):
             recursive=True
         else:
             recursive=False
-        if ( request.hasParam('clear-error') and 
+        if ( request.hasParam('clear-error') and
              int(request.getParam('clear-error')) == 1):
             clearError=True
         else:
@@ -305,7 +305,7 @@ class SCProjectLog(ProjectServerCommand):
             return
         response.setFile(fob, 'application/text')
         log.info("Project log on %s: %s"%(prj.getName(), item))
-       
+
 
 class SCProjectGraph(ProjectServerCommand):
     """Get network graph."""
@@ -391,16 +391,16 @@ class SCProjectGet(ProjectServerCommand):
                 if val is not None:
                     ret["value"]=val.getDesc()
                 else:
-                    ret["value"]="not found"    
+                    ret["value"]="not found"
             #except cpc.dataflow.ApplicationError as e:
-            #    ret["value"]="not found"    
+            #    ret["value"]="not found"
             finally:
                 pass
             response.add(ret)
         else:
             try:
                 val=prj.getNamedValue(itemname)
-                if (val is not None and 
+                if (val is not None and
                     val.getType().isSubtype(cpc.dataflow.fileType)):
                     if val.fileValue is not None:
                         fname=val.fileValue.getAbsoluteName()
@@ -493,7 +493,7 @@ class SCProjectSet(ProjectServerCommand):
             if upfile is None:
                 prj.scheduleSet(itemname, setval, outf)
             else:
-                # write out the file 
+                # write out the file
                 dir=prj.getNewInputSubDir()
                 os.mkdir(dir)
                 setval=os.path.join(dir, filename)
@@ -512,7 +512,7 @@ class SCProjectSet(ProjectServerCommand):
         log.info("Project set %s: %s"%(prj.getName(), itemname))
 
 class SCProjectTransact(ProjectServerCommand):
-    """Start a transaction to be able to commit several project-set commands 
+    """Start a transaction to be able to commit several project-set commands
        in a project."""
     def __init__(self):
         ServerCommand.__init__(self, "project-transact")
@@ -578,8 +578,8 @@ class SCStatus(ProjectServerCommand):
             # we iterate over the childred rather than calling _traverseInstance
             # here to avoid the project itself being counted as an instance
             for child in prj_obj.getSubValueIterList():
-                self._traverseInstance(prj_obj.getSubValue([child]), 
-                                       state_count, queue, err_list, 
+                self._traverseInstance(prj_obj.getSubValue([child]),
+                                       state_count, queue, err_list,
                                        warn_list)
             ret_prj_dict[prj_str]['states'] = state_count
             ret_prj_dict[prj_str]['queue']  = queue
@@ -624,7 +624,7 @@ class SCStatus(ProjectServerCommand):
 
         response.add("", ret_dict)
 
-    def _handle_instance(self, instance, state_count, queue, 
+    def _handle_instance(self, instance, state_count, queue,
                          err_list, warn_list):
         """ Parse an instance: check for errors, state etc """
         stateStr=instance.getStateStr()
@@ -643,14 +643,15 @@ class SCStatus(ProjectServerCommand):
                 else:
                     queue['queue'].append(cmd.toJSON())
 
-    def _traverseInstance(self, instance, state_count, queue, 
+    def _traverseInstance(self, instance, state_count, queue,
                           err_list, warn_list):
-        """Recursively traverse the instance tree, depth first search"""
-        self._handle_instance(instance, state_count, queue, err_list, warn_list)
-        for child_str in instance.getSubValueIterList():
-            child_obj = instance.getSubValue([child_str])
-            if child_obj is not None:
-                if child_obj.getType() == instanceType:
-                    self._traverseInstance(child_obj,state_count, queue, 
-                                           err_list, warn_list)
+        return
+        #"""Recursively traverse the instance tree, depth first search"""
+        #self._handle_instance(instance, state_count, queue, err_list, warn_list)
+        #for child_str in instance.getSubValueIterList():
+            #child_obj = instance.getSubValue([child_str])
+            #if child_obj is not None:
+                #if child_obj.getType() == instanceType:
+                    #self._traverseInstance(child_obj,state_count, queue,
+                                           #err_list, warn_list)
 

@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -30,7 +30,7 @@ import cpc.util
 import apperror
 import description
 import keywords
-import vtype
+#import vtype
 import os
 from cpc.util.conf.server_conf import ServerConf
 
@@ -53,7 +53,7 @@ class ImportList(object):
             log.debug("Adding new lib %s"%lib.name)
             self.libs[lib.name]=lib
     def exists(self, name):
-        """Check whether an importLibrary with such a name exists in 
+        """Check whether an importLibrary with such a name exists in
            the collection."""
         with self.lock:
             return name in self.libs
@@ -66,7 +66,7 @@ class ImportList(object):
         return self.libs.iterkeys()
 
     def getFunctionByFullName(self, name, thisImport):
-        """Get a function from a full (double colon-separated) name. 
+        """Get a function from a full (double colon-separated) name.
            name = the double colon-separated function name
            thisImport = the library to use for names with no colons."""
         rs=name.rsplit(keywords.ModSep,1)
@@ -83,10 +83,10 @@ class ImportList(object):
             lib=thisImport
             if lib is None:
                 raise ImportLibraryError("Top-level module not found")
-        return lib.getFunction(fname) 
-    
+        return lib.getFunction(fname)
+
     def getTypeByFullName(self, name, thisImport):
-        """Get a type from a full (colon-separated) name. 
+        """Get a type from a full (colon-separated) name.
            name = the colon-separated function name
            thisImport = the library to use for names with no colons."""
         rs=name.rsplit(keywords.ModSep,1)
@@ -99,14 +99,14 @@ class ImportList(object):
             fname=rs[1]
         else:
             # there's a colon in the name. Search the defaults list
-            if name in vtype.basicTypes:
-                return vtype.basicTypes[name] 
+            #if name in vtype.basicTypes:
+                #return vtype.basicTypes[name]
             # Then search the current import
             fname=name
             lib=thisImport
             if lib is None:
                 raise ImportLibraryError("Top-level module not found")
-        return lib.getType(fname) 
+        return lib.getType(fname)
 
     def getItemByFullName(self, name):
         """Get an item: a library, function, or type by its full name."""
@@ -119,20 +119,20 @@ class ImportList(object):
         if len(rs) > 1:
             # there's a double colon in the name. Search the libraries
             lib=self.get(rs[0])
-        if lib is None: 
+        if lib is None:
             raise ImportLibraryError("Item %s not found"%name)
         if lib.hasFunction(rs[1]):
             return lib.getFunction(rs[1])
         if lib.hasType(rs[1]):
             return lib.getType(rs[1])
         raise ImportLibraryError("Item %s not found"%name)
-        
+
 
 class ImportLibrary(description.Describable):
     """The class describing an imported source file."""
     def __init__(self, name, filename, network=None):
         """Initializes an new import
-    
+
            name = the import's full (canonical) name
            filename = the import's file name
            network = the network for top-level network descriptions.
@@ -195,7 +195,7 @@ class ImportLibrary(description.Describable):
         return self.network
 
     def writeXML(self, outf, indent=0):
-        """Write the function definitions (and possibly a top-level network 
+        """Write the function definitions (and possibly a top-level network
            description) in XML to outf."""
         #indstr=cpc.util.indStr*indent
         #outf.write('%s<cpc>\n'%indstr)

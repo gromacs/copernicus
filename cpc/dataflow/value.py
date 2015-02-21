@@ -1,880 +1,304 @@
-# This file is part of Copernicus
-# http://www.copernicus-computing.org/
-#
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published
-# by the Free Software Foundation
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+from notify.all import Variable
+from types import IntType, FloatType, ListType, DictType, StringType
+from function import Function, FunctionPrototype
 
+class Value(Variable):
+    """ Value is a container for a generic value. It can have a name and its ownerFunction, if any,
+        is the function or function prototype that it is part of. It can also have a description
+        documenting what it contains. The actual value contents is stored in self.value, inheriting
+        the functionality of Variable from the notify library. Values can be connected to each other
+        to propagate data. """
 
-
-import logging
-import os
-import xml.sax
-
-
-log=logging.getLogger(__name__)
-
-
-import cpc.util
-import apperror
-import vtype
-import keywords
-
-class ValError(apperror.ApplicationError):
-    pass
-
-class ValXMLError(apperror.ApplicationXMLError):
-    def __init__(self, msg, reader):
-        loc=reader.getLocator()
-        if loc is not None:
-            self.str = "%s (line %d, column %d): %s"%(reader.getFilename(),
-                                                      loc.getLineNumber(),
-                                                      loc.getColumnNumber(),
-                                                      msg)
-        else:
-            self.str=" %s: %s"%(reader.getFilename(), msg)
-
-
-def interpretLiteral(literal, destType, sourceType=None, fileList=None):
-    """Try to interpret a literal given a result type and a source type.
-       Returns a value object.
-
-       literal = the literal to interpret
-       destType = the type the value should become
-       sourceType = an optional (base)type that this literal has
-       fileList = an optional file list to choose file objects from
-       """
-    if sourceType is not None:
-        # get the most specific type
-        if destType.isSubtype(sourceType):
-            tp=destType
-        elif sourceType.isSubtype(destType):
-            tp=sourceType
-        else:
-            raise ValError(
-                    "Source type %s is not compatible with resulting type %s for literal '%s'."%
-                    (sourceType.getName(), destType.getName(), literal))
-    else:
-        tp=destType
-    if tp.getBaseType().simpleLiteral:
-        # if it's a simple literal just make the value
-        retval=Value(None, tp, None, None, fileList=fileList)
-        retval._set(tp.valueFromLiteral(literal), tp)
-        return retval
-    raise ValError("Non-simple literals not yet implemented.")
-
-
-class ValueBase(object):
-    """The basic interface for a value-like object."""
-
-    __slots__=[]
-
-    def getSubValue(self, itemList):
-        """Get a specific subvalue through a list of subitems, or return None
-           if not found.
-           itemList = the path of the value to return"""
-        return None
-
-    def getCreateSubValue(self, itemList, createType=None,
-                          setCreateSourceTag=None):
-        """Get or create a specific subvalue through a list of subitems, or
-           return None if not found.
-           itemList = the path of the value to return/create
-           if createType == a type, a subitem will be created with the given
-                            type
-           if setCreateSourceTag = not None, the source tag will be set for
-                                   any items that are created."""
-        raise ValError("Cannot create sub value")
-
-    def getClosestSubValue(self, itemList):
-        """Get the closest relevant subvalue through a list of subitems,
-
-           itemList = the path of the value to get the closest value for """
-        return None
-
-
-    def getSubValueList(self):
-        """Return a list of addressable subvalues."""
-        return []
-
-    def getSubValueIterList(self):
-        """Return an iterable list of addressable subvalues."""
-        return []
-
-    def hasSubValue(self, itemList):
-        """Check whether a particular subvalue exists"""
-        return False
-
-    def getType(self):
-        """Return the type associated with this value"""
-        raise ValError("Value has no type")
-
-    def getDesc(self):
-        """Return a 'description' of a value: an item that can be passed to
-           the client describing the value."""
-        return None
-
-
-class Value(ValueBase):
-    """The class describing a data value. Value classes hold function input
-       and output data, and are used to transmit external i/o data."""
-    __slots__=['type', 'basetype', 'createObject', 'parent', 'owner',
-               'fileValue', 'fileList', 'updated', 'selfName', 'seqNr',
-               'sourceTag', 'value']
-    def __init__(self, value, tp, parent=None, owner=None, selfName=None,
-                 createObject=None, fileList=None, sourceTag=None):
-        """Initializes an new value, with no references
-
-           val = an original value
-           tp = the actual type
-           parent = the parent in which this value is a sub-item (or None)
-           owner = the owning object (such as the ActiveInstance) of this value
-           selfName = the name in the parent's collection
-           createObject = the object type to create when creating subitems
-           fileList = the file list object to attach file references to
-           sourceTag = the initial value for the source tag.
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
         """
-        self.type=tp
-        self.basetype=tp.getBaseType()
-        if createObject is None:
-            self.createObject=Value
-        else:
-            self.createObject=createObject
-        self.parent=parent
-        self.owner=owner
-        self.fileValue=None
-        self.fileList=fileList
-        self.updated=False # whether this value has been updated
-        self.copy(value)
-        self.selfName=selfName
-        self.seqNr=0
-        self.sourceTag=sourceTag
+           :param initialValue  : A value of any kind that the value container
+                                  should contain from the start.
+           :param name          : The name of the variable.
+           :param ownerFunction : The ownerFunction of the variable.
+           :type ownerFunction  : Function/FunctionPrototype.
+           :param container     : A list or dict type container that contains
+                                  this value.
+           :type                : ListValue
+           :param description   : A description of the data and what it is used for.
+           :type description    : str.
+           :raises              : AssertionError.
+        """
 
-    def _create(self, value, tp, selfName, sourceTag):
-        """create a new subvalue using a value or None (in which case tp
-           is used as a type)."""
-        if value is not None:
-            tp=value.type
-        return self.createObject(value, tp, parent=self, owner=self.owner,
-                                 selfName=selfName,
-                                 createObject=self.createObject,
-                                 fileList=self.fileList, sourceTag=sourceTag)
+        assert ownerFunction == None or isinstance(ownerFunction,
+                                                   (Function, FunctionPrototype))
+        assert container == None or isinstance(container, (ListValue, DictValue))
 
-    def copy(self, val):
-        """Copy a value object or None"""
-        # now do something for composites
-        # copy this value for later
-        rmref=self.fileValue
-        self.fileValue=None
-        #if newSeqNr is not None:
-        #    self.seqNr=newSeqNr
-        if not self.type.isCompound():
-            if val is not None:
-                self.updated=val.updated
-                # now handle files.
-                if val.fileValue is not None:
-                    # copy the file value if we have one
-                    val.fileValue.addRef()
-                    self.fileValue=val.fileValue
-                    self.value=val.value
-                else:
-                    self._set(val.value, val.basetype)
-            else:
-                self.value=None
-        else:
-            if val is None:
-                oval=None
-                valtp=None
-            else:
-                oval=val.value
-                valtp=val.type
-                self.updated=val.updated
-            if self.type.isSubtype(vtype.recordType):
-                # create all list elements as sub-values
-                self.value=dict()
-                mems=self.type.getMemberKeys()
-                updated=False
-                for name in mems:
-                    #self.type.getMembers().iteritems():
-                    memtp=self.type.getMember(name)
-                    if oval is None:
-                        subval=None
-                    else:
-                        if name in oval:
-                            subval = oval[name]
-                        else:
-                            subval = None
-                    self.value[name] = self._create(subval, memtp, name, None)
-            elif self.type.isSubtype(vtype.arrayType):
-                # create an array.
-                self.value=[]
-                if oval is not None:
-                    if isinstance(oval, list):
-                        index=0
-                        for item in oval:
-                            self.value.append(self._create(item,
-                                                           item.type, index,
-                                                           item.sourceTag))
-                            index+=1
-                    elif oval is not None:
-                        raise ValError("Trying to assign array from non-array")
-            elif self.type.isSubtype(vtype.dictType):
-                # create a dict
-                self.value=dict()
-                if oval is not None:
-                    if isinstance(oval, dict):
-                        for index, item in oval.iteritems():
-                            self.value[index]=self._create(item,
-                                                    self.type.getMembers(),
-                                                    index,
-                                                    None)
-            else:
-                raise ValError("Unknown compound type %s."%tp.getName())
-        if rmref is not None:
-            rmref.rmRef()
+        Variable.__init__(self, initialValue)
 
-    def destroy(self):
-        """Destroy the contents of this value. Only relevant for values
-           that keep File objects."""
-        if self.fileValue is not None:
-            self.fileValue.rmRef()
-        if isinstance(self.value, dict):
-            for val in self.value.itervalues():
-                val.destroy()
-        elif isinstance(self.value, list):
-            for val in self.value:
-                val.destroy()
+        self.name = name
+        self.ownerFunction = ownerFunction
+        self.container = container
+        self.hasChanged = False # If the value changes this will be set to True.
+        self.optional = optional
+        self.description = description
 
-    def _set(self, literalValue, basetype=None):
-        """Set a value: a value without subtypes."""
-        rmref=self.fileValue
-        self.value=literalValue
-        if ( (self.fileList is not None ) and
-             (literalValue is not None ) and
-             (basetype is not None) and
-             (basetype.isSubtype(vtype.fileType) ) ):
-            if os.path.isabs(literalValue):
-                self.fileValue=self.fileList.getAbsoluteFile(literalValue)
-                self.value=self.fileValue.getName()
-            else:
-                self.fileValue=self.fileList.getFile(literalValue)
-        if rmref is not None:
-            rmref.rmRef()
+    def is_allowed_value(self, value):
+        """ Verify that the variable is of an allowed type. Overrides method of
+            Variable.
+            The implementation in the Value base class allows all values.
 
-    def setLiteral(self, literalValue):
-        """Set a value: a value without subtypes."""
-        self._set(self.type.valueFromLiteral(literalValue))
+           :param value : The value that should be checked if it is allowed.
+           :returns     : True is the value is allowed (always) or False if it
+                          is not (never).
+        """
+        return True
 
-    def setNone(self):
-        """Set a value to None"""
-        self._set(None)
+    def set(self, value):
+        """ Set the value. This is also called when using the assignment operator
+            (=). is_allowed_value is called to verify that the value is OK.
 
-    def get(self):
-        """Set a literal value: a value without subtypes."""
-        return self.value
+           :param value: The new value.
+        """
 
-    def getType(self):
-        """Return the type associated with this value"""
-        return self.type
+        # If the value is changed update the hasChanged flag.
+        containerHasChanged = False
+        if self.value != value:
+            self.hasChanged = True
+            if self.container:
+                self.container.hasChanged = True
+                containerHasChanged = True
 
-    def getBasetype(self):
-        """Get the base type."""
-        return self.basetype
+        Variable.set(self, value)
 
-    def hasSubValue(self, itemList):
-        """Check whether a particular subvalue exists"""
-        if len(itemList)==0:
-            return (self.value is not None)
-        if not (isinstance(self.value,dict) or isinstance(self.value,list)):
-            return False
-        if itemList[0] not in self.value:
-            return False
-        subVal=self.value[itemList[0]]
-        return subVal.hasSubValue(itemList[1:])
+        # If the value is input to a function execute the function code (if all
+        # input is set).
+        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
+            self in self.ownerFunction.subnetInputValues):
+            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.execute()
 
-    def _getCreateSubValue(self, itemList, create=False, createType=None,
-                           setCreateSourceTag=None, closestValue=False):
-        """Base function for getSubValue, getCreateSubValue and
-           getClosestValue
+        if containerHasChanged:
+            if self.container.ownerFunction and (self.container in self.container.ownerFunction.inputValues or \
+                                                 self.container in self.container.ownerFunction.subnetInputValues):
+                self.container.ownerFunction.functionInstance.isFinished = False
+                self.container.ownerFunction.execute()
 
-           Returns a value, which is created if create is True, or the closest
-           value if closestValue is True
-           itemList = the path of the value to find
-           createType = the type to create if a new value must be created
-           setCreateSourceTag = if not None, the source tag to set if a value
-                                must be created
-           closestValue = whether to return the closest value (mutually
-                          exclusive with create)"""
-        #log.debug("getSubValue on on %s"%(self.getFullName()))
-        if len(itemList)==0:
-            return self
-        # now get the first subitem
-        if not (isinstance(self.value,dict) or isinstance(self.value,list)):
-            #raise ValError("Trying to find sub-item in primitive value.")
-            return None
-        if isinstance(self.value, list):
-            if self.type.isSubtype(vtype.arrayType):
-                index=itemList[0]
-                if index == "+":
-                    index=len(self.value)
-                #if (itemList[0] == "+") or (len(self.value) == itemList[0]):
-                while len(self.value) <= index:
-                    if not create:
-                        if closestValue:
-                            return self
-                        else:
-                            return None
-                    # choose the most specific type
-                    ntp=self.type.getMembers()
-                    #log.debug("ntp=%s"%ntp)
-                    #log.debug("type=%s, name=%s"%(self.type, self.type.name))
-                    if createType is not None and createType.isSubtype(ntp):
-                        ntp=createType
-                    # and make it
-                    itemList[0]=len(self.value)
-                    nval=self._create(None, ntp, len(self.value),
-                                      setCreateSourceTag)
-                    self.value.append(nval)
-            else:
-                raise ValError("Array type not a list.")
-        else:
-            if itemList[0] not in self.value:
-                #log.debug("%s not in %s"%(itemList[0], self.value))
-                if not create:
-                    if closestValue:
-                        if ( (createType is not None) or
-                             (self.type.isSubtype(vtype.dictType) ) ):
-                            # only return a closest value if we can actually
-                            # create one if needed.
-                            return self
-                    return None
-                else:
-                    if self.type.isSubtype(vtype.dictType):
-                        # choose the most specific type
-                        ntp=self.type.getMembers()
-                        if createType is not None:
-                            if createType.isSubtype(ntp):
-                                ntp=createType
-                        # and make it
-                        nval=self._create(None, ntp, itemList[0],
-                                          setCreateSourceTag)
-                        self.value[itemList[0]] = nval
-                    else:
-                        # it is a list. Only create a subitem if we know what
-                        # type it should be (i.e. createType is set).
-                        if createType is not None:
-                            nval=self._create(None, createType, itemList[0],
-                                              setCreateSourceTag)
-                            self.value[itemList[0]] = nval
-                        else:
-                            return None
-        # try to find the child value
-        subVal=self.value[itemList[0]]
-        return subVal._getCreateSubValue(itemList[1:], create=create,
-                                         setCreateSourceTag=setCreateSourceTag,
-                                         closestValue=closestValue)
+    def setByConnection(self, value):
+        """ Update self.value when it is connected to a value that has been
+            changed.
 
-    def getSubValue(self, itemList):
-        """Get a specific subvalue through a list of subitems, or
-           return None if not found.
-           itemList = the path of the value to return"""
-        return self._getCreateSubValue(itemList, create=False)
+           :param value     : The new value (that had been modified before
+                              causing this function to be called).
+        """
 
+        if self.value != value:
+            self.hasChanged = True
 
-    def getCreateSubValue(self, itemList, createType=None,
-                          setCreateSourceTag=None):
-        """Get or create a specific subvalue through a list of subitems, or
-           return None if not found.
-           itemList = the path of the value to return/create
-           If create==true, a subitem will be created for arrays/dicts
-           if createType == a type, a subitem will be created with the given
-                            type
-           if setCreateSourceTag = not None, the source tag will be set for
-                                   any items that are created."""
+        self.value = value
 
-        return self._getCreateSubValue(itemList, create=True,
-                                       createType=createType,
-                                       setCreateSourceTag=setCreateSourceTag)
+        if self.ownerFunction:
+            if self in self.ownerFunction.inputValues or self in \
+                self.ownerFunction.subnetInputValues:
+                self.ownerFunction.functionInstance.isFinished = False
+                self.ownerFunction.execute()
 
-    def getClosestSubValue(self, itemList):
-        """Get or create (if create==True) a specific subvalue through a
-           list of subitems, or return None if not found.
+    def addConnection(self, toValue):
+        """ Add a connection from this value container to another value
+            container. When this value is modified the other value will
+            reflect that.
 
-           itemList = the path of the value to get the closest value for
-           If create==true, a subitem will be created for arrays/dicts
-           if createType == a type, a subitem will be created with the given
-                            type
-           if setCreateSourceTag = not None, the source tag will be set for
-                                   any items that are created.
-           if closestValue is true, the closest relevant value will be
-                                    returned """
-        return self._getCreateSubValue(itemList, create=False,
-                                       closestValue=True)
+           :param toValue: The value that should be updated when this value
+                           is updated.
+        """
 
-    def getSubType(self, itemList):
-        """Determine the type of a sub-item (even if it doesn't exist yet)."""
-        if len(itemList)==0:
-            return self.type
-        if not isinstance(self.value, dict) or isinstance(self.value, list):
-            # we're asking for a subitem of a non-compound item.
-            return None
-        if itemList[0] not in self.value:
-            if (self.type.isSubtype(vtype.arrayType) or
-                self.type.isSubtype(vtype.dictType)):
-                stp=self.type
-                # it's an array. Follow the subtypes to the end
-                try:
-                    for item in itemList:
-                        stp=stp.getSubItem(item)
-                        if stp is None:
-                            return None
-                except vtype.TypeErr:
-                    return None
-                return stp
-            elif self.type.isSubtype(vtype.recordType):
-                return None # we don't know what it is
-        return self.value[itemList[0]].getSubType(itemList[1:])
+        if self.ownerFunction:
+            if self not in self.ownerFunction.outputValues and \
+               self not in self.ownerFunction.subnetOutputValues:
+                print "Cannot add a connection from a value that is not an output value."
+                return
+            if self in self.ownerFunction.subnetOutputValues:
+                if toValue.ownerFunction not in self.ownerFunction.subnetFunctions:
+                    print "Cannot add a connection. Connected value is not part of the function subnet."
+                    return
+                if toValue not in toValue.ownerFunction.inputValues and \
+                   toValue not in toValue.ownerFunction.subnetInputValues:
+                    print "Cannot add a connection. Connected value is not part of the function subnet."
+                    return
 
-    def getSubValueList(self):
-        """Return a list of addressable subvalues."""
-        if self.type.isSubtype(vtype.recordType):
-            return self.type.getMemberKeys()
-        elif self.type.isSubtype(vtype.arrayType):
-            return self.val.keys()
-        elif self.type.isSubtype(vtype.dictType):
-            return self.val.keys()
-        else:
-            return []
+        self.changed.connect_safe(toValue.setByConnection)
 
-    def getSubValueIterList(self):
-        """Return an iterable list of addressable subvalues."""
-        if self.type.isSubtype(vtype.recordType):
-            return self.type.getMemberKeys()
-        elif self.type.isSubtype(vtype.arrayType):
-            return self.val.iterkeys()
-        elif self.type.isSubtype(vtype.dictType):
-            return self.val.iterkeys()
-        else:
-            return []
+        if self.value != toValue.value:
+            toValue.value = self.value
+            toValue.hasChanged = True
+            if toValue.ownerFunction:
+                toValue.ownerFunction.functionInstance.isFinished = False
+                toValue.ownerFunction.execute()
 
-    def haveAllRequiredValues(self):
-        """Return a boolean indicating whether this value and all of its
-           subvalues are present (if they're not optional)."""
-        return self._haveAllRequiredValues(False, False)
+    def removeConnection(self, toValue):
+        """ Remove all connections from this value to another.
+            toValue will no longer reflect changes made to this value.
 
-    def _haveAllRequiredValues(self, complete, optional):
-        if self.type.isSubtype(vtype.recordType):
-            kv=self.type.getMemberKeys()
-            for item in kv:
-                rm=self.type.getRecordMember(item)
-                ncomplete = complete or rm.complete
-                #log.debug('%s: checking for record value %s; ncomplete=%s'%
-                #          (self.getFullName(), item, ncomplete))
-                if not rm.opt:
-                    if ( (not item in self.value) or
-                           (self.value[item].value is None) ):
-                        #log.debug('%s: missing record value %s'%
-                        #          (self.getFullName(), item))
-                        return False
-                if (not rm.opt) or ncomplete:
-                    #if ncomplete:
-                    #    log.debug('%s: checking for missing record value %s'%
-                    #              (self.getFullName(), item))
-                    if not self.value[item]._haveAllRequiredValues(ncomplete,
-                                                                   rm.opt):
-                        #log.debug('%s: * missing record value %s'%
-                        #          (self.getFullName(), item))
-                        return False
-            return True
-        elif (isinstance(self.value, list) or isinstance(self.value, dict)):
-            # and if it's not optional, arrays and dicts
-            # must have more than 0 items.
-            if not optional and len(self.value) == 0:
-                return False
-            if complete:
-                # check whether all sub-items are complete.
-                if isinstance(self.value, list):
-                    for val in self.value:
-                        if not val._haveAllRequiredValues(True, False):
-                            return False
-                else:
-                    for val in self.value.itervalues():
-                        if not val._haveAllRequiredValues(True, False):
-                            return False
+           :param toValue: The value to which all connections (from this value)
+                           should be removed.
+        """
+
+        self.changed.disconnect_all(toValue, fromValue=self)
+
+class BoolValue(Value):
+
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
+
+        Value.__init__(self, initialValue, name, ownerFunction, container,
+                       optional, description)
+
+    def is_allowed_value(self, value):
+
+        if value == None or isinstance(value, bool):
             return True
         else:
-            # if it's a simple value, just check whether it's not None
-            return (self.value is not None)
+            return False
 
-    def remove(self):
-        """Remove the actual object."""
-        self.type.remove(self)
+class IntValue(Value):
 
-    def getFullName(self):
-        """Get the full name of the subitems of this value."""
-        if self.parent is None:
-            return self.selfName
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
+
+        Value.__init__(self, initialValue, name, ownerFunction, container,
+                       optional, description)
+
+    def is_allowed_value(self, value):
+
+        if value == None or isinstance(value, IntType):
+            return True
         else:
-            parentName=self.parent.getFullName()
-            if parentName is None:
-                parentName=""
-            if self.parent.basetype == vtype.recordType:
-                return "%s.%s"%(parentName, self.selfName)
-            elif (self.parent.basetype == vtype.dictType or
-                  self.parent.basetype == vtype.arrayType):
-                return "%s[%s]"%(parentName, self.selfName)
-            raise ValError("Unknown parent/child relationship.")
+            return False
 
-    def setUpdated(self, updated):
-        """Set the updated field for this value, and all its subvalues
-           to 'updated'"""
-        #if updated:
-        #    log.debug("**Setting %s to updated"%self.getFullName())
-        self.updated=updated
-        if isinstance(self.value, list):
-            for val in self.value:
-                val.setUpdated(updated)
-        elif isinstance(self.value, dict):
-            for val in self.value.itervalues():
-                val.setUpdated(updated)
+class FloatValue(Value):
 
-    def markUpdated(self, updated):
-        """Set the updated field for this value and its parents."""
-        #if updated:
-        #    log.debug("Setting %s to updated"%self.getFullName())
-        self.updated=updated
-        if self.parent is not None:
-            self.parent.markUpdated(updated)
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
 
-    def isUpdated(self):
-        return self.updated
+        Value.__init__(self, initialValue, name, ownerFunction, container,
+                       optional, description)
 
-    def hasUpdates(self):
-        """Return whether this value or any of its chidren has the updated
-           field set."""
-        if self.updated:
-           return True
-        if isinstance(self.value, list):
-            for val in self.value:
-                if val.hasUpdates():
-                    return True
-        elif isinstance(self.value, dict):
-            for val in self.value.itervalues():
-                if val.hasUpdates():
-                    return True
-        return False
+    def is_allowed_value(self, value):
 
-
-
-    def writeXML(self, outf, indent=0, fieldName=None):
-        """Write out this value as XML"""
-        indstr=cpc.util.indStr*indent
-        if fieldName is not None:
-            fieldstr=' field="%s"'%(fieldName)
+        if value == None or isinstance(value, (IntType, FloatType)):
+            return True
         else:
-            fieldstr=''
-        if self.seqNr > 0:
-            seqnrstr=' seqnr="%d"'%(self.seqNr)
+            return False
+
+class StringValue(Value):
+
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
+
+        Value.__init__(self, initialValue, name, ownerFunction, container,
+                       optional, description)
+
+    def is_allowed_value(self, value):
+
+        # Allow both StringType and UnicodeType
+        if value == None or isinstance(value, StringType):
+            return True
         else:
-            seqnrstr=''
-        if self.updated:
-            updatedstr=' updated="1"'
-        else:
-            updatedstr=''
-        basetypeName=self.type.getBaseType().getName()
-        if not self.type.isCompound():
-            if self.value is not None:
-                valuestr=' value="%s"'%(self.type.valueToLiteral(self.value))
+            return False
+
+class ListValue(Value):
+
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description='', dataType=None):
+
+        self.dataType = dataType
+
+        if initialValue:
+            assert isinstance(initialValue, ListType)
+            iv = list(initialValue)
+            if dataType:
+                t = dataType
             else:
-                valuestr=''
-            outf.write('%s<%s type="%s" %s%s%s%s />\n'%
-                       (indstr, basetypeName,
-                        self.type.getFullName(),
-                        fieldstr, seqnrstr, updatedstr, valuestr))
+                t = Value
+
+            for i, v in enumerate(iv):
+                if not isinstance(v, t):
+                    iv[i] = t(v)
+
         else:
-            outf.write('%s<%s type="%s" %s%s%s>\n'%(indstr, basetypeName,
-                                                self.type.getFullName(),
-                                                fieldstr, seqnrstr,
-                                                updatedstr))
-            if self.type.isSubtype(vtype.arrayType):
-                for val in self.value:
-                    val.writeXML(outf, indent+1)
-            else:
-                for name, val in self.value.iteritems():
-                    if val is not None:
-                        val.writeXML(outf, indent+1, fieldName=name)
-            outf.write('%s</%s>\n'%(indstr, basetypeName))
+            iv = []
 
-    def writeContentsXML(self, outf, indent=0):
-        """Write out this value's subvalues as XML"""
-        if not self.type.isCompound():
-            raise ValError("Can't write contents of non-compound type.")
-        if self.type.isSubtype(vtype.arrayType):
-            for val in self.value:
-                val.writeXML(outf, indent)
+        Value.__init__(self, iv, name, ownerFunction, container,
+                       optional, description)
+
+    def set(self, value):
+
+        iv = list(value)
+        if self.dataType:
+            t = self.dataType
         else:
-            for name, val in self.value.iteritems():
-                if val is not None:
-                    val.writeXML(outf, indent, fieldName=name)
+            t = Value
+        for i, v in enumerate(iv):
+            if not isinstance(v, t):
+                iv[i] = t(v)
+
+        Value.set(self, iv)
 
 
-    def itervalues(self):
-        """Iterate the values of a compound type"""
-        if isinstance(self.value, dict):
-            return self.value.itervalues()
-        elif isinstance(self.value, list):
-            return self.value
+    def is_allowed_value(self, value):
+
+        if value == None:
+            return True
+
+        if isinstance(value, ListType):
+            if self.dataType:
+                t = self.dataType
+            else:
+                t = Value
+            for v in value:
+                if not isinstance(v, t):
+                    return False
+            return True
         else:
-            return [self.value]
+            return False
 
-    def getDesc(self):
-        """Return a 'description' of a value: an item that can be passed to
-           the client describing the value."""
-        if not self.type.isCompound():
-            if self.value is not None:
-                if self.fileValue is not None:
-                    return self.fileValue.getName()
-                return self.type.valueToLiteral(self.value)
+    def append(self, value):
+
+        if self.dataType:
+            if isinstance(value, Value):
+                assert isinstance(value, self.dataType)
+                self.value.append(value)
+                value.container = self
             else:
-                return "None"
-        # it's a compound type.
-        if isinstance(self.value, list):
-            ret=[]
-            for i in self.value:
-                ret.append(i.getDesc())
-        elif isinstance(self.value, dict):
-            ret=dict()
-            for name, i in self.value.iteritems():
-                ret[name]=i.getDesc()
+                newValue = self.dataType(value, container=self)
+                self.value.append(newValue)
+
         else:
-            log.error("Uknown compound type %s"%type(self.value))
-            raise ValError("Uknown compound type.")
-        return ret
+            assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+            self.value.append(value)
+            value.container = self
 
-class File(object):
-    """Keeps track of a file."""
-    def __init__(self, name, fileList):
-        self.refs=1
-        self.name=name
-        self.fileList=fileList
-    def getName(self):
-        return self.name
-    def getAbsoluteName(self):
-        """Get the absolute name of this file."""
-        return os.path.join(self.fileList.root, self.name)
-    def addRef(self):
-        """Add a reference to the file."""
-        self.refs += 1
-    def rmRef(self):
-        """Remove a reference to the file. Delete when the nubmer falls
-           below 0"""
-        self.refs -= 1
-        if self.refs <= 0:
-            log.debug("Removing %s because it is no longer in use."%self.name)
-            try:
-                d = os.path.dirname(os.path.join(self.fileList.root, self.name, self.name))
-                os.remove( os.path.join(self.fileList.root, self.name ) )
-            except OSError:
-                # we don't care about non-existing files at this point
-                pass
-            try:
-                if not os.listdir(d):
-                    log.debug("Removing directory %s because it is empty."%d)
-                    os.rmdir(d)
-            except OSError:
-                log.exception("Cannot remove directory %s."%d)
-                # Cannot remove directory, but it is OK. The reason might be e.g.
-                # insufficient permissions or that there is suddenly a file in the
-                # directory.
-                pass
+        # Update the hasChanged flag
+        self.hasChanged = True
+        # If the value is input to a function execute the function code (if all input is set).
+        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
+                                   self in self.ownerFunction.subnetInputValues):
+            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.execute()
 
+class DictValue(Value):
 
-class FileList(object):
-    """Contains a list of all files referenced in a project."""
-    def __init__(self, projectRoot):
-        """Initialize a list given a project root directory."""
-        self.files=dict()
-        self.root=projectRoot
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
 
-    def getFile(self, name):
-        """Get a file object by a file name relative to the project root.
-           Returns a File object."""
-        if name not in self.files:
-            ret=File(name, self)
-            self.files[name]=ret
+        if initialValue:
+            assert isinstance(initialValue, DictType)
+            iv = dict(initialValue)
         else:
-            ret=self.files[name]
-            ret.addRef()
-        return ret
+            iv = {}
 
-    def getAbsoluteFile(self, name):
-        """Get a file object by an absolute file name relative to the
-           project root.  Returns a File object."""
-        relnm=os.path.relpath(name, self.root)
-        return self.getFile(relnm)
+        Value.__init__(self, iv, name, ownerFunction, container,
+                       optional, description)
 
+    def is_allowed_value(self, value):
 
-
-class ValueReader(xml.sax.handler.ContentHandler):
-    """XML reader for values."""
-    def __init__(self, filename, startValue, importList=None,
-                 currentImport=None, implicitTopItem=True,
-                 allowUnknownTypes=False, valueType=Value,
-                 sourceTag=None):
-        """Initialize based on
-           filename = the filename to report in error messages
-           importList = the ImportList object of the project. If None,
-                        knowledge about the type is not neccesarly
-           startValue = a pre-initialized value to read into.
-           currentImport = the import being  currently imported.
-           implicitTopItem = whether the top item of the start value is
-                             implicit.
-           allowUnknownTypes = whether to allow unknown list types
-           valueType = the value class to allocate if startValue is none
-           sourceTag =  the source tag to set"""
-        self.value=startValue
-        self.valueType=valueType
-        self.importList=importList
-        self.currentImport=currentImport
-        self.filename=filename
-        self.subStack=[] # stack of subvalue we're in
-        self.subCounters=[] # stack of item counters.
-        self.typeStack=[] # type stack
-        self.depth=0        # depth in subitem stack
-        self.lastDepth=-1   # depth in subitem stack of last item
-        if implicitTopItem:
-            self.subStack.append(startValue) # stack of subvalue we're in
-            self.subCounters.append(0) # stack of item counters.
-            self.typeStack.append(startValue.basetype) # type stack
-            self.lastDepth=0
-        self.loc=None
-        self.allowUnknownTypes = allowUnknownTypes
-        self.sourceTag=sourceTag
-
-    def setDocumentLocator(self, locator):
-        self.loc=locator
-
-    def getFilename(self):
-        return self.filename
-    def getLocator(self):
-        return self.loc
-
-    def startElement(self, name, attrs):
-        #if name == "value" or name == "data":
-        if name in vtype.basicTypes:
-            basicType=vtype.basicTypes[name]
-            if 'type' in attrs:
-                tpnm=keywords.fixID(attrs.getValue('type'))
-                if self.importList is not None:
-                    tp=self.importList.getTypeByFullName(tpnm,
-                                                         self.currentImport)
-                else:
-                    tp=basicType
-            else:
-                tp=basicType
-            # determine the numerical location in the subitem tree
-            if self.depth == self.lastDepth:
-                self.subCounters[self.depth] += 1
-            elif self.depth > self.lastDepth:
-                if len(self.subCounters) < self.depth+1:
-                    self.subCounters.append(0)
-                else:
-                    self.subCounters[self.depth] = 0
-            else:
-                self.subCounters[self.depth] += 1
-            # now determine the sub-item context
-            itemStackAdd=None  # the item to add to the item stack at the end
-            if len(self.subStack) > 0:
-                subVal=self.subStack[-1] # subVal is the current value to read
-                if 'field' in attrs:
-                    if (len(self.typeStack)>0
-                        and self.typeStack[-1].isCompound()):
-                        # if it's a field, it's named.
-                        itemStackAdd=keywords.fixID(attrs.getValue('field'))
-                        createType=None
-                        if self.allowUnknownTypes:
-                            createType=tp
-                        subVal=subVal.getCreateSubValue([itemStackAdd],
-                                            createType=createType,
-                                            setCreateSourceTag=self.sourceTag)
-                        if subVal is None:
-                            raise ValXMLError("Did not find field '%s'"%
-                                              attrs.getValue('field'), self)
-                    else:
-                        raise ValXMLError("field '%s' inside non-compound type"%
-                                          attrs.getValue('field'), self)
-                elif 'subitem' in attrs:
-                    # this is a single, directly addressed sub-item
-                    subitems=vtype.parseItemList(
-                                    keywords.fixID(attrs.getValue('subitem')))
-                    subVal=subVal.getCreateSubValue(subitems,
-                                              setCreateSourceTag=self.sourceTag)
-                elif ( len(self.typeStack) > 0 and
-                       (self.typeStack[-1] == vtype.arrayType) ):
-                    itemStackAdd=self.subCounters[self.depth]
-                    createType=None
-                    if self.allowUnknownTypes:
-                        createType=tp
-                    subVal=subVal.getCreateSubValue([itemStackAdd],
-                                              createType=createType,
-                                              setCreateSourceTag=self.sourceTag)
-            else:
-                # this is the top-level value
-                self.value=self.valueType(None, tp)
-                subVal=self.value
-
-            if tp is not None:
-                # check the type
-                if not tp.isSubtype(subVal.getType()):
-                    raise ValXMLError("%s not a subtype of %s."%
-                                      (tp.getName(),
-                                       subVal.getType().getName()),
-                                      self)
-            else:
-                tp=subVal.getType()
-            if not subVal.getType().isCompound():
-                if 'value' in attrs:
-                    # this means that the type is a literal and can be parsed
-                    nval=interpretLiteral(attrs.getValue('value'), tp)
-                    subVal.copy(nval)
-                    #log.debug("Setting value for %s to %s"%
-                    #          (subVal.getFullName(), subVal.value) )
-                    #subVal._set(tp.valueFromLiteral(attrs.getValue('value')))
-            else:
-                if 'value' in attrs:
-                    raise ValXMLError("Literal value for compound type", self)
-            # increment depth
-            if 'seqnr' in attrs:
-                subVal.seqNr=int(attrs.getValue('seqnr'))
-            if 'updated' in attrs:
-                updated=cpc.util.getBooleanAttribute(attrs, "updated")
-                if updated:
-                    subVal.markUpdated(updated)
-            #log.debug("Setting value for %s"%subVal.getFullName())
-            subVal.sourceTag=self.sourceTag
-            self.lastDepth=self.depth
-            self.depth+=1
-            self.typeStack.append(basicType)
-            #self.itemStack.append(itemStackAdd)
-            self.subStack.append(subVal)
-
-    def endElement(self, name):
-        #if name == "value" or name == "data":
-        if name in vtype.basicTypes:
-            #self.lastSubItem=self.subList.pop()
-            #self.lastSubItemNr=len(self.subList)
-            self.depth-=1
-            self.typeStack.pop()
-            self.subStack.pop()
+        if value == None or isinstance(value, DictType):
+            return True
+        else:
+            return False
 
