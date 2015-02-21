@@ -34,7 +34,7 @@ import cpc.util
 from cpc.util.conf.server_conf import ServerConf
 import apperror
 import cpc.util
-import active_inst
+#import active_inst
 import transaction
 
 
@@ -133,7 +133,8 @@ class Task(object):
 
     def isActive(self):
         """Return whether the underlying active instance is active."""
-        return self.activeInstance.state == active_inst.active
+        return
+        #return self.activeInstance.state == active_inst.active
 
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,
@@ -270,20 +271,20 @@ class Task(object):
     def getProject(self):
         return self.project
 
-    def writeXML(self, outf, indent=0):
-        indstr=cpc.util.indStr*indent
-        iindstr=cpc.util.indStr*(indent+1)
-        outf.write('%s<task project="%s" priority="%d" active_instance="%s" seqnr="%d">\n'%
-                   (indstr,
-                    self.project.getName(),
-                    self.priority,
-                    self.activeInstance.getCanonicalName(),
-                    self.seqNr))
-        self.fnInput.writeStateXML(outf, indent+1)
-        if len(self.cmds)>0:
-            outf.write('%s<command-list>\n'%iindstr)
-            for cmd in self.cmds:
-                cmd.writeXML(outf, indent+2)
-            outf.write('%s</command-list>\n'%iindstr)
-        outf.write('%s</task>\n'%indstr)
+    #def writeXML(self, outf, indent=0):
+        #indstr=cpc.util.indStr*indent
+        #iindstr=cpc.util.indStr*(indent+1)
+        #outf.write('%s<task project="%s" priority="%d" active_instance="%s" seqnr="%d">\n'%
+                   #(indstr,
+                    #self.project.getName(),
+                    #self.priority,
+                    #self.activeInstance.getCanonicalName(),
+                    #self.seqNr))
+        #self.fnInput.writeStateXML(outf, indent+1)
+        #if len(self.cmds)>0:
+            #outf.write('%s<command-list>\n'%iindstr)
+            #for cmd in self.cmds:
+                #cmd.writeXML(outf, indent+2)
+            #outf.write('%s</command-list>\n'%iindstr)
+        #outf.write('%s</task>\n'%indstr)
 

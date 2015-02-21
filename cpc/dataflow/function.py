@@ -1,284 +1,506 @@
-# This file is part of Copernicus
-# http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
-# by the Free Software Foundation
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-
-
-#import logging
-
-
-#log=logging.getLogger(__name__)
-
-
-import cpc.util
-import apperror
-import keywords
-import description
-import value
-import function_io
-import vtype
-import run
-
-class FunctionError(apperror.ApplicationError):
+import logging
+import subprocess
+import threading
+try:
+    import keywords
+except:
     pass
 
-class FunctionState(object):
-    """Class describing a function state. Instantiated as static objects in 
-       the Function class."""
+log=logging.getLogger(__name__)
+
+def executeSystemCommand(cmd, inp=None):
+    """ Executes a system command and returns the output.
+
+       :param cmd : The command to execute. This is supplied as a list
+                    containing all arguments.
+       :type cmd  : list.
+       :inp       : Input to be directed to the command
+                    (not command-line arguments).
+       :type inp  : str.
+       :returns   : The output of the command.
+    """
+
+    if not inp:
+        output = ''.join(subprocess.check_output(cmd, stderr=subprocess.STDOUT))
+    else:
+        p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT)
+
+        output = ''.join(p.communicate(input=inp)[0])
+
+    return output
+
+class FunctionBase(object):
+    """ This class contains basic data and data management functions.
+        It is inherited by Function and FunctionPrototype."""
+
+    description = None
+
     def __init__(self, name):
-        self.name=name
-    def __str__(self):
-        return self.name
 
-class Function(description.Describable):
-    """The class describing a function. A function is a single 
-       computational unit in a dataflow network. It can consist of either 
-       a controller with input and output definitions, or of a function graph.
-       """
-    # this class is an abstract base class
+        self.name = name
+        self.inputValues = []
+        self.outputValues = []
+        self.subnetInputValues = []
+        self.subnetOutputValues = []
 
-    ok=FunctionState("ok")
-    error=FunctionState("error")
+    def getInputValueContainer(self, name):
+        """ Get the (first) input Value object named as specified.
 
-    def __init__(self, name, lib=None):
-        """Initializes a function.
-
-           input = list of input items
-           output = list of output items
+           :param name : The name of the value to retrieve.
+           :type name   : str.
+           :returns    : The found Value object or None
         """
-        self.name=name
 
-        # the I/O items are types (lists)
-        self.inputs=vtype.RecordType("%s:in"%self.name, 
-                                     vtype.recordType, lib=lib)
-        self.outputs=vtype.RecordType("%s:out"%self.name, 
-                                      vtype.recordType, lib=lib)
-        self.subnetInputs=vtype.RecordType("%s:sub_in"%self.name, 
-                                           vtype.recordType, lib=lib)
-        self.subnetOutputs=vtype.RecordType("%s:sub_out"%self.name, 
-                                            vtype.recordType, lib=lib)
-        self.inputs.markImplicit()
-        self.outputs.markImplicit()
-        self.subnetInputs.markImplicit()
-        self.subnetOutputs.markImplicit()
+        for v in self.inputValues:
+            if v.name == name:
+                return v
 
-        self.genTasks=True # whether to generate tasks based on this function
-                           # NetworkFunctions, for example, have no tasks
-        self.log=False # whether the function wants to log output
+    def getSubnetInputValueContainer(self, name):
+        """ Get the (first) subnet input Value object named as specified.
 
-        # whether an output dir is needed despite having no input/output files
-        self.outputDirWithoutFiles=False
-        self._checkOutputDirNeeded()
-        # whether a persistent scratch directory is needed
-        self.persistentDir=False
-        # whether the current (subnet)outputs are given to the task when 
-        # it is executed
-        self.taskAccessOutputs=False
-        self.taskAccessSubnetOutputs=False
-        #self.importLib=None
-        self.state=Function.ok
-        self.stateMsg=""
-        if lib is not None:
-            self.setLib(lib)
-        description.Describable.__init__(self)
+           :param name : The name of the value to retrieve.
+           :type name   : str.
+           :returns    : The found Value object or None
+        """
 
-    def getName(self):
-        """Returns the function's name."""
-        return self.name
+        for v in self.subnetInputValues:
+            if v.name == name:
+                return v
 
-    def getFullName(self):
-        """Return the function's full name."""
-        if self.lib is not None and self.lib.getName() != "":
-            return "%s%s%s"%(self.lib.getName(), keywords.ModSep, self.name)
+    def getAllInputNames(self):
+        """ Get the names of all inputs and subnet inputs.
+           :returns    : A list of the names of all inputs.
+        """
+
+        return [v.name for v in self.inputValues + self.subnetInputValues]
+
+    def getAllOutputNames(self):
+        """ Get the names of all outputs and subnet outputs.
+           :returns    : A list of the names of all outputs.
+        """
+
+        return [v.name for v in self.outputValues + self.subnetOutputValues]
+
+    def getInputNames(self):
+        """ Get the names of inputs.
+           :returns    : A list of the names of inputs.
+        """
+
+        return [v.name for v in self.inputValues]
+
+    def getOutputNames(self):
+        """ Get the names of outputs.
+           :returns    : A list of the names of outputs.
+        """
+
+        return [v.name for v in self.outputValues]
+
+    def getSubnetInputNames(self):
+        """ Get the names of subnet inputs.
+           :returns    : A list of the names of subnet inputs.
+        """
+
+        return [v.name for v in self.subnetInputValues]
+
+    def getSubnetOutputNames(self):
+        """ Get the names of subnet outputs.
+           :returns    : A list of the names of subnet outputs.
+        """
+
+        return [v.name for v in self.subnetOutputValues]
+
+    def getOutputValueContainer(self, name):
+        """ Get the (first) output Value object named as specified.
+
+           :param name : The name of the value to retrieve.
+           :type name  : str.
+           :returns    : The found Value object or None
+        """
+
+        for v in self.outputValues:
+            if v.name == name:
+                return v
+
+    def getSubnetOutputValueContainer(self, name):
+        """ Get the (first) subnet output Value object named as specified.
+
+           :param name : The name of the value to retrieve.
+           :type name   : str.
+           :returns    : The found Value object or None
+        """
+
+        for v in self.subnetOutputValues:
+            if v.name == name:
+                return v
+
+    def setInputValueContents(self, name, value):
+        """ Set the contents (Value.value) of the (first) input Value object
+            named as specified.
+
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :param value : The new value.
+           :returns     : The found Value object or None
+        """
+
+        v = self.getInputValueContainer(name)
+
+        if v:
+            if v.value != value:
+                v.hasChanged = True
+
+            v.value = value
         else:
-            return self.name
+            print 'Value %s does not exist' % name
 
-    def setLib(self, lib):
-        """Set the function's library."""
-        self.lib=lib
-        lib.addType(self.inputs)
-        lib.addType(self.outputs)
-        lib.addType(self.subnetInputs)
-        lib.addType(self.subnetOutputs)
-        self.inputs.setLib(lib)
-        self.outputs.setLib(lib)
-        self.subnetInputs.setLib(lib)
-        self.subnetOutputs.setLib(lib)
+    def setSubnetInputValueContents(self, name, value):
+        """ Set the contents (Value.value) of the (first) subnet input
+            Value object named as specified.
 
-    def getLib(self):
-        """Get the function's library."""
-        return self.lib
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :param value : The new value.
+           :returns     : The found Value object or None
+        """
 
-    #def getSelf(self):
-    #    """Get the 'self' object, if it exists. None, otherwise."""
-    #    return None
+        v = self.getSubnetInputValueContainer(name)
 
-    def getState(self):
-        """Get the state of the function."""
-        return self.state
+        if v:
+            if v.value != value:
+                v.hasChanged = True
 
-    def hasLog(self):
-        """Return whether this function has a log."""
-        return self.log
-    def setLog(self, log):
-        """Set whether this function has a log."""
-        self.log=log
-        self._checkOutputDirNeeded()
+            v.value = value
+        else:
+            print 'Value %s does not exist' % name
+
+    def getInputValueContents(self, name):
+        """ Get the contents (Value.value) of the (first) input Value object
+            named as specified.
+
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :returns     : The value of the specified input value object.
+        """
+
+        v = self.getInputValueContainer(name)
+
+        if v:
+            return v.value
+        else:
+            print 'Value %s does not exist' % name
+
+    def getSubnetInputValueContents(self, name):
+        """ Get the contents (Value.value) of the (first) subnet input Value
+            object named as specified.
+
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :returns     : The value of the specified input value object.
+        """
+
+        v = self.getSubnetInputValueContainer(name)
+
+        if v:
+            return v.value
+        else:
+            print 'Value %s does not exist' % name
+
+    def getOutputValueContents(self, name):
+        """ Get the contents (Value.value) of the (first) output Value object
+            named as specified.
+
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :returns     : The value of the specified input value object.
+        """
+
+        v = self.getOutputValueContainer(name)
+
+        if v:
+            return v.value
+        else:
+            print 'Value %s does not exist' % name
+
+    def getSubnetOutputValueContents(self, name):
+        """ Get the contents (Value.value) of the (first) subnet output Value
+            object named as specified.
+
+           :param name  : The name of the value to modify.
+           :type name   : str.
+           :returns     : The value of the specified input value object.
+        """
+
+        v = self.getSubnetOutputValueContainer(name)
+
+        if v:
+            return v.value
+        else:
+            print 'Value %s does not exist' % name
+
+    def getDescription(self):
+
+        return self.description
 
 
-    def accessOutputs(self):
-        """Return whether we want to give the current outputs to tasks""" 
-        return self.taskAccessOutputs
-    def accessSubnetOutputs(self):
-        """Return whether we want to give the current outputs to tasks""" 
-        return self.taskAccessSubnetOutputs
-    def setAccessOutputs(self, use):
-        """Set whether we want to give the current outputs to tasks""" 
-        self.taskAccessOutputs=use
-    def setAccessSubnetOutputs(self, use):
-        """Set whether we want to give the current outputs to tasks""" 
-        self.taskAccessSubnetOutputs=use
 
-    def getStateMsg(self):
-        """Get the state message (in case of error) of the function."""
-        return self.stateMsg
+class FunctionPrototype(FunctionBase):
+    """ This class is inherited to describe how a function works and what input
+        and output values it has. The actual function instances are of class
+        Function.
+    """
 
-    def check(self):
-        """Perform a check on whether the function can run and set
-           the state to reflect this."""
-        self.stateMsg=""
-        self.state=Function.ok
+    def __init__(self, name):
 
-    def setOutputDirWithoutFiles(self, val):
-        """Set whether there should be a run directory even if there's no
-           output files.
+        FunctionBase.__init__(self, name)
 
-           val =  a boolean
-           """
-        self.outputDirWithoutFiles=val
-        self._checkOutputDirNeeded()
+    def execute(self):
+        """ This function should be overloaded to contain the code that should
+            be executed by a function.
+        """
 
+        return
 
+class Function(FunctionBase):
+    """ This is an instance of a function, with its own input and output
+        data.
+    """
 
-    def getInputs(self):
-        """Get a the type of all inputs."""
-        return self.inputs
+    def __init__(self, functionPrototype, name=None, dataNetwork=None):
 
-    def getOutputs(self):
-        """Get a the type of all outputs."""
-        return self.outputs
+        assert functionPrototype, "A function must have a function prototype."
+        assert isinstance(functionPrototype, FunctionPrototype), "The function prototype of the function must be of class FunctionPrototype."
 
-    def getSubnetInputs(self):
-        """Get a the type of all subnet inputs."""
-        return self.subnetInputs
+        FunctionBase.__init__(self, name)
 
-    def getSubnetOutputs(self):
-        """Get a the type of all subnet outputs."""
-        return self.subnetOutputs
+        self.functionInstance = functionPrototype
+        self.dataNetwork = dataNetwork
+        self.frozen = False
+        self.subnetFunctions = []
+        self.inputValues = list(functionPrototype.inputValues)
+        self.outputValues = list(functionPrototype.outputValues)
+        self.subnetInputValues = list(functionPrototype.subnetInputValues)
+        self.subnetOutputValues = list(functionPrototype.subnetOutputValues)
+        self.inputLock = threading.RLock()
+        self.outputLock = threading.RLock()
+        self.message = ''
+        self.state = 'held'
 
-    def getSubnet(self):
-        """Return a subnetwork associated with this function, or None."""
+        for v in self.inputValues + self.outputValues + self.subnetInputValues + \
+            self.subnetOutputValues:
+            v.ownerFunction = self
+        if name:
+            self.name = name
+
+    #def _getSubVal(self, itemList, staging=False):
+        #"""Helper function"""
+
+        #subval=None
+        #try:
+            #if itemList[0]==keywords.In:
+                #with self.inputLock:
+                    #if staging:
+                        #subval=self.stagedInputVal
+                    #else:
+                        #subval=self.inputVal
+            #elif itemList[0]==keywords.Out:
+                #with self.outputLock:
+                    #subval=self.outputVal
+            #elif itemList[0]==keywords.SubIn:
+                #with self.inputLock:
+                    #if staging:
+                        #subval=self.stagedSubnetInputVal
+                    #else:
+                        #subval=self.subnetInputVal
+            #elif itemList[0]==keywords.SubOut:
+                #with self.outputLock:
+                    #subval=self.subnetOutputVal
+            #elif itemList[0]==keywords.Msg:
+                #with self.outputLock:
+                    #subval=self.msg
+            #elif self.subnet is not None:
+                #subval=self.subnet.tryGetActiveInstance(itemList[0])
+        #except:
+            #pass
+        #return subval
+
+    def _getSubVal(self, itemList):
+        """Helper function"""
+
+        subval=None
+        try:
+            if itemList[0]==keywords.In and len(itemList) > 1:
+                with self.inputLock:
+                    itemList=itemList[1:]
+                    subval=self.getInputValueContainer(itemList[0])
+            elif itemList[0]==keywords.Out and len(itemList) > 1:
+                with self.outputLock:
+                    itemList=itemList[1:]
+                    subval=self.getOutputValueContainer(itemList[0])
+            elif itemList[0]==keywords.SubIn and len(itemList) > 1:
+                with self.inputLock:
+                    itemList=itemList[1:]
+                    subval=self.getSubnetInputValueContainer(itemList[0])
+            elif itemList[0]==keywords.SubOut and len(itemList) > 1:
+                with self.outputLock:
+                    itemList=itemList[1:]
+                    subval=self.getSubnetOutputValueContainer(itemList[0])
+            elif itemList[0]==keywords.Msg:
+                with self.outputLock:
+                    subval=self.msg
+            elif self.subnet is not None:
+                subval=self.subnet.tryGetActiveInstance(itemList[0])
+        except:
+            pass
+        return subval
+
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or return None
+           if not found.
+           itemList = the path of the value to return"""
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getSubValue(itemList[1:])
         return None
 
-    def _checkOutputDirNeeded(self):
-        if self.outputDirWithoutFiles or self.log:
-            self._outputDirNeeded=True
-            return 
-        # set to true if the outputs/subnetOutputs contain files
-        if self.outputs.containsBasetype(vtype.fileType):
-            self._outputDirNeeded=True
-            return
-        if self.subnetOutputs.containsBasetype(vtype.fileType):
-            self._outputDirNeeded=True
-            return
-        self._outputDirNeeded=False
+    def getCreateSubValue(self, itemList):
+        """Get or create a specific subvalue through a list of subitems, or
+           return None if not found.
+           itemList = the path of the value to return/create
+           if createType == a type, a subitem will be created with the given
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+        if len(itemList)==0:
+            return self
+        # staging is true because we know we want to be able to create a new
+        # value.
+        log.debug('GET OR CREATE %s' % itemList)
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getCreateSubValue(itemList[1:])
+        raise ValError("Cannot create sub value of active instance")
 
-    def outputDirNeeded(self):
-        """Returns  whether an output directory is needed."""
-        self._checkOutputDirNeeded()
-        return self._outputDirNeeded
+    def getClosestSubValue(self, itemList):
+        """Get the closest relevant subvalue through a list of subitems,
 
-    def setPersistentDir(self, val):
-        """Set whether a persistent scratch dir is needed."""
-        self.persistentDir=val
-    def persistentDirNeeded(self):
-        """Return whether a persistance scratch storage directory is needed."""
-        return self.persistentDir
+           itemList = the path of the value to get the closest value for """
+        log.debug('FUNCTION: itemlist %s' % itemList)
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        log.debug('FUNCTION: subval %s' % subval)
+        if subval is not None:
+            return subval.getClosestSubValue(itemList[1:])
+        return self
 
-    def _writeInputOutputXML(self, outf, indent=0):
-        """Describe the inputs and outputs"""
-        indstr=cpc.util.indStr*indent
-        iindstr=cpc.util.indStr*(indent+1)
-        if self.desc is not None:
-            self.desc.writeXML(outf, indent)
-        if self.inputs.hasMembers():
-            outf.write('%s<inputs>\n'%indstr)
-            self.inputs.writePartsXML(outf, indent+1)
-            outf.write('%s</inputs>\n'%indstr)
-        if self.outputs.hasMembers():
-            outf.write('%s<outputs>\n'%indstr)
-            self.outputs.writePartsXML(outf, indent+1)
-            outf.write('%s</outputs>\n'%indstr)
-        if self.subnetInputs.hasMembers():
-            outf.write('%s<subnet-inputs>\n'%indstr)
-            self.subnetInputs.writePartsXML(outf, indent+1)
-            outf.write('%s</subnet-inputs>\n'%indstr)
-        if self.subnetOutputs.hasMembers():
-            outf.write('%s<subnet-outputs>\n'%indstr)
-            self.subnetOutputs.writePartsXML(outf, indent+1)
-            outf.write('%s</subnet-outputs>\n'%indstr)
+    def getSubValueList(self):
+        """Return a list of addressable subvalues."""
+        ret=[ function_io.inputs, function_io.outputs,
+              function_io.subnetInputs, function_io.subnetOutputs,
+              keywords.Msg ]
+        if self.activeNetwork is not None:
+            ailist=self.subnet.getActiveInstanceList(False, False)
+            ret.extend( ailist.keys() )
+        return ret
 
-    def writeXML(self, outFile, indent=0):
-        """Describe the fucntion in XML."""
-        pass
+    def hasSubValue(self, itemList):
+        """Check whether a particular subvalue exists"""
+        if len(itemList) == 0:
+            return True
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.hasSubValue(itemList[1:])
+        return False
 
-    def run(self, fnInput):
-        """Run a function. Return a dict of outputs as Value objects, a 
-           command to be queued, or None.
-          
-           fnInput = a run.FunctionRunInput object. 
+    def getDescription(self):
 
-           fnInput contains the functionRunOutput object that must be
-                   filled with output data
-           """
-        pass
+        return self.functionInstance.description
 
+    def freeze(self):
+        """ Make the function frozen. A frozen function does not execute
+            when its input is changed.
+        """
 
-#class ConstFunction(Function):
-#    """A function that holds a constant value."""
-#    def __init__(self, name, tp, value, lib):
-#        """Initializes a const function.
-#
-#           type = a const type
-#           value = its value
-#        """
-#        self.type=tp
-#        self.value=value
-#        inputs=[]
-#        outputs=[ function_io.FunctionOutput("val", tp)  ]
-#        Function.__init__(self, "const", inputs, outputs)
-#        self.genTasks=False
-#
-#    def writeXML(self, outFile, indent=0):
-#        """The function itself does not need to be described."""
-#        pass
-#
-#    def run(self, fnInput):
-#        """Run the const function, returning the value."""
-#        return run.FunctionRunOutput( 
-#                      outputs={ "val" : value.Value(self.value, self.type) })
+        self.frozen = True
+        self.state = 'held'
 
+    def unfreeze(self):
+        """ Remove the frozen state. The function will execute if any of the
+            inputs have changed during the period it was frozen.
+        """
+
+        self.frozen = False
+        self.state = 'active'
+        self.execute()
+
+    def isFrozen(self):
+        """ Return if the function is frozen or not.
+
+           :returns : True if frozen, False if not frozen.
+        """
+
+        return self.frozen
+
+    def inputHasChanged(self):
+        """ Check if the input or subnet input of this function
+            has changed since it was last executed.
+
+           :returns : True if the input has changed, False if not.
+        """
+
+        with self.inputLock:
+            for v in self.inputValues + self.subnetInputValues:
+                if v.hasChanged:
+                    return True
+            return False
+
+    def resetInputChange(self):
+        """ Set the hasChanged status of all inputs and subnet inputs to False.
+        """
+
+        with self.inputLock:
+            for v in self.inputValues + self.subnetInputValues:
+                v.hasChanged = False
+        # TODO: Reset status of values in a list
+
+    def execute(self):
+        """ Execute the actual function executable (from the function definition
+            itself). There are checks that the required input is available and
+            also that the input has changed since last running the executable
+            block.
+
+            :returns : True if running the executable block, False if not
+                       executing, i.e. due to missing input.
+        """
+
+        with self.inputLock and self.outputLock:
+            if not self.frozen and self.inputHasChanged():
+                from value import Value, ListValue, DictValue
+                for iv in self.inputValues:
+                    if iv == None or not isinstance(iv, Value) or \
+                       (iv.optional == False and iv.value == None):
+                        return False
+                    if isinstance(iv, ListValue):
+                        if len(iv.value) == 0:
+                            return False
+                        # Chances are the last value is set last, so traverse
+                        # the list in reverse order.
+                        for v in reversed(iv.value):
+                            if v == None or not isinstance(v, Value) or \
+                               v.value == None:
+                                return False
+                    elif isinstance(iv, DictValue):
+                        for v in iv.value.values():
+                            if v == None or not isinstance(v, Value) or \
+                               v.value == None:
+                                return False
+                #print 'Will execute', self.name
+                if self.functionInstance.execute():
+                    return self.resetInputChange()
+
+            else:
+                return False

@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -29,11 +29,11 @@ import traceback
 import sys
 
 import apperror
-import connection
+#import connection
 import value
 import run
-import instance
-import active_value
+#import instance
+#import active_value
 import vtype
 
 
@@ -43,8 +43,8 @@ class SetError(apperror.ApplicationError):
     pass
 
 class SetValue(object):
-    def __init__(self, project, itemName, 
-                 #activeInstance, direction, ioItemList, 
+    def __init__(self, project, itemName,
+                 #activeInstance, direction, ioItemList,
                  literal, sourceType, printName):
         """Object to hold an set value for an arbitrary active instance."""
         self.itemName=itemName
@@ -54,7 +54,8 @@ class SetValue(object):
         #instance=self.activeNetwork.getNamedActiveInstance(instanceName)
         self.itemList=vtype.parseItemList(itemName)
         item=project.getClosestSubValue(self.itemList)
-        if not isinstance(item, active_value.ActiveValue):
+        log.debug('TRANSACTION: %s' % item)
+        if not isinstance(item, value.Value):
             raise SetError("Value of '%s' cannot be set"%itemName)
         #self.activeInstance=item.owner
         self.closestVal=item
@@ -77,29 +78,30 @@ class SetValue(object):
 
     def findAffected(self, affectedOutputAIs, affectedInputAIs):
         """Find all affected input and output active instances."""
-        activeInstance=self.closestVal.owner
+        activeInstance=self.closestVal.ownerFunction
         activeInstance.getValueAffectedAIs(self.closestVal, affectedInputAIs)
 
     def set(self, project, sourceTag):
-        activeInstance=self.closestVal.owner
-        with activeInstance.lock:
-            dstVal=self.project.getCreateSubValue(self.itemList)
-            #dstVal=activeInstance.findCreateNamedInput(self.direction,
-            #                                                self.ioItemList,
-            #                                                sourceTag)
-            # now we can extract the type.
-            tp=dstVal.getType()
-            if not isinstance(self.literal, value.Value):
-                newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
-                                              project.fileList)
-            else:
-                newVal=self.literal
-                if not (tp.isSubtype(rval.getType()) or
-                        rval.getType().isSubtype(tp) ):
-                    raise SetError(
-                              "Incompatible types in assignment: '%s' to '%s'"%
-                              (rval.getType().getName(), tp.getName()))
-        activeInstance.stageNamedInput(dstVal, newVal, sourceTag)
+        return
+        #activeInstance=self.closestVal.owner
+        #with activeInstance.lock:
+            #dstVal=self.project.getCreateSubValue(self.itemList)
+            ##dstVal=activeInstance.findCreateNamedInput(self.direction,
+            ##                                                self.ioItemList,
+            ##                                                sourceTag)
+            ## now we can extract the type.
+            #tp=dstVal.getType()
+            #if not isinstance(self.literal, value.Value):
+                #newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
+                                              #project.fileList)
+            #else:
+                #newVal=self.literal
+                #if not (tp.isSubtype(rval.getType()) or
+                        #rval.getType().isSubtype(tp) ):
+                    #raise SetError(
+                              #"Incompatible types in assignment: '%s' to '%s'"%
+                              #(rval.getType().getName(), tp.getName()))
+        #activeInstance.stageNamedInput(dstVal, newVal, sourceTag)
         # this should be done in the transaction:
         #dstVal.notifyOwner(sourceTag, None)
         #dstVal.notifyDestinations(sourceTag, None)
@@ -113,7 +115,7 @@ class Transaction(run.FunctionRunOutput):
        add in a single transaction. All updates must happen through this
        object"""
     def __init__(self, project, task, activeNetwork, importLib):
-        """Initialize. Task may be None if outputs/subnetOutputs/cmds are 
+        """Initialize. Task may be None if outputs/subnetOutputs/cmds are
            empty.
 
            project = the project this transaction belongs to
@@ -132,10 +134,10 @@ class Transaction(run.FunctionRunOutput):
         self.project=project
         #self.imports=project.imports
         self.lib=importLib
-        self.setValues=None # a list of new values to set 
+        self.setValues=None # a list of new values to set
 
     def addSetValue(self, itemName, literal, sourceType, printName):
-        sv=SetValue(self.project, itemName, 
+        sv=SetValue(self.project, itemName,
                     #instance, direction, ioItemList,
                     literal, sourceType, printName)
         if not isinstance(self.setValues, list):
@@ -144,22 +146,22 @@ class Transaction(run.FunctionRunOutput):
             self.setValues.append(sv)
         return sv
 
-    def _makeConn(self, newConnection):
-        """Make a connection object for a new connection."""
-        if newConnection.srcStr is not None:
-            log.debug("Making new connection %s -> %s"%
-                      (newConnection.srcStr, newConnection.dstStr))
-            conn=connection.makeConnectionFromDesc(self.activeNetwork,
-                                                   newConnection.srcStr,
-                                                   newConnection.dstStr)
-        else:
-            log.debug("Making assignment %s -> %s"%
-                      (newConnection.val.value, 
-                       newConnection.dstStr))
-            conn=connection.makeInitialValueFromDesc(self.activeNetwork,
-                                                     newConnection.dstStr,
-                                                     newConnection.val)
-        newConnection.conn=conn
+    #def _makeConn(self, newConnection):
+        #"""Make a connection object for a new connection."""
+        #if newConnection.srcStr is not None:
+            #log.debug("Making new connection %s -> %s"%
+                      #(newConnection.srcStr, newConnection.dstStr))
+            #conn=connection.makeConnectionFromDesc(self.activeNetwork,
+                                                   #newConnection.srcStr,
+                                                   #newConnection.dstStr)
+        #else:
+            #log.debug("Making assignment %s -> %s"%
+                      #(newConnection.val.value,
+                       #newConnection.dstStr))
+            #conn=connection.makeInitialValueFromDesc(self.activeNetwork,
+                                                     #newConnection.dstStr,
+                                                     #newConnection.val)
+        #newConnection.conn=conn
 
     def check(self, outf=None):
         """Check the transaction items for any errors."""
@@ -170,7 +172,7 @@ class Transaction(run.FunctionRunOutput):
         """Do a transaction."""
         # we start out with 'none' objects, and initialize them to sets if
         # there's a need for it.
-        locked=False
+        #locked=False
         addedInstances=None
         affectedOutputAIs=None
         affectedInputAIs=None
@@ -190,10 +192,10 @@ class Transaction(run.FunctionRunOutput):
                 self.project.updateLock.acquire()
                 # these are the active instances for which output locks are set
                 affectedOutputAIs=set()
-                # these are active instances for which handleNewInput() is 
+                # these are active instances for which handleNewInput() is
                 # called
                 affectedInputAIs=set()
-                if self.activeInstance is not None: 
+                if self.activeInstance is not None:
                     affectedOutputAIs.add(self.activeInstance)
             # now make the new instances
             if self.newInstances is not None:
@@ -204,7 +206,7 @@ class Transaction(run.FunctionRunOutput):
                     fn=self.project.imports.getFunctionByFullName(
                                                     newInstance.functionName,
                                                     self.lib)
-                    inst=instance.Instance(newInstance.name, fn, 
+                    inst=instance.Instance(newInstance.name, fn,
                                            fn.getFullName())
                     # for later activation
                     addedInstances.append(self.activeNetwork.addInstance(inst))
@@ -215,22 +217,22 @@ class Transaction(run.FunctionRunOutput):
                     if newConnection.conn is None:
                         self._makeConn(newConnection)
                     self.activeNetwork.findConnectionSrcDest(
-                                                        newConnection.conn, 
+                                                        newConnection.conn,
                                                         affectedOutputAIs,
                                                         affectedInputAIs)
             if self.setValues is not None:
                 for val in self.setValues:
                     log.debug("Setting new value %s"%(val.itemName))
-                    val.findAffected(affectedOutputAIs, affectedInputAIs)
-            if affectedOutputAIs is None:
-                if self.activeInstance is not None: 
-                    self.activeInstance.outputLock.acquire()
-                    locked=True
-            else:
-                for ai in affectedOutputAIs:
-                    ai.outputLock.acquire()
-                locked=True
-                log.debug("Locked.")
+                    #val.findAffected(affectedOutputAIs, affectedInputAIs)
+            #if affectedOutputAIs is None:
+                #if self.activeInstance is not None:
+                    #self.activeInstance.outputLock.acquire()
+                    #locked=True
+            #else:
+                #for ai in affectedOutputAIs:
+                    #ai.outputLock.acquire()
+                #locked=True
+                #log.debug("Locked.")
             # now do the transaction
             # new values
             if self.setValues is not None:
@@ -239,30 +241,30 @@ class Transaction(run.FunctionRunOutput):
                         val.describe(outf)
                     val.set(self.project, self)
             # connections
-            if self.newConnections is not None:
-                for newConnection in self.newConnections:
-                    if outf is not None:
-                        newConnection.describe(outf)
-                    self.activeNetwork.addConnection(newConnection.conn, self)
-            # call the function meant specifically for this 
-            if self.activeInstance is not None:
-                if outf is not None:
-                    if self.outputs is not None:
-                        for output in self.outputs:
-                            output.describe(outf)
-                    if self.subnetOutputs is not None:
-                        for output in self.subnetOutputs:
-                            output.describe(outf)
-                if len(self.outputs) > 0 or len(self.subnetOutputs)>0:
-                    self.activeInstance.handleTaskOutput(self, 
-                                                         self.seqNr, 
-                                                         self.outputs, 
-                                                         self.subnetOutputs,
-                                                         self.warnMsg)
-            if affectedInputAIs is not None:
-                for ai in affectedInputAIs:
-                    #log.debug("affected input AI %s"%ai.getCanonicalName())
-                    ai.handleNewInput(self, self.seqNr)
+            #if self.newConnections is not None:
+                #for newConnection in self.newConnections:
+                    #if outf is not None:
+                        #newConnection.describe(outf)
+                    #self.activeNetwork.addConnection(newConnection.conn, self)
+            # call the function meant specifically for this
+            #if self.activeInstance is not None:
+                #if outf is not None:
+                    #if self.outputs is not None:
+                        #for output in self.outputs:
+                            #output.describe(outf)
+                    #if self.subnetOutputs is not None:
+                        #for output in self.subnetOutputs:
+                            #output.describe(outf)
+                #if len(self.outputs) > 0 or len(self.subnetOutputs)>0:
+                    #self.activeInstance.handleTaskOutput(self,
+                                                         #self.seqNr,
+                                                         #self.outputs,
+                                                         #self.subnetOutputs,
+                                                         #self.warnMsg)
+            #if affectedInputAIs is not None:
+                #for ai in affectedInputAIs:
+                    ##log.debug("affected input AI %s"%ai.getCanonicalName())
+                    #ai.handleNewInput(self, self.seqNr)
         except:
             fo=StringIO()
             traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
@@ -272,24 +274,24 @@ class Transaction(run.FunctionRunOutput):
                 self.activeInstance.markError(errmsg)
             else:
                 log.error(errmsg)
-        finally:
-            if locked:
-                if affectedOutputAIs is None:
-                    self.activeInstance.outputLock.release()
-                else:
-                    for ai in affectedOutputAIs:
-                        ai.outputLock.release()
+        #finally:
+            #if locked:
+                #if affectedOutputAIs is None:
+                    #self.activeInstance.outputLock.release()
+                #else:
+                    #for ai in affectedOutputAIs:
+                        #ai.outputLock.release()
             #if affectedOutputAIs is not None:
-            if not (self.newConnections is None and self.setValues is None):
-                self.project.updateLock.release() 
+            #if not (self.newConnections is None and self.setValues is None):
+                #self.project.updateLock.release()
         log.debug("Finished transaction locks")
         if addedInstances is not None:
-            for inst in addedInstances: 
+            for inst in addedInstances:
                 inst.activate()
         #log.debug("TRANSACTION ENDING *****************")
-            
 
- 
+
+
 class TransactionList(object):
     """A list of transaction items (TransactionItem objects)"""
     def __init__(self, networkLock, autoCommit):
@@ -323,7 +325,7 @@ class TransactionList(object):
                 try:
                     # first get all affected active instances.
                     for item in self.lst:
-                        item.getAffected(project, affectedInputAIs, 
+                        item.getAffected(project, affectedInputAIs,
                                          affectedOutputAIs)
                     # lock all affected I/O active instances
                     for ai in affectedOutputAIs:

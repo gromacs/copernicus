@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -24,6 +24,7 @@ import os
 import shutil
 
 #import cpc.server.project
+from cpc.dataflow.task import TaskQueue
 import cpc.dataflow.project
 from cpc.util.conf.server_conf import ServerConf
 import cpc.util.file
@@ -58,7 +59,7 @@ class ProjectList(object):
         self.projects = dict()
         self.cmdQueue = cmdQueue
         # the shared task queue.
-        self.taskQueue = cpc.dataflow.TaskQueue(cmdQueue)
+        self.taskQueue = TaskQueue(cmdQueue)
         self.conf = conf
 
     def get(self, name):

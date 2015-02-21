@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -34,8 +34,16 @@ class Describable(object):
     """An object with a description."""
     def __init__(self):
         self.desc=None
+
+    def __getstate__(self):
+        return self.desc
+
+    def __setstate__(self, desc):
+        self.desc = desc
+
     def setDescription(self, desc):
         self.desc=desc
+
     def getDescription(self):
         return self.desc
 
@@ -47,6 +55,12 @@ class Description(object):
            happen from within a DescriptionReader."""
         self.desc=desc
 
+    def __getstate__(self):
+        return self.desc
+
+    def __setstate__(self, desc):
+        self.desc = desc
+
     def output(self, outf):
         tw=textwrap.TextWrapper(initial_indent="   ", subsequent_indent="   ")
         outf.write(tw.wrap(desc))
@@ -56,7 +70,7 @@ class Description(object):
 
     def writeXML(self, outf, indent=0):
         indstr=cpc.util.indStr*indent
-        outf.write('%s<desc>%s</desc>\n'%(indstr, 
+        outf.write('%s<desc>%s</desc>\n'%(indstr,
                                           xml.sax.saxutils.escape(self.desc)))
 
 
@@ -79,7 +93,7 @@ class DescriptionReader(xml.sax.handler.ContentHandler):
         self.desc=describable
         self.descStr=""
         self.filename=filename
-    
+
     def finish(self):
         #log.debug("Setting description %s"%(self.descStr))
         self.desc.setDescription(Description(self.descStr))
@@ -96,13 +110,13 @@ class DescriptionReader(xml.sax.handler.ContentHandler):
             pass
         else:
             raise DescXMLError("Unknown element %s", self)
-    
+
     def endElement(self, name):
         if name == "desc":
             pass
         else:
             raise DescXMLError("Unknown element %s", self)
-    
+
     def characters(self, content):
         self.descStr += xml.sax.saxutils.unescape(content).strip()
 
