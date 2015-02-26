@@ -1,6 +1,9 @@
+import logging
 from notify.all import Variable
 from types import IntType, FloatType, ListType, DictType, StringType
 from function import Function, FunctionPrototype
+
+log=logging.getLogger(__name__)
 
 class Value(Variable):
     """ Value is a container for a generic value. It can have a name and its ownerFunction, if any,
@@ -8,6 +11,8 @@ class Value(Variable):
         documenting what it contains. The actual value contents is stored in self.value, inheriting
         the functionality of Variable from the notify library. Values can be connected to each other
         to propagate data. """
+
+    typeString = 'value'
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
@@ -127,8 +132,10 @@ class Value(Variable):
             toValue.value = self.value
             toValue.hasChanged = True
             if toValue.ownerFunction:
-                toValue.ownerFunction.functionInstance.isFinished = False
-                toValue.ownerFunction.execute()
+                if toValue in toValue.ownerFunction.inputValues or toValue in \
+                    toValue.ownerFunction.subnetInputValues:
+                    toValue.ownerFunction.functionInstance.isFinished = False
+                    toValue.ownerFunction.execute()
 
     def removeConnection(self, toValue):
         """ Remove all connections from this value to another.
@@ -140,7 +147,40 @@ class Value(Variable):
 
         self.changed.disconnect_all(toValue, fromValue=self)
 
+    def getTypeString(self):
+
+        return self.typeString
+
+    def getDescription(self):
+
+        return self.description
+
+    def setDescription(self, desc):
+
+        self.description = desc
+
+    def getBaseType(self):
+        """Get the base type of this type."""
+        ret=self
+        while not isinstance(ret, basicTypeList):
+            ret=ret.container
+        return ret
+
+    def getBaseTypeName(self):
+        """Get the name of the base type of this type."""
+        ret=self
+        while not isinstance(ret, basicTypeList):
+            ret=ret.container
+        return ret.typeString
+
+    def jsonDescribe(self):
+        """Get a description of a value in a JSON-serializable format."""
+        return { 'name' : self.name,
+                 'base-type' : self.getBaseTypeName()}
+
 class BoolValue(Value):
+
+    typeString = 'bool'
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
@@ -157,6 +197,8 @@ class BoolValue(Value):
 
 class IntValue(Value):
 
+    typeString = 'int'
+
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
@@ -171,6 +213,8 @@ class IntValue(Value):
             return False
 
 class FloatValue(Value):
+
+    typeString = 'float'
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
@@ -187,6 +231,8 @@ class FloatValue(Value):
 
 class StringValue(Value):
 
+    typeString = 'string'
+
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
@@ -202,6 +248,8 @@ class StringValue(Value):
             return False
 
 class ListValue(Value):
+
+    typeString = 'list'
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description='', dataType=None):
@@ -257,34 +305,63 @@ class ListValue(Value):
         else:
             return False
 
+    def getClosestSubValue(self, index):
+
+        if not self.value:
+            return self
+        if index < len(self.value):
+            return self.value[index]
+        return self.value[-1]
+
+    def getSubValue(self, index):
+
+        if not self.value:
+            return None
+        if index < len(self.value):
+            return self.value[index]
+        return None
+
     def append(self, value):
+
+        nValues = len(self.value)
+        self.setIndex(value, nValues)
+
+    def setIndex(self, value, index):
 
         if self.dataType:
             if isinstance(value, Value):
                 assert isinstance(value, self.dataType)
-                self.value.append(value)
                 value.container = self
             else:
                 newValue = self.dataType(value, container=self)
-                self.value.append(newValue)
 
         else:
             assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
-            self.value.append(value)
             value.container = self
+
+        nValues = len(self.value)
+        if index >= nValues:
+            index = nValues
+            self.value.append(value)
+        else:
+            self.value[index] = value
 
         # Update the hasChanged flag
         self.hasChanged = True
         # If the value is input to a function execute the function code (if all input is set).
         if self.ownerFunction and (self in self.ownerFunction.inputValues or \
-                                   self in self.ownerFunction.subnetInputValues):
+                                self in self.ownerFunction.subnetInputValues):
             self.ownerFunction.functionInstance.isFinished = False
             self.ownerFunction.execute()
 
 class DictValue(Value):
 
+    typeString = 'dict'
+
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
-                 container=None, optional=False, description=''):
+                 container=None, optional=False, description='', dataType=None):
+
+        self.dataType = dataType
 
         if initialValue:
             assert isinstance(initialValue, DictType)
@@ -295,10 +372,90 @@ class DictValue(Value):
         Value.__init__(self, iv, name, ownerFunction, container,
                        optional, description)
 
+    def set(self, value):
+
+        iv = list(value)
+        if self.dataType:
+            t = self.dataType
+        else:
+            t = Value
+        for i, v in enumerate(iv):
+            if not isinstance(v, t):
+                iv[i] = t(v)
+
+        Value.set(self, iv)
+
+
     def is_allowed_value(self, value):
 
-        if value == None or isinstance(value, DictType):
+        if value == None:
+            return True
+
+        if isinstance(value, DictType):
+            if self.dataType:
+                t = self.dataType
+            else:
+                t = Value
+            for v in value.itervalues():
+                if not isinstance(v, t):
+                    return False
             return True
         else:
             return False
 
+    def update(self, *args, **kwargs):
+
+        if self.dataType:
+            if args:
+                d = args[0]
+            else:
+                d = {}
+            if isinstance(d, DictType):
+                for k,v in d.iteritems():
+                    if isinstance(v, Value):
+                        assert isinstance(v, self.dataType)
+                        v.container = self
+                    else:
+                        newValue = self.dataType(v, container=self)
+                        d[k] = newValue
+            else:
+                d = {}
+
+            for k,v in kwargs.iteritems():
+                if isinstance(v, Value):
+                    assert isinstance(v, self.dataType)
+                    v.container = self
+                else:
+                    newValue = self.dataType(v, container=self)
+                    kwargs[k] = newValue
+
+        else:
+            if args:
+                d = args[0]
+            else:
+                d = {}
+            if isinstance(d, DictType):
+                for k,v in d.iteritems():
+                    assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                    v.container = self
+            else:
+                d = {}
+
+            for k,v in kwargs.iteritems():
+                assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                v.container = self
+
+
+        newDict = dict(d.items() + kwargs.items())
+        dict.update(self, newDict)
+
+        # Update the hasChanged flag
+        self.hasChanged = True
+        # If the value is input to a function execute the function code (if all input is set).
+        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
+                                   self in self.ownerFunction.subnetInputValues):
+            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.execute()
+
+
+basicTypeList = (BoolValue, IntValue, FloatValue, StringValue, ListValue, DictValue)

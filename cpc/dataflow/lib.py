@@ -20,6 +20,8 @@
 
 import logging
 import threading
+import fnmatch
+import inspect
 try:
     from collections import OrderedDict
 except ImportError:
@@ -33,6 +35,7 @@ import keywords
 #import vtype
 import os
 from cpc.util.conf.server_conf import ServerConf
+from cpc.dataflow.library import Library
 
 
 log=logging.getLogger(__name__)
@@ -50,7 +53,7 @@ class ImportList(object):
     def add(self, lib):
         """Add an importLibrary to the collection."""
         with self.lock:
-            log.debug("Adding new lib %s"%lib.name)
+            log.debug("Adding new lib %s: %s"%(lib.name, lib))
             self.libs[lib.name]=lib
     def exists(self, name):
         """Check whether an importLibrary with such a name exists in
@@ -85,28 +88,28 @@ class ImportList(object):
                 raise ImportLibraryError("Top-level module not found")
         return lib.getFunction(fname)
 
-    def getTypeByFullName(self, name, thisImport):
-        """Get a type from a full (colon-separated) name.
-           name = the colon-separated function name
-           thisImport = the library to use for names with no colons."""
-        rs=name.rsplit(keywords.ModSep,1)
-        if len(rs) > 1:
-            # there's a double colon in the name. Search the libraries
-            flib=rs[0]
-            lib=self.get(flib)
-            if lib is None:
-                raise ImportLibraryError("Module '%s' not found"%flib)
-            fname=rs[1]
-        else:
-            # there's a colon in the name. Search the defaults list
-            #if name in vtype.basicTypes:
-                #return vtype.basicTypes[name]
-            # Then search the current import
-            fname=name
-            lib=thisImport
-            if lib is None:
-                raise ImportLibraryError("Top-level module not found")
-        return lib.getType(fname)
+    #def getTypeByFullName(self, name, thisImport):
+        #"""Get a type from a full (colon-separated) name.
+           #name = the colon-separated function name
+           #thisImport = the library to use for names with no colons."""
+        #rs=name.rsplit(keywords.ModSep,1)
+        #if len(rs) > 1:
+            ## there's a double colon in the name. Search the libraries
+            #flib=rs[0]
+            #lib=self.get(flib)
+            #if lib is None:
+                #raise ImportLibraryError("Module '%s' not found"%flib)
+            #fname=rs[1]
+        #else:
+            ## there's a colon in the name. Search the defaults list
+            ##if name in vtype.basicTypes:
+                ##return vtype.basicTypes[name]
+            ## Then search the current import
+            #fname=name
+            #lib=thisImport
+            #if lib is None:
+                #raise ImportLibraryError("Top-level module not found")
+        #return lib.getType(fname)
 
     def getItemByFullName(self, name):
         """Get an item: a library, function, or type by its full name."""
@@ -130,7 +133,7 @@ class ImportList(object):
 
 class ImportLibrary(description.Describable):
     """The class describing an imported source file."""
-    def __init__(self, name, filename, network=None):
+    def __init__(self, name, library, network=None):
         """Initializes an new import
 
            name = the import's full (canonical) name
@@ -139,7 +142,7 @@ class ImportLibrary(description.Describable):
                      Only the top-level import should have one.
         """
         self.name=name
-        self.filename=filename
+        self.library=library
         self.types=OrderedDict()
         self.functions=OrderedDict()
         self.network=network
@@ -211,18 +214,44 @@ class ImportLibrary(description.Describable):
             outf.write('\n')
         #outf.write('%s</cpc>\n'%indstr)
 
+def getModulesDict():
+    """
+    Returns a dictionary of modules available on the server
+    """
+    files = []
+    lDict = {}
+    for pathItem in ServerConf().getImportPaths():
+        for root, dirnames, filenames in os.walk(pathItem):
+            for filename in fnmatch.filter(filenames, '*.py'):
+                if filename == '__init__.py':
+                    continue
+                filename=os.path.join(root, filename[:-3]).replace(pathItem, '').replace(os.sep, '.')
+                # FIXME: The root path must be set better
+                files.append('cpc.lib.' + filename[1:])
+
+    for f in files:
+        try:
+            l = __import__(f, fromlist = ['nonsense']) # fromlist must be a non-empty list
+        except (ImportError,NotImplementedError):
+            log.debug('Cannot import %s' %f)
+            continue
+
+        for cls in dir(l): # Loop over all objects in the module's namespace.
+            try:
+                cls=getattr(l, cls)
+                if (inspect.isclass(cls)              # It should be a class.
+                    and inspect.getmodule(cls) == l   # Make sure it was defined in module, not just imported.
+                    and issubclass(cls, Library)      # It should be a subclass of Library.
+                    and cls.__name__ != Library.__name__): # It should not be the Library baseclass itself.
+                        lDict[cls.name] = (cls)
+            except Exception:
+                log.debug('Error inspecting library: %s', f)
+
+    return lDict
+
 def getModulesList():
     """
-    Returns a list of modules available on the server
+    Returns a dictionary of modules available on the server
     """
-    ret = []
-    for libDir in ServerConf().getImportPaths():
-        if not os.path.exists(libDir):
-            continue
-        subdirs = os.listdir(libDir)
-        for dir in subdirs:
-            if not os.path.isdir(os.path.join(libDir, dir)):
-                continue
-            if os.path.isfile(os.path.join(libDir, dir, '_import.xml')):
-                ret.append(dir)
-    return ret
+
+    return getModulesDict().keys()

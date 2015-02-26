@@ -21,6 +21,7 @@
 import logging
 import threading
 import os
+import dill as pickle
 
 try:
     from cStringIO import StringIO
@@ -41,10 +42,11 @@ import keywords
 import task
 import transaction
 import lib
+import value
 import vtype
 #import readxml
 from cpc.dataflow.datanetwork import DataNetwork
-from cpc.dataflow.function import Function
+from cpc.dataflow.function import Function, FunctionBase
 
 log=logging.getLogger(__name__)
 
@@ -86,7 +88,9 @@ class Project(object):
         self.network=DataNetwork(project=self, taskQueue=self.queue, dirName="",
                                  lock=self.updateLock)
         # now take care of imports. First get the import path
-        self.topLevelImport=lib.ImportLibrary("", "", self.network)
+        self.topLevelImport=lib.ImportLibrary("", None, self.network)
+        # a list of available libraries
+        self.availableLibraries=dict()
         # create a list of function definitions
         self.functions=dict()
         # create a list of already performed imports
@@ -177,6 +181,7 @@ class Project(object):
         """Add an instance of a set in the transaction schedule."""
         itemname=keywords.fixID(itemname)
         with self.transactionStackLock:
+            log.debug("ADD/SET: %s, %s, %s, %s" % (itemname, literal, sourceType, printName))
             sv=self.transactionStack[-1].addSetValue(itemname, literal,
                                                      sourceType, printName)
             if not self._tryImmediateTransaction(outf):
@@ -218,32 +223,29 @@ class Project(object):
         with self.updateLock:
             itemlist=vtype.parseItemList(pathname)
             item=self.getSubValue(itemlist)
-        if not isinstance(item, active_inst.ActiveInstance):
+        if not isinstance(item, Function):
             raise ProjectError("%s is not an active instance"%instname)
         return item
 
 
-    #def getNamedItemList(self, pathname):
-        #"""Get an list based on a path name according to the rule
-           #[instance]:[instance]"""
-        #pathname=keywords.fixID(pathname)
-        #with self.updateLock:
-            #itemlist=vtype.parseItemList(pathname)
-            #item=self.getSubValue(itemlist)
-            #ret=dict()
-            #if item is None:
-                #ret["type"]="Not found: "
-                #ret["name"]=pathname
-            #elif isinstance(item, value.Value):
-                ## it is an active I/O item
-                #tp=item.getType()
-                #ret["type"]="input/output value"
-                #ret["name"]=pathname
-                #if tp is not None:
-                    #ret["typename"]=tp.getName()
-                    #ret["value-type"]=tp.jsonDescribe()
-                #else:
-                    #ret["typename"]="Not found"
+    def getNamedItemList(self, pathname):
+        """Get an list based on a path name according to the rule
+           [instance]:[instance]"""
+        pathname=keywords.fixID(pathname)
+        with self.updateLock:
+            itemlist=vtype.parseItemList(pathname)
+            item=self.getSubValue(itemlist)
+            log.debug('PATHNAME: %s, LIST: %s, item: %s' % (pathname, itemlist, item))
+            ret=dict()
+            if item is None:
+                ret["type"]="Not found: "
+                ret["name"]=pathname
+            elif isinstance(item, value.Value):
+                # it is an active I/O item
+                ret["type"]="input/output value"
+                ret["name"]=pathname
+                ret["typename"]=item.getTypeString()
+                # FIXME:
                 #if tp.isSubtype(vtype.recordType):
                     #ret["subitems"]=[]
                     #keys=tp.getMemberKeys()
@@ -264,21 +266,21 @@ class Project(object):
                         #if mem.desc is not None:
                             #subi["desc"]=mem.desc.get()
                         #ret["subitems"].append( subi )
-                #elif (tp.isSubtype(vtype.arrayType) or
-                      #tp.isSubtype(vtype.dictType)):
-                    #mem=tp.getMembers()
-                    #subi={"type" : mem.getName()}
-                    #ret["subitems"]=[ subi ]
-            #elif isinstance(item, active_inst.ActiveInstance):
-                #ret["type"]="instance"
-                #ret["name"]=item.getCanonicalName()
-                #ret["fn_name"]=item.function.getFullName()
-                #ret["inputs" ]=item.getInputs().getSubValueList()
-                #ret["outputs" ]=item.getOutputs().getSubValueList()
-                #net=item.getNet()
-                #if net is not None:
-                    #ret["instances" ]=net.getActiveInstanceList(False,
-                                                                #False)
+                if isinstance(item, (value.ListValue, value.DictValue)):
+                    memType=item.dataType
+                    subi={"type" : memType.getTypeString()}
+                    ret["subitems"]=[ subi ]
+            elif isinstance(item, Function):
+                ret["type"]="instance"
+                ret["state"]=item.state
+                ret["name"]=item.name
+                ret["fn_name"]=item.name
+                ret["inputs" ]=item.getAllInputNames()
+                ret["outputs" ]=item.getAllOutputNames()
+                net=item.dataNetwork
+                if net is not None:
+                    ret["instances" ]=net.getActiveInstanceList(False, False)
+                #FIXME:
                 #ret["state"]=item.getPropagatedStateStr()
                 #cputime=int(item.getCputime())
                 #if cputime > 0:
@@ -286,47 +288,38 @@ class Project(object):
                 #cputime=int(item.getCumulativeCputime())
                 #if cputime > 0:
                     #ret["cumulative-cputime" ]=str(cputime)
-            #elif isinstance(item, Project):
-                #ret["type"]="network"
-                #ret["name"]=pathname
-                #ret["instances"]=item.network.getActiveInstanceList(
-                                                            #False,
-                                                            #False)
+            elif isinstance(item, Project):
+                ret["type"]="network"
+                ret["name"]=pathname
+                ret["instances"]=item.network.getActiveInstanceList(False, False)
                 #cputime=int(item.network.getCumulativeCputime())
                 #if cputime > 0:
                     #ret["cumulative-cputime" ]=str(cputime)
-            #else:
-                #ret["type"]="Unknown type of item: "
-                #ret["name"]=pathname
-            #return ret
+            else:
+                ret["type"]="Unknown type of item: "
+                ret["name"]=pathname
+            return ret
 
 
-    #def getNamedDescription(self, pathname):
-        #"""Get a description of a named function/type/lib"""
-        #pathname=keywords.fixID(pathname)
-        #with self.updateLock:
-            #ret=dict()
-            #item=self.imports.getItemByFullName(pathname)
-            #if item is not None:
-                #ret["name"]=pathname
-                #desc=item.getDescription()
-                #if desc is not None:
-                    #ret["desc"]=desc.get()
-                #else:
-                    #ret["desc"]=""
-                #if isinstance(item, lib.ImportLibrary):
-                    #ret["type"]="library"
-                    #rfuncs=[]
-                    #funcs=item.getFunctionList()
-                    #for f in funcs:
-                        #nf={ "name" : f }
-                        #desc=item.getFunction(f).getDescription()
-                        #if desc is not None:
-                            #nf["desc"] = desc.get()
-                        #else:
-                            #nf["desc"] = ""
-                        #rfuncs.append(nf)
-                    #ret["functions"]=rfuncs
+    def getNamedDescription(self, pathname):
+        """Get a description of a named function/type/lib"""
+        pathname=keywords.fixID(pathname)
+        with self.updateLock:
+            ret=dict()
+            item=self.imports.getItemByFullName(pathname)
+            if item is not None:
+                ret["name"]=pathname
+                ret["desc"]=item.getDescription() or ""
+                log.debug('Get description of: %s' % item)
+                if isinstance(item, lib.ImportLibrary):
+                    ret["type"]="library"
+                    rfuncs=[]
+                    for name, f in item.functions.items():
+                        nf={ "name" : name }
+                        nf["desc"] = f.getDescription() or ""
+                        rfuncs.append(nf)
+                    ret["functions"]=rfuncs
+                    #FIXME:
                     #rtypes=[]
                     #types=item.getTypeList()
                     #for t in types:
@@ -340,40 +333,41 @@ class Project(object):
                             #rtypes.append(nf)
                     #if len(rtypes)>0:
                         #ret["types"]=rtypes
-                #elif isinstance(item, function.Function):
-                    #ret["type"]="function"
-                    #ioitems=item.getInputs()
-                    #inps=[]
-                    #for key in ioitems.getMemberKeys():
-                        #retd=dict()
-                        #retd["name"]=key
-                        #retd["type"]=ioitems.getMember(key).getName()
-                        #desc=ioitems.getRecordMember(key).getDescription()
-                        #if desc is not None:
-                            #retd["desc"]=desc.get()
-                        #else:
-                            #retd["desc"]=""
-                        #inps.append(retd)
-                    #ret["inputs"]=inps
-                    #ioitems=item.getOutputs()
-                    #outs=[]
-                    #for key in ioitems.getMemberKeys():
-                        #retd=dict()
-                        #retd["name"]=key
-                        #retd["type"]=ioitems.getMember(key).getName()
-                        #desc=ioitems.getRecordMember(key).getDescription()
-                        #if desc is not None:
-                            #retd["desc"]=desc.get()
-                        #else:
-                            #retd["desc"]=""
-                        #outs.append(retd)
-                    #ret["outputs"]=outs
+                elif isinstance(item, FunctionBase):
+                    ret["type"]="function"
+                    log.debug("GET FUNCTION.")
+                    ioitems=item.getInputs()
+                    log.debug("IOITEMS: %s" % ioitems)
+                    inps=[]
+                    for key in ioitems.getMemberKeys():
+                        retd=dict()
+                        retd["name"]=key
+                        retd["type"]=ioitems.getMember(key).getName()
+                        retd["desc"]=ioitems.getRecordMember(key).getDescription() or ""
+                        inps.append(retd)
+                    ret["inputs"]=inps
+                    ioitems=item.getOutputs()
+                    outs=[]
+                    for key in ioitems.getMemberKeys():
+                        retd=dict()
+                        retd["name"]=key
+                        retd["type"]=ioitems.getMember(key).getName()
+                        desc=ioitems.getRecordMember(key).getDescription()
+                        if desc is not None:
+                            retd["desc"]=desc.get()
+                        else:
+                            retd["desc"]=""
+                        outs.append(retd)
+                    ret["outputs"]=outs
+                #FIXME:
                 #elif isinstance(item, vtype.Type):
                     #ret["type"]="type"
-            #else:
-                #ret["name"]="Not found: %s"%pathname
-                #ret["desc"]=""
-            #return ret
+                else:
+                    ret["type"]=""
+            else:
+                ret["name"]="Not found: %s"%pathname
+                ret["desc"]=""
+            return ret
 
     def getDebugInfo(self, itemname):
         """Give debug info about a particular item."""
@@ -394,6 +388,7 @@ class Project(object):
         item.writeDebug(outf)
         return outf.getvalue()
 
+    #FIXME:
     #def getGraph(self, pathname):
         #"""Get an graph description based on a path name according to the rule
            #[instance]:[instance]."""
@@ -419,22 +414,27 @@ class Project(object):
                     #ret["connections"]=[]
             #return ret
 
-    #def addInstance(self, name, functionName):
-        #"""Add an instance with a name and function name to the top-level
-           #network."""
-        #name=keywords.fixID(name)
-        #functionName=keywords.fixID(functionName)
-        #with self.updateLock:
-            #func=self.imports.getFunctionByFullName(functionName,
-                                                    #self.topLevelImport)
-            #(net, instanceName)=self.network.getContainingNetwork(name)
-            #nm=""
-            #if net.inActiveInstance is not None:
-                #nm=net.inActiveInstance.getCanonicalName()
+    #FIXME:
+    def addInstance(self, name, functionName):
+        """Add an instance with a name and function name to the top-level
+           network."""
+        name=keywords.fixID(name)
+        functionName=keywords.fixID(functionName)
+        with self.updateLock:
+            func=self.imports.getFunctionByFullName(functionName,
+                                                    self.topLevelImport)
+            log.debug('FUNC: %s' % func)
+            (net, instanceName)=self.network.getContainingNetwork(name)
+            nm=""
+            log.debug('NET: %s, instance name: %s' % (net, instanceName))
+            if net.containingInstance is not None:
+                nm=net.containingInstance.getCanonicalName()
+            log.debug('NM: %s' % nm)
             ##log.debug("net=%s, instanceName=%s"%(nm, instanceName))
             #inst=instance.Instance(instanceName, func, functionName)
-            #net.addInstance(inst)
+            net.newInstance(func, name)
 
+    #FIXME:
     #def importTopLevelFile(self, fileObject, filename):
         #"""Read a source file as a top-level description."""
         #with self.updateLock:
@@ -442,33 +442,32 @@ class Project(object):
                                             #self)
             #reader.readFile(fileObject, filename)
 
+    def getLibrariesDict(self):
+
+        return lib.getModulesDict()
+
+
     def importName(self, name):
         """Import a named module."""
+
+        if not self.availableLibraries:
+            self.availableLibraries = self.getLibrariesDict()
+
         name=keywords.fixID(name)
+
         with self.updateLock:
+            if not name in self.availableLibraries:
+                raise(ProjectError('Library "%s" not found' % name))
+
             if not self.imports.exists(name):
-                baseFilename="%s.xml"%name.replace(keywords.ModSep, '/')
-                baseFilename2="%s/_import.xml"%name.replace(keywords.ModSep,
-                                                            '/')
-                filename=None
-                for pathItem in self.conf.getImportPaths():
-                    nfilename=os.path.join(pathItem, baseFilename)
-                    if os.path.exists(nfilename):
-                        filename=nfilename
-                        break
-                    nfilename=os.path.join(pathItem, baseFilename2)
-                    if os.path.exists(nfilename):
-                        filename=nfilename
-                        break
-                if filename is None:
-                    raise ProjectError("Library %s not found"%name)
-                log.debug("Importing library %s with file name %s"% (name,
-                                                                     filename))
-                newlib=lib.ImportLibrary(name, filename, None)
-                reader=readxml.ProjectXMLReader(newlib, self.imports, self)
-                reader.read(filename)
-                self.imports.add(newlib)
-                return newlib
+                try:
+                    newLib = self.availableLibraries[name]()
+                    impLib = lib.ImportLibrary(name, newLib, None)
+                    impLib.functions = newLib.functions
+                    self.imports.add(impLib)
+                    return newLib
+                except Exception as e:
+                    log.debug('Cannot load library %s: %s' % name, e)
             else:
                 return self.imports.get(name)
 
@@ -510,6 +509,7 @@ class Project(object):
             else:
                 raise ProjectError("%s is not an instance"%pathname)
 
+    #FIXME:
     #def rerun(self, pathname, recursive, clearError, outf):
         #"""Re-run and optionally clear an error on an item."""
         #pathname=keywords.fixID(pathname)
@@ -530,64 +530,78 @@ class Project(object):
         """Get the task queue."""
         return self.queue
 
-    #def writeXML(self, outf, indent=0):
-        #"""Write the function definitions and top-level network description
-           #in XML to outf."""
-        #indstr=cpc.util.indStr*indent
-        #iindstr=cpc.util.indStr*(indent+1)
-        #outf.write('%s<cpc version="%d">\n'%(indstr, readxml.curVersion))
-        #for name in self.imports.getLibNames():
-            #outf.write('%s<import name="%s" />\n'%(iindstr,name))
-        #outf.write('\n')
-        #self.topLevelImport.writeXML(outf, indent+1)
-        #outf.write('%s</cpc>\n'%indstr)
-
-    #def writeXMLPointer(self, outFile):
-        #"""Write a short pointer to where information can be found to an
-           #XML file."""
-        #outFile.write('  <cpc-project id="%s" dir=""/>\n'%(self.name))
-
-    def readState(self,stateFile="_state.xml"):
+    def readState(self,stateFile="_state.pickle"):
         return
-        #fname=os.path.join(self.basedir, stateFile)
-        #if os.path.exists(fname):
-            #log.debug("Importing project state from %s"%fname)
-            #with self.updateLock:
-                #reader=readxml.ProjectXMLReader(self.topLevelImport,
-                                                #self.imports,
-                                                #self)
-                #reader.readFile(fname, fname)
-                #tasks=reader.getTaskList()
-                #for tsk in tasks:
-                    #cmds=tsk.getCommands()
-                    #if len(cmds) < 1:
-                        #log.debug("Queuing task")
-                        #self.queue.put(tsk)
-                    #else:
-                        #log.debug("Queuing command")
-                        #for cmd in cmds:
-                            #self.cmdQueue.add(cmd)
+        fname=os.path.join(self.basedir, stateFile)
+        if os.path.exists(fname):
+            #confLock = self.conf.lock
+            #queue = self.queue
+            #cmdQueue = self.cmdQueue
+            #transactionStackLock = self.transactionStackLock
+            #libLock = self.imports.lock
+
+            log.debug("Importing project state from %s"%fname)
+            updateLock = self.updateLock
+            #self.updateLock = None
+            #self.conf.lock = None
+            #self.queue = None
+            #self.cmdQueue = None
+            #self.transactionStackLock = None
+            #self.imports.lock = None
+            #self.network.lock = None
+            #self.network.taskQueue = None
+            with updateLock:
+                fin=open(fname, 'r')
+                self=pickle.load(fin)
+            self.updateLock = updateLock
+            #self.conf.lock = confLock
+            #self.queue = queue
+            #self.cmdQueue = cmdQueue
+            #self.transactionStackLock = transactionStackLock
+            #self.imports.lock = libLock
+            #self.network.lock = updateLock
+            #self.network.taskQueue = queue
 
 
     def writeState(self):
-        return
-        #with self.updateLock:
-            #fname=os.path.join(self.basedir, "_state.xml")
-            #nfname=os.path.join(self.basedir, "_state.xml.new")
-            #fout=open(nfname, 'w')
-            #fout.write('<?xml version="1.0"?>\n')
-            #self.writeXML(fout, 0)
-            #fout.close()
+        #updateLock = self.updateLock
+        #confLock = self.conf.lock
+        #queue = self.queue
+        #cmdQueue = self.cmdQueue
+        #transactionStackLock = self.transactionStackLock
+        #libLock = self.imports.lock
+        #self.updateLock = None
+        #self.conf.lock = None
+        #self.queue = None
+        #self.cmdQueue = None
+        #self.transactionStackLock = None
+        #self.imports.lock = None
+        #self.network.lock = None
+        #self.network.taskQueue = None
+        with self.updateLock:
+            fname=os.path.join(self.basedir, "_state.pickle")
+            nfname=os.path.join(self.basedir, "_state.pickle.new")
+            fout=open(nfname, 'w')
+            pickle.dump(self, fout)
+            fout.close()
             ## now we use POSIX file renaming  atomicity to make sure the state
             ## is always a consistent file.
-            #os.rename(nfname, fname)
+            os.rename(nfname, fname)
+        #self.updateLock = updateLock
+        #self.conf.lock = confLock
+        #self.queue = queue
+        #self.cmdQueue = cmdQueue
+        #self.transactionStackLock = transactionStackLock
+        #self.imports.lock = libLock
+        #self.network.lock = updateLock
+        #self.network.taskQueue = queue
 
     ########################################################
     # Member functions from the ValueBase interface:
     ########################################################
     def _getSubVal(self, itemList):
         """Helper function"""
-        subval=self.network.tryGetActiveInstance(itemList[0])
+        subval=self.network.getInstance(itemList[0])
         return subval
 
     def getSubValue(self, itemList):
@@ -597,25 +611,21 @@ class Project(object):
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
+        log.debug('SUBVAL: %s, %s' % (subval, itemList))
         if subval is not None:
             return subval.getSubValue(itemList[1:])
         return None
 
-    def getCreateSubValue(self, itemList, createType=None,
-                          setCreateSourceTag=None):
+    def getCreateSubValue(self, itemList):
         """Get or create a specific subvalue through a list of subitems, or
            return None if not found.
-           itemList = the path of the value to return/create
-           if createType == a type, a subitem will be created with the given
-                            type
-           if setCreateSourceTag = not None, the source tag will be set for
-                                   any items that are created."""
+           itemList = the path of the value to return/create.
+        """
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
         if subval is not None:
-            return subval.getCreateSubValue(itemList[1:], createType,
-                                            setCreateSourceTag)
+            return subval.getCreateSubValue(itemList[1:])
         #raise ValError("Cannot create sub value of project")
         raise Exception("Cannot create sub value of project")
 
@@ -623,16 +633,18 @@ class Project(object):
         """Get the closest relevant subvalue through a list of subitems,
 
            itemList = the path of the value to get the closest value for """
+        log.debug('PROJECT SUBVAL path: %s' % itemList)
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
+        log.debug('PROJECT SUBVAL: %s' % subval)
         if subval is not None:
             return subval.getClosestSubValue(itemList[1:])
         return self
 
     def getSubValueList(self):
         """Return a list of addressable subvalues."""
-        return self.network.getInstanceList()
+        return self.network.getInstanceNameList()
 
     def getSubValueIterList(self):
         """Return an iterable list of addressable subvalues."""
@@ -651,7 +663,7 @@ class Project(object):
         #"""Return the type associated with this value"""
         #return vtype.instanceType
 
-    def getDesc(self):
+    def getDescription(self):
         """Return a 'description' of a value: an item that can be passed to
            the client describing the value."""
         ret=self.network.getActiveInstanceList(False, False)

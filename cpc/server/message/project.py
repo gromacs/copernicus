@@ -39,6 +39,7 @@ import cpc.util
 import cpc.server.state.projectlist
 from cpc.server.state.user_handler import UserHandler, UserError
 import cpc.util.exception
+from cpc.dataflow.apperror import ApplicationError
 #from cpc.dataflow.vtype import instanceType
 
 
@@ -248,6 +249,7 @@ class SCProjectList(ProjectServerCommand):
         else:
             item=""
         lst=prj.getNamedItemList(item)
+        log.debug('LIST: %s' % lst)
         response.add(lst)
         log.info("Project list on %s: %s"%(prj.getName(), item))
         gc.collect()
@@ -388,14 +390,15 @@ class SCProjectGet(ProjectServerCommand):
             ret["name"]=itemname
             try:
                 val=prj.getNamedValue(itemname)
+                log.debug("VAL: %s" % val)
                 if val is not None:
-                    ret["value"]=val.getDesc()
+                    ret["value"]=val.getDescription()
                 else:
                     ret["value"]="not found"
-            #except cpc.dataflow.ApplicationError as e:
-            #    ret["value"]="not found"
-            finally:
-                pass
+            except ApplicationError as e:
+               ret["value"]="not found"
+            #finally:
+                #pass
             response.add(ret)
         else:
             try:
@@ -414,7 +417,7 @@ class SCProjectGet(ProjectServerCommand):
                     response.setFile(fob, 'application/text')
                 else:
                     response.add('Item %s not a file'%itemname, status="ERROR")
-            except cpc.dataflow.ApplicationError as e:
+            except ApplicationError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
             except IOError as e:
                 response.add('Item %s not found'%itemname, status="ERROR")
@@ -507,7 +510,7 @@ class SCProjectSet(ProjectServerCommand):
                 prj.scheduleSet(itemname, setval, outf, cpc.dataflow.fileType,
                                 printName=filename)
             response.add(outf.getvalue())
-        except cpc.dataflow.ApplicationError as e:
+        except ApplicationError as e:
             response.add("Item not found: %s"%(str(e)))
         log.info("Project set %s: %s"%(prj.getName(), itemname))
 

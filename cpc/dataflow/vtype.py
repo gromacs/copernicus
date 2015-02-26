@@ -32,7 +32,7 @@ log=logging.getLogger(__name__)
 import cpc.util
 import keywords
 import apperror
-import description
+#import description
 
 
 class TypeErr(apperror.ApplicationError):

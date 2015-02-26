@@ -1,4 +1,12 @@
+import logging
 import subprocess
+import threading
+try:
+    import keywords
+except:
+    pass
+
+log=logging.getLogger(__name__)
 
 def executeSystemCommand(cmd, inp=None):
     """ Executes a system command and returns the output.
@@ -26,6 +34,8 @@ def executeSystemCommand(cmd, inp=None):
 class FunctionBase(object):
     """ This class contains basic data and data management functions.
         It is inherited by Function and FunctionPrototype."""
+
+    description = None
 
     def __init__(self, name):
 
@@ -59,11 +69,53 @@ class FunctionBase(object):
             if v.name == name:
                 return v
 
+    def getAllInputNames(self):
+        """ Get the names of all inputs and subnet inputs.
+           :returns    : A list of the names of all inputs.
+        """
+
+        return [v.name for v in self.inputValues + self.subnetInputValues]
+
+    def getAllOutputNames(self):
+        """ Get the names of all outputs and subnet outputs.
+           :returns    : A list of the names of all outputs.
+        """
+
+        return [v.name for v in self.outputValues + self.subnetOutputValues]
+
+    def getInputNames(self):
+        """ Get the names of inputs.
+           :returns    : A list of the names of inputs.
+        """
+
+        return [v.name for v in self.inputValues]
+
+    def getOutputNames(self):
+        """ Get the names of outputs.
+           :returns    : A list of the names of outputs.
+        """
+
+        return [v.name for v in self.outputValues]
+
+    def getSubnetInputNames(self):
+        """ Get the names of subnet inputs.
+           :returns    : A list of the names of subnet inputs.
+        """
+
+        return [v.name for v in self.subnetInputValues]
+
+    def getSubnetOutputNames(self):
+        """ Get the names of subnet outputs.
+           :returns    : A list of the names of subnet outputs.
+        """
+
+        return [v.name for v in self.subnetOutputValues]
+
     def getOutputValueContainer(self, name):
         """ Get the (first) output Value object named as specified.
 
            :param name : The name of the value to retrieve.
-           :type name   : str.
+           :type name  : str.
            :returns    : The found Value object or None
         """
 
@@ -187,6 +239,12 @@ class FunctionBase(object):
         else:
             print 'Value %s does not exist' % name
 
+    def getDescription(self):
+
+        return self.description
+
+
+
 class FunctionPrototype(FunctionBase):
     """ This class is inherited to describe how a function works and what input
         and output values it has. The actual function instances are of class
@@ -224,6 +282,10 @@ class Function(FunctionBase):
         self.outputValues = list(functionPrototype.outputValues)
         self.subnetInputValues = list(functionPrototype.subnetInputValues)
         self.subnetOutputValues = list(functionPrototype.subnetOutputValues)
+        self.inputLock = threading.RLock()
+        self.outputLock = threading.RLock()
+        self.message = ''
+        self.state = 'held'
 
         for v in self.inputValues + self.outputValues + self.subnetInputValues + \
             self.subnetOutputValues:
@@ -231,12 +293,140 @@ class Function(FunctionBase):
         if name:
             self.name = name
 
+    #def _getSubVal(self, itemList, staging=False):
+        #"""Helper function"""
+
+        #subval=None
+        #try:
+            #if itemList[0]==keywords.In:
+                #with self.inputLock:
+                    #if staging:
+                        #subval=self.stagedInputVal
+                    #else:
+                        #subval=self.inputVal
+            #elif itemList[0]==keywords.Out:
+                #with self.outputLock:
+                    #subval=self.outputVal
+            #elif itemList[0]==keywords.SubIn:
+                #with self.inputLock:
+                    #if staging:
+                        #subval=self.stagedSubnetInputVal
+                    #else:
+                        #subval=self.subnetInputVal
+            #elif itemList[0]==keywords.SubOut:
+                #with self.outputLock:
+                    #subval=self.subnetOutputVal
+            #elif itemList[0]==keywords.Msg:
+                #with self.outputLock:
+                    #subval=self.msg
+            #elif self.subnet is not None:
+                #subval=self.subnet.tryGetActiveInstance(itemList[0])
+        #except:
+            #pass
+        #return subval
+
+    def _getSubVal(self, itemList):
+        """Helper function"""
+
+        subval=None
+        try:
+            if itemList[0]==keywords.In and len(itemList) > 1:
+                with self.inputLock:
+                    itemList=itemList[1:]
+                    subval=self.getInputValueContainer(itemList[0])
+            elif itemList[0]==keywords.Out and len(itemList) > 1:
+                with self.outputLock:
+                    itemList=itemList[1:]
+                    subval=self.getOutputValueContainer(itemList[0])
+            elif itemList[0]==keywords.SubIn and len(itemList) > 1:
+                with self.inputLock:
+                    itemList=itemList[1:]
+                    subval=self.getSubnetInputValueContainer(itemList[0])
+            elif itemList[0]==keywords.SubOut and len(itemList) > 1:
+                with self.outputLock:
+                    itemList=itemList[1:]
+                    subval=self.getSubnetOutputValueContainer(itemList[0])
+            elif itemList[0]==keywords.Msg:
+                with self.outputLock:
+                    subval=self.msg
+            elif self.subnet is not None:
+                subval=self.subnet.tryGetActiveInstance(itemList[0])
+        except:
+            pass
+        return subval
+
+    def getSubValue(self, itemList):
+        """Get a specific subvalue through a list of subitems, or return None
+           if not found.
+           itemList = the path of the value to return"""
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getSubValue(itemList[1:])
+        return None
+
+    def getCreateSubValue(self, itemList):
+        """Get or create a specific subvalue through a list of subitems, or
+           return None if not found.
+           itemList = the path of the value to return/create
+           if createType == a type, a subitem will be created with the given
+                            type
+           if setCreateSourceTag = not None, the source tag will be set for
+                                   any items that are created."""
+        if len(itemList)==0:
+            return self
+        # staging is true because we know we want to be able to create a new
+        # value.
+        log.debug('GET OR CREATE %s' % itemList)
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.getCreateSubValue(itemList[1:])
+        raise ValError("Cannot create sub value of active instance")
+
+    def getClosestSubValue(self, itemList):
+        """Get the closest relevant subvalue through a list of subitems,
+
+           itemList = the path of the value to get the closest value for """
+        log.debug('FUNCTION: itemlist %s' % itemList)
+        if len(itemList)==0:
+            return self
+        subval=self._getSubVal(itemList)
+        log.debug('FUNCTION: subval %s' % subval)
+        if subval is not None:
+            return subval.getClosestSubValue(itemList[1:])
+        return self
+
+    def getSubValueList(self):
+        """Return a list of addressable subvalues."""
+        ret=[ function_io.inputs, function_io.outputs,
+              function_io.subnetInputs, function_io.subnetOutputs,
+              keywords.Msg ]
+        if self.activeNetwork is not None:
+            ailist=self.subnet.getActiveInstanceList(False, False)
+            ret.extend( ailist.keys() )
+        return ret
+
+    def hasSubValue(self, itemList):
+        """Check whether a particular subvalue exists"""
+        if len(itemList) == 0:
+            return True
+        subval=self._getSubVal(itemList)
+        if subval is not None:
+            return subval.hasSubValue(itemList[1:])
+        return False
+
+    def getDescription(self):
+
+        return self.functionInstance.description
+
     def freeze(self):
         """ Make the function frozen. A frozen function does not execute
             when its input is changed.
         """
 
         self.frozen = True
+        self.state = 'held'
 
     def unfreeze(self):
         """ Remove the frozen state. The function will execute if any of the
@@ -244,6 +434,7 @@ class Function(FunctionBase):
         """
 
         self.frozen = False
+        self.state = 'active'
         self.execute()
 
     def isFrozen(self):
@@ -261,17 +452,19 @@ class Function(FunctionBase):
            :returns : True if the input has changed, False if not.
         """
 
-        for v in self.inputValues + self.subnetInputValues:
-            if v.hasChanged:
-                return True
-        return False
+        with self.inputLock:
+            for v in self.inputValues + self.subnetInputValues:
+                if v.hasChanged:
+                    return True
+            return False
 
     def resetInputChange(self):
         """ Set the hasChanged status of all inputs and subnet inputs to False.
         """
 
-        for v in self.inputValues + self.subnetInputValues:
-            v.hasChanged = False
+        with self.inputLock:
+            for v in self.inputValues + self.subnetInputValues:
+                v.hasChanged = False
         # TODO: Reset status of values in a list
 
     def execute(self):
@@ -284,29 +477,30 @@ class Function(FunctionBase):
                        executing, i.e. due to missing input.
         """
 
-        if not self.frozen and self.inputHasChanged():
-            from value import Value, ListValue, DictValue
-            for iv in self.inputValues:
-                if iv == None or not isinstance(iv, Value) or \
-                   (iv.optional == False and iv.value == None):
-                    return False
-                if isinstance(iv, ListValue):
-                    if len(iv.value) == 0:
+        with self.inputLock and self.outputLock:
+            if not self.frozen and self.inputHasChanged():
+                from value import Value, ListValue, DictValue
+                for iv in self.inputValues:
+                    if iv == None or not isinstance(iv, Value) or \
+                       (iv.optional == False and iv.value == None):
                         return False
-                    # Chances are the last value is set last, so traverse
-                    # the list in reverse order.
-                    for v in reversed(iv.value):
-                        if v == None or not isinstance(v, Value) or \
-                           v.value == None:
+                    if isinstance(iv, ListValue):
+                        if len(iv.value) == 0:
                             return False
-                elif isinstance(iv, DictValue):
-                    for v in iv.value.values():
-                        if v == None or not isinstance(v, Value) or \
-                           v.value == None:
-                            return False
-            #print 'Will execute', self.name
-            if self.functionInstance.execute():
-                return self.resetInputChange()
+                        # Chances are the last value is set last, so traverse
+                        # the list in reverse order.
+                        for v in reversed(iv.value):
+                            if v == None or not isinstance(v, Value) or \
+                               v.value == None:
+                                return False
+                    elif isinstance(iv, DictValue):
+                        for v in iv.value.values():
+                            if v == None or not isinstance(v, Value) or \
+                               v.value == None:
+                                return False
+                #print 'Will execute', self.name
+                if self.functionInstance.execute():
+                    return self.resetInputChange()
 
-        else:
-            return False
+            else:
+                return False

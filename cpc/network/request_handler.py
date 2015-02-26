@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -81,7 +81,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
 
         self.log.log(cpc.util.log.TRACE,'%s %s'%(self.command,self.path))
-    
+
         # if the path starts with application root + / or ?  we have a message to process
         #otherwise we should just strip any request params and keep the resource reference
 
@@ -271,7 +271,7 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
                     response.add(errmsg, status="ERROR")
                     self.log.error(errmsg)
 
-                # now send the response and call the finish() function on the 
+                # now send the response and call the finish() function on the
                 # command
                 self._sendResponse(response,closeConnection=closeConnection,
                     revertSocket=revertSocket)
@@ -294,7 +294,9 @@ class handler_base(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def _sendResponse(self,retmsg,closeConnection=True,revertSocket=False):
         conf = ServerConf()
+        self.log.debug('MSG: %s' % retmsg)
         rets = retmsg.render()
+        self.log.debug('RETS: %s' % rets)
         self.log.log(cpc.util.log.TRACE,"Done. Reply message is: '%s'\n"%rets)
 
         self.send_response(self.responseCode)
