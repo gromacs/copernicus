@@ -1,0 +1,164 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+import reparametrize
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+# Run a simulation *without* restraints active, to let the system explore the
+# energy landscape around the swarm path points
+
+def run(inp, out):
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+
+    # first create the right mdp file
+    merge = pers.get('merge')
+    if merge is None or merge == 0:
+        merge = 1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # now we set our own mdp settings
+        steps = inp.getInput('swarm_steps')
+        settings = [] 
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('sd') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue("%s" % steps) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        out.setSubOut('swarm_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    mdruns = pers.get('mdruns')
+    if mdruns is None or mdruns < 1:
+
+        mdruns = 0
+        confs = inp.getInput('swarmconfs')
+        finished = True
+        if confs is not None and len(confs)>0:
+            for i in range(len(confs)):
+                subconfs = inp.getInput('swarmconfs[%d]' % i)
+                if subconfs is None or len(subconfs) == 0:
+                    finished = False
+        else: 
+            finished = False
+               
+        # we ALWAYS run swarms on one core only
+        maxcores = 1
+        out.setSubOut('resources.max.cores', IntValue(maxcores))
+        
+        # keep track of the mdruns
+        if finished == True:
+            #out.addInstance('grama', 'g_rama_multi')
+            # For each swarm
+            for i in range(len(confs)):
+                # Create a network instance that runs multiple grompp/mdruns in parallell
+                # For each swarm, we will run multiple runs due to the 2D array input swarmconfs
+                out.addInstance('runs%d' % i, 'gromacs::grompp_mdruns')
+
+                # Connect the swarm mdp and resources, only put in [0] to use for all runs
+                out.addConnection('self:ext_in.grompp.top', 'runs%d:in.top[0]' % i)
+                out.addConnection('self:ext_in.grompp.ndx', 'runs%d:in.ndx[0]' % i)
+                # The includes are any normal includes, not the includes with the restraints as
+                # those are not to be used here
+                out.addConnection('self:ext_in.include', 'runs%d:in.include[0]' % i)
+
+                out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                                  'runs%d:in.cmdline_options[0]' % i)
+
+                out.addConnection('self:sub_out.resources', 'runs%d:in.resources[0]' % i)
+                out.addConnection('merge:out.mdp', 'runs%d:in.mdp[0]' % i)
+                out.addConnection('self:sub_out.swarm_settings', 'runs%d:in.settings[0]' % i)
+
+                # Connect the array of configs for this swarm to the grompp/mdruns input config array
+                out.addConnection('self:ext_in.swarmconfs[%d]' % i, 'runs%d:in.conf' % i)
+
+                #out.addConnection('runs%d:out.conf'%i,'grama:in.confs[%d]'%i)
+
+                # Connect the mdrun outputs to the module out (again, each of these is an array of configs)
+                out.addConnection('runs%d:out.conf' % i,'self:ext_out.swarms[%d]' % i)
+
+            # Mark so we don't run this part again
+            mdruns = 1
+    pers.set('mdruns', mdruns)
+    
+    pers.write()
+
+
+# read the input data
+inf = StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp = cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+run(inp, out)
+
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

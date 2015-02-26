@@ -1,0 +1,313 @@
+;
+;	File 'topol.top' was generated
+;	By user: onbekend (0)
+;	On host: onbekend
+;	At date: Tue Aug 21 15:04:48 2012
+;
+
+HB     0.000000  -0.022000     1.320000 ! ALLOW PEP ALI POL SUL ARO PRO ALC
+;	This is a standalone topology file
+;
+;	It was generated using program:
+;	pdb2gmx - VERSION 4.5.2-dev-20101105-f8a6a3d-dirty
+;
+;	Command line was:
+;	pdb2gmx -f conf.gro 
+;
+;	Force field was read from the standard Gromacs share directory.
+;
+
+; Include forcefield parameters
+
+[ defaults ]
+; nbfunc    comb-rule   gen-pairs   fudgeLJ fudgeQQ
+1   2   yes 1.0 1.0
+
+
+[ atomtypes ]
+; name at.num    mass charge ptype     sigma     epsilon
+CT3  56 12.01100 
+CT3    0.000000  -0.080000     2.060000   0.000000  -0.010000     1.900000 
+HA
+HA     0.000000  -0.022000     1.320000 
+C
+C      0.000000  -0.110000     2.000000 
+O
+O      0.000000  -0.120000     1.700000   0.000000  -0.120000     1.400000 
+NH1
+NH1    0.000000  -0.200000     1.850000   0.000000  -0.200000     1.550000 
+H
+H      0.000000  -0.046000     0.224500 
+CT1
+CT1    0.000000  -0.020000     2.275000   0.000000  -0.010000     1.900000 
+HB
+HB     0.000000  -0.022000     1.320000 
+
+
+[ bondtypes ]
+; a1 a2 bondlength(nm) kb
+HA   CT3  0.11110 134724.8
+CT3  C    0.14900 104600.0
+O    C    0.12300 259408.0
+CT3  CT1  0.15380 93094.0
+NH1  CT1  0.24300 133888.0
+CT1  HB   0.10800 138072.0
+CT1  C    0.14900 104600.0
+
+[ angletypes ]
+HA   CT3  HA    35.500    108.40    5.40   1.80200 
+HA   CT3  C     33.000    109.50   30.00   2.16300 
+O    C    NH1    80.000   122.5000 
+H    NH1  CT1    35.000   117.0000 
+HA   CT3  CT1   33.430    110.10   22.53   2.17900 
+HB   CT1  CT3    35.000   111.0000 
+HB   CT1  C      50.000   109.5000
+CT3  CT1  C      52.000   108.0000 
+H    NH1  CT3    35.000   117.0000 
+HA   CT1  CT3   34.500    110.10   22.53   2.17900 
+
+
+[ dihedraltypes ]
+; i j k l func phi0 cp mult
+; function type 9 is prop. diheds with multiplicity
+O    C    CT3  HA   9  180.00  0.0000  3    
+NH1  C    CT3  HA   9    0.00  0.0000  3    
+H    NH1  C    CT3  9  180.00  10.46   2    
+CT3  C    NH1  CT1  9    0.00  6.6944  1    
+CT3  C    NH1  CT1  9  180.00  10.46  2    
+O    C    NH1  H    9  180.00  10.46  2    
+O    C    NH1  CT1  9  180.00  10.46  2    
+HB   CT1  NH1  C    9    0.00  0.0000  1    
+CT3  CT1  NH1  C    9    0.00  7.5312  1    
+C    CT1  NH1  C    9  180.00  0.8368  1    
+HB   CT1  NH1  H    9    0.00  0.0000  1    
+H    NH1  CT1  CT3  9    0.00  0.0000  1    
+H    NH1  CT1  C    9    0.00  0.0000  1    
+;                            
+NH1  CT1  CT3  HA   9    0.00  0.8368  3    
+HB   CT1  CT3  HA   9    0.00  0.8368  3    
+C    CT1  CT3  HA   9    0.00  0.8368  3    
+;                            
+O    C    CT1  NH1  9    0.00  0.0000  1    
+NH1  C    CT1  NH1  9    0.00  2.5104  1    
+O    C    CT1  HB   9    0.00  0.0000  1    
+NH1  C    CT1  HB   9    0.00  0.0000  1    
+O    C    CT1  CT3  9    0.00  5.8576  1    
+NH1  C    CT1  CT3  9    0.00  0.0000  1    
+H    NH1  C    CT1  9  180.00  10.46  2    
+O    C    NH1  CT3  9  180.00  10.46  2    
+HA   CT3  NH1  C    9    0.00  0.0000  3    
+HA   CT3  NH1  H    9    0.00  0.0000  3    
+; Impropers
+; i j k l func q0 cq
+O    NH1  CT3  C    2  0.0000  502.08     
+NH1  C    CT1  H    2  0.0000   83.68    
+
+
+
+
+[ moleculetype ]
+; Name            nrexcl
+Other               3
+
+[ atoms ]
+;   nr       type  resnr residue  atom   cgnr     charge       mass  typeB    chargeB      massB
+; residue   1 ALAD rtp ALAD q  0.0
+     1        CT3      1    ACE    CH3      1      -0.27     12.011   ; qtot -0.27
+     2         HA      1    ACE   HH31      1       0.09      1.008   ; qtot -0.18
+     3         HA      1    ACE   HH32      1       0.09      1.008   ; qtot -0.09
+     4         HA      1    ACE   HH33      1       0.09      1.008   ; qtot 0
+;
+     5          C      1    ACE      C      2       0.51     12.011   ; qtot 0.51
+     6          O      1    ACE      O      2      -0.51     15.999   ; qtot 0
+;
+     7        NH1      2    ALA      N      3      -0.47     14.007   ; qtot -0.47
+     8          H      2    ALA      H      3       0.31      1.008   ; qtot -0.16
+     9        CT1      2    ALA     CA      3       0.07     12.011   ; qtot -0.09
+    10         HB      2    ALA     HA      3       0.09      1.008   ; qtot 0
+;
+    11        CT3      2    ALA     CB      4      -0.27     12.011   ; qtot -0.27
+    12         HA      2    ALA    HB1      4       0.09      1.008   ; qtot -0.18
+    13         HA      2    ALA    HB2      4       0.09      1.008   ; qtot -0.09
+    14         HA      2    ALA    HB3      4       0.09      1.008   ; qtot 0
+;
+    15          C      2    ALA      C      5       0.51     12.011   ; qtot 0.51
+    16          O      2    ALA      O      5      -0.51     15.999   ; qtot 0
+;
+    17        NH1      3    NME      N      6      -0.47     14.007   ; qtot -0.47
+    18          H      3    NME      H      6       0.31      1.008   ; qtot -0.16
+    19        CT3      3    NME    CH3      6      -0.11     12.011   ; qtot -0.27
+    20         HA      3    NME   HH31      6       0.09      1.008   ; qtot -0.18
+    21         HA      3    NME   HH32      6       0.09      1.008   ; qtot -0.09
+    22         HA      3    NME   HH33      6       0.09      1.008   ; qtot 0
+
+[ bonds ]
+;  ai    aj funct            c0            c1            c2            c3
+    1     2     1 
+    1     3     1 
+    1     4     1 
+    1     5     1 
+    5     6     1 
+    5     7     1 
+    7     8     1 
+    7     9     1 
+    9    10     1 
+    9    11     1 
+    9    15     1 
+   11    12     1 
+   11    13     1 
+   11    14     1 
+   15    16     1 
+   15    17     1 
+   17    18     1 
+   17    19     1 
+   19    20     1 
+   19    21     1 
+   19    22     1 
+
+[ pairs ]
+;  ai    aj funct            c0            c1            c2            c3
+    1     8     1 
+    1     9     1 
+    2     6     1 
+    2     7     1 
+    3     6     1 
+    3     7     1 
+    4     6     1 
+    4     7     1 
+    5    10     1 
+    5    11     1 
+    5    15     1 
+    6     8     1 
+    6     9     1 
+    7    12     1 
+    7    13     1 
+    7    14     1 
+    7    16     1 
+    7    17     1 
+    8    10     1 
+    8    11     1 
+    8    15     1 
+    9    18     1 
+    9    19     1 
+   10    12     1 
+   10    13     1 
+   10    14     1 
+   10    16     1 
+   10    17     1 
+   11    16     1 
+   11    17     1 
+   12    15     1 
+   13    15     1 
+   14    15     1 
+   15    20     1 
+   15    21     1 
+   15    22     1 
+   16    18     1 
+   16    19     1 
+   18    20     1 
+   18    21     1 
+   18    22     1 
+
+[ angles ]
+;  ai    aj    ak funct            c0            c1            c2            c3
+    2     1     3     5 
+    2     1     4     5 
+    2     1     5     5 
+    3     1     4     5 
+    3     1     5     5 
+    4     1     5     5 
+    1     5     6     5 
+    1     5     7     5 
+    6     5     7     5 
+    5     7     8     5 
+    5     7     9     5 
+    8     7     9     5 
+    7     9    10     5 
+    7     9    11     5 
+    7     9    15     5 
+   10     9    11     5 
+   10     9    15     5 
+   11     9    15     5 
+    9    11    12     5 
+    9    11    13     5 
+    9    11    14     5 
+   12    11    13     5 
+   12    11    14     5 
+   13    11    14     5 
+    9    15    16     5 
+    9    15    17     5 
+   16    15    17     5 
+   15    17    18     5 
+   15    17    19     5 
+   18    17    19     5 
+   17    19    20     5 
+   17    19    21     5 
+   17    19    22     5 
+   20    19    21     5 
+   20    19    22     5 
+   21    19    22     5 
+
+[ dihedrals ]
+;  ai    aj    ak    al funct            c0            c1            c2            c3            c4            c5
+    2     1     5     6     9 
+    2     1     5     7     9 
+    3     1     5     6     9 
+    3     1     5     7     9 
+    4     1     5     6     9 
+    4     1     5     7     9 
+    1     5     7     8     9 
+    1     5     7     9     9 
+    6     5     7     8     9 
+    6     5     7     9     9 
+    5     7     9    10     9 
+    5     7     9    11     9 
+    5     7     9    15     9 
+    8     7     9    10     9 
+    8     7     9    11     9 
+    8     7     9    15     9 
+    7     9    11    12     9 
+    7     9    11    13     9 
+    7     9    11    14     9 
+   10     9    11    12     9 
+   10     9    11    13     9 
+   10     9    11    14     9 
+   15     9    11    12     9 
+   15     9    11    13     9 
+   15     9    11    14     9 
+    7     9    15    16     9 
+    7     9    15    17     9 
+   10     9    15    16     9 
+   10     9    15    17     9 
+   11     9    15    16     9 
+   11     9    15    17     9 
+    9    15    17    18     9 
+    9    15    17    19     9 
+   16    15    17    18     9 
+   16    15    17    19     9 
+   15    17    19    20     9 
+   15    17    19    21     9 
+   15    17    19    22     9 
+   18    17    19    20     9 
+   18    17    19    21     9 
+   18    17    19    22     9 
+
+[ dihedrals ]
+;  ai    aj    ak    al funct            c0            c1            c2            c3
+    5     1     7     6     2 
+    7     5     9     8     2 
+   15     9    17    16     2 
+   17    15    19    18     2 
+
+; Include Position restraint file
+#ifdef POSRES
+#include "posre.itp"
+#endif
+
+[ system ]
+; Name
+GROningen Mixture of Alchemy and Childrens' Stories
+
+[ molecules ]
+; Compound        #mols
+Other               1

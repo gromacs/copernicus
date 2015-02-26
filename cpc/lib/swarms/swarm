@@ -1,0 +1,325 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import time
+import subprocess
+import dihedral_restraints
+import position_restraints
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+from subprocess import Popen
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+# TODO: let start_xvg and end_xvg be opt, and if not given, calculate them from start and end_conf by g_rama
+
+def swarm(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(), "persistent.dat"))
+    
+    # TODO allow additional iterations to be set by having each iteration within pers object
+    
+    iterations = pers.get('iterations')
+    if iterations is None or iterations<1:
+        Niterations = inp.getInput('Niterations')
+        # Niterations is an optional input, path converge may also be 
+        #used to monitor iterations
+        # BW: Note, removed opt flag on Niterations as this is not implemented here anyway now.
+    #if Niterations is not None:
+
+        start = inp.getInput('start_conf')
+        start_xvg = inp.getInput('start_xvg')
+        end = inp.getInput('end_conf')
+        end_xvg = inp.getInput('end_xvg')
+        n = inp.getInput('Ninterpolants')
+        ndxfn = inp.getInput('cv_index')         # what atoms to use for the restraints
+        tpr = inp.getInput('tpr')
+        Nchains = inp.getInput('Nchains')
+
+        # Figure out if we are going to use position or dihedral restraints for the swarm controls
+        if inp.getInput('use_posres') is not None and inp.getInput('use_posres') > 0:
+            use_posres = 1
+        else:
+            use_posres = 0
+            
+        # BW: temporarily disable mdrun_tune here
+        #out.addInstance('mdrun_tune','gromacs::mdrun_tune')
+        #out.addConnection('self:ext_in.start_conf', 'mdrun_tune:in.conf')
+        # The tuning run uses the equilibration settings
+        #out.addConnection('self:ext_in.equi_grompp.mdp', 'mdrun_tune:in.mdp')
+        #out.addConnection('self:ext_in.top', 'mdrun_tune:in.top')
+        #out.addConnection('self:ext_in.include', 'mdrun_tune:in.include')
+        
+        # Set explicitly the min/max core usage for the min/therm/equil runs
+        mincores=1
+#        maxcores=2
+        maxcores=8
+        out.setSubOut('resources.min.cores', IntValue(mincores))
+        out.setSubOut('resources.max.cores', IntValue(maxcores))
+
+        includes = []
+        inc_array = inp.getInput('include')
+        if inc_array is not None:
+            for i in range(len(inc_array)):
+                includes.append(inp.getInput('include[%d]' % i))
+        # if the include array is none, the single chain is in topol.top
+        top = inp.getInput('top')
+        
+        # If the initial_confs list of .gro's is given, use that as the initial string,
+        # otherwise we interpolate from the start and end confs also given.
+
+        # Note - we assume that if the list is given, it should be of Ninterpolants (n)
+        # length. We could also simply set that to be opt, and if not given, use this
+        # length as an alternative.
+
+        initial_confs = []
+        initial_confs_array = inp.getInput('initial_confs')
+        if initial_confs_array is not None:
+            for i in range(len(initial_confs_array)):
+                initial_confs.append(inp.getInput('initial_confs[%d]' % i))
+
+        # If the initial_resconfs[] array is given, use as starting point for the restraints in the first
+        # minimization step of the first iteration. Used to continue a string simulation from a previous
+        # run, where we extract the last reparametrized resconfs.
+        # Only used for the position-restraint mode currently.
+
+        initial_resconfs = []
+        initial_resconfs_array = inp.getInput('initial_resconfs')
+        if initial_resconfs_array is not None:
+            for i in range(len(initial_resconfs_array)):
+                initial_resconfs.append(inp.getInput('initial_resconfs[%d]' % i))
+
+        # Write out restraint include files res_N_chain_Y.itp and rewrite the
+        # topology and topology includes to include these.
+        #
+        # The restraints to use for each point come from an interpolation from start_xvg to end_xvg
+        # (for dihedral restraints) or start_conf and end_conf (for position restraints)
+        # if the initial_confs are empty, otherwise inferred from the states in those confs.
+        #
+        # ndx is the atom list to use for the restraints (for dihedrals, the residues affected are used)
+
+        if use_posres == 1:
+            # NOTE: interpolation not supported here yet, TODO
+            position_restraints.write_restraints(inp, initial_confs, start, end, 
+                                                 tpr, top, includes, n, ndxfn, Nchains)
+        else:
+            dihedral_restraints.write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, 
+                                                 tpr, top, includes, n, ndxfn, Nchains)
+        
+        # Setup the subnet's path output with a config, top and itp for each string point.
+        # 
+        # Use these restraint includes to set as include inputs for the
+        # configs of the initial path. These are set through a subnet, which is connected
+        # to the first iteration iter0 further below (sub_out.path -> iter0:in.path)
+        #
+        # We create a string path with all points included even the start and end points, but
+        # depending on the "fix_endpoints" mode, we then don't actually simulate and update the start/end indices
+        # if they are to be kept fixed.
+
+        for i in range(n):
+
+            # Set a starting configuration for every point
+            #
+            # Check initial_confs[] and use that if given, otherwise use the same start_conf for all
+            # (the interpolated restraints will be used in the minimization step to force the
+            #  start_conf into the intermediate states, which will work in some setups)
+
+            if len(initial_confs) > 0:
+                out.setSubOut('path[%d].conf' % i, FileValue(initial_confs[i]))
+                # We also extract the starting restraint coordinates from the initial conf for this stringpoint, unless
+                # it is given in the initial_resconfs[] array (as would be the case for continuing a run)
+                if len(initial_resconfs) > 0:
+                    out.setSubOut('path[%d].resconf' % i, FileValue(initial_resconfs[i]))
+                else:
+                    # Basically we just use trjconv to output the Protein group from the input system.
+                    # It is not strictly necessary for the first iteration, as grompp without the resconf input defaults to
+                    # using the conf itself, but the reparametrize step needs this file as a template to replace the atom
+                    # positions when it rewrites the coordinates.
+                    # Note that we don't do any rot+trans fit here - the restraint coordinates should match the conf we are
+                    # going to min/therm/equil exactly just like if the resconf wasn't given.
+                    resfn = 'initial_resconf%03d.gro' % i
+                    FNULL = open(os.devnull, 'w') # sink for output spam
+                    trjproc = subprocess.Popen([
+                        'trjconv', '-f', initial_confs[i], '-s', tpr, '-o', resfn, 
+                        '-pbc', 'none' ], 
+                                               stdin=subprocess.PIPE, stdout=FNULL, stderr=FNULL)
+                    writeStdin = StringIO()
+                    writeStdin.write("Protein\n")       # output selection (should match the choice in get_cvs)
+                    # Give the stdin to trjconv then wait for completion
+                    trjproc.communicate(writeStdin.getvalue())
+                    FNULL.close()
+                    # Use the generated file as resconf in the initial path[]
+                    out.setSubOut('path[%d].resconf' % i, FileValue(os.path.join(inp.getOutputDir(), resfn)))
+            else:
+                # Set the same initial conf to all starting structures
+                out.setSubOut('path[%d].conf' % i, FileValue(start))
+
+            # One topology file per path point. These are also written by dihedral_restraints
+            # but are simply passed through from the top level topology input, with the
+            # specific .itp added as an include directive
+
+            #if len(includes)==0:
+            top_i = os.path.join(inp.getOutputDir(), 'topol_%d.top' % i)
+            out.setSubOut('path[%d].top' % i, FileValue(top_i))
+            #else:
+            #    out.setSubOut('path[%d].top'%(i-1), FileValue(top))
+            # connect includes output by write_restraints
+
+            # One restraint itp per chain in the protein
+            
+            for chain in range(Nchains):
+                # These are written to our output dir by the write_restraints fn above
+                include_i = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i, chain))
+                out.setSubOut('path[%d].include[%d]' % (i, chain), FileValue(include_i))
+
+            # Connect any other includes as itp's after the chain restraint itps
+
+            if len(includes) > Nchains:
+                for j in range(Nchains,len(includes)):
+                    include = inp.getInput('include[%d]' % j)
+                    out.setSubOut('path[%d].include[%d]' % (i, j),
+                                              FileValue(include))
+        
+        # Create the swarm iteration instances
+        for i in range(Niterations):
+            # The swarm_iteration is completely described by the corresponding
+            # section in the _import.xml file, as a network function with sub-instances.
+            out.addInstance('iter%d' % i, 'swarm_iteration')
+            
+            # Mode of CVs, dihedrals or position restraints
+            out.addConnection('self:ext_in.use_posres', 'iter%d:in.use_posres' % i)
+            # If the start/end points are allowed to drift or not
+            out.addConnection('self:ext_in.fix_endpoints', 'iter%d:in.fix_endpoints' % i)
+
+            # Initial input points - these are used by the reparametrize step to "stretch"
+            # the path well between the start and end points as the 
+            # individual path points in between move around
+            out.addConnection('self:ext_in.start_conf', 'iter%d:in.start_conf' % i)
+            out.addConnection('self:ext_in.start_xvg', 'iter%d:in.start_xvg' % i)
+            out.addConnection('self:ext_in.end_conf', 'iter%d:in.end_conf' % i)
+            out.addConnection('self:ext_in.end_xvg', 'iter%d:in.end_xvg' % i)
+
+            # Number of string points in total (including start and end confs)
+            out.addConnection('self:ext_in.Ninterpolants', 'iter%d:in.Ninterpolants' % i)
+
+            # Restraint/CV atom-selection index
+            out.addConnection('self:ext_in.cv_index', 'iter%d:in.cv_index' % i)
+            # A run-file used by g_rama or trjconv fit for topology and reference data, will not actually be mdrun'ed
+            out.addConnection('self:ext_in.tpr', 'iter%d:in.tpr' % i)
+
+            # Topology 
+            out.addConnection('self:ext_in.top', 'iter%d:in.top' % i)
+
+            # Topology include files
+            out.addConnection('self:ext_in.include', 'iter%d:in.include' % i)
+            
+            # Propagate the various run settings into the functions in the iteration
+
+            # Minimization
+            out.addConnection('self:ext_in.minim_grompp', 'iter%d:in.minim_grompp' % i)
+            out.addConnection('self:ext_in.em_tolerance', 'iter%d:in.em_tolerance' % i)
+            out.addConnection('self:ext_in.minim_restrforce', 'iter%d:in.minim_restrforce' % i)
+            # When given initial_confs, we don't need double precision in the minimization
+            # step (actually we should make an option to bypass minimization, thermalization
+            # and equilibration for the first iteration and go directly to the swarms, but
+            # this requires a rewrite of the iteration function as the connections are hard-
+            # coded in the xml file currently)
+            if i > 0 or len(initial_confs) == 0:
+                out.addConnection('self:ext_in.minim_doubleprec', 'iter%d:in.minim_doubleprec' % i)
+
+            # Thermalization
+            out.addConnection('self:ext_in.therm_grompp', 'iter%d:in.therm_grompp' % i)
+            out.addConnection('self:ext_in.therm_restrforce', 'iter%d:in.therm_restrforce' % i)
+
+            # Equilibration (and used for the swarm production runs as well)
+            out.addConnection('self:ext_in.equi_grompp', 'iter%d:in.equi_grompp' % i)
+            out.addConnection('self:ext_in.equil_restrforce', 'iter%d:in.equil_restrforce' % i)
+            out.addConnection('self:ext_in.restrained_steps', 'iter%d:in.restrained_steps' % i)
+
+            # Setup some other configuration parameters
+            out.addConnection('self:ext_in.swarm_steps', 'iter%d:in.swarm_steps' % i)
+            out.addConnection('self:ext_in.Nswarms', 'iter%d:in.Nswarms' % i)
+            out.addConnection('self:ext_in.Nchains', 'iter%d:in.Nchains' % i)
+
+            out.addConnection('self:sub_out.resources', 'iter%d:in.resources' % i)
+            #out.addConnection('mdrun_tune:out.resources', 'iter%d:in.resources'%i)
+
+            # The refined path from each iteration is output as an array of paths
+            out.addConnection('iter%d:out.path' % i, 'self:ext_out.paths[%d]' % i)
+
+            # The refined path from each iteration connects to the next iterations
+            # input, and the first iteration gets the interpolated/initialized path as
+            # starting path
+            if i > 0:
+                out.addConnection('iter%d:out.path' % (i - 1), 'iter%d:in.path' % i)
+            else:  
+                out.addConnection('self:sub_out.path', 'iter0:in.path')
+
+        iterations = 1
+
+    # use pers.get to pass the function args to the various subfunctions
+    pers.set('iterations', iterations)
+    pers.write()
+
+# read the input data
+inf = StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp = cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+swarm(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+# Run an energy-minimization with restraints active
+
+
+def run(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                                 "persistent.dat"))
+
+    # First create the right mdp file by fixing some of the parameters
+    merge = pers.get('merge')
+    if merge is None or merge==0:
+        merge = 1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # the following settings are standardized for the swarms method calculation
+        # dihedral restraints are necessary, but the other settings are flexible 
+        tol = inp.getInput('em_tolerance')
+        settings = []
+        # Note: in older Gromacs, the dihre options were controlled from here too.
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('steep') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('emtol'),
+                                       'value' : StringValue("%g"%tol) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue('10000') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        out.setSubOut('minimization_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    mdruns = pers.get('mdruns')
+    if mdruns is None or mdruns == 0:
+
+        if inp.getInput('fix_endpoints') is not None and inp.getInput('fix_endpoints') > 0:
+            fix_endpoints = 1
+        else:
+            fix_endpoints = 0
+
+        # Create a network instance that runs multiple grompp/mdruns in parallell
+        out.addInstance('runs', 'gromacs::grompp_mdruns')
+
+        # Inputs to mdruns are in arrays, and if we fill one entry that goes to all simulations, and if we
+        # fill all entries each have their own
+
+        # The index file, cmdline options and resources (from tuning) are the same for all
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                          'runs:in.cmdline_options[0]')
+        # Double-precision selector
+        out.addConnection('self:ext_in.double', 'runs:in.double')
+        # Connect the resources from the tuning run
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+
+        # The project settings are the same for all as well, but come from the merge function output
+        # instead of directly from an input file
+        out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
+
+        out.addConnection('self:sub_out.minimization_settings', 
+                          'runs:in.settings[0]')
+
+        # The output is self:ext_out.path[*] which is a conf_path of path_points (conf/top/include)
+
+        # Create a connection that connects each entry in the input array to each grompp_mdruns multi-
+        # input, the mdruns configuration output to the output array, and bypass the topologies for each
+        # input directly to the output.
+
+        in_confs = inp.getInput('path')
+        if len(in_confs) == 0:
+            sys.stderr.write("run_minimization ran despite path of len 0\n")
+
+        for i in range(len(in_confs)):
+            
+            # For the fixed endpoints case, we can skip running anything for the first and last point
+            if fix_endpoints == 1 and (i == 0 or i == (len(in_confs) - 1)):
+                # Just pass-through the path-state
+                out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+                out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+                out.addConnection('self:ext_in.path[%d].conf' % i, 'self:ext_out.path[%d].conf' % i)
+                out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+                continue
+
+            # If there are .itp's, some of them might have restraints (dihedral or posres)  with place-holder
+            # force constants (KFAC) which we now need to search/replace into a new set of files
+            # with the kfac we want in this stage
+
+            inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
+            if inc_array is not None:
+                kfac = inp.getInput('restrforce')
+                if kfac is None:
+                    kfac = 500.0  # Default to something sane
+                for j in range(len(inc_array)):
+                    in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
+                    # Since we don't rewrite the .top file which includes these files, we have
+                    # to generate exactly the same output filenames here. TODO: split this from
+                    # the in_itpfn to make sure there can be no mixups due to ordering.
+                    out_itpfn = 'res_%d_chain_%d.itp' % (i, j)
+                    # Do the search/replace
+                    with open(in_itpfn, 'r') as in_itpf:
+                        with open(out_itpfn, 'w') as out_itpf:
+                            for line in in_itpf:
+                                out_itpf.write(line.replace('KFAC', '%8.4f' % kfac))
+                    # Set the result in the path to use for the run
+                    out.setSubOut('path[%d].include[%d]' % (i, j), 
+                                  FileValue(os.path.join(inp.getOutputDir(), out_itpfn)))
+
+            # Setup the topology and configuration parts of the subnet path point
+            out.setSubOut('path[%d].conf' % i, FileValue(inp.getInput('path[%d].conf' % i)))
+            out.setSubOut('path[%d].top' % i, FileValue(inp.getInput('path[%d].top' % i)))
+            # The position restraint coordinates, if posres mode (will be None otherwise)
+            out.setSubOut('path[%d].resconf' % i, FileValue(inp.getInput('path[%d].resconf' % i)))
+
+            # Split the input path element and connect input configuration, topology and topology-include to 
+            # grompp/mdruns (separate for each swarm point)
+
+            # Use the subnet path setup above
+            out.addConnection('self:sub_out.path[%d].conf' % i, 'runs:in.conf[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].top' % i, 'runs:in.top[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].include' % i, 'runs:in.include[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].resconf' % i, 'runs:in.resconf[%d]' % i)
+
+            # Not used now, when we have to do the include manipulation above using the subnet
+            #out.addConnection('self:ext_in.path[%d].conf' % i,'runs:in.conf[%d]' % i)
+            #out.addConnection('self:ext_in.path[%d].top' % i,'runs:in.top[%d]' % i)
+            #out.addConnection('self:ext_in.path[%d].include' % i,'runs:in.include[%d]' % i)
+
+            # The output configuration goes to the proper entry in the output array, after mdruns is done.
+            out.addConnection('runs:out.conf[%d]' % i, 'self:ext_out.path[%d].conf' % i)
+
+            # All other parts of the swarmpoint are bypassed from the input to the output.
+            # It is important that these are all generated here on the first run of the function,
+            # since the path[] array elements have to be created, otherwise the "complete" flag which is set for
+            # path in the _import.xml definition will not halt the pipeline until we have all the path[].conf's.
+            out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+            out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+
+        mdruns = 1
+    pers.set('mdruns', mdruns)
+
+    pers.write()
+
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Minimization Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+run(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

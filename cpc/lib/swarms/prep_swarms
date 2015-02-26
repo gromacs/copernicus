@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+# This step of the swarm pipeline generates new swarm configurations by taking confs from each 
+# written trajectory timestep of the previous equilibration step.
+#
+# So, we might input 5 equilibration trajectories into this function, and if each trajectory
+# has 10 timesteps, it means our output here "swarmconfs[]" is an array of 5 entries each of
+# which is an array of 10 configurations, so we output 50 configs in total, in a conf_array_array.
+
+def run(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                                 "persistent.dat"))
+    # the multiple restrained trjconvs
+    #trjconvs=pers.get('trjconvs')
+    #if trjconvs is None or trjconvs==0:
+    #    trrs=inp.getInput('trrs')
+    #    finished=True
+    #    if trrs is not None and len(trrs)>0:
+    #        for i in range(len(trrs)):
+    #            trr=inp.getInput('trrs[%d]'%i)
+    #            if FileValue(trr) is None:
+    #                finished=False
+    #    else:
+    #        finished=False
+    #    if finished==True:
+    #        for i in range(len(trrs)):
+    #            out.addInstance('conv%d'%i, 'gromacs::trjconv_split')
+    #            out.addConnection('self:ext_in.trrs[%d]'%i, 'conv%d:in.traj'%i)
+    #            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr'%i)
+    #            # we don't want the 0 time point
+    #            out.addConnection('conv%d:out.confs'%i, 'self:sub_in.swarmconfs[%d]'%i)
+    #        trjconvs=1
+
+    # This code depends on that the length of the in.trrs array is correct, that is, fully
+    # created, by the time this script is first run. It does not matter if it's not fully
+    # populated though as each trjconv_split is a separate instance with a separate in/out.
+    # 
+    # Since the previous step, equilibration (run_restrained) creates all the connections
+    # to its output restrained_trrs[] at the same time, and this is connected to our trrs[]
+    # input, the length will be correct by the time this script is run, and our instances
+    # and connections will then not depend on if the entries in the array are ready at
+    # start.
+    #
+    # NB: we could also just set the complete flag on the trrs[] input and hence make a barrier
+    # here but that seems unnecessary.
+
+    trjconvs = pers.get('trjconvs')
+    trrs = inp.getInput('trrs')
+    if trjconvs is None or trjconvs == 0:
+        for i in range(len(trrs)):
+
+            # trjconv_split splits an input trajectory into its component configurations (.gros)
+            out.addInstance('conv%d' % i, 'gromacs::trjconv_split')
+
+            # Trajectory inputs are from our trrs[] input array
+            out.addConnection('self:ext_in.trrs[%d]' % i, 'conv%d:in.traj' % i)
+
+            # The input topology tpr is connected to all trjconvs
+            out.addConnection('self:ext_in.tpr', 'conv%d:in.tpr' % i)
+
+            # The trjconv output, an array of configurations, is output on the swarmconfs[]
+            # array. Note that this means the output is a conf *array* for each trrs[] *entry*.
+            out.addConnection('conv%d:out.confs' % i, 'self:ext_out.swarmconfs[%d]' % i)
+
+            # Mark so we don't run this script again
+            trjconvs = 1
+   
+    pers.set('trjconvs', trjconvs)
+    pers.write()
+
+    #if trjconvs==1:
+    #    trrs=inp.getInput('trrs')
+    #    #if confs is not None and len(confs)>0:
+    #    finished=True
+    #    for i in range(len(trrs)):
+    #        confs_i=inp.getSubnetInput('swarmconfs[%d]'%i)
+    #        if confs_i is None or len(confs_i)==0:
+    #            finished=False
+                
+    #    if finished==True:
+    #        out.setOut('swarmconfs', inp.getSubnetInputValue('swarmconfs'))
+            #for i in range(len(trrs)):
+            #    for j in range(len(confs_i)):
+            #            conf=inp.getSubnetInputValue('swarmconfs[%d][%d]'%(i,j))
+                                #if conf.value is not None and conf.isUpdated():
+            #            out.setOut('swarmconfs[%d][%d]'%(i,j), conf)
+                     
+# read the input data
+inf=StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp=cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+run(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+

@@ -1,0 +1,226 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+from cpc.dataflow import FileValue
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+# Run an equilibration with dihedral restraints active
+
+def run(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                                 "persistent.dat"))
+
+    # Create the .mdp by merging the input mdp with some specific settings we decide on
+    # here
+    merge = pers.get('merge')
+    if merge is None or merge == 0:
+        merge = 1
+        out.addInstance('merge', 'gromacs::merge_mdp')
+        out.addConnection('self:ext_in.grompp.mdp', 'merge:in.mdp')
+        out.addConnection('self:ext_in.grompp.settings', 'merge:in.settings')
+        # setting are standardized for the swarms method
+        # dihedral restraints are required, stochastic or langevin dynamics recommended 
+
+        # Calculate the trajectory output interval so that we get the right number of snapshots
+        # to use as starting points for the following swarms
+        steps = inp.getInput('restrained_steps')
+        Nswarms = inp.getInput('Nswarms')
+        output_timing = steps / (Nswarms - 1)
+        settings = [] 
+        # Note: in older Gromacs, the dihre options were controlled from here too.
+        settings.append(RecordValue( { 'name' : StringValue('integrator'),
+                                       'value' : StringValue('sd') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nsteps'),
+                                       'value' : StringValue("%d"%steps) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxout'),
+                                       'value' : StringValue('%d'%output_timing) } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstvout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstfout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstxtcout'),
+                                       'value' : StringValue('0') } ) )
+        settings.append(RecordValue( { 'name' : StringValue('nstlog'),
+                                       'value' : StringValue('10000') } ) )
+        out.setSubOut('restrained_settings', ArrayValue(settings))
+    pers.set('merge', merge)
+
+    mdruns = pers.get('mdruns')
+    if mdruns is None or mdruns == 0:
+
+        if inp.getInput('fix_endpoints') is not None and inp.getInput('fix_endpoints') > 0:
+            fix_endpoints = 1
+        else:
+            fix_endpoints = 0
+
+        # Create an instance of the multiple-simulation grompp/mdrun combo function
+        out.addInstance('runs', 'gromacs::grompp_mdruns')
+
+        #out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
+
+        # The following inputs are only set to [0], which means they will be passed to all
+        # instances of grompp_mdruns.
+        out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
+                          'runs:in.cmdline_options[0]')
+
+        out.addConnection('self:ext_in.resources', 'runs:in.resources[0]')
+
+        out.addConnection('merge:out.mdp', 'runs:in.mdp[0]')
+
+        out.addConnection('self:sub_out.restrained_settings', 'runs:in.settings[0]')
+        #out.addConnection('self:sub_out.includes', 'runs:in.include')
+
+        # Link the entire output trr[] array to a subnet input (WHY?)
+        out.addConnection('runs:out.trr', 'self:sub_in.trrs')
+
+        in_confs = inp.getInput('path')
+
+        for i in range(len(in_confs)):
+
+            # For the fixed endpoints case, we can skip running anything for the first and last point
+            if fix_endpoints == 1 and (i == 0 or i == (len(in_confs) - 1)):
+                # Just pass-through the path-state
+                out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+                out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+                out.addConnection('self:ext_in.path[%d].conf' % i, 'self:ext_out.path[%d].conf' % i)
+                out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+                out.addConnection('self:ext_in.path[%d].conf' % i, 'self:ext_out.confs[%d]' % i)
+                continue
+
+            #outconf=inp.getOutput
+            #itp=inp.getInput('path[%d].itp'%i)
+            #out.setSubOut('includes[%d][0]'%i, FileValue(itp))
+
+            # If there are .itp's, some of them will have restraints (dihedral or posres) with place-holder
+            # force constants (KFAC) which we now need to search/replace into a new set of files
+            # with the kfac we want in this stage
+
+            inc_array = inp.getInput('path[%d].include' % i)  # Get the include[] array
+            if inc_array is not None:
+                kfac = inp.getInput('restrforce')
+                if kfac is None:
+                    kfac = 750.0
+                for j in range(len(inc_array)):
+                    in_itpfn = inp.getInput('path[%d].include[%d]' % (i, j))
+                    # Since we don't rewrite the .top file which includes these files, we have
+                    # to generate exactly the same output filenames here. TODO: split this from
+                    # the in_itpfn to make sure there can be no mixups due to ordering.
+                    out_itpfn = 'res_%d_chain_%d.itp' % (i, j)
+                    # Do the search/replace
+                    with open(in_itpfn, 'r') as in_itpf:
+                        with open(out_itpfn, 'w') as out_itpf:
+                            for line in in_itpf:
+                                out_itpf.write(line.replace('KFAC', '%8.4f' % kfac))
+                    # Set the result in the path to use for the run
+                    out.setSubOut('path[%d].include[%d]' % (i, j), 
+                                  FileValue(os.path.join(inp.getOutputDir(), out_itpfn)))
+
+            # Setup the topology and configuration parts of the subnet path point
+            # NOTE: the .gro (conf) for each path point is taken from the confs[]
+            # array instead of from the path[].conf member. What does this help?
+            out.setSubOut('path[%d].conf' % i, FileValue(inp.getInput('confs[%d]' % i)))
+            out.setSubOut('path[%d].top' % i, FileValue(inp.getInput('path[%d].top' % i)))
+            # The position restraint coordinates, if posres mode (will be None otherwise)
+            out.setSubOut('path[%d].resconf' % i, FileValue(inp.getInput('path[%d].resconf' % i)))
+            
+            # The inputs that are unique for each mdruns instance.
+            # Use the subnet path setup above
+            out.addConnection('self:sub_out.path[%d].conf' % i, 'runs:in.conf[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].top' % i, 'runs:in.top[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].include' % i, 'runs:in.include[%d]' % i)
+            out.addConnection('self:sub_out.path[%d].resconf' % i, 'runs:in.resconf[%d]' % i)
+
+            # Not used now, when we have to do the include manipulation above using the subnet
+            # NOTE: the .gro (conf) for each path point is taken from the confs[]
+            # array instead of from the path[].conf member. What does this help?
+            #out.addConnection('self:ext_in.confs[%d]'%i,'runs:in.conf[%d]'%i)
+            #out.addConnection('self:ext_in.path[%d].top'%i,'runs:in.top[%d]'%i)
+            #out.addConnection('self:ext_in.path[%d].include'%i,'runs:in.include[%d]'%i)
+
+            # The output .gro goes to this functions confs[] output array..
+            out.addConnection('runs:out.conf[%d]' % i, 'self:ext_out.confs[%d]' % i)
+
+            # The input top/include for each path point are simply passed through to the
+            # path output. NOTE: path[].conf seems to be unused, it should be the conf that
+            # now is put in the confs[] array above..
+            out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+            out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+
+            # The output .trr goes to the restrained_trrs[] output array
+            if fix_endpoints == 1:
+                # Without the endpoints processed, the restrained_trrs[] should still start at 0
+                # so it will be fully setup without gaps at 0 and n-1
+                out.addConnection('runs:out.trr[%d]' % i, 'self:ext_out.restrained_trrs[%d]' % (i - 1))
+            else:
+                out.addConnection('runs:out.trr[%d]' % i, 'self:ext_out.restrained_trrs[%d]' % i)
+
+        # Mark so we don't run this function again
+        mdruns = 1
+    pers.set('mdruns', mdruns)
+
+    pers.write()
+
+# read the input data
+inf = StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp = cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+# prepare the output data
+out = inp.getFunctionOutput()
+
+run(inp, out)
+
+out.writeXML(sys.stdout)
+sys.stderr.write('\n')
+out.writeXML(sys.stderr)
+sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")

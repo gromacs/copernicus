@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<cpc>
+  <!-- a module for umbrella sampling calculations.-->
+  <import name="resource" />
+  <import name="gromacs" />
+  <import name="meas" />
+  <import name="int" />
+  <import name="coord" />
+
+  <type id="grompp_input" base="record">
+    <desc>Partial grompp input</desc>
+    <field type="file" id="mdp" ><desc>A .mdp settings file</desc></field>
+    <field type="file" id="top" ><desc>A .top topology file</desc></field>
+    <field type="file" id="ndx" opt="true">
+      <desc>A .ndx index file</desc>
+    </field>
+    <field type="gromacs::grompp_include_array" id="include" opt="true"
+            complete="true">
+      <desc>array of files to include</desc>
+    </field>
+    <field type="gromacs::mdp_array" id="settings" opt="true" 
+           complete="true">
+      <desc>array of settings</desc>
+    </field>
+    <field type="string" id="mdrun_cmdline_options" opt="true">
+      <desc>mdrun command line options</desc>
+    </field>
+  </type>
+
+  <function id="umbrella-sampling" type="external">
+    <inputs>
+      <field id="conf" type="file">
+        <desc>A .gro file of the system to be sampled.</desc>
+      </field>
+      <field id="grompp" type="grompp_input">
+        <desc>The .mdp, .top, and other files necessary to run the system.</desc>
+      </field>
+      <field id="z1" type="rxn_coord">
+        <desc>A reaction coordinate to vary and the points at which to sample</desc>
+      </field>
+      <field id="z2" type="rxn_coord">
+        <desc>A reaction coordinate to vary and the points at which to sample</desc>
+      </field>
+    </inputs>
+    <outputs>
+      <field id="fe_landscape" type="file">
+        <desc>The free energy map along the reaction coordinate(s).</desc>
+      </field>
+    </outputs>
+  </function>
+
+  <function id="gen_confs" type="external">
+    <desc>Generate the initial configurations for umbrella sampling</desc>
+    <inputs>
+    </inputs>
+    <outputs>
+      <field id="conf_array" type="conf_array">
+        <desc>Structures representing the desired set of points in z-space.</desc>
+      </field>
+    </outputs>
+  </function>
+

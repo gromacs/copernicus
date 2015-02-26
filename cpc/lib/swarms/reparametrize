@@ -1,0 +1,191 @@
+#!/usr/bin/env python
+
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+# 
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published 
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
+import sys
+import os
+import math
+import os.path
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+import cpc.dataflow
+from cpc.dataflow import StringValue
+from cpc.dataflow import FloatValue
+from cpc.dataflow import IntValue
+from cpc.dataflow import FileValue
+from cpc.dataflow import RecordValue
+from cpc.dataflow import ArrayValue
+
+import reparametrize
+
+
+class FEError(cpc.dataflow.ApplicationError):
+    pass
+
+
+def rep(inp, out):
+    pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    # Run once
+    repa = pers.get('repa')
+
+    if repa is not None and repa > 0:
+        return
+
+    ndx_file = inp.getInput('cv_index')
+    start_conf = inp.getInput('start_conf')
+    start_xvg = inp.getInput('start_xvg')
+    end_conf = inp.getInput('end_conf')
+    end_xvg = inp.getInput('end_xvg')
+    Nswarms = inp.getInput('Nswarms')
+    Ninterpolants = inp.getInput('Ninterpolants')
+    Nchains = inp.getInput('Nchains')
+
+    # Figure out if we are going to use position or dihedral restraints for the swarm controls
+    if inp.getInput('use_posres') is not None and inp.getInput('use_posres') > 0:
+        use_posres = 1
+    else:
+        use_posres = 0
+
+    if inp.getInput('fix_endpoints') is not None and inp.getInput('fix_endpoints') > 0:
+        fix_endpoints = 1
+    else:
+        fix_endpoints = 0
+
+    # Create a python object from the cv_array_array in cvs
+    # NOTE: the cvs array will contain data from get_cvs for all points we did run swarms on, which
+    # will vary depending on the fix_endpoints option. If it's 1, the cvs array will not contain the
+    # data for the start or end point and we have to consider this further below.
+    cv_array = []
+    cvs = inp.getInput('cvs')
+    for i in range(len(cvs)):   # for each point i
+        cv_i = []
+        cvs_point = inp.getInput('cvs[%d]' % i)  # one point in the string
+        for j in range(len(cvs_point)):  # for each swarm-member j
+            cv = inp.getInput('cvs[%d][%d]' % (i, j))  # one swarm result in one point
+            if cv is not None:
+                cv_i.append(cv)
+            else:
+                sys.stderr.write('Swarm trajectory %d %d failed CV pre-processing\n' % (i, j))
+                # sys.stderr.write('The file is: %s %s\n' % (cv, FileValue(cv)))  <-- pointless if cv is None!
+        cv_array.append(cv_i)
+
+    top = inp.getInput('path[0].top')
+    includes = []
+    path = inp.getInput('path')
+    last_resconfs = []  # build the python list of the incoming CV coordinate files (update for the posres case)
+    for i in range(len(path)):  # for each path point i
+        last_resconfs += [ inp.getInput('path[%d].resconf' % i) ] # can be None, for the dihedral case
+        inc_array = inp.getInput('path[%d].include' % i)
+        if inc_array is not None:
+            subincludes = []
+            for j in range(len(inc_array)):
+                inc_ij = inp.getInput('path[%d].include[%d]' % (i, j))
+                subincludes.append(inc_ij)
+            includes += [ subincludes ]
+
+    # call the external python script
+    reparametrize.reparametrize(use_posres, fix_endpoints, cv_array, ndx_file, Nchains, 
+                                start_conf, start_xvg, end_conf, end_xvg, last_resconfs, 
+                                top, includes)
+
+    # TODO: for the position res string, we should still pass along the restrained_confs to the next iteration, but
+    # instead of replacing the res_chain.itp files, we should pass them along unaltered but replace the path[].resconf's
+    # instead with the new coordinates written by the reparametrizer above.
+    for i in range(len(path)):
+
+        # For the start/end points, if they are to be kept fixed, we didn't write any new .itp's in the 
+        # reparametrize call above and here we can simply bypass them
+        if fix_endpoints == 1 and (i == 0 or i == (len(path) - 1)):
+            out.addConnection('self:ext_in.path[%d].top' % i, 'self:ext_out.path[%d].top' % i)
+            out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+            out.addConnection('self:ext_in.restrained_confs[%d]' % i, 'self:ext_out.path[%d].conf' % i)
+            out.addConnection('self:ext_in.path[%d].resconf' % i, 'self:ext_out.path[%d].resconf' % i)
+            continue
+
+        top = FileValue(inp.getInput('path[%d].top' % i))
+        out.setOut('path[%d].top' % i, top)
+
+        conf = FileValue(inp.getInput('restrained_confs[%d]' % i))  # this is the result from the equilibration stage
+        out.setOut('path[%d].conf' % i, conf) # and it is what will go as starting conf for the next iteration
+
+        # Connect the includes, which are either newly reparametrized dihedrals or just force constants (in the posres case)
+        if use_posres == 1:
+            # Position CVs
+            # Copy the in path[].include to the out path
+            # TODO: could have done: out.addConnection('self:ext_in.path[%d].include' % i, 'self:ext_out.path[%d].include' % i)
+            inc_array = inp.getInput('path[%d].include' % i)
+            if inc_array is not None:
+                for j in range(len(inc_array)):
+                    inc_ij = inp.getInput('path[%d].include[%d]' % (i, j))
+                    out.setOut('path[%d].include[%d]' % (i, j), FileValue(inc_ij))
+
+            # For the position restraints we also have to replace the output path[].resconf with the reparametrized atom positions
+            resconf = os.path.join(inp.getOutputDir(), 'rep_resconf_%d.gro' % i)
+            out.setOut('path[%d].resconf' % i, FileValue(resconf))
+        else:
+            # Dihedral CVs, replace the first Nchains number of itp files with the reparametrized angles, then copy the rest
+            for j in range(Nchains):
+                include = os.path.join(inp.getOutputDir(), 'res_%d_chain_%d.itp' % (i, j))
+                out.setOut('path[%d].include[%d]' % (i, j), FileValue(include))
+            # Copy any additional include files
+            if len(includes[0]) > Nchains:
+                for j in range(Nchains, len(includes[0])):
+                    include = inp.getInput('path[%d].include[%d]' % (i, j))
+                    out.setOut('path[%d].include[%d]' % (i, j), FileValue(include))
+
+    repa = 1
+    repa = pers.set('repa', repa)
+    pers.write()
+
+# read the input data
+inf = StringIO()
+inf.write(sys.stdin.read())
+inf.seek(0)
+sys.stderr.write("\n-----> Starting\n")
+inf.seek(0)
+inp = cpc.dataflow.readInput(inf)
+
+if inp.testing():
+    # TODO: make it possible for sub-functions to be checked now.
+    cpc.util.plugin.testCommand("g_bar -version")
+    cpc.util.plugin.testCommand("grompp -version")
+    cpc.util.plugin.testCommand("trjconv -version")
+    cpc.util.plugin.testCommand("gmxdump -version")
+    # try to import msmproject and thereby msmbuilder
+    sys.exit(0)
+
+
+
+# prepare the output data
+out=inp.getFunctionOutput()
+
+rep(inp, out)
+
+out.writeXML(sys.stdout)
+#sys.stderr.write('\n')
+#out.writeXML(sys.stderr)
+#sys.stderr.write('\n')
+sys.stderr.write("-----> Finished.\n")
+
+
