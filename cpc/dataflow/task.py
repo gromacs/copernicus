@@ -57,7 +57,9 @@ class TaskQueue(object):
 
     def put(self, task):
         """Put a task in the queue."""
-        self.queue.put(task)
+        # Use a timeout in order to avoid freezing the server completely
+        # if the queue is full.
+        self.queue.put(task, timeout=15)
 
     def putNone(self):
         """Put a none into the queue to make sure threads are reading it."""
