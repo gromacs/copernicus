@@ -1,10 +1,10 @@
-# This file was created Mon Sep 17 21:59:18 2012
+# This file was created Fri Jan 16 04:20:19 2015
 # by the following command:
-# g_rama -f end.gro -o end.xvg 
+# g_rama -s end_4angle_minim.tpr -f end_4angle_minim.gro -o end_4angle_minim_rama.xvg 
 #
 # g_rama is part of G R O M A C S:
 #
-# Gromacs Runs One Microsecond At Cannonball Speeds
+# Gallium Rubidium Oxygen Manganese Argon Carbon Silicon
 #
 @    title "Ramachandran Plot"
 @    xaxis  label "Phi"
@@ -27,4 +27,4 @@
 @ s0 symbol 2
 @ s0 symbol size 0.4
 @ s0 symbol fill 1
-74.3149  -72.6423  ALA-2
+70.7483  -69.3875  ALA-2

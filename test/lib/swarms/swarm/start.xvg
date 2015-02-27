@@ -1,10 +1,10 @@
-# This file was created Mon Sep 17 21:59:06 2012
+# This file was created Fri Jan 16 04:18:23 2015
 # by the following command:
-# g_rama -f start.gro -o start.xvg 
+# g_rama -s start_4angle_minim.tpr -f start_4angle_minim.gro -o start_4angle_minim_rama.xvg 
 #
 # g_rama is part of G R O M A C S:
 #
-# GROningen MAchine for Chemical Simulation
+# Good ROcking Metal Altar for Chronical Sinners
 #
 @    title "Ramachandran Plot"
 @    xaxis  label "Phi"
@@ -27,4 +27,4 @@
 @ s0 symbol 2
 @ s0 symbol size 0.4
 @ s0 symbol fill 1
--86.4054  77.9614  ALA-2
+-82.1693  73.3131  ALA-2
