@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -27,7 +27,7 @@ log=logging.getLogger(__name__)
 class ServerRequest(object):
     """Server request object; contains all the fields as 'fields' (strings) or
        'files' (temporary files)."""
-   
+
     CRLF = '\r\n'
 
     def __init__(self,headers,msg=None,params=None,files=None,bigFile=None):
@@ -43,19 +43,19 @@ class ServerRequest(object):
 
     def __del__(self):
         del self.files # remove the reference; files should be deleted.
- 
+
     def getCmd(self):
         #return self.params['cmd']
         return self.getField('cmd')
-    
+
     def getJob(self):
         return self.getField('job')
-    
+
     def getField(self,fieldName):
         ''' gets a property based on its fieldname'''
         if self.params.has_key(fieldName):
             return self.params[fieldName]
-        else: 
+        else:
             return None
 
     def getFlag(self, name):
@@ -65,7 +65,7 @@ class ServerRequest(object):
         return self.flags[name]
 
     def setFlag(self, name, value):
-        """Sets a request-handler-defined property - allocating a dict if 
+        """Sets a request-handler-defined property - allocating a dict if
            it needs to."""
         if self.flags is None:
             self.flags=dict()
@@ -74,7 +74,7 @@ class ServerRequest(object):
     def getParam(self,paramName):
         ''' gets a property based on its paramname'''
         #returns None if paramName is not found
-        return self.params.get(paramName,None)  
+        return self.params.get(paramName,None)
 
     def hasParam(self,paramName):
         ''' Returns whether a property has been set'''
@@ -82,7 +82,7 @@ class ServerRequest(object):
 
     def addField(self, fieldName, msg):
         """Add a field to a request."""
-        self.fields[fieldName]=msg
+        self.params[fieldName]=msg
     def addFile(self, filename, fileObject):
         """Add an open file to a request."""
         self.files[filename] = fileObject
@@ -102,19 +102,19 @@ class ServerRequest(object):
         headers = dict()
         headerString = headerString.strip()
         lines = headerString.split('\n')
-        
+
         for line in lines:
             splittedStr = line.split(':')
             headers[splittedStr[0]] = splittedStr[1]
-        
+
         return headers
-        
-            
-    @staticmethod    
+
+
+    @staticmethod
     def getFieldName(header):
         namePattern = re.compile('name="(\S+)"')
         match = namePattern.search(header)
-        fieldName = match.group(1) 
+        fieldName = match.group(1)
         return fieldName
 
     @staticmethod
@@ -122,17 +122,17 @@ class ServerRequest(object):
         filePattern = re.compile('filename="(\S+)"')
         if(filePattern.search(header)):
             return True
-        else: 
+        else:
             return False
 
-    @staticmethod 
+    @staticmethod
     def getBoundary():
         return Messaging.BOUNDARY
-    
+
     @staticmethod
     def getCRLF():
-        return '\r\n' 
-   
+        return '\r\n'
+
     @staticmethod
     def prepareRequest(fields=[], files=[],headers = None):
         """
@@ -142,37 +142,37 @@ class ServerRequest(object):
         """
         if headers is None:
             headers = {}
-        
-        if(len(files)==0):   #single part message         
+
+        if(len(files)==0):   #single part message
             headers['Content-Type'] = 'application/x-www-form-urlencoded'
             #create a dict of the fields object
             inputs = dict()
 
-            for input in fields:                
+            for input in fields:
                 inputs[input.name] = input.value
-            ## NOTE encodes in a non standard % format but 
+            ## NOTE encodes in a non standard % format but
             # this is usually what browsers do
-            msg = urllib.urlencode(inputs)   
-           
+            msg = urllib.urlencode(inputs)
 
-        else:  #multipart message 
-            headers['Content-Type'] = ( 'multipart/form-data; boundary=%s' % 
+
+        else:  #multipart message
+            headers['Content-Type'] = ( 'multipart/form-data; boundary=%s' %
                                         Messaging.BOUNDARY )
-            msg = Messaging.encode_multipart_formdata(fields,files) 
+            msg = Messaging.encode_multipart_formdata(fields,files)
         headers['Content-Length'] = len(msg)
         headers['User-agent'] = 'copernicus-cmd-client'
         content = msg
         req = ServerRequest(headers,content)
         return req
-   
+
     @staticmethod
     def isMultiPart(contentType):
         regexp = '^multipart/form-data;'
         return re.search(regexp,contentType)
-        
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+

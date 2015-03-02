@@ -56,6 +56,10 @@ class ClientConnectionBase(ConnectionBase):
     Abstract base class for client connections, must be extended.
     """
 
+    def __init__(self):
+        ConnectionBase.__init__(self)
+        self.cookieHandler = None
+
     def prepareHeaders(self,request):
         if not request.headers.has_key('Originating-Client')\
         and not request.headers.has_key('originating-client'):

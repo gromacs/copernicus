@@ -489,7 +489,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 valueString=attrs.getValue('value')
                 tp=self.importList.getTypeByFullName(typestr, self.thisImport)
                 # get the value from the type object
-                val=value.interpetLiteral(valueString, tp)
+                val=value.interpretLiteral(valueString, tp)
                 cn=connection.makeInitialValue(self.network,
                                                dstInstName, dstDir, dstItemName,
                                                val)
@@ -624,7 +624,7 @@ class ProjectXMLReader(xml.sax.handler.ContentHandler):
                 vtp=self.importList.getTypeByFullName(vtpnm, self.thisImport)
                 valnm=attrs.getValue("value")
                 valueString=attrs.getValue('value')
-                val=value.interpetLiteral(valueString, tp)
+                val=value.interpretLiteral(valueString, tp)
             if self.ioitem == "inputs":
                 self.activeInst.setInput(name, tp, val, seqnr)
             elif self.ioitem == "outputs":

@@ -135,7 +135,7 @@ class Task(object):
 
     def isActive(self):
         """Return whether the underlying active instance is active."""
-        return self.activeInstance.state == active_inst.active
+        return self.activeInstance.state == active_inst.ActiveInstance.active
 
     def run(self, cmd=None):
         """Run the task's underlying function with the required inputs,

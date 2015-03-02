@@ -145,7 +145,7 @@ class WorkerDataList(object):
         if not wd in self.workerDirs:
             self.workerDirs[wd] = cpc.util.rng.getRandomHash()
 
-    def remove(self, workerdir):
+    def remove(self, workerDir):
         wd=os.path.normpath(workerDir)
         if wd in self.workerDirs:
             del self.workerDirs[wd]

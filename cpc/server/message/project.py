@@ -596,6 +596,10 @@ class SCStatus(ProjectServerCommand):
         # handle network
         topology = ServerToServerMessage.getNetworkTopology()
 
+        if not topology:
+            log.error("Cannot get network topology.")
+            return
+
         numWorkers = 0
         numServers = 0
 
