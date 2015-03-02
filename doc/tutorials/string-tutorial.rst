@@ -117,9 +117,11 @@ General settings
 ----------------
 
 * run:in.fixed_endpoints (integer 0 or 1)
+
 Option that controls whether the starting and ending point in the string should be fixed or also updated just like all the other points. If you are not completely sure that your initial starting or ending point are actually the true local minimas for the force-field used, it is recommended to try running with the endpoints not fixed.
 
 * run:in.Ninterpolants (integer)
+
 The number of points in the string, including the starting and ending point.
 
 Usually 10-50 points are enough, but depends on the system and free-energy landscape. The total computational time, storage space and network bandwidth increases linearly with the number of points, and it might be good to start with a smaller number of points to evaluate the method for the system and then increase.
@@ -129,23 +131,29 @@ Since every string point that can move involves minimizing and running a system 
 For example, if you have 16 worker nodes attached it makes sense to use 16+2 (or 32+2) stringpoints in total if the endpoints don’t move, and 16 stringpoints in total if the endpoints move.
 
 * run:in.Niterations (integer)
+
 The number of string iterations to run. Common numbers are from 10 to hundreds, this depends a lot on the system size and energy landscape. Note that this is correlated with the swarm simulation step count described further below - doing more steps each swarm iteration results in less iterations needed to evolve the string the same distance, but it will be less accurate and might result in the string not converging as it might “step over” the true minima.
 
 Each iteration requires a certain amount of memory and disk resources at the Copernicus server, and for large systems, it makes sense to restrict the number of iterations scheduled in each invocation for many reasons, including giving the ability to monitor the convergence better and see if bad things happen to the evolving string point systems.
 
 * run:in.top (.top)
+
 The Gromacs topology file to use for simulating the string point systems.
 
 * run:in.tpr (.tpr)
+
 A Gromacs run-file corresponding to the topology above, which is needed by various Gromacs helper tools invoked by the module, like g_rama. It is never run, and it doesn’t matter if it corresponds to a minimization or run simulation, as long as it comes from the same topology and base system.
 
 * run:in.Nchains (integer)
+
 Normally 1. For polymers, this should correspond to the number of separate peptide chains in the system topology. If you use polymers, and have separate .itp files for each subunit, you need to provide them in the in.include[] array.
 
 * run:in.include (array of .itp, optional)
+
 See above regarding polymers
 
 * run:in.cv_index (.ndx)
+
 The specification of the collective variables (CVs) that monitors and controls the string evolution. For the dihedral string case, this is the set of atoms with at least one atom listed per residue whose dihedral phi/psi angles should be used. It does not matter if the index contains one atom per residue or all atoms in the residues, and it accepts the output format used by the make_ndx Gromacs helper which might be useful for generating an index for large proteins.
 
 There should be one single index group in the file only but the name of the group is irrelevant.
@@ -153,6 +161,7 @@ There should be one single index group in the file only but the name of the grou
 An example would be:
 
 .. code-block:: none
+
 [ CA_&_Protein ]
    7   27   46   60   74   88   94  117  129 
 
@@ -168,17 +177,21 @@ String specification
 --------------------
 
 * run:in.start_conf (.gro)
+
 The system configuration corresponding to the starting point of the string. This is also used by the dihedral CV mode as base configuration for all other string points.
 
 * run:in.end_conf (.gro)
+
 The system configuration corresponding to the ending point of the string. In the dihedral CV mode, this is unused (see start_conf above, which is used for all stringpoints).
 
 * run:in.start_xvg (.xvg)
+
 The dihedral CV values corresponding to the starting configuration of the string. Together with end_xvg, these are used by the module to linearily interpolate an initial estimate of all intermediary stringpoints. The starting point will stay locked to the start_xvg CV values during all iterations.
 
 This file can either be created manually using known desired values for the CVs, or if a starting system configuration is available, g_rama can be invoked to generate an .xvg containing all dihedral phi/psi values for all peptide bonds in the system.
 
 * run:in.end_xvg (.xvg)
+
 The dihedral CV values corresponding to the ending configuration of the string. See start_xvg. The ending point will stay locked to the end_xvg CV values during all iterations.
 
 
@@ -188,18 +201,23 @@ Minimization stage settings
 The minimization stage is run using the specification files below, with restraints on all CVs for the values generated by the interpolation (if this is the first iteration) or the values generated by the previous iteration’s output. In both cases, the system will be forced a the new state by the restraints as opposed to simply staying locked still as is usually done in the minimization step in a simulation. This can pose a problem if the structure is complicated and the new CV values try to change it a lot. If there are issues, tweaks to the minimization grompp input (described below) are needed to improve minimization performance, as well as possibly tweaks to the following stages as well.
 
 * run:in.minim_grompp.mdp (.mdp)
+
 The Gromacs configuration file to use for minimizing your system. Use settings that you know are capable of producing a good energy minimization for the system in general.
 
 * run:in.minim_grompp.top (.top)
+
 The Gromacs topology to use for minimization (usually the same as the other steps’ topologies)
 
 * run:in.minim_grompp.ndx (.ndx, optional)
+
 A Gromacs atom index file, if needed for simulations (for example if you specify atom groups in the .mdp which are specified in the .ndx file)
 
 * run:in.em_tolerance (float)
+
 Minimization tolerance to set during the minimization stage.
 
 * run:in.minim_restrforce (float, optional)
+
 The restraint k-value to use during the minimization stage for the CVs. It should be fairly large (500.0-4000.0 kJ/mol/rad^2 for the dihedral case for example) but ultimately depends on the protein and the amount of distortions of the starting string compare with the start_conf, or the amount of string point evolution per iteration. 
 
 If no value is given, 500.0 is used.
@@ -209,6 +227,7 @@ Thermalization stage settings
 -----------------------------
 
 * run:in.therm_grompp.mdp (.mdp)
+
 The Gromacs configuration file to use for thermalizing your system after minimization is done (system will start at 0 K). Use normal settings that work for running your system in general, including a proper thermostat. It is not recommended to use pressure coupling here as the temperature is not stabilized yet. 
 
 The step size should be set very conservatively at 0.5 fs for example, to help with structures that are difficult to minimize into their new configurations.
@@ -216,12 +235,15 @@ The step size should be set very conservatively at 0.5 fs for example, to help w
 The number of steps required to thermalize depends on the step size and the thermostat time coefficient, but in general 1000-2000 steps or so is enough for a step size of 0.5 fs and a tau of 1.0 ps.
 
 * run:in.therm_grompp.top (.top)
+
 The Gromacs topology to use for thermalization (usually the same as the other steps’ topologies)
 
 * run:in.therm_grompp.ndx (.ndx, optional)
+
 A Gromacs atom index file, if needed for simulations (for example if you specify atom groups in the .mdp which are specified in the .ndx file)
 
 * run:in.therm_restrforce (float, optional)
+
 The restraint k-value to use during the thermalization stage for the CVs. See the discussion for minim_restrforce above.
 
 If no value is given, 750.0 is used.
@@ -230,6 +252,7 @@ Equilibration and Swarm stage settings
 --------------------------------------
 
 * run:in.equil_grompp.mdp (.mdp)
+
 The Gromacs configuration file to use for running your system normally. Use settings that work for running your system in general, including a proper thermostat. Pressure coupling may be used for solvated systems.
 
 This will be used for the equilibration stage together with restraints on all CVs, as well as on the swarm stage without restraints.
@@ -237,23 +260,29 @@ This will be used for the equilibration stage together with restraints on all CV
 Note:The number of simulation steps will be set automatically by the module to use this configuration file for both equilibration and swarms.
 
 * run:in.equil_grompp.top (.top)
+
 The Gromacs topology to use for equilibration (usually the same as the other steps’ topologies)
 
 * run:in.equil_grompp.ndx (.ndx, optional)
+
 A Gromacs atom index file, if needed for simulations (for example if you specify atom groups in the .mdp which are specified in the .ndx file)
 
 * run:in.equil_restrforce (float, optional)
+
 The restraint k-value to use during the equilibration stage for the CVs. See the discussion for minim_restrforce above.
 
 If no value is given, 750.0 is used.
 
 * run:in.restrained_steps (integer)
+
 The number of simulation steps to equilibrate for using the equil_grompp.mdp settings.
 
 * run:in.swarm_steps (integer)
+
 The number of simulation steps used for the swarm run. This should be very short, often between 15-300 steps depending on the system size. 
 
 * run:in.Nswarms (integer)
+
 The number of swarm simulations to issue for each string point during the swarm stage. They will be started from a selection of configurations extracted from the equilibration stage and their ending coordinates will be averaged to get the average drift of the string point. The averaging is needed to counteract the randomness induced by simulating a system at a non-zero temperature.
 
 More swarm simulations per point is always better to average the thermal fluctuations, but require more simulation time, storage space and network bandwidth, which might be a concern if the system is very big. 

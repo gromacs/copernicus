@@ -1,4 +1,3 @@
-.. _network:
 
 **************************
 Developer Documentation
