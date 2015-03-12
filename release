@@ -25,7 +25,7 @@ def executeCommand(command):
         sys.exit(1)
 
 
-if(sys.argc<2):
+if(len(sys.argv)<2):
     print "Usage release VERSION_NUM"
 
 versionExists = False
