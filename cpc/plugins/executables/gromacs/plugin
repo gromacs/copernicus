@@ -16,10 +16,15 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
 
     try:
         cmdargs = shlex.split(cmd)
+	platform = sys.argv[3]
+	cmdPrefix = ""
+	if platform=='cray':
+		cmdargs = ['aprun']+cmdargs
+
         np=subprocess.Popen(cmdargs+["-version"], stdin=None,
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        for line in np.stdout:
-            if (re.match(r"Version:", line, re.IGNORECASE) or
+	for line in np.stdout:
+	    if (re.match(r"Version:", line, re.IGNORECASE) or
                 re.match(r"Gromacs version:", line, re.IGNORECASE)):
                 version=re.sub(r'([0-9]\.[0-9.]+).*', r'\1', line.split()[-1])
             elif re.match(r"Parallellization", line): # 4.5
@@ -44,8 +49,8 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
         if np.returncode == 0:
             if MPI:
                 outf.write(
-                    '<executable name="gromacs/%s" platform="mpi" arch="" version="%s">\n'%
-                    (name, version))
+                    '<executable name="gromacs/%s" platform="%s" arch="" version="%s">\n'%
+                    (name,platform, version))
                 if re.match(r"4.6",version):
                   outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s -ntomp 1" />\n'%(cmd, opts))
                 else: 
@@ -68,21 +73,24 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
     except OSError:
         return False
 
-
 sys.stdout.write('<?xml version="1.0"?>\n')
 sys.stdout.write('<executable-list>\n')
 
 #as of gromacs 5.0 all commands are unified under the gmx command
 #we first try to run this command
 
+platform = sys.argv[3]
+cmdPrefix = ""
+if platform=='cray':
+	cmdPrefix='aprun'
 #current version supports both gmx and the old commands but we make sure to only detect one of them
-if (try_report_command(sys.stdout, "mdrun", "gmx mdrun", "-cpt 10 -maxh 1 -x traj.xtc",True)
-    or try_report_command(sys.stdout, "mdrun", "gmx mdrun_mpi","-cpt 10 -maxh 1 -x traj.xtc", True)):
-    try_report_command(sys.stdout, "grompp", "grompp")
-    try_report_command(sys.stdout, "trjconv", "trjconv")
-    try_report_command(sys.stdout, "trjcat", "trjcat")
-    try_report_command(sys.stdout, "g_energy", "g_energy")
-
+if (try_report_command(sys.stdout, "mdrun", "gmx_mpi mdrun", "-cpt 10 -maxh 1 -x traj.xtc",True)
+    or try_report_command(sys.stdout, "mdrun", "gmx mdrun","-cpt 10 -maxh 1 -x traj.xtc", True)):
+#    try_report_command(sys.stdout, "grompp", "grompp")
+#    try_report_command(sys.stdout, "trjconv", "trjconv")
+#    try_report_command(sys.stdout, "trjcat", "trjcat")
+#    try_report_command(sys.stdout, "g_energy", "g_energy")
+     pass
 
 
 else:

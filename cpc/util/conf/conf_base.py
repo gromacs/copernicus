@@ -49,6 +49,11 @@ def findAndCreateGlobalDir():
         files. This depends on the OS"""
     if "HOME" in os.environ:
         globdir = os.path.join(os.environ["HOME"], Conf.base_path)
+    
+    #Users can set this variable to change the location of .copernicus	
+    if "CPC_CONF_HOME" in os.environ:
+ 	globdir = os.path.join(os.environ["CPC_CONF_HOME"], Conf.base_path)	
+
     else:
         # we're probably running on Windows.
         # there we store the connection bundlein 
