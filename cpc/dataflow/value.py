@@ -72,6 +72,21 @@ class Value(Variable):
         self.optional = optional
         self.description = description
 
+    def __deepcopy__(self, memo):
+        log.debug('Making deepcopy of class: %s' % type(self))
+        result = type(self)()
+        result.name = self.name
+        result.typeString = self.typeString
+        result.ownerFunction = self.ownerFunction
+        result.container = self.container
+        result.hasChanged = self.hasChanged
+        result.optional = self.optional
+        result.description = self.description
+
+        result.value = copy.deepcopy(self.value, memo)
+
+        return result
+
     def is_allowed_value(self, value):
         """ Verify that the variable is of an allowed type. Overrides method of
             Variable.
@@ -90,10 +105,10 @@ class Value(Variable):
            :param value: The new value.
         """
 
-        # If the value is changed update the hasChanged flag.
         if self.value == value:
             return
 
+        # If the value is changed update the hasChanged flag.
         self.hasChanged = True
 
         Variable.set(self, value)
@@ -105,12 +120,14 @@ class Value(Variable):
             self.ownerFunction.functionPrototype.isFinished = False
             self.ownerFunction.execute()
 
-        if self.container:
-            self.container.hasChanged = True
-            if self.container.ownerFunction and (self.container in self.container.ownerFunction.inputValues or \
-                                                 self.container in self.container.ownerFunction.subnetInputValues):
-                self.container.ownerFunction.functionPrototype.isFinished = False
-                self.container.ownerFunction.execute()
+        container = self.container
+        while container:
+            container.hasChanged = True
+            if container.ownerFunction and (container in container.ownerFunction.inputValues or \
+                                            container in container.ownerFunction.subnetInputValues):
+                container.ownerFunction.functionPrototype.isFinished = False
+                container.ownerFunction.execute()
+            container = container.container
 
     def setByConnection(self, value):
         """ Update self.value when it is connected to a value that has been
@@ -121,20 +138,23 @@ class Value(Variable):
         """
 
         log.debug('In setByConnection. Setting %s (%s) to %s.' % (self, self.value, value))
-        log.debug('self.ownerFunction: %s' % self.ownerFunction)
-
-        if self.value == value:
-            return
-
-        self.hasChanged = True
 
         self.value = value
 
-        if self.ownerFunction:
-            if self in self.ownerFunction.inputValues or self in \
-                self.ownerFunction.subnetInputValues:
-                self.ownerFunction.functionPrototype.isFinished = False
-                self.ownerFunction.execute()
+        #log.debug('self.container: %s' % self.container)
+
+        #if self.ownerFunction:
+            #if self in self.ownerFunction.inputValues or self in \
+                #self.ownerFunction.subnetInputValues:
+                #self.ownerFunction.functionPrototype.isFinished = False
+                #self.ownerFunction.execute()
+
+        #if self.container:
+            #self.container.hasChanged = True
+            #if self.container.ownerFunction and (self.container in self.container.ownerFunction.inputValues or \
+                                                 #self.container in self.container.ownerFunction.subnetInputValues):
+                #self.container.ownerFunction.functionPrototype.isFinished = False
+                #self.container.ownerFunction.execute()
 
     def addConnection(self, toValue):
         """ Add a connection from this value container to another value
@@ -161,17 +181,6 @@ class Value(Variable):
         if self.value == toValue.value:
             return
 
-        #log.debug('value: %s, toValue: %s' % (self.value, toValue.value))
-        #if isinstance(self, DictValue) and isinstance(toValue, DictValue):
-            ##toValue.value = {}
-            #for k, v in self.value.iteritems():
-                #toValue.value[k] = copy.deepcopy(v)
-        #elif isinstance(self, ListValue) and isinstance(toValue, ListValue):
-            #toValue.value = []
-            #for v in self.value:
-                #toValue.append(copy.deepcopy(v))
-        #else:
-            #toValue.value = copy.deepcopy(self.value)
         log.debug('Making deepcopy of %s to overwrite %s' % (self.value, toValue.value))
         toValue.value = copy.deepcopy(self.value)
         toValue.hasChanged = True
@@ -387,6 +396,12 @@ class ListValue(Value):
                        optional, description)
         self.typeString = 'list'
 
+    def __deepcopy__(self, memo):
+        result = Value.__deepcopy__(self, memo)
+        result.dataType = self.dataType
+
+        return result
+
     def set(self, value):
 
         iv = list(value)
@@ -396,6 +411,7 @@ class ListValue(Value):
         for i, v in enumerate(iv):
             if not isinstance(v, t):
                 iv[i] = t(v)
+                iv[i].container = self
 
         Value.set(self, iv)
 
@@ -440,13 +456,13 @@ class ListValue(Value):
 
         if self.value == None:
             return None
-        log.debug('ListValue getCreateSubValue. index: %s' % index)
         nValues = len(self.value)
         while nValues <= index:
-            newValue = self.dataType(None, container=self)
-            log.debug('newValue: %s' % newValue)
+            newValue = self.dataType(None)
+            newValue.container = self
             self.append(newValue)
             nValues += 1
+        log.debug('getCreateSubValue: %s, ownerFunction: %s, container: %s' % (self.value[index], self.value[index].ownerFunction, self.value[index].container))
         return self.value[index]
 
     def getClosestSubValue(self, index):
@@ -481,6 +497,10 @@ class ListValue(Value):
             return self.value[index]
         return None
 
+    def setSubValue(self, index, value):
+
+        self.setIndex(value, index)
+
     def append(self, value):
         """ Add a value to the end of the list. """
 
@@ -490,13 +510,19 @@ class ListValue(Value):
     def setIndex(self, value, index):
         """ Set the value of the specified index to the supplied value argument. """
 
-        if self.dataType:
-            if isinstance(value, Value):
-                assert isinstance(value, self.dataType)
-            else:
-                value = self.dataType(value)
+        if len(self.value) > index:
+            oldValue = self.value[index]
+            oldValue.value = value
+            value = oldValue
+
         else:
-            assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+            if self.dataType:
+                if isinstance(value, Value):
+                    assert isinstance(value, self.dataType)
+                else:
+                    value = self.dataType(value)
+            else:
+                assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
 
         value.container = self
 
@@ -540,6 +566,15 @@ class DictValue(Value):
                        optional, description)
         self.typeString = 'dict'
 
+        for v in self.value.itervalues():
+            v.container = self
+
+    def __deepcopy__(self, memo):
+        result = Value.__deepcopy__(self, memo)
+        result.dataType = self.dataType
+
+        return result
+
     def set(self, value):
 
         iv = dict(value)
@@ -550,6 +585,7 @@ class DictValue(Value):
         for k, v in iv.iteritems():
             if not isinstance(v, t):
                 iv[k] = t(v)
+                iv[k].container = self
 
         Value.set(self, iv)
 
@@ -579,8 +615,6 @@ class DictValue(Value):
               self.update(a=1, b=2, c=3)
         """
 
-        log.debug('DictValue update. self.dataType: %s' % self.dataType)
-
         if self.dataType:
             if args:
                 d = args[0]
@@ -592,7 +626,8 @@ class DictValue(Value):
                         assert isinstance(v, self.dataType)
                         v.container = self
                     else:
-                        newValue = self.dataType(v, container=self)
+                        newValue = self.dataType(v)
+                        newValue.container = self
                         d[k] = newValue
             else:
                 d = {}
@@ -602,7 +637,8 @@ class DictValue(Value):
                     assert isinstance(v, self.dataType)
                     v.container = self
                 else:
-                    newValue = self.dataType(v, container=self)
+                    newValue = self.dataType(v)
+                    newValue.container = self
                     kwargs[k] = newValue
 
         else:
@@ -613,20 +649,26 @@ class DictValue(Value):
             if isinstance(d, DictType):
                 for k,v in d.iteritems():
                     oldValue = self.value.get(k)
+                    oldValueType = type(oldValue)
+                    if not isinstance(v, Value):
+                        v = oldValueType(v)
                     if oldValue:
-                        assert isinstance(v, type(oldValue)), "When updating an existing item in a dictionary it may not change type."
+                        assert isinstance(v, oldValueType), "When updating an existing item in a dictionary it may not change type."
                     else:
-                        assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                        assert isinstance(v, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
                     v.container = self
             else:
                 d = {}
 
-            for k,v in kwargs.iteritems():
+            for k, v in kwargs.iteritems():
                 oldValue = self.value.get(k)
+                oldValueType = type(oldValue)
+                if not isinstance(v, Value):
+                    v = oldValueType(v)
                 if oldValue:
-                    assert isinstance(v, type(oldValue)), "When updating an existing item in a dictionary it may not change type."
+                    assert isinstance(v, oldValueType), "When updating an existing item in a dictionary it may not change type."
                 else:
-                    assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                    assert isinstance(v, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
                 v.container = self
 
 
@@ -659,10 +701,10 @@ class DictValue(Value):
         if self.value == None:
             return None
         value = self.value.get(key)
-        log.debug('DictValue getCreateSubValue. value: %s' % value)
         if value is None:
-            value = self.dataType(None, name = key, container=self)
-            self.update(key = value)
+            value = self.dataType(None, name = key)
+            value.container = self
+            self.update({key: value})
         return value
 
     def getClosestSubValue(self, key):
@@ -677,10 +719,11 @@ class DictValue(Value):
             return None
         if key == None or key == []:
             return self
-        log.debug('Getting subvalue: %s. Got: %s.' % (key, self.value.get(key)))
         return self.value.get(key)
 
     def setSubValue(self, key, value):
+
+        log.debug('In dict.setSubValue(), key: %s, value: %s' % (key, value))
 
         valueContainer = self.value.get(key)
         if not valueContainer:
@@ -688,16 +731,17 @@ class DictValue(Value):
                 if isinstance(value, Value):
                     assert isinstance(value, self.dataType)
                 else:
-                    value = self.dataType(value, container=self)
+                    value = self.dataType(value)
             else:
-                assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                assert isinstance(value, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
 
-            self.value[key] = value
+            value.container = self
 
         else:
             if isinstance(value, Value):
                 valueContainer.value = value.value
             else:
                 valueContainer.value = value
+
 
 basicTypeList = (BoolValue, IntValue, FloatValue, StringValue, ListValue, DictValue)

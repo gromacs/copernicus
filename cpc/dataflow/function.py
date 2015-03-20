@@ -451,7 +451,7 @@ class Function(FunctionBase):
         else:
             self.subnet = None
 
-        log.debug('Creating function %s, in %s, %s' % (self.name, self.project, self.dataNetwork))
+        #log.debug('Creating function %s, in %s, %s' % (self.name, self.project, self.dataNetwork))
 
     #def _getSubVal(self, itemList, staging=False):
         #"""Helper function"""
@@ -490,13 +490,11 @@ class Function(FunctionBase):
 
         subval=None
         #try:
-        log.debug('FUNCTION: itemList[0] = %s' % itemList[0])
+        #log.debug('FUNCTION: itemList[0] = %s' % itemList[0])
         if itemList[0]==keywords.In:
-            log.debug('FUNCTION: Get In')
             with self.inputLock:
                 subval=self.inputListValue
         elif itemList[0]==keywords.Out:
-            log.debug('FUNCTION: Get Out')
             with self.outputLock:
                 subval=self.outputListValue
         elif itemList[0]==keywords.SubIn:
@@ -538,8 +536,6 @@ class Function(FunctionBase):
                 else:
                     func = subval.getSubValue
 
-                log.debug('func: %s, i: %s' % (func, i))
-
                 subval = func(itemList[i])
                 i += 1
             if subval and i < len(itemList):
@@ -559,7 +555,7 @@ class Function(FunctionBase):
         """Get a specific subvalue through a list of subitems, or return None
            if not found.
            itemList = the path of the value to return"""
-        log.debug('FUNCTION: GETTING SUBVAL %s' % itemList)
+        #log.debug('FUNCTION: GETTING SUBVAL %s' % itemList)
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
@@ -577,7 +573,7 @@ class Function(FunctionBase):
             return self
         # staging is true because we know we want to be able to create a new
         # value.
-        log.debug('GET OR CREATE %s' % itemList)
+        #log.debug('FUNCTION: getCreateSubValue %s' % itemList)
         subval=self._getSubVal(itemList, createValue=True)
         return(subval)
 
@@ -585,7 +581,7 @@ class Function(FunctionBase):
         """Get the closest relevant subvalue through a list of subitems,
 
            itemList = the path of the value to get the closest value for """
-        log.debug('FUNCTION: itemlist %s' % itemList)
+        #log.debug('FUNCTION: getClosestSubValue itemlist %s' % itemList)
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList, closestValue=True)
@@ -675,7 +671,6 @@ class Function(FunctionBase):
         f = subnet.newInstance(prototype, name)
 
         self.subnetFunctions[name] = f
-        log.debug(self.subnetFunctions)
 
         return f
 
@@ -808,7 +803,7 @@ class Function(FunctionBase):
                        executing, i.e. due to missing input.
         """
 
-        log.debug('FUNCTION EXECUTE')
+        #log.debug('FUNCTION EXECUTE')
         with self.inputLock and self.outputLock:
             if not self.frozen and self._inputHasChanged():
                 from value import ListValue, DictValue
@@ -835,7 +830,7 @@ class Function(FunctionBase):
 
                 #print 'Will execute', self.name
                 if self.functionPrototype.useOutputDir:
-                    log.debug("Creating output dir")
+                    #log.debug("Creating output dir")
                     created=False
                     while not created:
                         outputDirName=os.path.join(self.baseDir,
@@ -847,7 +842,7 @@ class Function(FunctionBase):
                             os.mkdir(fullOutputDirName)
                             created=True
                 else:
-                    log.debug("Not creating output dir")
+                    #log.debug("Not creating output dir")
                     outputDirName=None
 
 

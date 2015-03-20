@@ -143,7 +143,7 @@ class TaskExecThread(object):
 
     def doStop(self):
         """Stop the thread at the next iteration."""
-        log.debug('Acquiring lock to stop TaskExecThread %s. Lock: %s' % (self, self.lock))
+        log.debug('Acquiring lock to stop TaskExecThread %s. Lock: %s. Is already locked: %s' % (self, self.lock, self.lock.locked()))
         with self.lock:
             log.debug('Stopping %s' % self)
             self.stop=True

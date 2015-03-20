@@ -67,7 +67,6 @@ class ProjectList(object):
         log.debug('Getting project %s from projectlist' % name)
         with self.lock:
             try:
-                log.debug('Got lock.')
                 return self.projects[name]
             except KeyError:
                 raise ProjectListNotFoundError(name)

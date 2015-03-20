@@ -56,7 +56,7 @@ class ServerState:
     def __init__(self, conf):
         self.conf=conf
         self.quit=False
-        self.quitlock=threading.RLock()
+        self.quitlock=threading.Lock()
         self.cmdQueue=cpc.server.queue.CmdQueue()
         self.projectlist=projectlist.ProjectList(conf, self.cmdQueue)
         self.taskExecThreads=None
@@ -112,11 +112,11 @@ class ServerState:
 
     def doQuit(self):
         """set the quit state to true"""
-        log.debug('In doQuit. Lock: %s' % self.quitlock)
+        log.debug('Stopping taskExecThreads')
+        self.taskExecThreads.stop()
+        log.debug('Stopped taskExecThreads')
+        log.debug('In doQuit. Lock: %s. Is already locked: %s' % (self.quitlock, self.quitlock.locked()))
         with self.quitlock:
-            log.debug('Stopping taskExecThreads')
-            self.taskExecThreads.stop()
-            log.debug('Stopped taskExecThreads')
             self._write()
             self.quit=True
             doProfile = self.conf.getProfiling()

@@ -179,8 +179,7 @@ class DataNetwork(object):
 
     def getInstance(self, name):
 
-        log.debug('In dataNetwork.getInstance. Instance: %s' % self.instances[name])
-        log.debug('Lock: %s' % self.lock)
+        log.debug('In dataNetwork.getInstance. Instance: %s' % self.instances.get(name))
         with self.lock:
             i = self.instances.get(name)
             log.debug('In network.getInstance. %s' % i)

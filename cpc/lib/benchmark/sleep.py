@@ -74,6 +74,8 @@ class Sleep(FunctionPrototype):
         pers = Persistence(os.path.join(persDir,
                            "starttime.dat"))
 
+        log.debug('In sleep.executeFinished().')
+
         endTime = int(time.time())
         startTime = pers.get("startTime")
 
