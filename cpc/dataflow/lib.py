@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -137,7 +138,7 @@ class ImportLibrary(description.Describable):
         """Initializes an new import
 
            name = the import's full (canonical) name
-           filename = the import's file name
+           library = the library module
            network = the network for top-level network descriptions.
                      Only the top-level import should have one.
         """
@@ -150,9 +151,6 @@ class ImportLibrary(description.Describable):
     def getName(self):
         """Get the full (canonical) name"""
         return self.name
-    def getFilename(self):
-        """Get the filename associated with the library."""
-        return self.filename
     def addFunction(self, fn):
         """Add one reference to the value."""
         self.functions[fn.getName()] = fn
@@ -197,22 +195,22 @@ class ImportLibrary(description.Describable):
     def getNetwork(self):
         return self.network
 
-    def writeXML(self, outf, indent=0):
-        """Write the function definitions (and possibly a top-level network
-           description) in XML to outf."""
-        #indstr=cpc.util.indStr*indent
-        #outf.write('%s<cpc>\n'%indstr)
-        for tp in self.types.itervalues():
-            if not tp.isImplicit():
-                tp.writeXML(outf, indent)
-                outf.write('\n')
-        for fn in self.functions.itervalues():
-            fn.writeXML(outf, indent)
-            outf.write('\n')
-        if self.network is not None:
-            self.network.writeXML(outf, indent)
-            outf.write('\n')
-        #outf.write('%s</cpc>\n'%indstr)
+    #def writeXML(self, outf, indent=0):
+        #"""Write the function definitions (and possibly a top-level network
+           #description) in XML to outf."""
+        ##indstr=cpc.util.indStr*indent
+        ##outf.write('%s<cpc>\n'%indstr)
+        #for tp in self.types.itervalues():
+            #if not tp.isImplicit():
+                #tp.writeXML(outf, indent)
+                #outf.write('\n')
+        #for fn in self.functions.itervalues():
+            #fn.writeXML(outf, indent)
+            #outf.write('\n')
+        #if self.network is not None:
+            #self.network.writeXML(outf, indent)
+            #outf.write('\n')
+        ##outf.write('%s</cpc>\n'%indstr)
 
 def getModulesDict():
     """
@@ -232,8 +230,8 @@ def getModulesDict():
     for f in files:
         try:
             l = __import__(f, fromlist = ['nonsense']) # fromlist must be a non-empty list
-        except (ImportError,NotImplementedError):
-            log.debug('Cannot import %s' %f)
+        except (ImportError,NotImplementedError) as e:
+            log.debug('Cannot import %s, %s' %(f, e))
             continue
 
         for cls in dir(l): # Loop over all objects in the module's namespace.

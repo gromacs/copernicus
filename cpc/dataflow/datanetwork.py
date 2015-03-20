@@ -1,27 +1,58 @@
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
 import threading
+import logging
 from function import Function, FunctionPrototype
+from apperror import ApplicationError
+try:
+    from collections import OrderedDict
+except ImportError:
+    from cpc.util.ordered_dict import OrderedDict
+
+log = logging.getLogger(__name__)
+
+class NetworkError(ApplicationError):
+    pass
 
 class DataNetwork(object):
 
     def __init__(self, project=None, name=None, taskQueue=None, dirName="",
-                 lock=None, containingInstance=None):
+                 containingInstance=None):
 
         self.project = project
         self.name = name
         self.taskQueue = taskQueue
         self.dirName = dirName
-        self.lock = lock or threading.RLock()
-        self.instances = {}
+        self.lock = threading.RLock()
+        self.instances = OrderedDict()
         self.containingInstance = containingInstance
 
-    def _getAssociatedInstance(self, name):
+    def _getActiveInstance(self, name):
         """Get the named active instance associated with this network."""
         try:
             if name == self.name:
                 return self.containingInstance
             return self.instances[name]
         except KeyError:
-            raise KeyError("Active instance '%s' not found"%name)
+            raise NetworkError("Active instance '%s' not found"%name)
 
     def _getContainingNet(self, instancePathList):
         """Return the tuple of (network, instanceName), for an
@@ -32,11 +63,11 @@ class DataNetwork(object):
         elif len(instancePathList) < 2:
             return (self, instancePathList[0])
         # otherwise, get the network of the next item in the path.
-        topItem=self._getAssociatedInstance(instancePathList[0])
+        topItem=self._getActiveInstance(instancePathList[0])
         topNet=topItem.dataNetwork
         if topNet is None:
-            raise KeyError("Active instance %s has no subnet"%
-                              topItem.getName())
+            raise NetworkError("Active instance %s has no subnet"%
+                               topItem.getName())
         rest=instancePathList[1:]
         return topNet._getContainingNet( rest )
 
@@ -45,6 +76,9 @@ class DataNetwork(object):
         assert isinstance(instance, Function)
         with self.lock:
             name = instance.name
+            log.debug('Adding instance %s to network. %s' % (name, self.instances))
+            if name in self.instances:
+                raise NetworkError('Tried to start instance %s which already exists' % name)
 
             self.instances[name] = instance
 
@@ -58,6 +92,10 @@ class DataNetwork(object):
         assert isinstance(pr, FunctionPrototype), "The function prototype of the function must be of class FunctionPrototype."
 
         with self.lock:
+            log.debug('Adding instance %s to network. %s' % (name, self.instances))
+            if name in self.instances:
+                raise NetworkError('Tried to start instance %s which already exists' % name)
+
             f = Function(pr, name, self)
 
             self.instances[name] = f
@@ -76,9 +114,14 @@ class DataNetwork(object):
 
     def getActiveInstance(self, name):
         """Get the named active instance associated with this network.
-           Throw an ActiveError if not found."""
+           Throws a NetworkError if not found."""
         with self.lock:
-            return self._getAssociatedInstance(name)
+            return self._getActiveInstance(name)
+
+    def tryGetActiveInstance(self, name):
+        """Get the named active instance or return None if not found."""
+        with self.lock:
+            return self.instances.get(name)
 
     def getActiveInstanceList(self, listIO, listSelf):
         """Return a dict of instance names. If listIO is true, each instance's
@@ -125,6 +168,10 @@ class DataNetwork(object):
         ( net, instanceName ) = self._getContainingNet(sp)
         return (net, instanceName)
 
+    def getTaskQueue(self):
+        """Get the task queue associated with this network."""
+        return self.taskQueue
+
     def getInstances(self):
 
         with self.lock:
@@ -132,8 +179,11 @@ class DataNetwork(object):
 
     def getInstance(self, name):
 
+        log.debug('In dataNetwork.getInstance. Instance: %s' % self.instances[name])
+        log.debug('Lock: %s' % self.lock)
         with self.lock:
             i = self.instances.get(name)
+            log.debug('In network.getInstance. %s' % i)
             return i
 
     def activateAll(self):

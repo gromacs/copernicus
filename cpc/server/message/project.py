@@ -40,6 +40,8 @@ import cpc.server.state.projectlist
 from cpc.server.state.user_handler import UserHandler, UserError
 import cpc.util.exception
 from cpc.dataflow.apperror import ApplicationError
+from cpc.dataflow.value import Value
+from cpc.dataflow.function import Function
 #from cpc.dataflow.vtype import instanceType
 
 
@@ -69,7 +71,9 @@ class ProjectServerCommand(ServerCommand):
                 raise cpc.util.exception.CpcError("No project selected")
 
         #we check this at every command, as it may change
+        log.debug('Getting project %s from projectlist' % prjName)
         project = serverState.getProjectList().get(prjName)
+        log.debug('Got project %s' % project)
         if not UserHandler().userAccessToProject(user,prjName):
             raise UserError("You don't have access to this project")
         return project
@@ -116,11 +120,15 @@ class SCProjectDelete(ProjectServerCommand):
         ServerCommand.__init__(self, "project-delete")
 
     def run(self, serverState, request, response):
+        log.debug('About to delete project')
         prj=self.getProject(request, serverState)
         name=prj.getName()
+        log.debug('Name of project to delete: %s' % name)
         delDir = request.hasParam('delete-dir')
+        log.debug('Directory to delete: %s' % name)
         msg = " and its directory %s"%prj.getBasedir() if delDir else ""
         serverState.getProjectList().delete(prj, delDir)
+        log.debug('Deleted project from project list')
         UserHandler().wipeAccessToProject(name)
         if ( ( 'default_project_name' in request.session ) and
              ( name == request.session['default_project_name'] ) ):
@@ -389,10 +397,14 @@ class SCProjectGet(ProjectServerCommand):
             ret=dict()
             ret["name"]=itemname
             try:
+                log.debug('GETNAMEDVAL')
                 val=prj.getNamedValue(itemname)
-                log.debug("VAL: %s" % val)
+                log.debug('GOT VAL: %s' % val)
                 if val is not None:
-                    ret["value"]=val.getDescription()
+                    if isinstance (val, (Value, Function)):
+                        ret["value"]=val.getLiteralContents()
+                    else:
+                        ret["value"]=str(val)
                 else:
                     ret["value"]="not found"
             except ApplicationError as e:
@@ -578,7 +590,7 @@ class SCStatus(ProjectServerCommand):
             err_list=[]
             warn_list=[]
             prj_obj = serverState.getProjectList().get(prj_str)
-            # we iterate over the childred rather than calling _traverseInstance
+            # we iterate over the children rather than calling _traverseInstance
             # here to avoid the project itself being counted as an instance
             for child in prj_obj.getSubValueIterList():
                 self._traverseInstance(prj_obj.getSubValue([child]),
@@ -588,6 +600,7 @@ class SCStatus(ProjectServerCommand):
             ret_prj_dict[prj_str]['queue']  = queue
             ret_prj_dict[prj_str]['errors'] = err_list
             ret_prj_dict[prj_str]['warnings'] = warn_list
+            log.debug('In SCStatus. queue: %s' % queue)
             if prj_str == request.session.get('default_project_name', None):
                 ret_prj_dict[prj_str]['default']=True
         ret_dict['projects'] = ret_prj_dict
@@ -648,13 +661,11 @@ class SCStatus(ProjectServerCommand):
 
     def _traverseInstance(self, instance, state_count, queue,
                           err_list, warn_list):
-        return
-        #"""Recursively traverse the instance tree, depth first search"""
-        #self._handle_instance(instance, state_count, queue, err_list, warn_list)
-        #for child_str in instance.getSubValueIterList():
-            #child_obj = instance.getSubValue([child_str])
-            #if child_obj is not None:
-                #if child_obj.getType() == instanceType:
-                    #self._traverseInstance(child_obj,state_count, queue,
-                                           #err_list, warn_list)
+        """Recursively traverse the instance tree, depth first search"""
+        self._handle_instance(instance, state_count, queue, err_list, warn_list)
+        for child_str in instance.getSubValueList():
+            child_obj = instance.getSubValue([child_str])
+            if child_obj is not None and isinstance(child_obj, Function):
+                self._traverseInstance(child_obj,state_count, queue,
+                                       err_list, warn_list)
 

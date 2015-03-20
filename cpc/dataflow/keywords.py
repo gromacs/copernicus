@@ -1,10 +1,11 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -19,11 +20,11 @@
 
 import string
 
-import apperror
+#import apperror
 
-class IdentifierError(apperror.ApplicationError):
-    def __init__(self, idString):
-        self.str="'%s' is not a valid identifier"
+#class IdentifierError(apperror.ApplicationError):
+    #def __init__(self, idString):
+        #self.str="'%s' is not a valid identifier"
 
 # keyword strings belong here.
 
@@ -71,8 +72,8 @@ idTransTable = string.maketrans('-', '_')
 idEmptyTransTable = string.maketrans('','')
 
 def validIdentifier(idString):
-    """Check whether a string is a valid identifier. 
-       Throws an IdentifierError if it is not a valid identifier, 
+    """Check whether a string is a valid identifier.
+       Throws an IdentifierError if it is not a valid identifier,
        returns a backward-compatibility-fixed string"""
     global keywords
     global allowedIdFirstChars
@@ -86,7 +87,7 @@ def validIdentifier(idString):
     idString=idString.translate(idTransTable)
     # and check the string for non-allowed characters, or whether it is a
     # keyword
-    if ( not idString.translate(idEmptyTransTable, allowedIdChars) 
+    if ( not idString.translate(idEmptyTransTable, allowedIdChars)
          or idString in keywords):
         raise IdentifierError(idString)
     return idString

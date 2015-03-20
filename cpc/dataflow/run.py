@@ -1,22 +1,21 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
-# This file is free software; you can redistribute it and/or
-# modify it under the terms of the GNU Lesser General Public
-# License as published by the Free Software Foundation; either
-# version 2.1 of the License, or (at your option) any later version.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# Lesser General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public
-# License along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301
-# USA
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import logging
 import os
@@ -217,58 +216,58 @@ class FunctionRunInput(object):
         #return retv.isUpdated()
 
 
-    def getBaseDir(self):
-        """Get the project's basedir."""
-        return self.baseDir
+    #def getBaseDir(self):
+        #"""Get the project's basedir."""
+        #return self.baseDir
 
-    def getPersistentDir(self):
-        """Get the persistence directory"""
-        if self.persistentDir is None:
-            return None
-        if not os.path.isabs(self.persistentDir):
-            return os.path.join(self.baseDir, self.persistentDir)
-        else:
-            return self.persistentDir
+    #def getPersistentDir(self):
+        #"""Get the persistence directory"""
+        #if self.persistentDir is None:
+            #return None
+        #if not os.path.isabs(self.persistentDir):
+            #return os.path.join(self.baseDir, self.persistentDir)
+        #else:
+            #return self.persistentDir
 
-    def getParentPersistentDir(self):
-        """Get a good guess of the persistent directory of the
-           parent instance. Can be very risky since we do not know
-           if there is a parent instance or what its persistence
-           directory is called."""
-        if self.persistentDir is None:
-            return None
-        persdir = os.path.join(self.getPersistentDir(), '..', '..', '_persistence')
-        if os.path.isdir(persdir):
-            return persdir
+    #def getParentPersistentDir(self):
+        #"""Get a good guess of the persistent directory of the
+           #parent instance. Can be very risky since we do not know
+           #if there is a parent instance or what its persistence
+           #directory is called."""
+        #if self.persistentDir is None:
+            #return None
+        #persdir = os.path.join(self.getPersistentDir(), '..', '..', '_persistence')
+        #if os.path.isdir(persdir):
+            #return persdir
 
-    def getOutputDir(self):
-        """Get the output directory"""
-        if self.outputDir is None:
-            return None
-        if not os.path.isabs(self.outputDir):
-            return os.path.join(self.baseDir, self.outputDir)
-        else:
-            return self.outputDir
+    #def getOutputDir(self):
+        #"""Get the output directory"""
+        #if self.outputDir is None:
+            #return None
+        #if not os.path.isabs(self.outputDir):
+            #return os.path.join(self.baseDir, self.outputDir)
+        #else:
+            #return self.outputDir
 
     def getCmd(self):
         """Get the command."""
         return self.cmd
 
-    def setMissing(self, activeInstance, project):
-        """Set an actual instance and project. For use by readxml"""
-        self.activeInstance=activeInstance
-        self.function=self.activeInstance.getFunction()
-        self.project=project
-        if self.project is not None:
-            self.baseDir=project.getBasedir()
-            if ( self.persistentDir is not None and
-                 os.path.isabs(self.persistentDir)) :
-                self.persistentDir=os.path.relpath(self.persistentDir,
-                                                   self.baseDir)
-            if ( self.outputDir is not None and
-                 os.path.isabs(self.outputDir)) :
-                self.outputDir=os.path.relpath(self.outputDir,
-                                               self.baseDir)
+    #def setMissing(self, activeInstance, project):
+        #"""Set an actual instance and project. For use by readxml"""
+        #self.activeInstance=activeInstance
+        #self.function=self.activeInstance.getFunction()
+        #self.project=project
+        #if self.project is not None:
+            #self.baseDir=project.getBasedir()
+            #if ( self.persistentDir is not None and
+                 #os.path.isabs(self.persistentDir)) :
+                #self.persistentDir=os.path.relpath(self.persistentDir,
+                                                   #self.baseDir)
+            #if ( self.outputDir is not None and
+                 #os.path.isabs(self.outputDir)) :
+                #self.outputDir=os.path.relpath(self.outputDir,
+                                               #self.baseDir)
 
     def destroy(self):
         """Destroy all file object refs associated with this task."""
@@ -288,48 +287,48 @@ class FunctionRunInput(object):
             self.fo=FunctionRunOutput()
         return self.fo
 
-    def _writeXML(self, outf, writeState, indent=0):
-        """Write the contents of this object in XML form to a file."""
-        indstr=cpc.util.indStr*indent
-        iindstr=cpc.util.indStr*(indent+1)
-        outf.write('%s<function-input version="%d">\n'%(indstr,curVersion))
-        # write the inputs
-        outf.write('%s<env '%iindstr)
-        if self.outputDir is not None:
-            outf.write(' output_dir="%s"'%self.outputDir)
-        if self.persistentDir is not None:
-            outf.write(' persistent_dir="%s"'%self.persistentDir)
-        if not writeState:
-            if self.baseDir is not None:
-                outf.write(' base_dir="%s"'%self.baseDir)
-        outf.write('/>\n')
-        if self.inputs is not None:
-            outf.write('%s<inputs>\n'%iindstr)
-            self.inputs.writeContentsXML(outf, indent+3)
-            outf.write('%s</inputs>\n'%iindstr)
-        if self.subnetInputs is not None:
-            outf.write('%s<subnet-inputs>\n'%iindstr)
-            self.subnetInputs.writeContentsXML(outf, indent+2)
-            outf.write('%s</subnet-inputs>\n'%iindstr)
-        if self.outputs is not None:
-            outf.write('%s<outputs>\n'%iindstr)
-            self.outputs.writeContentsXML(outf, indent+3)
-            outf.write('%s</outputs>\n'%iindstr)
-        if self.subnetOutputs is not None:
-            outf.write('%s<subnet-outputs>\n'%iindstr)
-            self.subnetOutputs.writeContentsXML(outf, indent+2)
-            outf.write('%s</subnet-outputs>\n'%iindstr)
-        if self.cmd is not None:
-            outf.write('%s<commands>\n'%iindstr)
-            self.cmd.writeXML(outf, indent+2)
-            outf.write('%s</commands>\n'%iindstr)
-        outf.write('%s</function-input>\n'%indstr)
+    #def _writeXML(self, outf, writeState, indent=0):
+        #"""Write the contents of this object in XML form to a file."""
+        #indstr=cpc.util.indStr*indent
+        #iindstr=cpc.util.indStr*(indent+1)
+        #outf.write('%s<function-input version="%d">\n'%(indstr,curVersion))
+        ## write the inputs
+        #outf.write('%s<env '%iindstr)
+        #if self.outputDir is not None:
+            #outf.write(' output_dir="%s"'%self.outputDir)
+        #if self.persistentDir is not None:
+            #outf.write(' persistent_dir="%s"'%self.persistentDir)
+        #if not writeState:
+            #if self.baseDir is not None:
+                #outf.write(' base_dir="%s"'%self.baseDir)
+        #outf.write('/>\n')
+        #if self.inputs is not None:
+            #outf.write('%s<inputs>\n'%iindstr)
+            #self.inputs.writeContentsXML(outf, indent+3)
+            #outf.write('%s</inputs>\n'%iindstr)
+        #if self.subnetInputs is not None:
+            #outf.write('%s<subnet-inputs>\n'%iindstr)
+            #self.subnetInputs.writeContentsXML(outf, indent+2)
+            #outf.write('%s</subnet-inputs>\n'%iindstr)
+        #if self.outputs is not None:
+            #outf.write('%s<outputs>\n'%iindstr)
+            #self.outputs.writeContentsXML(outf, indent+3)
+            #outf.write('%s</outputs>\n'%iindstr)
+        #if self.subnetOutputs is not None:
+            #outf.write('%s<subnet-outputs>\n'%iindstr)
+            #self.subnetOutputs.writeContentsXML(outf, indent+2)
+            #outf.write('%s</subnet-outputs>\n'%iindstr)
+        #if self.cmd is not None:
+            #outf.write('%s<commands>\n'%iindstr)
+            #self.cmd.writeXML(outf, indent+2)
+            #outf.write('%s</commands>\n'%iindstr)
+        #outf.write('%s</function-input>\n'%indstr)
 
-    def writeRunXML(self, outf, indent=0):
-        self._writeXML(outf, False, indent)
+    #def writeRunXML(self, outf, indent=0):
+        #self._writeXML(outf, False, indent)
 
-    def writeStateXML(self, outf, indent=0):
-        self._writeXML(outf, True, indent)
+    #def writeStateXML(self, outf, indent=0):
+        #self._writeXML(outf, True, indent)
 
 class FunctionRunOutput(object):
     """A class holding the output of a function's run method.
@@ -361,31 +360,31 @@ class FunctionRunOutput(object):
         # Warning message.
         self.warnMsg=None
 
-    def setOut(self, ioitem, outval):
-        """Add a specified output value.
-            ioitem = the full output specifier
-            outval = an OutValue (OutValue object) """
-        if not isinstance(outval, value.Value):
-            raise FunctionRunError(
-                        "Output value for '%s' is not a Value object."%
-                        (ioitem))
-        oi=OutputItem(ioitem, outval)
-        self.outputs.append( oi )
-        return oi
-        #self.outputs.append( OutputItem(ioitem, outval) )
+    #def setOut(self, ioitem, outval):
+        #"""Add a specified output value.
+            #ioitem = the full output specifier
+            #outval = an OutValue (OutValue object) """
+        #if not isinstance(outval, value.Value):
+            #raise FunctionRunError(
+                        #"Output value for '%s' is not a Value object."%
+                        #(ioitem))
+        #oi=OutputItem(ioitem, outval)
+        #self.outputs.append( oi )
+        #return oi
+        ##self.outputs.append( OutputItem(ioitem, outval) )
 
-    def setSubOut(self, ioitem, outval):
-        """Set a specified subnet output value.
-            name = the output name
-            outval = the output value (OutValue object) """
-        if not isinstance(outval, value.Value):
-            raise FunctionRunError(
-                        "Subnet output value for '%s' is not a Value object."%
-                        (ioitem))
-        oi=OutputItem(ioitem, outval)
-        self.subnetOutputs.append( oi )
-        return oi
-        #self.subnetOutputs.append( OutputItem(ioitem, outval) )
+    #def setSubOut(self, ioitem, outval):
+        #"""Set a specified subnet output value.
+            #name = the output name
+            #outval = the output value (OutValue object) """
+        #if not isinstance(outval, value.Value):
+            #raise FunctionRunError(
+                        #"Subnet output value for '%s' is not a Value object."%
+                        #(ioitem))
+        #oi=OutputItem(ioitem, outval)
+        #self.subnetOutputs.append( oi )
+        #return oi
+        ##self.subnetOutputs.append( OutputItem(ioitem, outval) )
 
     def hasOutputs(self):
         """Check whether there are outputs."""
@@ -441,58 +440,58 @@ class FunctionRunOutput(object):
         """Cancel any previous commands."""
         self.cancelCmds=True
 
-    def writeXML(self, outf, indent=0):
-        """Write the contents of this object in XML form to a file."""
-        indstr=cpc.util.indStr*indent
-        iindstr=cpc.util.indStr*(indent+1)
-        iiindstr=cpc.util.indStr*(indent+2)
-        outf.write('%s<function-output version="%d">\n'%(indstr,curVersion))
-        # write the outputs
-        if self.outputs is not None and len(self.outputs)>0:
-            outf.write('%s<outputs>\n'%iindstr)
-            for output in self.outputs:
-                outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
-                output.val.writeXML(outf, indent+3)
-                outf.write('%s</value>\n'%(iiindstr))
-            outf.write('%s</outputs>\n'%iindstr)
-        if self.subnetOutputs is not None and len(self.subnetOutputs)>0:
-            outf.write('%s<subnet-outputs>\n'%iindstr)
-            for output in self.subnetOutputs:
-                outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
-                output.val.writeXML(outf, indent+3)
-                outf.write('%s</value>\n'%(iiindstr))
-            outf.write('%s</subnet-outputs>\n'%iindstr)
-        if self.newInstances is not None and len(self.newInstances)>0:
-            outf.write('%s<new-instances>\n'%iindstr)
-            for instance in self.newInstances:
-                instance.writeXML(outf, indent+2)
-            outf.write('%s</new-instances>\n'%iindstr)
-        if self.newConnections is not None and len(self.newConnections)>0:
-            outf.write('%s<new-connections>\n'%iindstr)
-            for conn in self.newConnections:
-                conn.writeXML(outf, indent+2)
-            outf.write('%s</new-connections>\n'%iindstr)
-        if self.cmds is not None and len(self.cmds)>0 or self.cancelCmds:
-            if self.cancelCmds:
-                cancelStr='cancel_prev="1"'
-            else:
-                cancelStr=''
-            outf.write('%s<commands %s>\n'%(iindstr, cancelStr))
-            for cmd in self.cmds:
-                cmd.writeXML(outf, indent+2)
-            outf.write('%s</commands>\n'%iindstr)
+    #def writeXML(self, outf, indent=0):
+        #"""Write the contents of this object in XML form to a file."""
+        #indstr=cpc.util.indStr*indent
+        #iindstr=cpc.util.indStr*(indent+1)
+        #iiindstr=cpc.util.indStr*(indent+2)
+        #outf.write('%s<function-output version="%d">\n'%(indstr,curVersion))
+        ## write the outputs
+        #if self.outputs is not None and len(self.outputs)>0:
+            #outf.write('%s<outputs>\n'%iindstr)
+            #for output in self.outputs:
+                #outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
+                #output.val.writeXML(outf, indent+3)
+                #outf.write('%s</value>\n'%(iiindstr))
+            #outf.write('%s</outputs>\n'%iindstr)
+        #if self.subnetOutputs is not None and len(self.subnetOutputs)>0:
+            #outf.write('%s<subnet-outputs>\n'%iindstr)
+            #for output in self.subnetOutputs:
+                #outf.write('%s<value id="%s">\n'%(iiindstr, output.name))
+                #output.val.writeXML(outf, indent+3)
+                #outf.write('%s</value>\n'%(iiindstr))
+            #outf.write('%s</subnet-outputs>\n'%iindstr)
+        #if self.newInstances is not None and len(self.newInstances)>0:
+            #outf.write('%s<new-instances>\n'%iindstr)
+            #for instance in self.newInstances:
+                #instance.writeXML(outf, indent+2)
+            #outf.write('%s</new-instances>\n'%iindstr)
+        #if self.newConnections is not None and len(self.newConnections)>0:
+            #outf.write('%s<new-connections>\n'%iindstr)
+            #for conn in self.newConnections:
+                #conn.writeXML(outf, indent+2)
+            #outf.write('%s</new-connections>\n'%iindstr)
+        #if self.cmds is not None and len(self.cmds)>0 or self.cancelCmds:
+            #if self.cancelCmds:
+                #cancelStr='cancel_prev="1"'
+            #else:
+                #cancelStr=''
+            #outf.write('%s<commands %s>\n'%(iindstr, cancelStr))
+            #for cmd in self.cmds:
+                #cmd.writeXML(outf, indent+2)
+            #outf.write('%s</commands>\n'%iindstr)
 
-        if self.errMsg is not None:
-            outf.write('%s<error msg=%s />\n'%
-                       (iindstr,
-                        xml.sax.saxutils.quoteattr(self.errMsg).
-                        encode('utf-8')))
-        if self.warnMsg is not None:
-            outf.write('%s<warning msg=%s />\n'%
-                       (iindstr,
-                        xml.sax.saxutils.quoteattr(self.warnMsg).
-                        encode('utf-8')))
-        outf.write('%s</function-output>\n'%indstr)
+        #if self.errMsg is not None:
+            #outf.write('%s<error msg=%s />\n'%
+                       #(iindstr,
+                        #xml.sax.saxutils.quoteattr(self.errMsg).
+                        #encode('utf-8')))
+        #if self.warnMsg is not None:
+            #outf.write('%s<warning msg=%s />\n'%
+                       #(iindstr,
+                        #xml.sax.saxutils.quoteattr(self.warnMsg).
+                        #encode('utf-8')))
+        #outf.write('%s</function-output>\n'%indstr)
 
 class NewInstance(object):
     """A class describing a new instance for a function's subnet, as an
@@ -533,187 +532,187 @@ class NewConnection(object):
         outf.write('Connection from %s to %s\n'%(self.srcStr, self.dstStr))
 
 
-    def writeXML(self, outf, indent=0):
-        indstr=cpc.util.indStr*indent
-        if self.val is None:
-            outf.write('%s<connection src="%s" dst="%s" />\n'%
-                       (indstr, self.srcStr, self.dstStr))
-        else:
-            outf.write('%s<connection value="%s" type="%s" dst="%s" />\n'%
-                       (indstr, self.val.value, self.val.getType().getName(),
-                        self.dstStr))
+    ##def writeXML(self, outf, indent=0):
+        ##indstr=cpc.util.indStr*indent
+        ##if self.val is None:
+            ##outf.write('%s<connection src="%s" dst="%s" />\n'%
+                       ##(indstr, self.srcStr, self.dstStr))
+        ##else:
+            ##outf.write('%s<connection value="%s" type="%s" dst="%s" />\n'%
+                       ##(indstr, self.val.value, self.val.getType().getName(),
+                        ##self.dstStr))
 
 
 
-class IOReaderError(apperror.ApplicationXMLError):
-    def __init__(self, msg, reader):
-        loc=reader.getLocator()
-        if loc is not None:
-            self.str = "%s (line %d, column %d): %s"%(reader.getFilename(),
-                                                      loc.getLineNumber(),
-                                                      loc.getColumnNumber(),
-                                                      msg)
-        else:
-            self.str = "%s: %s"%(reader.getFilename(), msg)
+#class IOReaderError(apperror.ApplicationXMLError):
+    #def __init__(self, msg, reader):
+        #loc=reader.getLocator()
+        #if loc is not None:
+            #self.str = "%s (line %d, column %d): %s"%(reader.getFilename(),
+                                                      #loc.getLineNumber(),
+                                                      #loc.getColumnNumber(),
+                                                      #msg)
+        #else:
+            #self.str = "%s: %s"%(reader.getFilename(), msg)
 
 
 
-class OutputItem:
-    """Class to hold information about an output item:
-       name = the full name of the output item
-       val = the value
-       destVal = (optional) the actual output subvalue as used by the server
-       """
-    def __init__(self, name, val, destVal=None):
-        self.name=name
-        self.val=val
-        #self.item=None
-        self.destVal=destVal
+#class OutputItem:
+    #"""Class to hold information about an output item:
+       #name = the full name of the output item
+       #val = the value
+       #destVal = (optional) the actual output subvalue as used by the server
+       #"""
+    #def __init__(self, name, val, destVal=None):
+        #self.name=name
+        #self.val=val
+        ##self.item=None
+        #self.destVal=destVal
 
-    def describe(self, outf):
-        """Print a description of this outputItem to outf"""
-        outf.write('Set %s to %s\n'%(self.name, self.val))
+    #def describe(self, outf):
+        #"""Print a description of this outputItem to outf"""
+        #outf.write('Set %s to %s\n'%(self.name, self.val))
 
-class BoolValue(value.Value):
-    """OutValue for boolean objects."""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.boolType)
-        self.value=val
+#class BoolValue(value.Value):
+    #"""OutValue for boolean objects."""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.boolType)
+        #self.value=val
 
-class IntValue(value.Value):
-    """OutValue for integers."""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.intType)
-        self.value=val
+#class IntValue(value.Value):
+    #"""OutValue for integers."""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.intType)
+        #self.value=val
 
-class FloatValue(value.Value):
-    """OutValue for floats."""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.floatType)
-        self.value=val
+#class FloatValue(value.Value):
+    #"""OutValue for floats."""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.floatType)
+        #self.value=val
 
-class StringValue(value.Value):
-    """OutValue for strings."""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.stringType)
-        self.value=val
+#class StringValue(value.Value):
+    #"""OutValue for strings."""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.stringType)
+        #self.value=val
 
-class FileValue(value.Value):
-    """OutValue for files."""
-    def __init__(self, val, fileList=None):
-        """Assuming val is a valid filename."""
-        value.Value.__init__(self, None, vtype.fileType)
-        self.value=val
-        if fileList is not None:
-            if os.path.isabs(val):
-                self.fileValue=fileList.getAbsoluteFile(val)
-            else:
-                self.fileValue=fileList.getFile(val)
+#class FileValue(value.Value):
+    #"""OutValue for files."""
+    #def __init__(self, val, fileList=None):
+        #"""Assuming val is a valid filename."""
+        #value.Value.__init__(self, None, vtype.fileType)
+        #self.value=val
+        #if fileList is not None:
+            #if os.path.isabs(val):
+                #self.fileValue=fileList.getAbsoluteFile(val)
+            #else:
+                #self.fileValue=fileList.getFile(val)
 
-class ArrayValue(value.Value):
-    """OutValue for arrays. Assumes a list of Values"""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.arrayType)
-        self.value=val
+#class ArrayValue(value.Value):
+    #"""OutValue for arrays. Assumes a list of Values"""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.arrayType)
+        #self.value=val
 
-class DictValue(value.Value):
-    """OutValue for arrays. Assumes a dict of Values"""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.dictType)
-        self.value=val
+#class DictValue(value.Value):
+    #"""OutValue for arrays. Assumes a dict of Values"""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.dictType)
+        #self.value=val
 
-class RecordValue(value.Value):
-    """OutValue for records. Assumes a dict of Values"""
-    def __init__(self, val):
-        value.Value.__init__(self, None, vtype.recordType)
-        if val is not None:
-            self.value=val
-        else:
-            self.value=dict()
-    def addItem(self, name, val):
-        """Add a single item."""
-        self.value[name] = val
-
-
-
-class IOReader(xml.sax.handler.ContentHandler):
-    """XML reader for external commands. Parses input and output generated by
-       ExternalFunction.run()."""
-    # Section numbers
-    none=0
-    env=1
-    inputs=2
-    outputs=3
-    subnetInputs=4
-    subnetOutputs=5
-    newInstances=6
-    newConnections=7
-    cmd=8
-
-    def __init__(self, functionRunInput, functionRunOutput):
-        """Initialize based on whether the reader is for input or output."""
-        #self.isInput=isInput
-        self.commands=[]
-        self.cmdReader=None
-        self.cmdReaderEndTag=None
-        # and internal stuff
-        self.section=IOReader.none
-        self.valueReader=None
-        self.valueReaderEndTag=None
-        self.valueName=None
-        self.inp=functionRunInput
-        self.out=functionRunOutput
-        self.loc=None
-        if self.inp is None:
-            if self.out is None:
-                raise IOReaderError("IOReader is neither input nor output",
-                                    self)
-            self.isInput=False
-        else:
-            if self.out is not None:
-                raise IOReaderError("IOReader is both input nor output", self)
-            self.isInput=True
-
-    def setCmdReader(self, cmdReader, endTag):
-        self.curCmdReader=cmdReader
-        self.curCmdReaderEndTag=endTag
-        if cmdReader is not None:
-            cmdReader.setDocumentLocator(self.loc)
-
-    def setValueReader(self, valueReader, endTag):
-        self.valueReader=valueReader
-        self.valueReaderEndTag=endTag
-        if valueReader is not None:
-            valueReader.setDocumentLocator(self.loc)
-
-    def setReportFilename(self, reportFilename):
-        self.filename=reportFilename
-
-    def read(self, file, reportFilename):
-        """Read a file object with input items. reportFilename is used for error
-           messages."""
-        self.filename=reportFilename
-        parser=xml.sax.make_parser()
-        parser.setContentHandler(self)
-        #inf=open(file, 'r')
-        parser.parse(file)
-        #inf.close()
-
-    def getFilename(self):
-        return self.filename
-    def getLocator(self):
-        return self.loc
+#class RecordValue(value.Value):
+    #"""OutValue for records. Assumes a dict of Values"""
+    #def __init__(self, val):
+        #value.Value.__init__(self, None, vtype.recordType)
+        #if val is not None:
+            #self.value=val
+        #else:
+            #self.value=dict()
+    #def addItem(self, name, val):
+        #"""Add a single item."""
+        #self.value[name] = val
 
 
-    def getFunctionRunInput(self):
-        return self.inp
-    def getFunctionRunOutput(self):
-        return self.out
 
-    def setDocumentLocator(self, locator):
-        self.loc=locator
-        if self.cmdReader is not None:
-            self.cmdReader.setDocumentLocator(locator)
+#class IOReader(xml.sax.handler.ContentHandler):
+    #"""XML reader for external commands. Parses input and output generated by
+       #ExternalFunction.run()."""
+    ## Section numbers
+    #none=0
+    #env=1
+    #inputs=2
+    #outputs=3
+    #subnetInputs=4
+    #subnetOutputs=5
+    #newInstances=6
+    #newConnections=7
+    #cmd=8
+
+    #def __init__(self, functionRunInput, functionRunOutput):
+        #"""Initialize based on whether the reader is for input or output."""
+        ##self.isInput=isInput
+        #self.commands=[]
+        #self.cmdReader=None
+        #self.cmdReaderEndTag=None
+        ## and internal stuff
+        #self.section=IOReader.none
+        #self.valueReader=None
+        #self.valueReaderEndTag=None
+        #self.valueName=None
+        #self.inp=functionRunInput
+        #self.out=functionRunOutput
+        #self.loc=None
+        #if self.inp is None:
+            #if self.out is None:
+                #raise IOReaderError("IOReader is neither input nor output",
+                                    #self)
+            #self.isInput=False
+        #else:
+            #if self.out is not None:
+                #raise IOReaderError("IOReader is both input nor output", self)
+            #self.isInput=True
+
+    #def setCmdReader(self, cmdReader, endTag):
+        #self.curCmdReader=cmdReader
+        #self.curCmdReaderEndTag=endTag
+        #if cmdReader is not None:
+            #cmdReader.setDocumentLocator(self.loc)
+
+    #def setValueReader(self, valueReader, endTag):
+        #self.valueReader=valueReader
+        #self.valueReaderEndTag=endTag
+        #if valueReader is not None:
+            #valueReader.setDocumentLocator(self.loc)
+
+    #def setReportFilename(self, reportFilename):
+        #self.filename=reportFilename
+
+    #def read(self, file, reportFilename):
+        #"""Read a file object with input items. reportFilename is used for error
+           #messages."""
+        #self.filename=reportFilename
+        #parser=xml.sax.make_parser()
+        #parser.setContentHandler(self)
+        ##inf=open(file, 'r')
+        #parser.parse(file)
+        ##inf.close()
+
+    #def getFilename(self):
+        #return self.filename
+    #def getLocator(self):
+        #return self.loc
+
+
+    #def getFunctionRunInput(self):
+        #return self.inp
+    #def getFunctionRunOutput(self):
+        #return self.out
+
+    #def setDocumentLocator(self, locator):
+        #self.loc=locator
+        #if self.cmdReader is not None:
+            #self.cmdReader.setDocumentLocator(locator)
 
     #def startElement(self, name, attrs):
         #if self.valueReader is not None:

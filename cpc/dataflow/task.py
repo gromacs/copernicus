@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -72,14 +73,11 @@ class TaskQueue(object):
 
 class Task(object):
     """A task is a queueable and runnable function with inputs."""
-    def __init__(self, project, activeInstance, function, fnInput,
-                 priority, seqNr):
+    def __init__(self, project, activeInstance, priority, seqNr):
         """Create a task based on a function
 
            project = the project of this task
            activeInstance = the activeInstance this task belongs to
-           function = the function object
-           fnInput = the FunctionRunInput object
            priority = the task's priority.
            seqNr = the task's sequence number
            """
@@ -88,21 +86,19 @@ class Task(object):
         log.debug("Making task of instance %s"%
                   (activeInstance.getCanonicalName()) )
         self.activeInstance=activeInstance
-        self.function=function
         self.priority=priority
         self.id=id(self)
         self.project = project
         # we want only one copy of a task running at a time
         self.lock=threading.Lock()
         self.seqNr=seqNr
-        self.fnInput=fnInput
         self.cmds=[]
         self.cputime=0
         self.canceled=False
 
-    def setFnInput(self, fnInput):
-        """Replace the fnInput object. Only for readxml"""
-        self.fnInput=fnInput
+    #def setFnInput(self, fnInput):
+        #"""Replace the fnInput object. Only for readxml"""
+        #self.fnInput=fnInput
     def addCommands(self, cmds, deactivate):
         """Add commands. Only for readxml"""
         for cmd in cmds:
@@ -111,9 +107,9 @@ class Task(object):
                 cmd.deactivate()
         self.cmds.extend(cmds)
 
-    def getFnInput(self):
-        """Get the fnInput object."""
-        return self.fnInput
+    #def getFnInput(self):
+        #"""Get the fnInput object."""
+        #return self.fnInput
 
     def getCommands(self):
         return self.cmds
@@ -149,36 +145,41 @@ class Task(object):
             canceled=None
             finished=False
             try:
-                log.debug("Running function %s"%
-                          self.activeInstance.instance.getName())
                 # a transaction object that serves as the function run
                 # output object.
-                fnOutput=transaction.Transaction(self.project,
-                                                 self,
-                                                 self.activeInstance.getNet(),
-                                                 self.function.getLib())
-                self.fnInput.setFunctionRunOutput(fnOutput)
-                self.fnInput.cmd=cmd
-                self.fnOutput=fnOutput
-                #self.fnInput.reset()
+                #fnOutput=transaction.Transaction(self.project,
+                                                 #self,
+                                                 #self.activeInstance.getNet(),
+                                                 #self.function.getLib())
+                #self.fnInput.setFunctionRunOutput(fnOutput)
+                #self.fnInput.cmd=cmd
+                #self.fnOutput=fnOutput
 
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.acquire()
                     locked=True
                 # now actually run
                 #self.ret=self.function.run(self.fnInput)
-                self.function.run(self.fnInput)
+
+                self.activeInstance.commandsToWorker = []
+
+                if cmd:
+                    log.debug('Command is finished. Running executeFinished().')
+                    self.activeInstance.functionPrototype.executeFinished(function = self.activeInstance)
+                else:
+                    log.debug('Command is not finished. Running execute().')
+                    self.activeInstance.functionPrototype.execute(function = self.activeInstance)
                 # and we're done.
-                if self.fnOutput.cancelCmds:
-                    # cancel all outstanding commands.
-                    canceled=self.activeInstance.cancelTasks(self.seqNr)
+                #if self.fnOutput.cancelCmds:
+                    ## cancel all outstanding commands.
+                    #canceled=self.activeInstance.cancelTasks(self.seqNr)
                 if self.activeInstance.runLock is not None:
                     self.activeInstance.runLock.release()
                     locked=False
 
                 # the commands must be handled here because they're really
                 # a property of the task
-                self.fnInput.cmd=None
+                #self.fnInput.cmd=None
                 if cmd is not None:
                     self.cmds.remove(cmd)
                     # do cpu time accounting.
@@ -187,20 +188,21 @@ class Task(object):
                         self.activeInstance.addCputime(cputime)
 
                 # handle things that can throw exceptions:
-                haveRetcmds=( (self.fnOutput.cmds is not None) and
-                              (len(self.fnOutput.cmds)>0) )
+                #haveRetcmds=( (self.fnOutput.cmds is not None) and
+                              #(len(self.fnOutput.cmds)>0) )
 
-                if ( (self.fnOutput.hasOutputs() or
-                      self.fnOutput.hasSubnetOutputs()) and
-                     ( haveRetcmds or len(self.cmds)>0 ) ):
-                    raise TaskError(
-                       "Task returned both outputs: %s, %s and commands %s,%s"%
-                       (str(self.fnOutput.outputs),
-                        str(self.fnOutput.subnetOutputs),
-                        str(self.cmds),str(self.fnOutput.cmds)))
+                #if ( (self.fnOutput.hasOutputs() or
+                      #self.fnOutput.hasSubnetOutputs()) and
+                     #( haveRetcmds or len(self.cmds)>0 ) ):
+                    #raise TaskError(
+                       #"Task returned both outputs: %s, %s and commands %s,%s"%
+                       #(str(self.fnOutput.outputs),
+                        #str(self.fnOutput.subnetOutputs),
+                        #str(self.cmds),str(self.fnOutput.cmds)))
 
-                if self.fnOutput.cmds is not None:
-                    for cmd in self.fnOutput.cmds:
+                if self.activeInstance.commandsToWorker:
+                    for cmd in self.activeInstance.commandsToWorker:
+                        log.debug('Adding command to run on worker: %s' % cmd)
                         cmd.setTask(self)
                         self.cmds.append(cmd)
                     finished=False
@@ -208,43 +210,45 @@ class Task(object):
                     finished=True
 
             except cpc.util.CpcError as e:
-                if locked:
-                    if self.activeInstance.runLock is not None:
-                        self.activeInstance.runLock.release()
-                self.fnOutput.setError(e.__unicode__())
-                #self.activeInstance.markError(e.__unicode__())
+                #self.fnOutput.setError(e.__unicode__())
+                self.activeInstance.markError(e.__unicode__())
                 return (True, None, canceled)
             except:
-                if locked:
-                    if self.activeInstance.runLock is not None:
-                        self.activeInstance.runLock.release()
                 fo=StringIO()
                 traceback.print_exception(sys.exc_info()[0], sys.exc_info()[1],
                                           sys.exc_info()[2], file=fo)
-                errmsg="Run error: %s"%(fo.getvalue())
-                self.fnOutput.setError(errmsg)
-                #self.activeInstance.markError(errmsg)
+                errmsg = "Run error: %s" % fo.getvalue()
+                log.debug(errmsg)
+                self.activeInstance.markError(errmsg)
+                #self.fnOutput.setError(errmsg)
                 return (True, None, canceled)
-        return (finished, self.fnOutput.cmds, canceled)
+            finally:
+                if locked:
+                    if self.activeInstance.runLock is not None:
+                        self.activeInstance.runLock.release()
+        #FIXME: Return what is needed
+        return (finished, self.activeInstance.commandsToWorker, canceled)
+        #return (finished, self.fnOutput.cmds, canceled)
 
     def handleOutput(self):
         """Called after the run() method returns 'finished=True'."""
         with self.lock:
+            #FIXME: Should something like activeInstance.executeFinished(...) be run here??
             # run the output as a transaction.
-            self.fnOutput.run()
+            #self.fnOutput.run()
 
             self.activeInstance.removeTask(self)
 
             # everything went OK; we got results
-            log.debug("Ran fn %s, got %s"%(self.function.getName(),
-                                           str(self.fnOutput.outputs)) )
+            #log.debug("Ran fn %s, got %s"%(self.function.getName(),
+                                           #str(self.fnOutput.outputs)) )
             # there is nothing more to execute
             if len(self.cmds) == 0:
-                self.fnInput.destroy()
-                self.fnInput=None
+                #self.fnInput.destroy()
+                #self.fnInput=None
 
                 log.debug("Removing files in persistence subdirectories")
-                fullPersDir=os.path.join(self.project.basedir, self.activeInstance.persDir)
+                fullPersDir=os.path.join(self.project.basedir, self.activeInstance.persistentDir)
                 if os.path.isdir(fullPersDir):
                     for d in os.listdir(fullPersDir):
                         dir_path = os.path.join(fullPersDir, d)
@@ -266,7 +270,7 @@ class Task(object):
         return "%s.%s"%(self.activeInstance.getCanonicalName(), self.seqNr)
 
     def getFunctionName(self):
-        return self.function.getName()
+        return self.activeInstance.getName()
 
     def getProject(self):
         return self.project

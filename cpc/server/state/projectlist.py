@@ -64,8 +64,10 @@ class ProjectList(object):
 
     def get(self, name):
         """get a project by its name"""
+        log.debug('Getting project %s from projectlist' % name)
         with self.lock:
             try:
+                log.debug('Got lock.')
                 return self.projects[name]
             except KeyError:
                 raise ProjectListNotFoundError(name)
@@ -97,7 +99,7 @@ class ProjectList(object):
         with self.lock:
             for project in self.projects.itervalues():
                 ret.append(project.getName())
-        return ret
+            return ret
 
     def delete(self, project, delDir=False):
         """Delete a project."""
@@ -162,8 +164,9 @@ class ProjectList(object):
         except xml.sax._exceptions.SAXParseException:
             log.debug("project list xml error (%s):" % filename)
         for prj in rd.getProjects():
-            self.projects[prj.getName()] = prj
-            prj.readState()
+            prj = prj.readState()
+            if prj:
+                self.projects[prj.getName()] = prj
 
     #reads in the project state of a project state that has been restored from backup
     def readProjectState(self, projectName):
@@ -177,7 +180,7 @@ class ProjectList(object):
         # Think of the case when we are moving projects to another server
         # here we replace those old paths with new valid paths
 
-        stateBakXML = "%s/%s"%(projectBaseDir,"_state.bak.xml")
+        stateBakXML = "%s/%s"%(projectBaseDir,"_state.bak.pickle")
         #/get the state_bak.xml
         file = open(stateBakXML, 'r')
         content = file.read()
@@ -195,7 +198,7 @@ class ProjectList(object):
             file.close()
 
         #reread project state
-        prj.readState(stateFile="_state.bak.xml")
+        prj.readState(stateFile="_state.bak.pickle")
 
 class ProjectListReaderError(cpc.util.CpcXMLError):
     pass

@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -42,11 +43,11 @@ import keywords
 import task
 import transaction
 import lib
-import value
 import vtype
 #import readxml
-from cpc.dataflow.datanetwork import DataNetwork
-from cpc.dataflow.function import Function, FunctionBase
+from datanetwork import DataNetwork
+from function import Function, FunctionBase
+from value import Value, ListValue, DictValue
 
 log=logging.getLogger(__name__)
 
@@ -85,8 +86,7 @@ class Project(object):
         # the file list
         #self.fileList=value.FileList(basedir)
         # create the active network (the top-level network)
-        self.network=DataNetwork(project=self, taskQueue=self.queue, dirName="",
-                                 lock=self.updateLock)
+        self.network=DataNetwork(project=self, taskQueue=self.queue, dirName="")
         # now take care of imports. First get the import path
         self.topLevelImport=lib.ImportLibrary("", None, self.network)
         # a list of available libraries
@@ -158,6 +158,7 @@ class Project(object):
            [instance]:[instance].[ioitem]."""
         with self.updateLock:
             itemlist=vtype.parseItemList(itemname)
+            log.debug ('Getting %s' % itemname)
             item=self.getSubValue(itemlist)
             return item
 
@@ -167,6 +168,7 @@ class Project(object):
            length 1 (i.e. the last operation was on the topmost level)..
 
            NOTE: assumes a locked tranactionStackLock"""
+        log.debug('In project._tryImmediateTransaction. stack len: %d' % len(self.transactionStack))
         if len(self.transactionStack) == 1:
             self.transactionStack[0].run(outf)
             # now replace the transaction with a fresh one.
@@ -187,6 +189,15 @@ class Project(object):
             if not self._tryImmediateTransaction(outf):
                 sv.describe(outf)
 
+    def scheduleConnect(self, src, dst, outf):
+        """Add an instance of a connect in the transaction schedule."""
+        src=keywords.fixID(src)
+        dst=keywords.fixID(dst)
+        log.debug('IN scheduleConnect')
+        with self.transactionStackLock:
+            ac=self.transactionStack[-1].addConnection(src, dst)
+            if not self._tryImmediateTransaction(outf):
+                ac.describe(outf)
 
 
     def beginTransaction(self, outf):
@@ -220,6 +231,7 @@ class Project(object):
 
     def getNamedInstance(self, instname):
         pathname=keywords.fixID(instname)
+        log.debug('PROJ: in getNamedInstance')
         with self.updateLock:
             itemlist=vtype.parseItemList(pathname)
             item=self.getSubValue(itemlist)
@@ -240,10 +252,34 @@ class Project(object):
             if item is None:
                 ret["type"]="Not found: "
                 ret["name"]=pathname
-            elif isinstance(item, value.Value):
-                # it is an active I/O item
+            elif isinstance(item, Value):
                 ret["type"]="input/output value"
                 ret["name"]=pathname
+                if isinstance(item, ListValue):
+                    memType=item.dataType
+                    if memType:
+                        subi={"type" : memType.getTypeString()}
+                    else:
+                        subi={"type" : None}
+                    ret["subitems"]=[ subi ]
+                elif isinstance(item, DictValue):
+                    log.debug('ITEM NAME: %s' % item.name)
+                    ret['subitems'] = []
+                    for key,value in item.value.items():
+                        subi = dict()
+                        subi['name'] = key
+                        if isinstance(value, ListValue) and value.dataType:
+                            typestr = '%s/%s' % (value.typeString, value.dataType.typeString)
+                        else:
+                            typestr = value.getTypeString()
+                        subi['type'] = typestr
+                        if value.optional:
+                            subi['optional']=1
+                        if value.description:
+                            subi['desc'] = value.description
+                        ret['subitems'].append(subi)
+
+                # it is an active I/O item
                 ret["typename"]=item.getTypeString()
                 # FIXME:
                 #if tp.isSubtype(vtype.recordType):
@@ -266,10 +302,6 @@ class Project(object):
                         #if mem.desc is not None:
                             #subi["desc"]=mem.desc.get()
                         #ret["subitems"].append( subi )
-                if isinstance(item, (value.ListValue, value.DictValue)):
-                    memType=item.dataType
-                    subi={"type" : memType.getTypeString()}
-                    ret["subitems"]=[ subi ]
             elif isinstance(item, Function):
                 ret["type"]="instance"
                 ret["state"]=item.state
@@ -277,7 +309,8 @@ class Project(object):
                 ret["fn_name"]=item.name
                 ret["inputs" ]=item.getAllInputNames()
                 ret["outputs" ]=item.getAllOutputNames()
-                net=item.dataNetwork
+                net=item.subnet
+                log.debug('Subnet of %s: %s' % (item.name, net))
                 if net is not None:
                     ret["instances" ]=net.getActiveInstanceList(False, False)
                 #FIXME:
@@ -309,14 +342,14 @@ class Project(object):
             item=self.imports.getItemByFullName(pathname)
             if item is not None:
                 ret["name"]=pathname
-                ret["desc"]=item.getDescription() or ""
+                ret["desc"]=item.getLiteralContents() or ""
                 log.debug('Get description of: %s' % item)
                 if isinstance(item, lib.ImportLibrary):
                     ret["type"]="library"
                     rfuncs=[]
                     for name, f in item.functions.items():
                         nf={ "name" : name }
-                        nf["desc"] = f.getDescription() or ""
+                        nf["desc"] = f.getLiteralContents() or ""
                         rfuncs.append(nf)
                     ret["functions"]=rfuncs
                     #FIXME:
@@ -343,7 +376,7 @@ class Project(object):
                         retd=dict()
                         retd["name"]=key
                         retd["type"]=ioitems.getMember(key).getName()
-                        retd["desc"]=ioitems.getRecordMember(key).getDescription() or ""
+                        retd["desc"]=ioitems.getRecordMember(key).getLiteralContents() or ""
                         inps.append(retd)
                     ret["inputs"]=inps
                     ioitems=item.getOutputs()
@@ -352,7 +385,7 @@ class Project(object):
                         retd=dict()
                         retd["name"]=key
                         retd["type"]=ioitems.getMember(key).getName()
-                        desc=ioitems.getRecordMember(key).getDescription()
+                        desc=ioitems.getRecordMember(key).getLiteralContents()
                         if desc is not None:
                             retd["desc"]=desc.get()
                         else:
@@ -416,8 +449,8 @@ class Project(object):
 
     #FIXME:
     def addInstance(self, name, functionName):
-        """Add an instance with a name and function name to the top-level
-           network."""
+        """Add an instance with a name of a type matching function name
+           to the top-level network."""
         name=keywords.fixID(name)
         functionName=keywords.fixID(functionName)
         with self.updateLock:
@@ -429,10 +462,13 @@ class Project(object):
             log.debug('NET: %s, instance name: %s' % (net, instanceName))
             if net.containingInstance is not None:
                 nm=net.containingInstance.getCanonicalName()
-            log.debug('NM: %s' % nm)
             ##log.debug("net=%s, instanceName=%s"%(nm, instanceName))
             #inst=instance.Instance(instanceName, func, functionName)
-            net.newInstance(func, name)
+            i = net.newInstance(func, name)
+
+            self.functions[name] = i
+
+            return i
 
     #FIXME:
     #def importTopLevelFile(self, fileObject, filename):
@@ -467,7 +503,7 @@ class Project(object):
                     self.imports.add(impLib)
                     return newLib
                 except Exception as e:
-                    log.debug('Cannot load library %s: %s' % name, e)
+                    log.debug('Cannot load library %s: %s' % (name, e))
             else:
                 return self.imports.get(name)
 
@@ -531,16 +567,14 @@ class Project(object):
         return self.queue
 
     def readState(self,stateFile="_state.pickle"):
-        return
         fname=os.path.join(self.basedir, stateFile)
+        loadedProject = None
         if os.path.exists(fname):
             #confLock = self.conf.lock
             #queue = self.queue
             #cmdQueue = self.cmdQueue
             #transactionStackLock = self.transactionStackLock
             #libLock = self.imports.lock
-
-            log.debug("Importing project state from %s"%fname)
             updateLock = self.updateLock
             #self.updateLock = None
             #self.conf.lock = None
@@ -552,8 +586,9 @@ class Project(object):
             #self.network.taskQueue = None
             with updateLock:
                 fin=open(fname, 'r')
-                self=pickle.load(fin)
-            self.updateLock = updateLock
+                loadedProject=pickle.load(fin)
+            loadedProject.updateLock = updateLock
+            loadedProject.network.lock = updateLock
             #self.conf.lock = confLock
             #self.queue = queue
             #self.cmdQueue = cmdQueue
@@ -561,6 +596,9 @@ class Project(object):
             #self.imports.lock = libLock
             #self.network.lock = updateLock
             #self.network.taskQueue = queue
+            #print "Loaded project. ToplevelImport: %s its name is %s" % (loadedProject.topLevelImport, loadedProject.topLevelImport.name)
+
+        return loadedProject
 
 
     def writeState(self):
@@ -578,10 +616,12 @@ class Project(object):
         #self.imports.lock = None
         #self.network.lock = None
         #self.network.taskQueue = None
+        log.debug('Writing project state. self.updateLock: %s' % self.updateLock)
         with self.updateLock:
             fname=os.path.join(self.basedir, "_state.pickle")
             nfname=os.path.join(self.basedir, "_state.pickle.new")
             fout=open(nfname, 'w')
+            log.debug("Writing project. ToplevelImport: %s its name is %s" % (self.topLevelImport, self.topLevelImport.name))
             pickle.dump(self, fout)
             fout.close()
             ## now we use POSIX file renaming  atomicity to make sure the state
@@ -601,13 +641,16 @@ class Project(object):
     ########################################################
     def _getSubVal(self, itemList):
         """Helper function"""
+        log.debug('In project._getSubVal. network: %s, itemList[0] %s' % (self.network, itemList[0]))
         subval=self.network.getInstance(itemList[0])
+        log.debug('In project._getSubVal %s %s' % (subval, self.network.instances))
         return subval
 
     def getSubValue(self, itemList):
         """Get a specific subvalue through a list of subitems, or return None
            if not found.
            itemList = the path of the value to return"""
+        log.debug('In getSubValue. len(itemList) = %d' % len(itemList))
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
@@ -621,12 +664,13 @@ class Project(object):
            return None if not found.
            itemList = the path of the value to return/create.
         """
+        log.debug('PROJECT GETCREATESUBVAL itemList: %s' % itemList)
         if len(itemList)==0:
             return self
         subval=self._getSubVal(itemList)
+        log.debug('PROJECT GETCREATESUBVAL subval: %s' % subval)
         if subval is not None:
             return subval.getCreateSubValue(itemList[1:])
-        #raise ValError("Cannot create sub value of project")
         raise Exception("Cannot create sub value of project")
 
     def getClosestSubValue(self, itemList):
@@ -663,7 +707,7 @@ class Project(object):
         #"""Return the type associated with this value"""
         #return vtype.instanceType
 
-    def getDescription(self):
+    def getLiteralContents(self):
         """Return a 'description' of a value: an item that can be passed to
            the client describing the value."""
         ret=self.network.getActiveInstanceList(False, False)

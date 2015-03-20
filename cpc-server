@@ -144,7 +144,6 @@ try:
         cpc.network.server.runServer(serverMode, doFork)
         sys.exit(0)
     elif cmd == "setup":
-        print "IMAN in setup"
     # the -c option will be ignored here.
         rundir = None
         altHostName = None

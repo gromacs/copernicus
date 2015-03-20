@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -76,20 +77,22 @@ class SetValue(object):
         #    raise SetError(itemName)
 
 
-    def findAffected(self, affectedOutputAIs, affectedInputAIs):
-        """Find all affected input and output active instances."""
-        activeInstance=self.closestVal.ownerFunction
-        activeInstance.getValueAffectedAIs(self.closestVal, affectedInputAIs)
+    #def findAffected(self, affectedOutputAIs, affectedInputAIs):
+        #"""Find all affected input and output active instances."""
+        #activeInstance=self.closestVal.ownerFunction
+        #activeInstance.getValueAffectedAIs(self.closestVal, affectedInputAIs)
 
     def set(self, project, sourceTag):
-        return
-        #activeInstance=self.closestVal.owner
-        #with activeInstance.lock:
-            #dstVal=self.project.getCreateSubValue(self.itemList)
-            ##dstVal=activeInstance.findCreateNamedInput(self.direction,
-            ##                                                self.ioItemList,
-            ##                                                sourceTag)
-            ## now we can extract the type.
+        log.debug('TRANSACTION: set. self.sourceType: %s' % self.sourceType)
+        activeFunction = self.closestVal.ownerFunction
+        if activeFunction:
+            with activeFunction.lock:
+                dstVal=self.project.getCreateSubValue(self.itemList)
+                dstVal.setFromString(self.literal)
+        else:
+            dstVal=self.project.getCreateSubValue(self.itemList)
+            dstVal.setFromString(self.literal)
+
             #tp=dstVal.getType()
             #if not isinstance(self.literal, value.Value):
                 #newVal=value.interpretLiteral(self.literal, tp, self.sourceType,
@@ -102,7 +105,7 @@ class SetValue(object):
                               #"Incompatible types in assignment: '%s' to '%s'"%
                               #(rval.getType().getName(), tp.getName()))
         #activeInstance.stageNamedInput(dstVal, newVal, sourceTag)
-        # this should be done in the transaction:
+        ##this should be done in the transaction:
         #dstVal.notifyOwner(sourceTag, None)
         #dstVal.notifyDestinations(sourceTag, None)
 
@@ -183,7 +186,8 @@ class Transaction(run.FunctionRunOutput):
                 # and bail out immediately
                 return
         try:
-            #log.debug("TRANSACTION STARTING *****************")
+            log.debug("TRANSACTION STARTING *****************")
+            log.debug('TRANSACTION: setValues: %s' % self.setValues)
             if (self.newConnections is None and self.setValues is None):
                 # In this case, there is only one active instance to lock
                 pass
@@ -214,12 +218,20 @@ class Transaction(run.FunctionRunOutput):
             if self.newConnections is not None:
                 # Make the connections
                for newConnection in self.newConnections:
-                    if newConnection.conn is None:
-                        self._makeConn(newConnection)
-                    self.activeNetwork.findConnectionSrcDest(
-                                                        newConnection.conn,
-                                                        affectedOutputAIs,
-                                                        affectedInputAIs)
+                    #if newConnection.conn is None:
+                    srcItemList = vtype.parseItemList(newConnection.srcStr)
+                    dstItemList = vtype.parseItemList(newConnection.dstStr)
+                    log.debug('NEW CONNECTION: %s %s' % (srcItemList, dstItemList))
+                    srcVal = self.project.getCreateSubValue(srcItemList)
+                    dstVal = self.project.getCreateSubValue(dstItemList)
+                    if outf is not None:
+                        newConnection.describe(outf)
+                    log.debug('Adding connection from %s to %s' % (srcVal, dstVal))
+                    srcVal.addConnection(dstVal)
+                    #self.activeNetwork.findConnectionSrcDest(
+                                                        #newConnection.conn,
+                                                        #affectedOutputAIs,
+                                                        #affectedInputAIs)
             if self.setValues is not None:
                 for val in self.setValues:
                     log.debug("Setting new value %s"%(val.itemName))
@@ -274,7 +286,8 @@ class Transaction(run.FunctionRunOutput):
                 self.activeInstance.markError(errmsg)
             else:
                 log.error(errmsg)
-        #finally:
+        finally:
+            self.project.updateLock.release()
             #if locked:
                 #if affectedOutputAIs is None:
                     #self.activeInstance.outputLock.release()
@@ -296,7 +309,7 @@ class TransactionList(object):
     """A list of transaction items (TransactionItem objects)"""
     def __init__(self, networkLock, autoCommit):
         """Initialize, with autocommit flag.
-           networkLock = the projecct's network lock
+           networkLock = the project's network lock
            autoCommit = whether to autocommit every added item immediately"""
         self.lst=[]
         self.lock=threading.Lock()

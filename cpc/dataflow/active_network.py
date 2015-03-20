@@ -1,10 +1,11 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -43,8 +44,8 @@ class ActiveNetwork(network.Network):
                  inActiveInstance=None):
         """Create a new active network from a network. It may be part
            of an active instance.
-          
-           project =  the project the active network is a part of 
+
+           project =  the project the active network is a part of
            net = any pre-exsiting network to copy
            functionNetwork = the function network to make an active network
                              from
@@ -73,18 +74,18 @@ class ActiveNetwork(network.Network):
             instCopy.markImplicit()
             # we only add the instance to the instance list, not the
             # active instance list:
-            #self.activeInstances[instCopy.getName()]=ai 
+            #self.activeInstances[instCopy.getName()]=ai
             network.Network.addInstance(self, instCopy)
         # now copy the network
         if net is not None:
             log.debug("Adding active instances %s"%str(net.instances))
             for inst in net.getInstances().itervalues():
                 name=inst.getName()
-                # we treat 'self' specially: it doesn't get an activeinstance 
-                # because it should already be active and passed as  
-                # 'inActiveInstance'. 
-                if name != keywords.Self: 
-                    # create a new empty (unconnected) instance 
+                # we treat 'self' specially: it doesn't get an activeinstance
+                # because it should already be active and passed as
+                # 'inActiveInstance'.
+                if name != keywords.Self:
+                    # create a new empty (unconnected) instance
                     instCopy=inst.copy()
                     instCopy.markImplicit()
                     self.addInstance(instCopy)
@@ -109,7 +110,7 @@ class ActiveNetwork(network.Network):
                 connCopy.markImplicit()
                 self.findConnectionSrcDest(connCopy, affectedInputAIs,
                                             affectedOutputAIs)
-                self.addConnection(connCopy, self) 
+                self.addConnection(connCopy, self)
             # and now run the right handlers for the affected AIs
             if inActiveInstance is not None:
                 affectedOutputAIs.add(inActiveInstance)
@@ -137,13 +138,13 @@ class ActiveNetwork(network.Network):
             dirn=os.path.join(self.baseDir,name)
             ai=active_inst.ActiveInstance(inst, self.project, self, dirn)
             log.debug("Adding active instance %s"%ai.name)
-            self.activeInstances[name]=ai 
+            self.activeInstances[name]=ai
             network.Network.addInstance(self, inst)
         return ai
 
     #def removeInstance(self, instance):
     # TODO: implement this
-    #    """React to an instance being removed. Called after all its            
+    #    """React to an instance being removed. Called after all its
     #       connections are removed"""
     #    del self.activeInstances[instance.getName()]
 
@@ -179,11 +180,11 @@ class ActiveNetwork(network.Network):
                 il={ "state" : str(inst.state),
                      "fn_name" : str(inst.function.getFullName()) }
                 if listIO:
-                    inps=inst.getInputs().getSubValueList() 
-                    outs=inst.getOutputs().getSubValueList() 
-                    il = { "state" : str(inst.state), 
+                    inps=inst.getInputs().getSubValueList()
+                    outs=inst.getOutputs().getSubValueList()
+                    il = { "state" : str(inst.state),
                            "fn_name" : str(inst.function.getFullName()),
-                           "inputs": inps, 
+                           "inputs": inps,
                            "outputs" : outs }
                 ret[inst.name] = il
             if listSelf and (self.inActiveInstance is not None):
@@ -191,20 +192,20 @@ class ActiveNetwork(network.Network):
                 il={ "state" : str(inst.state),
                      "fn_name" : str(inst.function.getFullName()) }
                 if listIO:
-                    inps=inst.getInputs().getSubValueList() 
-                    outs=inst.getOutputs().getSubValueList() 
+                    inps=inst.getInputs().getSubValueList()
+                    outs=inst.getOutputs().getSubValueList()
                     subnet_inps=inst.getSubnetInputs().getSubValueList()
                     subnet_outs=inst.getSubnetOutputs().getSubValueList()
-                    il = { "state" : str(inst.state), 
+                    il = { "state" : str(inst.state),
                            "fn_name" : str(inst.function.getFullName()),
-                           "inputs": inps, 
+                           "inputs": inps,
                            "outputs" : outs,
                            "subnet_inputs" : subnet_inps,
                            "subnet_outputs" : subnet_outs  }
                 ret[keywords.Self] = il
         return ret
 
- 
+
     def getConnectionList(self):
         """Return a list of instance connections."""
         ret=[]
@@ -217,7 +218,7 @@ class ActiveNetwork(network.Network):
                 #dstSubItem=conn.getDstSubItem()
                 if conn.getSrcInstance() is None:
                     ret.append( [ None, None, None,
-                                  dstInstance, dstIO, dstItemList, 
+                                  dstInstance, dstIO, dstItemList,
                                   conn.getInitialValue().value ] )
                 else:
                     srcInstance=conn.getSrcInstance().getName()
@@ -225,8 +226,8 @@ class ActiveNetwork(network.Network):
                     srcItemList=vtype.itemListStr(conn.getSrcItemList())
                     srcItem="%s%s"%(srcIO, srcItemList)
                     #srcSubItem=conn.getSrcSubItem()
-                    ret.append( [ srcInstance, srcItem, "", 
-                                  dstInstance, dstItem, "", 
+                    ret.append( [ srcInstance, srcItem, "",
+                                  dstInstance, dstItem, "",
                                   None ] )
         return ret
 
@@ -242,7 +243,7 @@ class ActiveNetwork(network.Network):
     #    return topItem._getNamedInstanceFromList(rest)
 
     def _getContainingNet(self, instancePathList):
-        """Return the tuple of (network, instanceName), for an 
+        """Return the tuple of (network, instanceName), for an
            instancePathList"""
         #log.debug("instance path list: %s"%(instancePathList))
         if len(instancePathList)==0 or instancePathList[0] == '':
@@ -259,21 +260,21 @@ class ActiveNetwork(network.Network):
         return topNet._getContainingNet( rest )
 
     def getNamedActiveInstance(self, instancePath):
-        """Get and instance/network in a path specifier according to 
-           [instance]:[instance]:... 
+        """Get and instance/network in a path specifier according to
+           [instance]:[instance]:...
            """
         sp=instancePath.split(':')
         ( net, instanceName ) = self._getContainingNet(sp)
         if instanceName is not None:
-            ret = net._getActiveInstance(instanceName)    
+            ret = net._getActiveInstance(instanceName)
         else:
             ret = net
         return ret #self._getNamedInstanceFromList(sp)
 
     def getContainingNetwork(self, instancePath):
-        """Get the network and instanceName that contains the item in a 
-           path specifier according to 
-           [instance]:[instance]:... 
+        """Get the network and instanceName that contains the item in a
+           path specifier according to
+           [instance]:[instance]:...
 
            returns a tuple (network, instanceName)
            """
@@ -305,7 +306,7 @@ class ActiveNetwork(network.Network):
                 srcAcp=srcAcpInst.getSubnetInputACP(conn.getSrcItemList())
             elif srcDir==function_io.subnetOutputs:
                 srcAcp=srcAcpInst.getSubnetOutputACP(conn.getSrcItemList())
-        # then get the destination instance 
+        # then get the destination instance
         dstInstanceName=conn.getDstInstance().getName()
         dstItemName=conn.getDstItemList()
         dstDir=conn.getDstIO().getDir()
@@ -324,19 +325,19 @@ class ActiveNetwork(network.Network):
         return (srcAcp, dstAcp)
 
     def findConnectionSrcDest(self, conn, affectedInputAIs, affectedOutputAIs):
-        """First step in making a connection: finding out the source and 
+        """First step in making a connection: finding out the source and
            destination (and the affected source/destination active instances).
 
            conn = the Connection object. Updated by this function
            affectedInputAIs = a set that will be updated with the affected
-                              destination active instances of the new 
+                              destination active instances of the new
                               connection.
-           affectedOutputAIs = a set that will be updated with the active 
-                               instances that have changed outputs because of 
+           affectedOutputAIs = a set that will be updated with the active
+                               instances that have changed outputs because of
                                the new connection. For these active instances,
                                handleNewOutputConnections will have to be
-                               called. 
-                               This makes it possible to make multiple 
+                               called.
+                               This makes it possible to make multiple
                                connections in a single transaction.
            """
         with self.lock:
@@ -349,11 +350,11 @@ class ActiveNetwork(network.Network):
             affectedInputAIs.add(dstAcp.activeInstance)
             dstAcp.findConnectedInputAIs(affectedInputAIs)
 
-    def addConnection(self, conn, sourceTag): 
-        """Add a connection. 
+    def addConnection(self, conn, sourceTag):
+        """Add a connection.
             findConnectionSrcDest MUST have been called on this connection
             before, and all affected output AIs MUST be locked at this point.
-            After this, handleConnectedListenerInput() must be called on 
+            After this, handleConnectedListenerInput() must be called on
             affected destination ACPs' value.
 
             conn = the connection object
@@ -406,7 +407,7 @@ class ActiveNetwork(network.Network):
         return cputime
 
     def findErrorStates(self, errlist, warnlist):
-        """Find any error states associated with this any of the 
+        """Find any error states associated with this any of the
            sub-instances. Fill errlist & warnlist with active instances in
            these states."""
         with self.lock:
@@ -424,7 +425,7 @@ class ActiveNetwork(network.Network):
             outFile.write('%s<network>\n'%indstr)
             for inst in self.instances.itervalues():
                 if not inst.isImplicit():
-                    inst.writeXML(outFile, indent+1) 
+                    inst.writeXML(outFile, indent+1)
             for ai in self.activeInstances.itervalues():
                 if ai.getName() != keywords.Self:
                     ai.writeXML(outFile, indent+1)

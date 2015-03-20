@@ -22,13 +22,14 @@ numjobs=`expr $2 - 1`
 ./cpcc transact
 
 ./cpcc instance benchmark::result_collector results
-./cpcc set results.in.num_samples $numjobs
+./cpcc set results.in.num_samples $2
 
 for i in $(eval echo {0..$numjobs})
 do
 	./cpcc instance benchmark::sleep sleep_$i
-	#./cpcc connect sleep_$i.out.exec_time results.in.sleep_time_array[$i]
-
+	./cpcc connect sleep_$i.out.exec_time.roundtrip_time results.in.sleep_time_array[$i].roundtrip_time
+	./cpcc connect sleep_$i.out.exec_time.start_timestamp results.in.sleep_time_array[$i].start_timestamp
+	./cpcc connect sleep_$i.out.exec_time.end_timestamp results.in.sleep_time_array[$i].end_timestamp
 done
 
 

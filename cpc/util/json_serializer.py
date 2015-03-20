@@ -29,7 +29,7 @@ from cpc.util.worker_state import WorkerState
 log=logging.getLogger(__name__)
 
 def toJson(obj):
-    log.debug('JSON OBJ: %s' % obj)
+    #log.debug('JSON OBJ: %s' % obj)
     if isinstance(obj,Nodes):
         return {'class':'Nodes',
                  'nodes':obj.nodes

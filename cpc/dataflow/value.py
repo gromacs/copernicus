@@ -1,9 +1,34 @@
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
 import logging
+import ast
+import copy
 from notify.all import Variable
+from cpc.util import CpcError
 from types import IntType, FloatType, ListType, DictType, StringType
-from function import Function, FunctionPrototype
 
 log=logging.getLogger(__name__)
+
+class ValueError(CpcError):
+    """Base Value exception class."""
+    pass
 
 class Value(Variable):
     """ Value is a container for a generic value. It can have a name and its ownerFunction, if any,
@@ -12,7 +37,8 @@ class Value(Variable):
         the functionality of Variable from the notify library. Values can be connected to each other
         to propagate data. """
 
-    typeString = 'value'
+    __slots__ = ['typeString', 'name', 'ownerFunction', 'container', 'hasChanged', 'optional',
+                 'description']
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
@@ -24,16 +50,19 @@ class Value(Variable):
            :type ownerFunction  : Function/FunctionPrototype.
            :param container     : A list or dict type container that contains
                                   this value.
-           :type                : ListValue
+           :type container      : ListValue
            :param description   : A description of the data and what it is used for.
            :type description    : str.
            :raises              : AssertionError.
         """
 
+        from function import Function, FunctionPrototype
+
         assert ownerFunction == None or isinstance(ownerFunction,
                                                    (Function, FunctionPrototype))
         assert container == None or isinstance(container, (ListValue, DictValue))
 
+        self.typeString = 'value'
         Variable.__init__(self, initialValue)
 
         self.name = name
@@ -62,12 +91,10 @@ class Value(Variable):
         """
 
         # If the value is changed update the hasChanged flag.
-        containerHasChanged = False
-        if self.value != value:
-            self.hasChanged = True
-            if self.container:
-                self.container.hasChanged = True
-                containerHasChanged = True
+        if self.value == value:
+            return
+
+        self.hasChanged = True
 
         Variable.set(self, value)
 
@@ -75,13 +102,14 @@ class Value(Variable):
         # input is set).
         if self.ownerFunction and (self in self.ownerFunction.inputValues or \
             self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.functionPrototype.isFinished = False
             self.ownerFunction.execute()
 
-        if containerHasChanged:
+        if self.container:
+            self.container.hasChanged = True
             if self.container.ownerFunction and (self.container in self.container.ownerFunction.inputValues or \
                                                  self.container in self.container.ownerFunction.subnetInputValues):
-                self.container.ownerFunction.functionInstance.isFinished = False
+                self.container.ownerFunction.functionPrototype.isFinished = False
                 self.container.ownerFunction.execute()
 
     def setByConnection(self, value):
@@ -92,15 +120,20 @@ class Value(Variable):
                               causing this function to be called).
         """
 
-        if self.value != value:
-            self.hasChanged = True
+        log.debug('In setByConnection. Setting %s (%s) to %s.' % (self, self.value, value))
+        log.debug('self.ownerFunction: %s' % self.ownerFunction)
+
+        if self.value == value:
+            return
+
+        self.hasChanged = True
 
         self.value = value
 
         if self.ownerFunction:
             if self in self.ownerFunction.inputValues or self in \
                 self.ownerFunction.subnetInputValues:
-                self.ownerFunction.functionInstance.isFinished = False
+                self.ownerFunction.functionPrototype.isFinished = False
                 self.ownerFunction.execute()
 
     def addConnection(self, toValue):
@@ -115,27 +148,38 @@ class Value(Variable):
         if self.ownerFunction:
             if self not in self.ownerFunction.outputValues and \
                self not in self.ownerFunction.subnetOutputValues:
-                print "Cannot add a connection from a value that is not an output value."
-                return
+                raise ValueError("Cannot add a connection from a value that is not an output value.")
             if self in self.ownerFunction.subnetOutputValues:
                 if toValue.ownerFunction not in self.ownerFunction.subnetFunctions:
-                    print "Cannot add a connection. Connected value is not part of the function subnet."
-                    return
+                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
                 if toValue not in toValue.ownerFunction.inputValues and \
                    toValue not in toValue.ownerFunction.subnetInputValues:
-                    print "Cannot add a connection. Connected value is not part of the function subnet."
-                    return
+                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
 
         self.changed.connect_safe(toValue.setByConnection)
 
-        if self.value != toValue.value:
-            toValue.value = self.value
-            toValue.hasChanged = True
-            if toValue.ownerFunction:
-                if toValue in toValue.ownerFunction.inputValues or toValue in \
-                    toValue.ownerFunction.subnetInputValues:
-                    toValue.ownerFunction.functionInstance.isFinished = False
-                    toValue.ownerFunction.execute()
+        if self.value == toValue.value:
+            return
+
+        #log.debug('value: %s, toValue: %s' % (self.value, toValue.value))
+        #if isinstance(self, DictValue) and isinstance(toValue, DictValue):
+            ##toValue.value = {}
+            #for k, v in self.value.iteritems():
+                #toValue.value[k] = copy.deepcopy(v)
+        #elif isinstance(self, ListValue) and isinstance(toValue, ListValue):
+            #toValue.value = []
+            #for v in self.value:
+                #toValue.append(copy.deepcopy(v))
+        #else:
+            #toValue.value = copy.deepcopy(self.value)
+        log.debug('Making deepcopy of %s to overwrite %s' % (self.value, toValue.value))
+        toValue.value = copy.deepcopy(self.value)
+        toValue.hasChanged = True
+        if toValue.ownerFunction:
+            if toValue in toValue.ownerFunction.inputValues or toValue in \
+                toValue.ownerFunction.subnetInputValues:
+                toValue.ownerFunction.functionPrototype.isFinished = False
+                toValue.ownerFunction.execute()
 
     def removeConnection(self, toValue):
         """ Remove all connections from this value to another.
@@ -147,9 +191,29 @@ class Value(Variable):
 
         self.changed.disconnect_all(toValue, fromValue=self)
 
+    def setFromString(self, string):
+        """ Set the value from a string.
+           :param string; The string containing the new value.
+        """
+
+        self.set(string)
+
     def getTypeString(self):
+        """ Return a string describing the format of the contents.
+           :returns     : string.
+        """
 
         return self.typeString
+
+    def getLiteralContents(self):
+        """ Get the contents of the variable returned as a string.
+           :returns     : string.
+        """
+
+        if self.value is not None:
+            return str(self.value)
+        else:
+            return "None"
 
     def getDescription(self):
 
@@ -158,6 +222,10 @@ class Value(Variable):
     def setDescription(self, desc):
 
         self.description = desc
+
+    def isUpdated(self):
+
+        return self.hasChanged
 
     def getBaseType(self):
         """Get the base type of this type."""
@@ -173,20 +241,46 @@ class Value(Variable):
             ret=ret.container
         return ret.typeString
 
+    def getSubValue(self, key):
+        return self
+
+    def getClosestSubValue(self):
+        return self
+
     def jsonDescribe(self):
         """Get a description of a value in a JSON-serializable format."""
         return { 'name' : self.name,
                  'base-type' : self.getBaseTypeName()}
 
-class BoolValue(Value):
+class FileValue(Value):
 
-    typeString = 'bool'
+    __slots__ = []
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
         Value.__init__(self, initialValue, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'file'
+
+    def is_allowed_value(self, value):
+
+        # Allow both StringType and UnicodeType
+        if value == None or isinstance(value, StringType):
+            return True
+        else:
+            return False
+
+class BoolValue(Value):
+
+    __slots__ = []
+
+    def __init__(self, initialValue=None, name=None, ownerFunction=None,
+                 container=None, optional=False, description=''):
+
+        Value.__init__(self, initialValue, name, ownerFunction, container,
+                       optional, description)
+        self.typeString = 'bool'
 
     def is_allowed_value(self, value):
 
@@ -195,15 +289,23 @@ class BoolValue(Value):
         else:
             return False
 
+    def setFromString(self, string):
+
+        if string.lower() == 'true' or string == '1':
+            self.value = True
+        else:
+            self.value = False
+
 class IntValue(Value):
 
-    typeString = 'int'
+    __slots__ = []
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
         Value.__init__(self, initialValue, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'int'
 
     def is_allowed_value(self, value):
 
@@ -212,15 +314,20 @@ class IntValue(Value):
         else:
             return False
 
+    def setFromString(self, string):
+
+        self.value = int(string)
+
 class FloatValue(Value):
 
-    typeString = 'float'
+    __slots__ = []
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
         Value.__init__(self, initialValue, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'float'
 
     def is_allowed_value(self, value):
 
@@ -229,15 +336,20 @@ class FloatValue(Value):
         else:
             return False
 
+    def setFromString(self, string):
+
+        self.value = float(string)
+
 class StringValue(Value):
 
-    typeString = 'string'
+    __slots__ = []
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
 
         Value.__init__(self, initialValue, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'string'
 
     def is_allowed_value(self, value):
 
@@ -249,7 +361,7 @@ class StringValue(Value):
 
 class ListValue(Value):
 
-    typeString = 'list'
+    __slots__ = ['dataType']
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description='', dataType=None):
@@ -273,14 +385,14 @@ class ListValue(Value):
 
         Value.__init__(self, iv, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'list'
 
     def set(self, value):
 
         iv = list(value)
-        if self.dataType:
-            t = self.dataType
-        else:
-            t = Value
+
+        t = self.dataType or Value
+
         for i, v in enumerate(iv):
             if not isinstance(v, t):
                 iv[i] = t(v)
@@ -305,15 +417,63 @@ class ListValue(Value):
         else:
             return False
 
+    def setFromString(self, string):
+
+        self.set(ast.literal_eval(string))
+
+    def getLiteralContents(self):
+
+        ret = []
+        for i in self.value:
+            ret.append(i.getLiteralContents())
+
+        return ret
+
+    def getCreateSubValue(self, index):
+        """ Return the value of the specified index in the list. If there is no
+            value of that index create it (and all values in between).
+
+           :param index    : The index of the value to return.
+           :type index     : Int.
+           :returns        : The value of the specified index in the list.
+        """
+
+        if self.value == None:
+            return None
+        log.debug('ListValue getCreateSubValue. index: %s' % index)
+        nValues = len(self.value)
+        while nValues <= index:
+            newValue = self.dataType(None, container=self)
+            log.debug('newValue: %s' % newValue)
+            self.append(newValue)
+            nValues += 1
+        return self.value[index]
+
     def getClosestSubValue(self, index):
+        """ Return the value of the specified index in the list. If there is no
+            value of that index return self.
+
+           :param index    : The index of the value to return.
+           :type index     : Int.
+           :returns        : The value of the specified index in the list or self.
+        """
 
         if not self.value:
             return self
+        if index == '+':
+            index = len(self.value)
         if index < len(self.value):
             return self.value[index]
-        return self.value[-1]
+        return self
 
     def getSubValue(self, index):
+        """ Return the value of the specified index in the list. If there is no
+            value of that index return None.
+
+           :param index    : The index of the value to return.
+           :type index     : Int.
+           :returns        : The value of the specified index in the list or None.
+        """
 
         if not self.value:
             return None
@@ -322,41 +482,38 @@ class ListValue(Value):
         return None
 
     def append(self, value):
+        """ Add a value to the end of the list. """
 
         nValues = len(self.value)
         self.setIndex(value, nValues)
 
     def setIndex(self, value, index):
+        """ Set the value of the specified index to the supplied value argument. """
 
         if self.dataType:
             if isinstance(value, Value):
                 assert isinstance(value, self.dataType)
-                value.container = self
             else:
-                newValue = self.dataType(value, container=self)
-
+                value = self.dataType(value)
         else:
             assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
-            value.container = self
 
-        nValues = len(self.value)
-        if index >= nValues:
-            index = nValues
-            self.value.append(value)
-        else:
-            self.value[index] = value
+        value.container = self
+
+        # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the list.
+        self.value = self.value[:index] + [value] + self.value[index + 1:]
 
         # Update the hasChanged flag
         self.hasChanged = True
         # If the value is input to a function execute the function code (if all input is set).
         if self.ownerFunction and (self in self.ownerFunction.inputValues or \
                                 self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.functionPrototype.isFinished = False
             self.ownerFunction.execute()
 
 class DictValue(Value):
 
-    typeString = 'dict'
+    __slots__ = ['dataType']
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description='', dataType=None):
@@ -364,24 +521,35 @@ class DictValue(Value):
         self.dataType = dataType
 
         if initialValue:
-            assert isinstance(initialValue, DictType)
-            iv = dict(initialValue)
+            if isinstance(initialValue, DictType):
+                iv = dict(initialValue)
+            elif isinstance(initialValue, ListType):
+                iv = dict()
+                for i in initialValue:
+                    if not isinstance(i, Value):
+                        raise ValueError('When setting up a DictValue object from a list the contents must be of type Value.')
+                    if self.dataType and not isinstance(i, self.dataType):
+                        raise ValueError('When setting up a DictValue object from a list the contents must match the data type of the DictValue.')
+                    iv[i.name] = i
+            else:
+                raise ValueError('initialValue of a DictValue object must be a dict or list.')
         else:
-            iv = {}
+            iv = dict()
 
         Value.__init__(self, iv, name, ownerFunction, container,
                        optional, description)
+        self.typeString = 'dict'
 
     def set(self, value):
 
-        iv = list(value)
+        iv = dict(value)
         if self.dataType:
             t = self.dataType
         else:
             t = Value
-        for i, v in enumerate(iv):
+        for k, v in iv.iteritems():
             if not isinstance(v, t):
-                iv[i] = t(v)
+                iv[k] = t(v)
 
         Value.set(self, iv)
 
@@ -404,6 +572,14 @@ class DictValue(Value):
             return False
 
     def update(self, *args, **kwargs):
+        """ Add items to the dictionary. The argument can be a combination of a dictionary
+            and a set of keyword - value pairs. E.g.
+              self.update({'a': 1, 'b': 2, 'c': 3})
+              self.update({'a': 1}, b=2, c=3)
+              self.update(a=1, b=2, c=3)
+        """
+
+        log.debug('DictValue update. self.dataType: %s' % self.dataType)
 
         if self.dataType:
             if args:
@@ -436,26 +612,92 @@ class DictValue(Value):
                 d = {}
             if isinstance(d, DictType):
                 for k,v in d.iteritems():
-                    assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                    oldValue = self.value.get(k)
+                    if oldValue:
+                        assert isinstance(v, type(oldValue)), "When updating an existing item in a dictionary it may not change type."
+                    else:
+                        assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
                     v.container = self
             else:
                 d = {}
 
             for k,v in kwargs.iteritems():
-                assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+                oldValue = self.value.get(k)
+                if oldValue:
+                    assert isinstance(v, type(oldValue)), "When updating an existing item in a dictionary it may not change type."
+                else:
+                    assert isinstance(v, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
                 v.container = self
 
 
-        newDict = dict(d.items() + kwargs.items())
-        dict.update(self, newDict)
+        # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the dictionary.
+        newDict = dict(self.value.items() + d.items() + kwargs.items())
+        self.value = newDict
 
         # Update the hasChanged flag
         self.hasChanged = True
-        # If the value is input to a function execute the function code (if all input is set).
+        ## If the value is input to a function execute the function code (if all input is set).
         if self.ownerFunction and (self in self.ownerFunction.inputValues or \
                                    self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionInstance.isFinished = False
+            self.ownerFunction.functionPrototype.isFinished = False
             self.ownerFunction.execute()
 
+    def setFromString(self, string):
+
+        self.set(ast.literal_eval(string))
+
+    def getLiteralContents(self):
+
+        ret = dict()
+        for name, i in self.value.iteritems():
+            ret[name] = i.getLiteralContents()
+
+        return ret
+
+    def getCreateSubValue(self, key):
+
+        if self.value == None:
+            return None
+        value = self.value.get(key)
+        log.debug('DictValue getCreateSubValue. value: %s' % value)
+        if value is None:
+            value = self.dataType(None, name = key, container=self)
+            self.update(key = value)
+        return value
+
+    def getClosestSubValue(self, key):
+
+        if not self.value:
+            return self
+        return self.value.get(key, self)
+
+    def getSubValue(self, key):
+
+        if not self.value:
+            return None
+        if key == None or key == []:
+            return self
+        log.debug('Getting subvalue: %s. Got: %s.' % (key, self.value.get(key)))
+        return self.value.get(key)
+
+    def setSubValue(self, key, value):
+
+        valueContainer = self.value.get(key)
+        if not valueContainer:
+            if self.dataType:
+                if isinstance(value, Value):
+                    assert isinstance(value, self.dataType)
+                else:
+                    value = self.dataType(value, container=self)
+            else:
+                assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
+
+            self.value[key] = value
+
+        else:
+            if isinstance(value, Value):
+                valueContainer.value = value.value
+            else:
+                valueContainer.value = value
 
 basicTypeList = (BoolValue, IntValue, FloatValue, StringValue, ListValue, DictValue)

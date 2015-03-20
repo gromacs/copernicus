@@ -9,7 +9,7 @@ args=copy.copy(sys.argv)
 
 seconds = 0
 if (len(args)>1):
-    seconds = int(args[1])
+    seconds = int(args[-1])
 
 print "Sleeping %s seconds"%seconds
 time.sleep(seconds)

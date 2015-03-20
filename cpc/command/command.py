@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -47,7 +47,7 @@ class CommandInputFile(object):
 
            realName = the real file name, relative to the command's execution
                       diretory (or absolute path).
-           packagedName = the file name relative to the command execution 
+           packagedName = the file name relative to the command execution
                           directory that the file should have when unpacked
                           on the worker."""
         self.realName=realName
@@ -62,22 +62,22 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     """A command is what is executed on runners. Each task that is emitted
        by the controller is broken up in commands (using the task plugins).
        """
-    def __init__(self, dir, executable, args, 
-                 addPriority=0, minVersion=None, maxVersion=None, 
+    def __init__(self, dir, executable, args,
+                 addPriority=0, minVersion=None, maxVersion=None,
                  id=None, task=None, running=False, workerServer=None,
                  env=None, outputFiles=None):
         """Create a command
             dir = the directory relative to the task directory
             executable = the name of the executable object
             args = the arguments for the executable
-            files = the needed input files (as a list of CommandInputFile     
-                                            objects) 
+            files = the needed input files (as a list of CommandInputFile
+                                            objects)
             minVersion = the minimum version for the command's executable
             maxVersion = the maximum version for the executable
             id = the command's ID (or None to generate one at random).
             task = the task associated with the command
             running = whether the cmd is running
-            workerServer = the server the worker executing this command is 
+            workerServer = the server the worker executing this command is
                            connected to.
             env = environment variables to set: a dict of values (or None).
             outputFiles = the list of any expected output files.
@@ -85,7 +85,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         #self.taskID=taskID
         if dir is not None and task is not None:
             self.dir=os.path.relpath(dir,
-                                     self.task.activeInstance.getFullBasedir())
+                                     self.task.activeInstance.getBaseDir())
         else:
             self.dir=dir
         self.executable=executable
@@ -99,7 +99,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         self.running=running # whether the command is running
         self.id=id
         self.workerServer=workerServer
-        # the return code 
+        # the return code
         self.returncode=None
         # the cpu time in seconds used by this command
         self.cputime=0.
@@ -107,7 +107,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         self.reserved={}
         # dictionary of required resource objects
         # all commands need a CPU to run on
-        cores=resource.Resource('cores', 1) 
+        cores=resource.Resource('cores', 1)
         self.minRequired = { cores.name: cores }
         # dictionary of max allowed resource objects
         self.maxAllowed = { }
@@ -120,12 +120,12 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     def setTask(self, task):
         self.task=task
         if self.dir is not None and os.path.isabs(self.dir):
-            self.dir=os.path.relpath(self.dir, 
-                                     task.activeInstance.getFullBasedir())
+            self.dir=os.path.relpath(self.dir,
+                                     task.activeInstance.getBaseDir())
 
     def getDir(self):
         if not os.path.isabs(self.dir):
-            return os.path.join(self.task.activeInstance.getFullBasedir(),
+            return os.path.join(self.task.activeInstance.getBaseDir(),
                                 self.dir)
         else:
             return self.dir
@@ -162,13 +162,13 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
 
 
     def getOutputFiles(self):
-        """Get the list of all possible relevant output files this command 
+        """Get the list of all possible relevant output files this command
            generates."""
         return self.outputFiles
 
     def addOutputFile(self, filename):
         """Add a file name to the list of output files that this command may
-           generate. The file name is relative to the run directory, and 
+           generate. The file name is relative to the run directory, and
            does not include the standard 'stdout' and 'stderr'"""
         if self.outputFiles is None:
             self.outputFiles=[]
@@ -189,7 +189,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     def setRunning(self, running, workerServer=None):
         """Set the command to a running (or not) state.
            running = boolean indicating the running state
-           workerServer = the server name of the server the worker is 
+           workerServer = the server name of the server the worker is
                           connected to."""
         self.running=running
         if running:
@@ -210,7 +210,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
 
     def getReturncode(self):
         """Set the latest return code."""
-        return self.returncode 
+        return self.returncode
 
     def setReturncode(self, returncode):
         """Set the latest return code."""
@@ -335,7 +335,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
         # required resources
         if self.env is not None:
             for name, value in self.env.iteritems():
-                outf.write('%s<env name="%s" value="%s"/>\n'%(iindstr, name, 
+                outf.write('%s<env name="%s" value="%s"/>\n'%(iindstr, name,
                                                               value))
         if self.outputFiles is not None:
             for name in self.outputFiles:
@@ -359,11 +359,11 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     def writeXML(self, outf, indent=0):
         """Write an XML description of the command to the file outf.
            This XML is for the controller."""
-        self._writeXML(outf, writeReservations=False, writeProject=True, 
+        self._writeXML(outf, writeReservations=False, writeProject=True,
                        indent=indent)
 
     def toJSON(self):
-        commandDict = dict()        
+        commandDict = dict()
         #commandDict['projectID'] = self.projectID
         commandDict['taskID'] = self.task.getID()
         commandDict['project'] = self.task.getProject().getName()
@@ -383,7 +383,7 @@ class Command(cpc.server.queue.cmdqueue.QueueableItem):
     def writeWorkerXML(self, outf):
         """Write an XML description of the command to the file outf.
            If restriction==True, it won't write project and task information."""
-        self._writeXML(outf, writeReservations=True, writeProject=False, 
+        self._writeXML(outf, writeReservations=True, writeProject=False,
                        indent=0)
 
 
@@ -417,7 +417,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
         inf.close()
 
     def readString(self, str, description):
-        """Read the XML from the string str. 'description' describes the 
+        """Read the XML from the string str. 'description' describes the
            source of this XML in exceptions."""
         parser=xml.sax.make_parser()
         parser.setContentHandler(self)
@@ -468,7 +468,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
                 try:
                     addPriority=int(attrs.getValue('add_priority'))
                 except ValueError:
-                    raise CommandReaderError("add_priority not a number", 
+                    raise CommandReaderError("add_priority not a number",
                                              self.loc)
             else:
                 addPriority=0
@@ -483,8 +483,8 @@ class CommandReader(xml.sax.handler.ContentHandler):
                 if attrs.getValue('running') == "yes":
                     running=True
             self.curCommand=Command(dir, executable, [],
-                                    addPriority, minVersion, maxVersion, 
-                                    id=id, running=running, 
+                                    addPriority, minVersion, maxVersion,
+                                    id=id, running=running,
                                     workerServer=workerServer)
             if cputime > 0:
                 self.curCommand.setCputime(cputime)
@@ -506,7 +506,7 @@ class CommandReader(xml.sax.handler.ContentHandler):
             if not attrs.has_key('value'):
                 raise CommandReaderError("environment variable has no value",
                                          self.loc)
-            self.curCommand.addEnv(attrs.getValue('name'), 
+            self.curCommand.addEnv(attrs.getValue('name'),
                                    attrs.getValue('value'))
         elif name == "min-required":
             self.inMinRequired=True

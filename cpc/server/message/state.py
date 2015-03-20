@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -98,6 +98,7 @@ class SCListServerItems(ServerCommand):
         retstr = ""
         if toList == "queue":
             list = serverState.getCmdQueue().list()
+            log.debug('Queue list: %s' % list)
             queue = []
             for cmd in list:
                 queue.append(cmd.toJSON())

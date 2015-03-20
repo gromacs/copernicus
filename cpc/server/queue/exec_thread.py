@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -62,14 +62,14 @@ class TaskExecThreads(object):
             th.doPause(self.tw)
         for th in self.threads:
             # queue a None so that each thread reaches the waiting point.
-            th.queueNone()            
+            th.queueNone()
         self.tw.waitUntilZero()
 
     def cont(self):
         """continue  all task exec threads."""
         self.tw.finishWaiting()
         # object keeps existing in threads, GC takes care of the rest.
-        self.tw=None 
+        self.tw=None
 
     def acquire(self):
         """Acquire the lock to do pause/cont."""
@@ -81,9 +81,11 @@ class TaskExecThreads(object):
         """stop (quit/join) all task exec threads.  """
         for th in self.threads:
             th.doStop()
+        log.debug('Set all threads to stop')
         for th in self.threads:
             # queue a None so that each thread reaches the waiting point.
-            th.queueNone()            
+            th.queueNone()
+        log.debug('Queued None for all threads')
         #for th in self.threads:
         #    # queue a None so that each thread reaches the waiting point.
         #    th.thread.join()
@@ -91,7 +93,7 @@ class TaskExecThreads(object):
 
 class ThreadWaiter(object):
     """A thread waiter: waits on waitUntilZero until all n threads have
-       called release().""" 
+       called release()."""
     def __init__(self, N):
         self.N=N
         self.sema=threading.Semaphore(0)
@@ -121,7 +123,7 @@ class ThreadWaiter(object):
 
 
 class TaskExecThread(object):
-    """A dataflow task execution thread; executes any tasks that are not 
+    """A dataflow task execution thread; executes any tasks that are not
        commands, and queues commands into a command queue."""
     def __init__(self, taskQueue, cmdQueue):
         """Start the task exec thread with a task queue and a command queue.
@@ -141,7 +143,9 @@ class TaskExecThread(object):
 
     def doStop(self):
         """Stop the thread at the next iteration."""
+        log.debug('Acquiring lock to stop TaskExecThread %s. Lock: %s' % (self, self.lock))
         with self.lock:
+            log.debug('Stopping %s' % self)
             self.stop=True
 
     def doPause(self, waiter):
@@ -166,6 +170,7 @@ class TaskExecThread(object):
                 task=self.taskQueue.get()
                 if task is not None:
                     #log.debug("Got queued task.")
+                    #FIXME: Handle returns from task.run() (currently not returning anything)
                     (finished, newcmds, cancelcmds)=task.run()
                     if newcmds is not None:
                         for cmd in newcmds:

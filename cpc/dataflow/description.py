@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -30,16 +31,16 @@ import apperror
 
 
 class Describable(object):
-    __slots__=['desc']
+    #__slots__=['desc']
     """An object with a description."""
     def __init__(self):
         self.desc=None
 
-    def __getstate__(self):
-        return self.desc
+    #def __getstate__(self):
+        #return self.desc
 
-    def __setstate__(self, desc):
-        self.desc = desc
+    #def __setstate__(self, desc):
+        #self.desc = desc
 
     def setDescription(self, desc):
         self.desc=desc
@@ -55,11 +56,11 @@ class Description(object):
            happen from within a DescriptionReader."""
         self.desc=desc
 
-    def __getstate__(self):
-        return self.desc
+    #def __getstate__(self):
+        #return self.desc
 
-    def __setstate__(self, desc):
-        self.desc = desc
+    #def __setstate__(self, desc):
+        #self.desc = desc
 
     def output(self, outf):
         tw=textwrap.TextWrapper(initial_indent="   ", subsequent_indent="   ")

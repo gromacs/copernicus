@@ -1,10 +1,10 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -39,16 +39,16 @@ class CmdLine(object):
 
     @staticmethod
     def listProject(messageStr):
-        projectDict = messageStr['message']               
+        projectDict = messageStr['message']
         co=StringIO()
         co.write("Projects:\n")
-        for project in projectDict:            
+        for project in projectDict:
             co.write("project %s (%s):\n"%(project['id'], project['state']))
             reports=project['reports']
             for report in reports:
                 co.write("  report %s (%s)\n"%(report['id'], report['state']))
                 tasks=report['tasks']
-                for task in tasks:                        
+                for task in tasks:
                     co.write("    %s (%s)\n"%(task['id'], task['state']))
         return co.getvalue()
 
@@ -58,17 +58,17 @@ class CmdLine(object):
             fmtstring = custom_fmtstring
         else:
             fmtstring="%3.3s %-12s %-40.40s %-20.20s\n"
-        if showFmt: 
+        if showFmt:
             co.write(fmtstring%('Pty', 'Project', 'Task ID', 'Executable'))
         for cmd in queueList:
             if 'project' in cmd:
-                co.write(fmtstring%("%3d"%cmd['priority'], 
-                                    cmd['project'], 
-                                    cmd['taskID'], 
+                co.write(fmtstring%("%3d"%cmd['priority'],
+                                    cmd['project'],
+                                    cmd['taskID'],
                                     cmd['executable']))
             else:
                 co.write(fmtstring%(("%3d"%cmd['priority'],  "",
-                                     cmd['taskID'], 
+                                     cmd['taskID'],
                                      cmd['executable'])))
 
     @staticmethod
@@ -98,10 +98,10 @@ class CmdLine(object):
         queueList = messageStr['message']
         co=StringIO()
         co.write("Running:\n")
-        for cmd in queueList:                
+        for cmd in queueList:
             if 'project' in cmd:
                 co.write("task %s %s\n\tcmd id %s\n\t%s\n"%\
-                         (cmd['project'], cmd['taskID'], cmd['id'], 
+                         (cmd['project'], cmd['taskID'], cmd['id'],
                           cmd['executable'] ))
             else:
                 co.write("task %s\n\tcmd id %s\n\t%s\n"%\
@@ -246,7 +246,7 @@ class CmdLine(object):
             co.write("Not found")
         return co.getvalue()
 
-        
+
 
     @staticmethod
     def listActiveItems(messageStr):
@@ -256,7 +256,7 @@ class CmdLine(object):
         #co.write("List items:\n")
         if 'project' in list:
             co.write("Project %s\n%s %s:\n"%(list['project'],
-                                               list['type'].title(), 
+                                               list['type'].title(),
                                                list['name']))
         else:
              co.write("%s %s:\n"%(list['type'].title(), list['name']))
@@ -361,7 +361,7 @@ class CmdLine(object):
                     co.write("%s\n"%line)
         return co.getvalue()
 
-    @staticmethod 
+    @staticmethod
     def writeDotInstance(co, name, fname, inputs, outputs):
         co.write('    %s [ shape="record" label="%s | { '%(name, fname))
         last=False
@@ -503,8 +503,8 @@ class CmdLine(object):
         co.write("    Client HTTPS port:  %s"%(info[
                                                       'client_secure_port']))
         return co.getvalue()
-    
-    @staticmethod   
+
+    @staticmethod
     def addNodeRequest(message):
         response = message['data']
         co = StringIO()
@@ -564,14 +564,14 @@ class CmdLine(object):
                                                    ,node.getId()) )
 
         return co.getvalue()
-    
+
     @staticmethod
     def grantNodeConnectRequests(message):
         print message['message']
         nodes = message['data']
         connected=nodes['connected']
        # notConnected = nodes['notConnected']
-        
+
         co = StringIO()
         co.write("Following nodes are now trusted:\n")
         co.write("%-20s %-10s %s\n"%("Hostname","Port","Server Id") )
@@ -599,20 +599,20 @@ class CmdLine(object):
 
             co.write("}")
         return co.getvalue()
-    @staticmethod     
+    @staticmethod
     def getTopologyGraphString(message):
         str = ''
         topology = message['data']
         str+="graph topology{\n"
-        for node in topology.nodes.itervalues():                                    
+        for node in topology.nodes.itervalues():
             for neighbour in node.getNodes().nodes.itervalues():
                 str+='\"%s\"--\"%s\"\n'%(node.getHostname(),neighbour.getHostname)
-            for worker in node.workerStates.itervalues():                
+            for worker in node.workerStates.itervalues():
                 str+='\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host
-                str+='\"%s\"--\"worker_%s\"\n'%(node.host,worker.host)                    
+                str+='\"%s\"--\"worker_%s\"\n'%(node.host,worker.host)
                 #co.write("worker %s status:%s\n"%(worker.host,worker.status))
-        
-        str+="}"    
+
+        str+="}"
         return str
 
     @staticmethod
@@ -677,7 +677,7 @@ class CmdLine(object):
                 # print 5 errors at most
                 for i in range(min(len(prj_obj['errors']), 5)):
                     inst=prj_obj['errors'][i]
-                    co.write("        %s get %s%s.msg.error\n"%('cpcc', 
+                    co.write("        %s get %s%s.msg.error\n"%('cpcc',
                                                                 projectGetStr,
                                                                 inst))
             if 'warnings' in prj_obj and len(prj_obj['warnings'])>0:
@@ -686,11 +686,11 @@ class CmdLine(object):
                 # print 5 errors at most
                 for i in range(min(len(prj_obj['warnings']), 5)):
                     inst=prj_obj['warnings'][i]
-                    co.write("        %s get %s%s.msg.warning\n"%('cpcc', 
+                    co.write("        %s get %s%s.msg.warning\n"%('cpcc',
                                                                   projectGetStr,
                                                                   inst))
             # queue
-            if True: 
+            if True:
                 if(len(prj_obj['queue']['queue']) > 0):
                     co.write("   %d command%s in queue\n"%(
                         len(prj_obj['queue']['queue']),
