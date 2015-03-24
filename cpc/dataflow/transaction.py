@@ -31,7 +31,6 @@ import sys
 
 import apperror
 #import connection
-import value
 import run
 #import instance
 #import active_value
@@ -56,8 +55,8 @@ class SetValue(object):
         self.itemList=vtype.parseItemList(itemName)
         item=project.getClosestSubValue(self.itemList)
         log.debug('TRANSACTION: %s' % item)
-        if not isinstance(item, value.Value):
-            raise SetError("Value of '%s' cannot be set"%itemName)
+        #if not isinstance(item, Value):
+            #raise SetError("Value of '%s' cannot be set"%itemName)
         #self.activeInstance=item.owner
         self.closestVal=item
         #self.activeInstance=activeInstance

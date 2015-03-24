@@ -27,7 +27,6 @@ import os
 from task import Task
 from msg import ActiveInstanceMsg
 from cpc.util import CpcError
-from value import ValueError
 
 log=logging.getLogger(__name__)
 
@@ -190,7 +189,7 @@ class FunctionBase(object):
 
             v.value = value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def setSubnetInputValueContents(self, name, value):
         """ Set the contents (Value.value) of the (first) subnet input
@@ -210,7 +209,7 @@ class FunctionBase(object):
 
             v.value = value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def setOutputValueContents(self, name, value):
         """ Set the contents (Value.value) of the (first) output Value object
@@ -230,7 +229,7 @@ class FunctionBase(object):
 
             v.value = value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def setSubnetOutputValueContents(self, name, value):
         """ Set the contents (Value.value) of the (first) subnet output
@@ -250,7 +249,7 @@ class FunctionBase(object):
 
             v.value = value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def getInputValueContents(self, name):
         """ Get the contents (Value.value) of the (first) input Value object
@@ -266,7 +265,7 @@ class FunctionBase(object):
         if v:
             return v.value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def getSubnetInputValueContents(self, name):
         """ Get the contents (Value.value) of the (first) subnet input Value
@@ -282,7 +281,7 @@ class FunctionBase(object):
         if v:
             return v.value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def getOutputValueContents(self, name):
         """ Get the contents (Value.value) of the (first) output Value object
@@ -298,7 +297,7 @@ class FunctionBase(object):
         if v:
             return v.value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def getSubnetOutputValueContents(self, name):
         """ Get the contents (Value.value) of the (first) subnet output Value
@@ -314,7 +313,7 @@ class FunctionBase(object):
         if v:
             return v.value
         else:
-            raise ValueError('Value %s does not exist' % name)
+            raise FunctionError('Value %s does not exist' % name)
 
     def getDescription(self):
 
@@ -360,8 +359,8 @@ class Function(FunctionBase):
     __slots__ = ['functionPrototype', 'dataNetwork', 'project', 'frozen', 'subnetFunctions',
                  'inputListValue', 'outputListValue', 'subnetInputListValue', 'subnetOutputListValue',
                  'inputLock', 'outputLock', 'lock', 'message', 'tasks', 'state', 'isFinished',
-                 'commandsToWorker', 'baseDir', 'outputDirNr', 'runLock', 'persistentDir', 'runSeqNr',
-                 'cputime', 'subnet']
+                 'willExecute', 'commandsToWorker', 'baseDir', 'outputDirNr', 'runLock', 'persistentDir',
+                 'runSeqNr', 'cputime', 'subnet']
 
     def __init__(self, functionPrototype, name=None, dataNetwork=None, persistentDir=None):
 
@@ -397,6 +396,7 @@ class Function(FunctionBase):
         self.tasks = []
         self.state = 'held'
         self.isFinished = False
+        self.willExecute = False
         self.commandsToWorker = []
 
         if self.project:
@@ -806,6 +806,10 @@ class Function(FunctionBase):
         #log.debug('FUNCTION EXECUTE')
         with self.inputLock and self.outputLock:
             if not self.frozen and self._inputHasChanged():
+                if self.willExecute:
+                    self._resetInputChange()
+                    return False
+                
                 from value import ListValue, DictValue
                 # The try/except statement is mainly to avoid checking if
                 # isinstance(v, Value) before checking if v.value == None.
@@ -847,6 +851,7 @@ class Function(FunctionBase):
 
 
                 self.state = 'active'
+                self.willExecute = True
                 if self.dataNetwork:
                     self.runSeqNr += 1
                     # FIXME: Does the task and taskQueue really work?
@@ -858,6 +863,7 @@ class Function(FunctionBase):
                     log.debug('Executing directly')
                     self.commandsToWorker = []
                     self.functionPrototype.execute(function = self)
+                    self.willExecute = False
                 #self.functionPrototype.execute(function = self)
                 self._resetInputChange()
                 return True

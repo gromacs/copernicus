@@ -76,7 +76,7 @@ class DataNetwork(object):
         assert isinstance(instance, Function)
         with self.lock:
             name = instance.name
-            log.debug('Adding instance %s to network. %s' % (name, self.instances))
+            #log.debug('Adding instance %s to network. %s' % (name, self.instances))
             if name in self.instances:
                 raise NetworkError('Tried to start instance %s which already exists' % name)
 

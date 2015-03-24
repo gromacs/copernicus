@@ -38,7 +38,7 @@ class Value(Variable):
         to propagate data. """
 
     __slots__ = ['typeString', 'name', 'ownerFunction', 'container', 'hasChanged', 'optional',
-                 'description']
+                 'description', 'listeningTo']
 
     def __init__(self, initialValue=None, name=None, ownerFunction=None,
                  container=None, optional=False, description=''):
@@ -71,21 +71,54 @@ class Value(Variable):
         self.hasChanged = False # If the value changes this will be set to True.
         self.optional = optional
         self.description = description
+        self.listeningTo = set()
 
-    def __deepcopy__(self, memo):
-        log.debug('Making deepcopy of class: %s' % type(self))
-        result = type(self)()
-        result.name = self.name
-        result.typeString = self.typeString
-        result.ownerFunction = self.ownerFunction
-        result.container = self.container
-        result.hasChanged = self.hasChanged
-        result.optional = self.optional
-        result.description = self.description
+    def _executeOwnerFunction(self):
+        """ Execute the owner function of a variable if the variable is part
+            of the function's input. Otherwise iterate through the chain
+            of containers until an owner function is found to execute. """
 
-        result.value = copy.deepcopy(self.value, memo)
+        # If the value is input to a function execute the function code (if all
+        # input is set).
+        if self.ownerFunction:
+            if self in self.ownerFunction.inputValues or \
+                self in self.ownerFunction.subnetInputValues:
+                #log.debug('Will execute owner function: %s' % self.ownerFunction.name)
+                self.ownerFunction.execute()
 
-        return result
+        else:
+            container = self.container
+            while container:
+                #log.debug('Modifying changed status of container: %s' % container.name)
+                container.hasChanged = True
+                if container.ownerFunction:
+                    if container in container.ownerFunction.inputValues or \
+                        container in container.ownerFunction.subnetInputValues:
+                        container.ownerFunction.execute()
+                    break
+                container = container.container
+                #log.debug('Container = %s, self.container = %s' % (container, self.container))
+
+    def _verifyCanConnect(self, toValue):
+        """ Verify that an attempted connection is valid. It is not OK to connect a value that
+            is belongs to a function, but is not one of its output values. It is also not OK
+            to connect a subnet output value to a value that is not input or subnet input or to
+            a value belonging to a function that is not part of the function subnet.
+
+           :raises              : ValueError if a connection is not allowed.
+        """
+
+
+        if self.ownerFunction:
+            if self not in self.ownerFunction.outputValues and \
+               self not in self.ownerFunction.subnetOutputValues:
+                raise ValueError("Cannot add a connection from a value that is not an output value.")
+            if self in self.ownerFunction.subnetOutputValues:
+                if toValue.ownerFunction not in self.ownerFunction.subnetFunctions:
+                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
+                if toValue not in toValue.ownerFunction.inputValues and \
+                   toValue not in toValue.ownerFunction.subnetInputValues:
+                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
 
     def is_allowed_value(self, value):
         """ Verify that the variable is of an allowed type. Overrides method of
@@ -105,56 +138,17 @@ class Value(Variable):
            :param value: The new value.
         """
 
+        #log.debug('Setting value of %s from %s to %s' % (self.name, self.value, value))
+
         if self.value == value:
             return
 
-        # If the value is changed update the hasChanged flag.
-        self.hasChanged = True
-
         Variable.set(self, value)
 
-        # If the value is input to a function execute the function code (if all
-        # input is set).
-        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
-            self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionPrototype.isFinished = False
-            self.ownerFunction.execute()
+        # If the value is changed update the hasChanged flag.
+        self.hasChanged = True
+        self._executeOwnerFunction()
 
-        container = self.container
-        while container:
-            container.hasChanged = True
-            if container.ownerFunction and (container in container.ownerFunction.inputValues or \
-                                            container in container.ownerFunction.subnetInputValues):
-                container.ownerFunction.functionPrototype.isFinished = False
-                container.ownerFunction.execute()
-            container = container.container
-
-    def setByConnection(self, value):
-        """ Update self.value when it is connected to a value that has been
-            changed.
-
-           :param value     : The new value (that had been modified before
-                              causing this function to be called).
-        """
-
-        log.debug('In setByConnection. Setting %s (%s) to %s.' % (self, self.value, value))
-
-        self.value = value
-
-        #log.debug('self.container: %s' % self.container)
-
-        #if self.ownerFunction:
-            #if self in self.ownerFunction.inputValues or self in \
-                #self.ownerFunction.subnetInputValues:
-                #self.ownerFunction.functionPrototype.isFinished = False
-                #self.ownerFunction.execute()
-
-        #if self.container:
-            #self.container.hasChanged = True
-            #if self.container.ownerFunction and (self.container in self.container.ownerFunction.inputValues or \
-                                                 #self.container in self.container.ownerFunction.subnetInputValues):
-                #self.container.ownerFunction.functionPrototype.isFinished = False
-                #self.container.ownerFunction.execute()
 
     def addConnection(self, toValue):
         """ Add a connection from this value container to another value
@@ -165,30 +159,18 @@ class Value(Variable):
                            is updated.
         """
 
-        if self.ownerFunction:
-            if self not in self.ownerFunction.outputValues and \
-               self not in self.ownerFunction.subnetOutputValues:
-                raise ValueError("Cannot add a connection from a value that is not an output value.")
-            if self in self.ownerFunction.subnetOutputValues:
-                if toValue.ownerFunction not in self.ownerFunction.subnetFunctions:
-                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
-                if toValue not in toValue.ownerFunction.inputValues and \
-                   toValue not in toValue.ownerFunction.subnetInputValues:
-                    raise ValueError("Cannot add a connection. Connected value is not part of the function subnet.")
+        self._verifyCanConnect(toValue)
 
-        self.changed.connect_safe(toValue.setByConnection)
+        #log.debug('Adding connection from %s to %s.' % (self.name, toValue.name))
+
+        #self.changed.connect_safe(toValue.setByConnection)
+        self.changed.connect_safe(toValue.set)
+        toValue.listeningTo.add(self)
 
         if self.value == toValue.value:
             return
 
-        log.debug('Making deepcopy of %s to overwrite %s' % (self.value, toValue.value))
-        toValue.value = copy.deepcopy(self.value)
-        toValue.hasChanged = True
-        if toValue.ownerFunction:
-            if toValue in toValue.ownerFunction.inputValues or toValue in \
-                toValue.ownerFunction.subnetInputValues:
-                toValue.ownerFunction.functionPrototype.isFinished = False
-                toValue.ownerFunction.execute()
+        toValue.value = self.value
 
     def removeConnection(self, toValue):
         """ Remove all connections from this value to another.
@@ -199,6 +181,7 @@ class Value(Variable):
         """
 
         self.changed.disconnect_all(toValue, fromValue=self)
+        toValue.listeningTo.remove(self)
 
     def setFromString(self, string):
         """ Set the value from a string.
@@ -225,14 +208,25 @@ class Value(Variable):
             return "None"
 
     def getDescription(self):
+        """ Get the description of the value returned as a string.
+           :returns     : string.
+        """
 
         return self.description
 
     def setDescription(self, desc):
+        """ Set the description of the value.
+           :param desc     : The new description.
+           :type desc      : str.
+        """
 
         self.description = desc
 
     def isUpdated(self):
+        """ Check if the value has changed since its associated function
+            was last executed.
+           :returns     : True if it has changed. False if it has not.
+        """
 
         return self.hasChanged
 
@@ -262,6 +256,7 @@ class Value(Variable):
                  'base-type' : self.getBaseTypeName()}
 
 class FileValue(Value):
+# FIXME: FileValue does not work yet.
 
     __slots__ = []
 
@@ -396,27 +391,17 @@ class ListValue(Value):
                        optional, description)
         self.typeString = 'list'
 
-    def __deepcopy__(self, memo):
-        result = Value.__deepcopy__(self, memo)
-        result.dataType = self.dataType
-
-        return result
-
-    def set(self, value):
-
-        iv = list(value)
-
-        t = self.dataType or Value
-
-        for i, v in enumerate(iv):
-            if not isinstance(v, t):
-                iv[i] = t(v)
-                iv[i].container = self
-
-        Value.set(self, iv)
-
+        for v in self.value:
+            v.container = self
 
     def is_allowed_value(self, value):
+        """ Verify that the variable is of an allowed type. Overrides method of
+            Value.
+
+           :param value : The value that should be checked if it is allowed.
+           :returns     : True is the value is allowed or False if it
+                          is not.
+        """
 
         if value == None:
             return True
@@ -433,11 +418,86 @@ class ListValue(Value):
         else:
             return False
 
+    def set(self, value):
+        """ Set the value. This is also called when using the assignment operator
+            (=). is_allowed_value is called to verify that the value is OK.
+
+           :param value: The new value.
+        """
+
+        newList = []
+
+        #log.debug('In ListValue.set().')
+
+        t = self.dataType or Value
+
+        # Go through the list of values and create Value objects
+        # if they are not already.
+        for i, v in enumerate(value):
+            if len(self.value) > i:
+                newV = self.value[i]
+            else:
+                newV = t(None, container=self)
+            if isinstance(v, Value):
+                newV.name = v.name
+                newV.value = v.value
+            else:
+                newV.value = v
+            newList.append(newV)
+
+        Variable.set(self, newList)
+
+        self.hasChanged = True
+        self._executeOwnerFunction()
+
+    def addConnection(self, toValue):
+        """ Add a connection from this value container to another value
+            container. When this value is modified the other value will
+            reflect that.
+
+           :param toValue: The value that should be updated when this value
+                           is updated.
+        """
+
+        #log.debug('In ListValue.addConnection.')
+
+        self._verifyCanConnect(toValue)
+        self.changed.connect_safe(toValue)
+        toValue.listeningTo.add(self)
+
+        if self.value:
+            for i in len(self.value):
+                self.value[i].addConnection(toValue.value[i])
+        else:
+            self.hasChanged = True
+            self._executeOwnerFunction()
+
+    def removeConnection(self, toValue):
+        """ Remove all connections from this value to another.
+            toValue will no longer reflect changes made to this value.
+
+           :param toValue: The value to which all connections (from this value)
+                           should be removed.
+        """
+
+
+        self.changed.disconnect_all(toValue, fromValue=self)
+        toValue.listeningTo.remove(self)
+
+        for i in min(len(self.value), len(toValue.value)):
+            self.value[i].removeConnection(toValue.value[i])
+
     def setFromString(self, string):
+        """ Set the value from a string.
+           :param string; The string containing the new value.
+        """
 
         self.set(ast.literal_eval(string))
 
     def getLiteralContents(self):
+        """ Get the contents of the variable returned as a string.
+           :returns     : string.
+        """
 
         ret = []
         for i in self.value:
@@ -462,7 +522,8 @@ class ListValue(Value):
             newValue.container = self
             self.append(newValue)
             nValues += 1
-        log.debug('getCreateSubValue: %s, ownerFunction: %s, container: %s' % (self.value[index], self.value[index].ownerFunction, self.value[index].container))
+        #log.debug('getCreateSubValue: %s, ownerFunction: %s, container: %s' % (self.value[index],
+        #self.value[index].ownerFunction, self.value[index].container))
         return self.value[index]
 
     def getClosestSubValue(self, index):
@@ -510,7 +571,8 @@ class ListValue(Value):
     def setIndex(self, value, index):
         """ Set the value of the specified index to the supplied value argument. """
 
-        if len(self.value) > index:
+        nValues = len(self.value)
+        if nValues > index:
             oldValue = self.value[index]
             oldValue.value = value
             value = oldValue
@@ -525,17 +587,18 @@ class ListValue(Value):
                 assert isinstance(value, Value), "If a list does not have a data type specified values can only be appended if they are a Value object."
 
         value.container = self
+        for conn in self.listeningTo:
+            if isinstance(conn, ListValue) and len(conn.value < index):
+                conn.value[index].addConnection(value)
 
-        # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the list.
-        self.value = self.value[:index] + [value] + self.value[index + 1:]
-
-        # Update the hasChanged flag
-        self.hasChanged = True
-        # If the value is input to a function execute the function code (if all input is set).
-        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
-                                self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionPrototype.isFinished = False
-            self.ownerFunction.execute()
+        if self.changed.has_handlers():
+            # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the list.
+            self.value = self.value[:index] + [value] + self.value[index + 1:]
+        else:
+            if nValues > index:
+                self.value[index] = value
+            else:
+                self.value.append(value)
 
 class DictValue(Value):
 
@@ -569,28 +632,15 @@ class DictValue(Value):
         for v in self.value.itervalues():
             v.container = self
 
-    def __deepcopy__(self, memo):
-        result = Value.__deepcopy__(self, memo)
-        result.dataType = self.dataType
-
-        return result
-
-    def set(self, value):
-
-        iv = dict(value)
-        if self.dataType:
-            t = self.dataType
-        else:
-            t = Value
-        for k, v in iv.iteritems():
-            if not isinstance(v, t):
-                iv[k] = t(v)
-                iv[k].container = self
-
-        Value.set(self, iv)
-
-
     def is_allowed_value(self, value):
+        """ Verify that the variable is of an allowed type. Overrides method of
+            Value.
+
+           :param value : The value that should be checked if it is allowed.
+           :returns     : True is the value is allowed or False if it
+                          is not.
+        """
+
 
         if value == None:
             return True
@@ -607,6 +657,72 @@ class DictValue(Value):
         else:
             return False
 
+    def set(self, value):
+        """ Set the value. This is also called when using the assignment operator
+            (=). is_allowed_value is called to verify that the value is OK.
+
+           :param value: The new value.
+        """
+
+        newDict = dict()
+
+        #log.debug('In DictValue.set().')
+
+        t = self.dataType or Value
+
+        for k, v in value.iteritems():
+            newV = self.value.get(k, t(None, container=self))
+            if isinstance(v, Value):
+                newV.name = v.name
+                newV.value = v.value
+            else:
+                newV.value = v
+
+            newDict[k] = newV
+
+        Variable.set(self, newDict)
+
+        self.hasChanged = True
+        self._executeOwnerFunction()
+
+    def addConnection(self, toValue):
+        """ Add a connection from this value container to another value
+            container. When this value is modified the other value will
+            reflect that.
+
+           :param toValue: The value that should be updated when this value
+                           is updated.
+        """
+
+        #log.debug('In DictValue.addConnection.')
+
+        self._verifyCanConnect(toValue)
+        self.changed.connect_safe(toValue)
+        toValue.listeningTo.add(self)
+
+        for k in self.value.iterkeys():
+            #log.debug('Adding connection from key: %s' % k)
+            self.value[k].addConnection(toValue.value[k])
+
+        self.hasChanged = True
+        self._executeOwnerFunction()
+
+    def removeConnection(self, toValue):
+        """ Remove all connections from this value to another.
+            toValue will no longer reflect changes made to this value.
+
+           :param toValue: The value to which all connections (from this value)
+                           should be removed.
+        """
+
+        self.changed.disconnect_all(toValue, fromValue=self)
+        toValue.listeningTo.remove(self)
+
+        for k in self.value.iterkeys():
+            to = toValue.value.get(k)
+            if to:
+                self.value[k].removeConnection(to)
+
     def update(self, *args, **kwargs):
         """ Add items to the dictionary. The argument can be a combination of a dictionary
             and a set of keyword - value pairs. E.g.
@@ -615,6 +731,8 @@ class DictValue(Value):
               self.update(a=1, b=2, c=3)
         """
 
+        # If the dictionary has a specified data type all values of the new
+        # dictionary must be compatible with that.
         if self.dataType:
             if args:
                 d = args[0]
@@ -624,23 +742,39 @@ class DictValue(Value):
                 for k,v in d.iteritems():
                     if isinstance(v, Value):
                         assert isinstance(v, self.dataType)
-                        v.container = self
                     else:
-                        newValue = self.dataType(v)
-                        newValue.container = self
-                        d[k] = newValue
+                        v = self.dataType(v)
+                        d[k] = v
+                    v.container = self
+                    for conn in self.listeningTo:
+                        if isinstance(conn, DictValue):
+                            fromValue = conn.value.get(k)
+                            if fromValue:
+                                fromValue.addConnection(v)
             else:
                 d = {}
 
             for k,v in kwargs.iteritems():
                 if isinstance(v, Value):
                     assert isinstance(v, self.dataType)
-                    v.container = self
                 else:
-                    newValue = self.dataType(v)
-                    newValue.container = self
-                    kwargs[k] = newValue
+                    v = self.dataType(v)
+                    for conn in self.listeningTo:
+                        if isinstance(conn, DictValue):
+                            fromValue = conn.value.get(k)
+                            if fromValue:
+                                fromValue.addConnection(value)
+                    kwargs[k] = v
+                v.container = self
+                for conn in self.listeningTo:
+                    if isinstance(conn, DictValue):
+                        fromValue = conn.value.get(k)
+                        if fromValue:
+                            fromValue.addConnection(v)
 
+        # If the values do not have to be of a specific type still check that
+        # the types of the new dictionary match the types in the old dictionary
+        # of entries with the same key.
         else:
             if args:
                 d = args[0]
@@ -657,6 +791,11 @@ class DictValue(Value):
                     else:
                         assert isinstance(v, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
                     v.container = self
+                    for conn in self.listeningTo:
+                        if isinstance(conn, DictValue):
+                            fromValue = conn.value.get(k)
+                            if fromValue:
+                                fromValue.addConnection(v)
             else:
                 d = {}
 
@@ -670,19 +809,20 @@ class DictValue(Value):
                 else:
                     assert isinstance(v, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
                 v.container = self
+                for conn in self.listeningTo:
+                    if isinstance(conn, DictValue):
+                        fromValue = conn.value.get(k)
+                        if fromValue:
+                            fromValue.addConnection(v)
 
+        if self.changed.has_handlers():
+            # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the dictionary.
+            newDict = dict(self.value.items() + d.items() + kwargs.items())
+            self.value = newDict
+        else:
+            # If there are no listeners it is quicker to just update the existing dictionary.
+            self.value.update(d.items() + kwards.items())
 
-        # In order to emit a signal self.value must be specifically set - it is not enough to just manipulate the dictionary.
-        newDict = dict(self.value.items() + d.items() + kwargs.items())
-        self.value = newDict
-
-        # Update the hasChanged flag
-        self.hasChanged = True
-        ## If the value is input to a function execute the function code (if all input is set).
-        if self.ownerFunction and (self in self.ownerFunction.inputValues or \
-                                   self in self.ownerFunction.subnetInputValues):
-            self.ownerFunction.functionPrototype.isFinished = False
-            self.ownerFunction.execute()
 
     def setFromString(self, string):
 
@@ -708,12 +848,25 @@ class DictValue(Value):
         return value
 
     def getClosestSubValue(self, key):
+        """ Return the value of the specified key in the dictionary. If there is no
+            value with that key return self.
+
+           :param key    : The key of the value to return.
+           :returns      : The value of the specified key in the dictionary or self.
+        """
+
 
         if not self.value:
             return self
         return self.value.get(key, self)
 
     def getSubValue(self, key):
+        """ Return the value of the specified key in the dictionary. If there is no
+            value with that key return None.
+
+           :param key      : The key of the value to return.
+           :returns        : The value of the specified key in the dictionary or None.
+        """
 
         if not self.value:
             return None
@@ -723,19 +876,11 @@ class DictValue(Value):
 
     def setSubValue(self, key, value):
 
-        log.debug('In dict.setSubValue(), key: %s, value: %s' % (key, value))
+        #log.debug('In dict.setSubValue(), key: %s, value: %s' % (key, value))
 
         valueContainer = self.value.get(key)
         if not valueContainer:
-            if self.dataType:
-                if isinstance(value, Value):
-                    assert isinstance(value, self.dataType)
-                else:
-                    value = self.dataType(value)
-            else:
-                assert isinstance(value, Value), "If a dictionary does not have a data type specified values can only be appended if they are a Value object."
-
-            value.container = self
+            self.update({key: value})
 
         else:
             if isinstance(value, Value):

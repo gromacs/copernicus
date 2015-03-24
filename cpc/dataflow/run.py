@@ -31,7 +31,6 @@ log=logging.getLogger(__name__)
 
 import cpc.util
 import apperror
-import value
 #import vtype
 import cpc.command
 

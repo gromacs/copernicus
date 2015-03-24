@@ -164,8 +164,9 @@ class TaskExecThread(object):
                         return
                     elif self.pause:
                         # signal that we're waiting, and wait
-                        #log.debug("Pausing...")
+                        log.debug('Pausing...')
                         self.waiter.releaseAndWait()
+                        log.debug('Resuming...')
                 #log.debug("Waiting for queued task..")
                 task=self.taskQueue.get()
                 if task is not None:

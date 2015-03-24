@@ -144,6 +144,7 @@ class Task(object):
             locked=False
             canceled=None
             finished=False
+            self.activeInstance.willExecute = False
             try:
                 # a transaction object that serves as the function run
                 # output object.
@@ -247,23 +248,24 @@ class Task(object):
                 #self.fnInput.destroy()
                 #self.fnInput=None
 
-                log.debug("Removing files in persistence subdirectories")
-                fullPersDir=os.path.join(self.project.basedir, self.activeInstance.persistentDir)
-                if os.path.isdir(fullPersDir):
-                    for d in os.listdir(fullPersDir):
-                        dir_path = os.path.join(fullPersDir, d)
-                        if os.path.isdir(dir_path):
-                            for f in os.listdir(dir_path):
-                                file_path = os.path.join(dir_path, f)
+                if self.activeInstance.persistentDir:
+                    log.debug("Removing files in persistence subdirectories")
+                    fullPersDir=os.path.join(self.project.basedir, self.activeInstance.persistentDir)
+                    if os.path.isdir(fullPersDir):
+                        for d in os.listdir(fullPersDir):
+                            dir_path = os.path.join(fullPersDir, d)
+                            if os.path.isdir(dir_path):
+                                for f in os.listdir(dir_path):
+                                    file_path = os.path.join(dir_path, f)
+                                    try:
+                                        if os.path.isfile(file_path):
+                                            os.remove(file_path)
+                                    except Exception, e:
+                                        log.error("Error deleting persistent data file: %s" % file_path)
                                 try:
-                                    if os.path.isfile(file_path):
-                                        os.remove(file_path)
+                                    os.rmdir(dir_path)
                                 except Exception, e:
-                                    log.error("Error deleting persistent data file: %s" % file_path)
-                            try:
-                                os.rmdir(dir_path)
-                            except Exception, e:
-                                log.error("Error removing subdir in persistence directory: %s" % dir_path)
+                                    log.error("Error removing subdir in persistence directory: %s" % dir_path)
 
 
     def getID(self):

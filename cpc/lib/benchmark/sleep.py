@@ -155,6 +155,8 @@ class CollectResults(FunctionPrototype):
                                                                     averageTime))
             self.setOutputValueContents('average_time', averageTime)
 
+            self.isFinished = True
+
         pers.set('init', init)
         pers.write()
 
