@@ -152,10 +152,10 @@ the server behind the firewall. The procedure will then be.
 
 .. code-block:: none
 
-    ssh -f server_behind_firewall -L 13807:server_behind_firewall:13807 -L 14807:server_behind_firewall:14807 -N
+    ssh -f server_behind_firewall -L 13808:server_behind_firewall:13807 -L 14808:server_behind_firewall:14807 -N
 
 
-the syntax 13807:server_behind_firewall:13807 means “anything from localhost port 13807 should be sent to server_behind_firewall  port 13807″
+the syntax 13808:server_behind_firewall:13807 means “anything from localhost port 13808 should be sent to server_behind_firewall  port 13807″
 The port numbers 13807 and 14807 are the standard copernicus server ports. in case you have changed these setting please make sure that those port numbers are provided in the tunnelling command.
 
 
@@ -163,7 +163,7 @@ The port numbers 13807 and 14807 are the standard copernicus server ports. in ca
 
 .. code-block:: none
 
-    cpcc connect-server localhost 14807
+    cpcc connect-server localhost 14808
 
 3. Approve the connection request
 
