@@ -47,12 +47,13 @@ class InputError(CpcError):
 def findAndCreateGlobalDir():
     """Get the global configuration directory base path for all configuration
         files. This depends on the OS"""
-    if "HOME" in os.environ:
+
+    #Users can set this variable to change the location of .copernicus
+    if "CPC_CONF_HOME" in os.environ:
+        globdir = os.path.join(os.environ["CPC_CONF_HOME"], Conf.base_path)
+
+    elif "HOME" in os.environ:
         globdir = os.path.join(os.environ["HOME"], Conf.base_path)
-    
-    #Users can set this variable to change the location of .copernicus	
-    elif "CPC_CONF_HOME" in os.environ:
- 	    globdir = os.path.join(os.environ["CPC_CONF_HOME"], Conf.base_path)
 
     else:
         # we're probably running on Windows.
