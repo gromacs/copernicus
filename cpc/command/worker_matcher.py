@@ -144,9 +144,12 @@ def matchCommandWorker(matcher, command):
     use=False
     execID=matcher.getExecID(command)
     log.log(cpc.util.log.TRACE,'exec id is %s'%execID)
+    log.debug("Type: %s"%command.getTask().getFunctionName())
     if execID is not None:
         use=(matcher.checkType(command.getTask().getFunctionName()) and
              matcher.checkWorkerRequirements(command))
+
+    log.debug("Should use: %s "%use)
     if use:
         if matcher.checkAddResources(command):
             use=True
