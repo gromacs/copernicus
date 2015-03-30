@@ -69,7 +69,9 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                 outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%
                            (cmd, nopts))
                 outf.write('</executable>\n')
-        return True
+            return True
+        else:
+            return False
     except OSError:
         return False
 
@@ -78,20 +80,13 @@ sys.stdout.write('<executable-list>\n')
 
 #as of gromacs 5.0 all commands are unified under the gmx command
 #we first try to run this command
-
-platform = sys.argv[3]
-cmdPrefix = ""
-if platform=='cray':
-	cmdPrefix='aprun'
 #current version supports both gmx and the old commands but we make sure to only detect one of them
 if (try_report_command(sys.stdout, "mdrun", "gmx_mpi mdrun", "-cpt 10 -maxh 1 -x traj.xtc",True)
     or try_report_command(sys.stdout, "mdrun", "gmx mdrun","-cpt 10 -maxh 1 -x traj.xtc", True)):
-#    try_report_command(sys.stdout, "grompp", "grompp")
-#    try_report_command(sys.stdout, "trjconv", "trjconv")
-#    try_report_command(sys.stdout, "trjcat", "trjcat")
-#    try_report_command(sys.stdout, "g_energy", "g_energy")
-     pass
-
+       try_report_command(sys.stdout, "gmx grompp", "grompp")
+       try_report_command(sys.stdout, "gmx trjconv", "trjconv")
+       try_report_command(sys.stdout, "gmx trjcat", "trjcat")
+       try_report_command(sys.stdout, "gmx energy", "g_energy")
 
 else:
     try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
