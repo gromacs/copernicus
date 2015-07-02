@@ -106,7 +106,7 @@ class ConnectionBundle(Conf):
     #overrrides method in ConfBase
     def initDefaults(self):
         self._add('client_host', self.client_host,
-                  "Hostname for the client to connect to", True)
+                  "Hostname for the client to connect to", True,None)
         self._add('server_secure_port', Conf.getDefaultServerSecurePort(),
                    "Port number the server uses for communication from servers ",
                    True,None,'\d+')

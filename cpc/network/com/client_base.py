@@ -19,6 +19,7 @@
 
 import httplib
 import socket
+import ssl
 import logging
 import cpc.util.log
 import client_connection
@@ -65,6 +66,7 @@ class ClientBase(object):
         self.port = port
         self.conf = conf
         self.require_certificate_authentication = None
+        self.useNoSSLFalback=False
 
     def putRequest(self, req, require_certificate_authentication=None, disable_cookies=False):
         self.__connect(require_certificate_authentication, disable_cookies)

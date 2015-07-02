@@ -104,6 +104,7 @@ class OpenSSL(object):
             serverConf.getClientSecurePort())
         connectionBundle.setServerSecurePort(
             serverConf.getServerSecurePort())
+        connectionBundle.setHostname(ServerConf().getHostName())
         return connectionBundle
 
     def setupServer(self):

@@ -1,10 +1,12 @@
 import httplib
-import socket
+import ssl
 import logging
 import traceback
+import socket
 
 from cpc.network.com.connection_base import ConnectionBase
-from cpc.network.https.real_https_connection import HttpsConnectionWithCertReq
+from cpc.network.https.real_https_connection import HttpsConnectionWithCertReq, \
+    HttpsConnectionNoCertReq
 from cpc.network.https_connection_pool import ServerConnectionPool, ConnectionPoolEmptyError
 from cpc.network.node import Node
 from cpc.util import CpcError, cpc
@@ -71,6 +73,7 @@ class ServerConnection(ConnectionBase):
             else:
                 self.conn = self.httpsConnectionPool.getConnection(self.node)
 
+
         except ConnectionPoolEmptyError as e:
             #Connection pool is currently empty this means that we do not
             # have any outbound connections to this node
@@ -78,6 +81,19 @@ class ServerConnection(ConnectionBase):
             # connections are simply taken!
             log.info("No connections in pool. No outbound connections of this network node.")
             raise
+
+        except ssl.SSLError as e:
+            '''If port 13807(Two sided verification) do not work we fall back on a connection where
+               certificate authentication is not required. The receiving server will only accept request
+               if it is started with -no-server-verification.
+            '''
+            log.error("Establishing server connection to %s:%s failed " \
+                      "Trying fallback port %s"%(self.node.getHostname(),self.node.getServerSecurePort(),self.node.getClientSecurePort()))
+
+            self.conn = HttpsConnectionNoCertReq(self.node.getHostname(),self.node.getClientSecurePort())
+            self.conn.connect()
+            self.connected=True
+
 
     def handleSocket(self):
         if self.storeInConnectionPool:

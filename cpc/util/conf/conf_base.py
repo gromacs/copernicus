@@ -389,13 +389,7 @@ class Conf:
         # construct a dict with only the values that have changed from 
         # the default values
         conf = dict()
-        for cf in self.conf.itervalues():
-            if cf.hasSetValue():
-                conf[cf.name] = cf.get()
-            # and write out that dict.
-        f.write(json.dumps(conf,
-            default=cpc.util.json_serializer.toJson,
-            indent=4))
+        f.write(self.toJson())
         f.close()
 
 
@@ -404,11 +398,11 @@ class Conf:
         returns a json formatted string
         @return json String
         '''
-
         with self.lock:
             conf = dict()
             for cf in self.conf.itervalues():
-                if cf.writable:
+                if cf.hasSetValue() and cf.writable:
+
                     conf[cf.name] = cf.get()
 
             return json.dumps(conf,
