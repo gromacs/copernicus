@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 #simply tests how many connections a server can handle
+from getpass import getpass
 from multiprocessing import pool
 import shlex
 import subprocess
@@ -21,7 +22,8 @@ def sendRequest(cmd_line):
     p =subprocess.call(args)
     if(p!=0):
         print "error occured for request %s"%cmd_line
-        return (cmd_line,False)
+        exit(0)
+
 
     return (cmd_line,True)
 
@@ -36,16 +38,17 @@ numJobs = int(cmd_args[1])
 projName = cmd_args[0]
 
 home = os.path.expanduser("~")
-#cmd_line_base = "./cpcc -c %s/.copernicus/client.cnx"%home
 cmd_line_base = "./cpcc"
 
 
 #do login
-cmd_line = 'cpcc login -stdin root'
+passwd = getpass("Enter the password for cpc-admin. this script will log you in autimatically: ")
+
+cmd_line = 'cpcc login -stdin cpc-admin'
 args = shlex.split(cmd_line)
 p = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
     stderr=subprocess.PIPE)
-(stdout, stderr) = p.communicate(input='root\n')
+(stdout, stderr) = p.communicate(input=passwd)
 assert p.returncode == 0,\
     "Failed login: stdout: '%s', stderr: '%s'"%(stdout,stderr)
 

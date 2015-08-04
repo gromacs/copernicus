@@ -2,9 +2,10 @@ import logging
 import os
 import time
 import math
-from cpc.dataflow import IntValue, FloatValue, StringValue
+from cpc.dataflow import IntValue, FloatValue, StringValue, Resources
 import cpc.command
-from cpc.lib.gromacs import iterate
+from cpc.dataflow import Resources
+
 
 log=logging.getLogger(__name__)
 
@@ -17,13 +18,15 @@ def sleep(inp):
 
     fo = inp.getFunctionOutput()
     sleepTime = inp.getInput('sleep_time')
-
     if inp.cmd is None:
         startTime = int(time.time())
         pers.set("startTime", startTime)
         #add the sleep command on the queue
         cmd = cpc.command.Command(inp.getPersistentDir(), "benchmark/sleep",
             [sleepTime])
+        rsrc=Resources(inp.getInputValue("resources"))
+        rsrc.max.set('cores',1)
+        rsrc.updateCmd(cmd)
         fo.addCommand(cmd)
 
     else:
