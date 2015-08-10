@@ -70,14 +70,19 @@ class HttpsConnectionWithCertReq(httplib.HTTPConnection):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         #create an ssl context and load certificate verify locations
-        self.sock = ssl.wrap_socket(sock,
-                                    self.privateKeyFile,
-                                    self.certFile,
-                                    cert_reqs = ssl.CERT_REQUIRED,
-                                    ssl_version=ssl.PROTOCOL_SSLv3,
-                                    ca_certs=self.caFile)
-        self.sock.connect((self.host,self.port))
-        self.connected = True
+        try:
+            self.sock = ssl.wrap_socket(sock,
+                                        self.privateKeyFile,
+                                        self.certFile,
+                                        cert_reqs = ssl.CERT_REQUIRED,
+                                        ssl_version=ssl.PROTOCOL_SSLv3,
+                                        ca_certs=self.caFile)
+            self.sock.connect((self.host,self.port))
+            self.connected = True
+
+        except ssl.SSLError as e:
+            log.error(e)
+            raise
 
 class HttpsConnectionNoCertReq(httplib.HTTPConnection):
     '''
@@ -93,10 +98,16 @@ class HttpsConnectionNoCertReq(httplib.HTTPConnection):
 
 
     def connect(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        #create an ssl context and load certificate verify locations
-        self.sock = ssl.wrap_socket(sock,
-                                    cert_reqs = ssl.CERT_NONE,
-                                    ssl_version=ssl.PROTOCOL_SSLv3)
-        self.sock.connect((self.host,self.port))
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+            #create an ssl context and load certificate verify locations
+            self.sock = ssl.wrap_socket(sock,
+                                        cert_reqs = ssl.CERT_NONE,
+                                        ssl_version=ssl.PROTOCOL_SSLv3)
+            self.sock.connect((self.host,self.port))
+
+        except ssl.SSLError as e:
+            log.error(e)
+            raise

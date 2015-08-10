@@ -48,7 +48,7 @@ def initClientLog(debug=False):
        stdout."""
     logger=logging.getLogger('cpc')
     if debug:
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(TRACE)
     else:
         logger.setLevel(logging.INFO)
 

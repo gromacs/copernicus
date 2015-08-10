@@ -357,6 +357,18 @@ class handlerForRequestWithNoCertReq(handler_base):
     def setup(self):
         handler_base.setup(self)
         self.log=logging.getLogger(__name__)
+        ##is this a request from a server and have
+
+    def _handleSession(self, request):
+        handler_base._handleSession(self,request)
+
+        if 'user' not in request.session \
+                and not ServerConf().getServerVerification() \
+                and self.headers.has_key('originating-server-id'):
+
+            if ServerConf().getNodes().exists(self.headers['originating-server-id']):
+                request.session['user'] = User(1, 'root', UserLevel.SUPERUSER)
+
 
 
 class handlerForRequestWithCertReq(handler_base):

@@ -243,6 +243,12 @@ class ServerConf(conf_base.Conf):
             "value is in seconds"
             ,userSettable=True)
 
+        self._add('server_verification',True,
+                  "By default servers should always require ssl certificate from both directions" \
+                  "setting this to true will let the sending server to use the client port and disregard" \
+                  "certificate checks. This should only be used in very rare circumstances, for example when debugging" \
+                  "ssl incombatibilites between machines " ,writable=False
+                  ,userSettable=False)
 
         dn=os.path.dirname(sys.argv[0])
         self.execBasedir = ''
@@ -256,6 +262,10 @@ class ServerConf(conf_base.Conf):
         else:
             os.environ['PYTHONPATH'] = self.execBasedir
 
+
+    def setServerVerification(self,doVerify):
+        self.set('server_verification',doVerify)
+        return
 
     def setServerHost(self,serverAddress):
         self.set('server_host',serverAddress)
@@ -326,11 +336,15 @@ class ServerConf(conf_base.Conf):
         with self.lock:
             return self.conf.get('nodes').get()
 
+    def getServerVerification(self):
+        return self.get('server_verification')
+
     def getNodeConnectRequests(self):
         return self.get('node_connect_requests')
 
     def getSentNodeConnectRequests(self):
         return self.get('sent_node_connect_requests')
+
     def getLogDir(self):
         return self.getFile('log_dir')
 

@@ -44,7 +44,7 @@ from cpc.util.version import __version__
 
 
 def print_usage():
-    print "Usage: cpc-server start [-dev]"
+    print "Usage: cpc-server start [-dev] [-no-server-verification]"
     print "       cpc-server config-list"
     print "       cpc-server config-values"
     print "       cpc-server config param value"
@@ -131,6 +131,11 @@ try:
 
                 cpc.util.log.initServerLogToStdout(serverMode)
                 doFork = False
+            if '-no-server-verification' in args:
+                cf.setServerVerification(False)
+                print "Server will allow requests from connected servers on the client port. " \
+                      "This means that the connecting servers will not be athuenticated in any way. " \
+                      "Only use this setting in cases where you have openssl incompatibilites between servers."
         print "Starting server.."
 
         doProfile = cf.getProfiling()
