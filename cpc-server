@@ -167,8 +167,9 @@ try:
                     print "cannot use -host in combination with -servername "
                     sys.exit(1)
                 hostConfDir = True
-            elif arg == '-stdin':
-                rootpass = raw_input("Please enter password for the root copernicus account:")
+            elif arg == '-p':
+                rootpass = args[i + 1]
+                i += 1
             elif arg == '-servername':
                 if(hostConfDir):
                     print "cannot use -servername in combination with -host"
