@@ -20,7 +20,7 @@ Installation
 The section :ref:`getting-started` of the User guide covers the installation of
 Copernicus.
 
-Tutorial files can be found [here] (https://github.com/gromacs/copernicus/tree/master/examples/mdruns-test)
+Tutorial files can be found [here](https://github.com/gromacs/copernicus/tree/master/examples/mdruns-test)
 
 
 Creating a workflow for molecular simulations
