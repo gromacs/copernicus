@@ -63,6 +63,8 @@ We import it with
 
 .. code-block:: none
 
+   > cpcc import gromacs
+
    > cpcc info gromacs
 
    \.\.\.\.\.\.
@@ -144,7 +146,7 @@ We do this by connecting the grompp tpr output to the mdrun tpr input.
 .. code-block:: none
 
     > cpcc transact
-    > cpcc connect grompp.out.tpr mdrun.in.tpr
+    > cpcc connect grompp:out.tpr mdrun:in.tpr
     Scheduled to connect grompp.out.tpr to mdrun.in.tpr at commit
 
 here you will notice syntax like grompp.out.tpr, These are called workflow paths. The next section
@@ -241,7 +243,7 @@ we will use the ``cpcc setf`` command to provide the input files for our grompp 
 
 .. code-block:: none
 
-    > cpcc setf grompp.in.conf[+] conf.gro
+    > cpcc setf grompp:in.conf[+] conf.gro
     Committing scheduled changes:
     - Set grompp:grompp:in.conf[0] to _inputs/0000/conf.gro
 
@@ -252,11 +254,11 @@ using the plus. lets add the topology file and the mdp file.
 
 .. code-block:: none
 
-    > cpcc setf grompp.in.top[+] topol.top
+    > cpcc setf grompp:in.top[+] topol.top
     Committing scheduled changes:
     - Set grompp:grompp:in.top[0] to _inputs/0001/topol.top
 
-    > cpcc setf grompp.in.mdp[+] grompp.mdp
+    > cpcc setf grompp:in.mdp[+] grompp.mdp
     Committing scheduled changes:
     - Set grompp:grompp:in.mdp[0] to _inputs/0002/grompp.mdp
 
