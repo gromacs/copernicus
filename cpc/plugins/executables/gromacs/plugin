@@ -87,7 +87,8 @@ if (try_report_command(sys.stdout, "mdrun", "gmx_mpi mdrun", "-cpt 10 -maxh 1 -x
        try_report_command(sys.stdout, "gmx trjconv", "trjconv")
        try_report_command(sys.stdout, "gmx trjcat", "trjcat")
        try_report_command(sys.stdout, "gmx energy", "g_energy")
-
+       # just in case we have gmx mdrun and mdrun_mpi:
+       try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
 else:
     try_report_command(sys.stdout, "mdrun", "mdrun", "-cpt 10 -maxh 1", True)
     try_report_command(sys.stdout, "mdrun", "mdrun_mpi", "-cpt 10 -maxh 1", True)
