@@ -93,9 +93,9 @@ def runGmxCheckGap(fileTypeFlag, checkFile):
 
 def checkConfoutDir(path):
 
-    xtcso = sorted(glob.glob(os.path.join(path, "traj.part*.xtc")))
-    trrso = sorted(glob.glob(os.path.join(path, "traj.part*.trr")))
-    edrso = sorted(glob.glob(os.path.join(path, "traj.part*.edr")))
+    xtcso = sorted(glob.glob(os.path.join(path, "traj.*xtc")))
+    trrso = sorted(glob.glob(os.path.join(path, "traj.*trr")))
+    edrso = sorted(glob.glob(os.path.join(path, "ener.*edr")))
 
     xtcs = []
     trrs = []
@@ -348,7 +348,7 @@ def extractData(confout, outDir, persDir, fo):
     fo.setOut('conf', FileValue(confoutPath))
     # fix the xtc files
     xtcso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.part*.xtc")))
+                                          "traj.*xtc")))
     # cull empty files and duplicate trajectory names
     xtcs=[]
     xtcbase=[]
@@ -381,7 +381,7 @@ def extractData(confout, outDir, persDir, fo):
         fo.setOut('xtc', FileValue(xtcoutname))
     # do the trrs
     trrso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.part*.trr")))
+                                          "traj.*trr")))
     # cull empty files and duplicate trajectory names
     trrs=[]
     trrbase=[]
@@ -412,7 +412,7 @@ def extractData(confout, outDir, persDir, fo):
         stdo.close()
         fo.setOut('trr', FileValue(trroutname))
     # and the edrs
-    edrso = glob.glob(os.path.join(persDir, "run_???", "ener.part*.edr"))
+    edrso = glob.glob(os.path.join(persDir, "run_???", "ener.*edr"))
     # cull empty files and duplicate trajectory names
     edrs=[]
     edrbase=[]
@@ -469,7 +469,7 @@ def extractData(confout, outDir, persDir, fo):
     outf.close()
     fo.setOut('stderr', FileValue(stderrname))
     # and do md.log
-    logo = glob.glob(os.path.join(persDir, "run_???", "md.part*.log"))
+    logo = glob.glob(os.path.join(persDir, "run_???", "md.*log"))
     logname=os.path.join(outDir, "md.log")
     outf=open(logname,"w")
     for infile in logo:
@@ -540,7 +540,7 @@ def mdrun(inp):
     if inp.cmd is not None:
         log.debug("Return code was %s"%str(inp.cmd.getReturncode()))
     # try to find out whether the run has already finished
-    confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
+    confout=glob.glob(os.path.join(persDir, "run_???", "confout.*gro"))
     if len(confout) > 0:
         confoutDir = os.path.dirname(confout[0])
         hasFinalData = checkConfoutDir(confoutDir)
