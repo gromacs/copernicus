@@ -136,13 +136,13 @@ Now we provide all the necessary input
 
 .. code-block:: none
 
-    cpcc setf msm:in.grompp.top examples/msm-test/topol.top
-    cpcc setf msm:in.grompp.mdp examples/msm-test/grompp.mdp
+    cpcc setf msm:in.grompp.top examples/msm/alanine-dipeptide-msm/topol.top
+    cpcc setf msm:in.grompp.mdp examples/msm/alanine-dipeptide-msm/grompp.mdp
 
-    cpcc setf msm:in.confs[+] examples/msm-test/equil0.gro
-    cpcc setf msm:in.confs[+] examples/msm-test/equil1.gro
-    cpcc setf msm:in.confs[+] examples/msm-test/equil2.gro
-    cpcc setf msm:in.confs[+] examples/msm-test/equil3.gro
+    cpcc setf msm:in.confs[+] examples/msm/alanine-dipeptide-msm/equil0.gro
+    cpcc setf msm:in.confs[+] examples/msm/alanine-dipeptide-msm/equil1.gro
+    cpcc setf msm:in.confs[+] examples/msm/alanine-dipeptide-msm/equil2.gro
+    cpcc setf msm:in.confs[+] examples/msm/alanine-dipeptide-msm/equil3.gro
 
     cpcc set msm:in.recluster 1.0
     cpcc set msm:in.num_sim 20
