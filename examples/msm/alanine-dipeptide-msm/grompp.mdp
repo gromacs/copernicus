@@ -71,7 +71,7 @@ tcoupl                   = V-rescale
 ; Groups to couple separately
 tc-grps                  = protein water
 ; Time constant (ps) and reference temperature (K)
-tau_t                    = 5.0  5.0
+tau_t                    = 3.0  3.0
 ref_t                    = 298  298
 ; Pressure coupling     
 Pcoupl                   = Berendsen
