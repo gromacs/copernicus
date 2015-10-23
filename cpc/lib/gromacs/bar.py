@@ -117,9 +117,10 @@ class res:
 
 
 def g_bar(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("g_bar -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.bar)
         return
     fo=inp.getFunctionOutput()
     outDir=inp.getOutputDir()
@@ -131,7 +132,7 @@ def g_bar(inp):
     baroutname=os.path.join(outDir, "bar.xvg")
     histoutname=os.path.join(outDir, "histogram.xvg")
     #item=inp.getInput('item')
-    cmdline=["g_bar", "-g"]
+    cmdline=[cmdnames.bar, "-g"]
     for i in xrange(nedrfiles):
         edrfile=inp.getInput('edr[%d]'%i)
         if edrfile is None:
@@ -159,7 +160,8 @@ def g_bar(inp):
                           close_fds=True)
     (stdout, stderr)=proc.communicate()
     if proc.returncode != 0:
-        raise GromacsError("ERROR: g_bar returned %s, %s"%(stdout, stderr))
+        raise GromacsError("ERROR: %s returned %s, %s"
+                           % (cmdnames.bar, stdout, stderr))
     detailedStart=re.compile(r".*lam_A[ ]*lam_B")
     finalStart=re.compile(r"Final results in kJ/mol")
     lambdaReg=re.compile(r".*lambda.*")

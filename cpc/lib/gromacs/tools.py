@@ -283,9 +283,10 @@ def eneconv(inp):
     return fo
 
 def pdb2gmx(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("pdb2gmx -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.pdb2gmx)
         return
     input_choices=inp.getInput('input_choices')
     if input_choices is None:
@@ -300,7 +301,7 @@ def pdb2gmx(inp):
         cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
     else:
         cmdlineOpts=[]
-    cmdline=["pdb2gmx", "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
+    cmdline=[cmdnames.pdb2gmx, "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
     if skip_hydrogens:
         cmdline.extend(["-ignh"])
     cmdline.extend(cmdlineOpts)

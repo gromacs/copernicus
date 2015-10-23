@@ -339,6 +339,7 @@ def checkErr(stde, rsrc, tpr, persDir):
 
 def extractData(confout, outDir, persDir, fo):
     """Concatenate all output data from the partial runs into the end results"""
+    cmdnames = cmds.GromacsCommands()
     #outputs=dict()
     # Concatenate stuff
     confoutPath=os.path.join(outDir, "confout.gro")
@@ -371,7 +372,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     xtcoutname=os.path.join(outDir, "traj.xtc")
     if len(xtcs) > 0:
-        cmd=["trjcat", "-f"]
+        cmd=[cmdnames.trjcat, "-f"]
         cmd.extend(xtcs)
         cmd.extend(["-o", xtcoutname])
         stdo=open(os.path.join(persDir,"trjcat_xtc.out"),"w")
@@ -403,7 +404,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     trroutname=os.path.join(outDir, "traj.trr")
     if len(trrs) > 0:
-        cmd=["trjcat", "-f"]
+        cmd=[cmdnames.trjcat, "-f"]
         cmd.extend(trrs)
         cmd.extend(["-o", trroutname])
         stdo=open(os.path.join(persDir,"trjcat_trr.out"),"w")
@@ -437,7 +438,7 @@ def extractData(confout, outDir, persDir, fo):
         log.debug("Concatenating edr files: %s" % edrs)
     # concatenate them
     if len(edrs) > 0:
-        cmd=["eneconv", "-f"]
+        cmd=[cmdnames.eneconv, "-f"]
         cmd.extend(edrs)
         cmd.extend(["-o", edroutname])
         stdo=open(os.path.join(persDir,"eneconv.out"),"w")
@@ -484,11 +485,12 @@ def extractData(confout, outDir, persDir, fo):
 
 
 def mdrun(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("trjcat -version")
-        cpc.util.plugin.testCommand("eneconv -version")
-        cpc.util.plugin.testCommand("gmxdump -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.trjcat)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.eneconv)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
         return
     persDir=inp.getPersistentDir()
     outDir=inp.getOutputDir()
