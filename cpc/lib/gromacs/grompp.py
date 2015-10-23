@@ -52,7 +52,6 @@ class GromacsError(cpc.util.CpcError):
 def procSettings(inp, outMdpDir):
     """Process settings into a new mdp file, or return the old mdp file if
        there are no additional settings."""
-    cmdnames = cmds.GromacsCommands()
     mdpfile=inp.getInput('mdp')
     if ( inp.hasInput('settings') and len(inp.getInput('settings'))>0 ):
         repl=dict()
@@ -203,6 +202,7 @@ def extract_mdp(inp):
     return fo
 
 def tune_fn(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         #cpc.util.plugin.testCommand("grompp -version")

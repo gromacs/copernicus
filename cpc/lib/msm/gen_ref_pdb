@@ -33,10 +33,12 @@ except ImportError:
 
 import cpc.dataflow
 import cpc.util
+from cpc.lib.gromacs import cmds
 
 def gen_ref_pdb(inp, out): 
     """Create a reference pdb."""
     #fo=inp.getFunctionOutput()
+    cmdnames = cmds.GromacsCommands()
     try:
         out_fname=os.path.join(inp.getOutputDir(), "reference.pdb")
         out_tmpfname="ref-tmp.pdb"
@@ -44,7 +46,8 @@ def gen_ref_pdb(inp, out):
         grp_name=inp.getInput('grpname')
         ndx_fname=inp.getInput('ndx')
         conf_fname=inp.getInput('conf')
-        cmd=["trjconv", "-f", conf_fname, "-s", tpr_fname, "-o", out_tmpfname]
+        cmd=[cmdnames.trjconv, "-f", conf_fname, "-s", tpr_fname, "-o",
+             out_tmpfname]
         if ndx_fname is not None and ndx_fname.strip() != "":
             cmd.extend(['-n', ndx_fname])
         proc=subprocess.Popen(cmd, stdin=subprocess.PIPE,

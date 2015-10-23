@@ -45,6 +45,7 @@ import cpc.util
 
 import tune
 import iterate
+import cmds
 
 class MdrunError(cpc.util.CpcError):
     pass
@@ -54,7 +55,8 @@ class GromacsError(cpc.util.CpcError):
 
 def extractConf(tprFile, confFile):
     """Extract a configuration to confFile from tprFile."""
-    cmdlist=['editconf', '-f', tprFile, '-o', confFile]
+    cmdnames = cmds.GromacsCommands()
+    cmdlist=[cmdnames.editconf, '-f', tprFile, '-o', confFile]
     proc=subprocess.Popen(cmdlist,
                           stdin=None,
                           stdout=subprocess.PIPE,
@@ -67,8 +69,8 @@ def extractConf(tprFile, confFile):
 
 
 def runGmxCheckGap(fileTypeFlag, checkFile):
-
-    cmd=['gmxcheck', fileTypeFlag, checkFile]
+    cmdnames = cmds.GromacsCommands()
+    cmd=[cmdnames.gmxcheck, fileTypeFlag, checkFile]
     proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     #noMatchLine=re.compile(r'Timesteps at.*don\'t match.*\(([0-9.]+),\s([0-9.]+)\)')
@@ -141,6 +143,7 @@ class TrajFileCollection(object):
         self.lastDir=lastrundir
         self.newRunDir=currundir
         self.lastTrajNr=self._extractLastTrajNr()
+        self.cmdnames = cmds.GromacsCommands()
 
     def getLastDir(self):
         """Return the last run directory."""
@@ -248,7 +251,7 @@ class TrajFileCollection(object):
             nsteps=1
             # now check how far along the run is by inspecting the
             # step number we're at.
-            cmd=['gmxdump', '-cp', self.lastcpt ]
+            cmd=[self.cmdnames.gmxdump, '-cp', self.lastcpt ]
             sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
             stepline=re.compile('step = .*')
@@ -273,7 +276,7 @@ class TrajFileCollection(object):
                 self.lastTrajNr=newFileNumber
             #sp.communicate()
             # and get the total step number
-            cmd=['gmxdump', '-s', tpr ]
+            cmd=[self.cmdnames.gmxdump, '-s', tpr ]
             sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
             stepline=re.compile('[ ]*nsteps.*')
@@ -295,7 +298,7 @@ class TrajFileCollection(object):
         if self.lastcpt is not None:
             outfile=os.path.join(self.lastDir, 'confout.part%04d.gro'  % self.getLastTrajNr())
             tprfile=os.path.join(self.lastDir, 'topol.tpr')
-            cmd=['trjconv', '-f', self.lastcpt, '-s', tprfile, '-o', outfile]
+            cmd=[self.cmdnames.trjconv, '-f', self.lastcpt, '-s', tprfile, '-o', outfile]
 
             sp = subprocess.Popen(cmd, stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,

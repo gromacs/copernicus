@@ -36,14 +36,16 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
 from cpc.dataflow import FileValue
+from cpc.lib.gromacs import cmds
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
 
 
 def run(inp, out):
+    cmdnames = cmds.GromacsCommands()
     pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
-                                               "persistent.dat"))
+                                                 "persistent.dat"))
 
     # TODO: make sure this works with installs with only g_rama_mpi 
 
@@ -64,7 +66,9 @@ def run(inp, out):
             subconfs = inp.getInput('confs[%d]' % i)
             for j in range(len(subconfs)):
                 conf = inp.getInput('confs[%d][%d]' % (i, j))
-                ramaprocs.append(Popen(['g_rama', '-f', conf, '-s', tpr, '-o', '0%3d_0%3d.xvg' % (i, j)], stdout=FNULL, stderr=FNULL))
+                ramaprocs.append(Popen([cmdnames.rama, '-f', conf, '-s', tpr, '-o',
+                                        '0%3d_0%3d.xvg' % (i, j)],
+                                       stdout=FNULL, stderr=FNULL))
 
         # Wait for each process to complete, and set the output file correctly
         q = 0

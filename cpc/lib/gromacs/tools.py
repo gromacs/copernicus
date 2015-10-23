@@ -43,21 +43,23 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import StringValue
 from cpc.dataflow import FloatValue
 import cpc.util
+import cmds
 
 class GromacsError(cpc.util.CpcError):
     def __init__(self, str):
         self.str=str
 
 def g_energy(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("g_energy -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.g_energy)
         return
     edrfile=inp.getInput('edr')
     item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xvgoutname=os.path.join(outDir, "energy.xvg")
-    proc=subprocess.Popen(["g_energy", "-f", edrfile, "-o", xvgoutname],
+    proc=subprocess.Popen([cmdnames.g_energy, "-f", edrfile, "-o", xvgoutname],
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -104,9 +106,10 @@ def checkUpdated(inp, items):
 
 def _trjconv(inp, fo, split):
     """Internal implementation of trjconv and trjconv_split"""
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("trjconv -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.trjconv)
         return
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
@@ -126,7 +129,7 @@ def _trjconv(inp, fo, split):
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
     grooutname=os.path.join(outDir, "out.gro")
-    cmdline=["trjconv", '-s', tprfile, '-f', trajfile]
+    cmdline=[cmdnames.trjconv, '-s', tprfile, '-f', trajfile]
     if not split:
         cmdline.extend(['-o', xtcoutname])
     else:
@@ -215,9 +218,10 @@ def trjconv_split(inp):
 
 def _eneconv(inp, fo):
     """Internal implementation of eneconv"""
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("eneconv -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.eneconv)
         return
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
@@ -236,7 +240,7 @@ def _eneconv(inp, fo):
     outDir=inp.getOutputDir()
     edrOutname=os.path.join(outDir, "fixed.edr")
     #cmdline=["eneconv", '-f', edrFiles, '-o', edrOutname]
-    cmdline=["eneconv", '-f']
+    cmdline=[cmdnames.eneconv, '-f']
     for i in xrange(len(edrFilesList)):
         cmdline.append(inp.getInput('edr_files[%d]' % i))
 
@@ -256,7 +260,7 @@ def _eneconv(inp, fo):
         cmdline.extend(['-offset', "%g"%offset] )
     scaleF=inp.getInput('scalefac')
     if scaleF is not None:
-        cmdline.extend(['-scalefac', "%g"%scalefac] )
+        cmdline.extend(['-scalefac', "%g"%scaleF] )
     if inp.getInput('cmdline_options') is not None:
         cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
     else:

@@ -70,7 +70,7 @@ def trajCollect(inp):
                     #totns+=ns
                     # now make a new xtc_to_tolh5 and connect it to the right
                     # inputs/outputs
-                    nnmame='tolh5_%d'%i
+                    nname='tolh5_%d'%i
                     out.addInstance('xtc_to_lh5', nname)
                     out.addConnection('self.ext_in.reference', 
                                       '%s.reference'%nname)

@@ -40,7 +40,7 @@ from cpc.dataflow import ArrayValue
 from cpc.dataflow import RecordValue
 import cpc.command
 import cpc.util
-
+import cmds
 
 class GromacsError(cpc.util.CpcError):
     def __init__(self, str):

@@ -33,14 +33,15 @@ except ImportError:
 
 import cpc.dataflow
 import cpc.util
-
+from cpc.lib.gromacs import cmds
 
 import msmbuilder.Trajectory
 
 def checkTrajectory(filename):
     """Check an existing trajectory and return the trajectory time in ns, 
         the delta t, and the number of frames"""
-    proc=subprocess.Popen(["gmxcheck", "-f", filename],
+    cmdnames = cmds.GromacsCommands()
+    proc=subprocess.Popen([cmdnames.gmxcheck, "-f", filename],
                           stdin=None,
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.PIPE)
@@ -94,14 +95,14 @@ def convertXtc2lh5(xtcfile,  ref_conf, outFilename, persDir):
 
 def removeSolAndPBC(inFile, outFile, tprFile, grpname, ndxFile, persDir):
     ''' Removes PBC on trajectories '''
-
+    cmdnames = cmds.GromacsCommands()
     #msm1=os.path.join(persDir, 'remove_sol.txt')
     #msm2=os.path.join(persDir, 'remove_sol_err.txt')
     #mstdout=open(msm1,'w')
     #mstderr=open(msm2,'w')
     sys.stderr.write("Removing solvent and pbc:\n")
-    args=["trjconv","-f","%s"%inFile,"-s", tprFile,"-o","%s"%outFile,"-pbc",
-            "mol"]
+    args=[cmdnames.trjconv, "-f", "%s" % inFile, "-s", tprFile, "-o",
+          "%s "% outFile, "-pbc", "mol"]
     if ndxFile is not None:
         args.extend( [ '-n', ndxFile ] )
     proc = subprocess.Popen(args, stdin=subprocess.PIPE,

@@ -1,4 +1,4 @@
-s file is part of Copernicus
+# This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
 # Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
@@ -17,35 +17,38 @@ s file is part of Copernicus
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
-import sys
-import os
-import os.path
-import shutil
 import logging
 
-log=logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 import cpc.util
 
-class GromacsCommands(Object):
-    try:
-        cpc.util.plugin.testCommand("grompp -version")
-        self.grompp = "grompp"
-        self.eneconv = "eneconv"
-        self.energy = "energy"
-        self.trjconv = "trjconv"
-        self.trjcat = "trjcat"
-        self.gmxdump = "gmxdump"
-        self.pdb2gmx = "pdb2gmx"
-        self.bar = "g_bar"
-    except cpc.util.CpcError as e:
-        cpc.util.plugin.testCommand("gmx -version")
-        self.grompp = "gmx grompp"
-        self.eneconv = "gmx eneconv"
-        self.energy = "gmx energy"
-        self.trjconv = "gmx trjconv"
-        self.trjcat = "gmx trjcat"
-        self.gmxdump = "gmx dump"
-        self.pdb2gmx = "gmx pdb2gmx"
-        self.bar = "gmx bar"
-    return
+class GromacsCommands(object):
+    def __init__(self):
+        try:
+            cpc.util.plugin.testCommand("grompp -version")
+            self.grompp = "grompp"
+            self.eneconv = "eneconv"
+            self.energy = "energy"
+            self.trjconv = "trjconv"
+            self.trjcat = "trjcat"
+            self.gmxdump = "gmxdump"
+            self.pdb2gmx = "pdb2gmx"
+            self.bar = "g_bar"
+            self.editconf = "editconf"
+            self.gmxcheck = "gmxcheck"
+            self.rama = "g_rama"
+        except cpc.util.CpcError as _unused_e:
+            cpc.util.plugin.testCommand("gmx -version")
+            self.grompp = "gmx grompp"
+            self.eneconv = "gmx eneconv"
+            self.energy = "gmx energy"
+            self.trjconv = "gmx trjconv"
+            self.trjcat = "gmx trjcat"
+            self.gmxdump = "gmx dump"
+            self.pdb2gmx = "gmx pdb2gmx"
+            self.bar = "gmx bar"
+            self.editconf = "gmx editconf"
+            self.gmxcheck = "gmx check"
+            self.rama = "gmx rama"
+        return

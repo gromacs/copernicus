@@ -43,6 +43,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
 from cpc.dataflow import FileValue
+from cpc.lib.gromacs import cmds
 from utils import findClosest
 
 class FEError(cpc.dataflow.ApplicationError):
@@ -52,6 +53,7 @@ class FEError(cpc.dataflow.ApplicationError):
 #npoints_init=10
 
 def fe_init(inp, out):
+    cmdnames = cmds.GromacsCommands()
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
@@ -235,7 +237,7 @@ def fe_init(inp, out):
         trrName=inp.getSubnetInput('trr')
         tprName=inp.getSubnetInput('tpr')
         confoutname=os.path.join(inp.getOutputDir(), 'lambda.gro')
-        cmd=['trjconv', '-s', tprName, '-f', trrName, '-o', confoutname,
+        cmd=[cmdnames.trjconv, '-s', tprName, '-f', trrName, '-o', confoutname,
              '-sep' ]
         proc=subprocess.Popen(cmd,
                               stdin=subprocess.PIPE,

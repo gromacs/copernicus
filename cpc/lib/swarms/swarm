@@ -2,7 +2,7 @@
 
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
+#
 # Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Grant Rotskoff, Bjorn Wesen, Erik Lindahl and others.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -31,6 +31,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from StringIO import StringIO
+from subprocess import Popen
 
 import cpc.dataflow
 from cpc.dataflow import StringValue
@@ -39,8 +40,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
 from cpc.dataflow import FileValue
-
-from subprocess import Popen
+from cpc.lib.gromacs import cmds
 
 class FEError(cpc.dataflow.ApplicationError):
     pass
@@ -48,6 +48,7 @@ class FEError(cpc.dataflow.ApplicationError):
 # TODO: let start_xvg and end_xvg be opt, and if not given, calculate them from start and end_conf by g_rama
 
 def swarm(inp, out):
+    cmdnames = cmds.GromacsCommands()
     pers = cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(), "persistent.dat"))
     
     # TODO allow additional iterations to be set by having each iteration within pers object
@@ -172,9 +173,8 @@ def swarm(inp, out):
                     # going to min/therm/equil exactly just like if the resconf wasn't given.
                     resfn = 'initial_resconf%03d.gro' % i
                     FNULL = open(os.devnull, 'w') # sink for output spam
-                    trjproc = subprocess.Popen([
-                        'trjconv', '-f', initial_confs[i], '-s', tpr, '-o', resfn, 
-                        '-pbc', 'none' ], 
+                    trjproc = subprocess.Popen([cmdnames.trjconv, '-f', initial_confs[i],
+                                                '-s', tpr, '-o', resfn, '-pbc', 'none'], 
                                                stdin=subprocess.PIPE, stdout=FNULL, stderr=FNULL)
                     writeStdin = StringIO()
                     writeStdin.write("Protein\n")       # output selection (should match the choice in get_cvs)
@@ -211,7 +211,7 @@ def swarm(inp, out):
                 for j in range(Nchains,len(includes)):
                     include = inp.getInput('include[%d]' % j)
                     out.setSubOut('path[%d].include[%d]' % (i, j),
-                                              FileValue(include))
+                                  FileValue(include))
         
         # Create the swarm iteration instances
         for i in range(Niterations):
