@@ -53,12 +53,12 @@ Downloading Copernicus
 Copernicus can be downloaded from our public git repository. To download the source
 , use the following command ``https://github.com/gromacs/copernicus.git``
 
-Set the *CPC_HOME* environment variable to the location where copernicus is installed
+Set the *CPC_CONF_HOME* environment variable to the location where copernicus is installed
 
-* On UNIX/Linux systems this is usually done with ``export CPC_HOME=path/to/cpc``
+* On UNIX/Linux systems this is usually done with ``export CPC_CONF_HOME=path/to/cpc``
 
-* Now add *CPC_HOME* to your *PATH* variable. On UNIX/Linux systems this is
-  usually done with ``export PATH=$PATH:$CPC_HOME``
+* Now add *CPC_CONF_HOME* to your *PATH* variable. On UNIX/Linux systems this is
+  usually done with ``export PATH=$PATH:$CPC_CONF_HOME``
 
 You should preferably but this in the startup file of your shell. Otherwise you will
 have to do this everytime you open up a terminal.
