@@ -66,8 +66,9 @@ def run(inp, out):
             subconfs = inp.getInput('confs[%d]' % i)
             for j in range(len(subconfs)):
                 conf = inp.getInput('confs[%d][%d]' % (i, j))
-                ramaprocs.append(Popen([cmdnames.rama, '-f', conf, '-s', tpr, '-o',
-                                        '0%3d_0%3d.xvg' % (i, j)],
+                cmd = cmdnames.rama.split() + ['-f', conf, '-s', tpr, '-o',
+                                               '0%3d_0%3d.xvg' % (i, j)]
+                ramaprocs.append(Popen(cmd,
                                        stdout=FNULL, stderr=FNULL))
 
         # Wait for each process to complete, and set the output file correctly

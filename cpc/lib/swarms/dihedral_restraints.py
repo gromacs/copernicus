@@ -77,8 +77,9 @@ def write_restraints(inp, initial_confs, start, end, start_xvg, end_xvg, tpr, to
         FNULL = open(os.devnull, 'w') # dont generate spam from g_rama 
         for i in range(n):
             # TODO: check for and use g_rama_mpi.. like everywhere else
-            ramaprocs[i] = Popen([cmdnames.rama, '-f', initial_confs[i], '-s', tpr, '-o', '0%3d.xvg' % i], 
-                                 stdout=FNULL, stderr=FNULL)
+            cmd = cmdnames.rama.split() + ['-f', initial_confs[i], '-s', tpr,
+                                           '-o', '0%3d.xvg' % i]
+            ramaprocs[i] = Popen(cmd, stdout=FNULL, stderr=FNULL)
 
         # Go through the output from the rama sub-processes and read the xvg outputs
 

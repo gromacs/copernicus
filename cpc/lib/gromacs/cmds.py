@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2015, Sander Pronk, Iman Pouya, Peter Kasson, Erik Lindahl,
+# and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -27,6 +28,7 @@ class GromacsCommands(object):
     def __init__(self):
         try:
             cpc.util.plugin.testCommand("grompp -version")
+            self.mdrun = "mdrun"
             self.grompp = "grompp"
             self.eneconv = "eneconv"
             self.energy = "energy"
@@ -40,6 +42,7 @@ class GromacsCommands(object):
             self.rama = "g_rama"
         except cpc.util.CpcError as _unused_e:
             cpc.util.plugin.testCommand("gmx -version")
+            self.mdrun = "gmx mdrun"
             self.grompp = "gmx grompp"
             self.eneconv = "gmx eneconv"
             self.energy = "gmx energy"

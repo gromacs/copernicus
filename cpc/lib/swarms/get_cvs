@@ -112,6 +112,7 @@ def run(inp, out):
                     # for the second trjconv pass that gets the output from here as input
                     # Remember the temporary file used so we can remove them easily when we're done
                     clustering_intermediaries.append('0%03d_0%03d_clustered.gro' % (i, j))
+                    # Will this actually work?  Set up with a pipe instead?
                     trjprocs_clustering.append(subprocess.Popen(['echo -e "Protein\nSystem\n" | %s -f %s -s %s -o %s -pbc cluster'
                                                                  % (cmdnames.trjconv, conf, tpr, clustering_intermediaries[-1])],
                                                                 stdout=FNULL, stderr=FNULL, shell=True))
@@ -149,7 +150,9 @@ def run(inp, out):
                 subconfs = inp.getInput('confs[%d]' % i)
                 for j in range(len(subconfs)):
                     conf = inp.getInput('confs[%d][%d]' % (i, j))
-                    ramaprocs.append(subprocess.Popen([cmdnames.rama, '-f', conf, '-s', tpr, '-o', '0%03d_0%03d.xvg' % (i, j)], 
+                    cmd = cmdnames.rama.split() + ['-f', conf, '-s', tpr, '-o',
+                                                   '0%03d_0%03d.xvg' % (i, j)]
+                    ramaprocs.append(subprocess.Popen(cmd,
                                                       stdout=FNULL, stderr=FNULL))
 
             # Wait for each process to complete, and set the output file correctly

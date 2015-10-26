@@ -132,7 +132,7 @@ def g_bar(inp):
     baroutname=os.path.join(outDir, "bar.xvg")
     histoutname=os.path.join(outDir, "histogram.xvg")
     #item=inp.getInput('item')
-    cmdline=[cmdnames.bar, "-g"]
+    cmdline = cmdnames.bar.split() + ["-g"]
     for i in xrange(nedrfiles):
         edrfile=inp.getInput('edr[%d]'%i)
         if edrfile is None:

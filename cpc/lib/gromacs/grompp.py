@@ -127,11 +127,11 @@ def grompp(inp):
                 nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
-    cmdlist=[ cmdnames.grompp, "-f", mdpfile,
-              "-quiet",
-              "-c", inp.getInput('conf'),
-              "-p", 'topol.top', # we made sure it's there
-              "-o", "topol.tpr" ]
+    cmdlist = cmdnames.grompp.split()  + ["-f", mdpfile, "-quiet",
+                                          "-c", inp.getInput('conf'),
+                                          "-p", 'topol.top',
+                                          # we made sure it's there
+                                          "-o", "topol.tpr" ]
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
@@ -223,11 +223,12 @@ def tune_fn(inp):
                 nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
-    cmdlist=[ cmdnames.grompp, "-f", mdpfile,
-              "-quiet",
-              "-c", inp.getInput('conf'),
-              "-p", 'topol.top', # we made sure it's there
-              "-o", "topol.tpr" ]
+    cmdlist = cmdnames.grompp.split()
+    cmdlist += ["-f", mdpfile,
+                "-quiet",
+                "-c", inp.getInput('conf'),
+                "-p", 'topol.top', # we made sure it's there
+                "-o", "topol.tpr" ]
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))

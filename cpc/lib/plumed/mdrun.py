@@ -116,7 +116,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     xtcoutname=os.path.join(outDir, "traj.xtc")
     if len(xtcs) > 0:
-        cmd=[cmdnames.trjcat, "-f"]
+        cmd = cmdnames.trjcat.split() + ["-f"]
         cmd.extend(xtcs)
         cmd.extend(["-o", xtcoutname])
         stdo=open(os.path.join(persDir,"trjcat_xtc.out"),"w")
@@ -145,7 +145,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     trroutname=os.path.join(outDir, "traj.trr")
     if len(trrs) > 0:
-        cmd=[cmdnames.trjcat, "-f"]
+        cmd = cmdnames.trjcat + ["-f"]
         cmd.extend(trrs)
         cmd.extend(["-o", trroutname])
         stdo=open(os.path.join(persDir,"trjcat_trr.out"),"w")
@@ -173,7 +173,7 @@ def extractData(confout, outDir, persDir, fo):
     edroutname=os.path.join(outDir, "ener.edr")
     # concatenate them
     if len(edrs) > 0:
-        cmd=[cmdnames.eneconv, "-f"]
+        cmd = cmdnames.eneconv.split() + ["-f"]
         cmd.extend(edrs)
         cmd.extend(["-o", edroutname])
         stdo=open(os.path.join(persDir,"eneconv.out"),"w")

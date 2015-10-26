@@ -237,8 +237,8 @@ def fe_init(inp, out):
         trrName=inp.getSubnetInput('trr')
         tprName=inp.getSubnetInput('tpr')
         confoutname=os.path.join(inp.getOutputDir(), 'lambda.gro')
-        cmd=[cmdnames.trjconv, '-s', tprName, '-f', trrName, '-o', confoutname,
-             '-sep' ]
+        cmd = cmdnames.trjconv.split()
+        cmd += ['-s', tprName, '-f', trrName, '-o', confoutname, '-sep']
         proc=subprocess.Popen(cmd,
                               stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE,

@@ -41,7 +41,7 @@ def checkTrajectory(filename):
     """Check an existing trajectory and return the trajectory time in ns, 
         the delta t, and the number of frames"""
     cmdnames = cmds.GromacsCommands()
-    proc=subprocess.Popen([cmdnames.gmxcheck, "-f", filename],
+    proc=subprocess.Popen(cmdnames.gmxcheck.split() + ["-f", filename],
                           stdin=None,
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.PIPE)
@@ -101,8 +101,9 @@ def removeSolAndPBC(inFile, outFile, tprFile, grpname, ndxFile, persDir):
     #mstdout=open(msm1,'w')
     #mstderr=open(msm2,'w')
     sys.stderr.write("Removing solvent and pbc:\n")
-    args=[cmdnames.trjconv, "-f", "%s" % inFile, "-s", tprFile, "-o",
-          "%s "% outFile, "-pbc", "mol"]
+    args = cmdnames.trjconv.split()
+    args += ["-f", "%s" % inFile, "-s", tprFile, "-o",
+             "%s "% outFile, "-pbc", "mol"]
     if ndxFile is not None:
         args.extend( [ '-n', ndxFile ] )
     proc = subprocess.Popen(args, stdin=subprocess.PIPE,

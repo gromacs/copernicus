@@ -59,7 +59,8 @@ def g_energy(inp):
     item=inp.getInput('item')
     outDir=inp.getOutputDir()
     xvgoutname=os.path.join(outDir, "energy.xvg")
-    proc=subprocess.Popen([cmdnames.g_energy, "-f", edrfile, "-o", xvgoutname],
+    cmdlist = cmdnames.g_energy.split() + ["-f", edrfile, "-o", xvgoutname]
+    proc=subprocess.Popen(cmdlist,
                           stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE,
                           stderr=subprocess.STDOUT,
@@ -129,7 +130,7 @@ def _trjconv(inp, fo, split):
     outDir=inp.getOutputDir()
     xtcoutname=os.path.join(outDir, "trajout.xtc")
     grooutname=os.path.join(outDir, "out.gro")
-    cmdline=[cmdnames.trjconv, '-s', tprfile, '-f', trajfile]
+    cmdline = cmdnames.trjconv.split() + ['-s', tprfile, '-f', trajfile]
     if not split:
         cmdline.extend(['-o', xtcoutname])
     else:
@@ -240,7 +241,7 @@ def _eneconv(inp, fo):
     outDir=inp.getOutputDir()
     edrOutname=os.path.join(outDir, "fixed.edr")
     #cmdline=["eneconv", '-f', edrFiles, '-o', edrOutname]
-    cmdline=[cmdnames.eneconv, '-f']
+    cmdline = cmdnames.eneconv.split() + ['-f']
     for i in xrange(len(edrFilesList)):
         cmdline.append(inp.getInput('edr_files[%d]' % i))
 
@@ -305,7 +306,8 @@ def pdb2gmx(inp):
         cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
     else:
         cmdlineOpts=[]
-    cmdline=[cmdnames.pdb2gmx, "-f", pdbfile, "-ff", forcefield, "-water", watermodel]
+    cmdline = cmdnames.pdb2gmx
+    cmdline += ["-f", pdbfile, "-ff", forcefield, "-water", watermodel]
     if skip_hydrogens:
         cmdline.extend(["-ignh"])
     cmdline.extend(cmdlineOpts)

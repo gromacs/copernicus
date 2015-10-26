@@ -173,9 +173,10 @@ def swarm(inp, out):
                     # going to min/therm/equil exactly just like if the resconf wasn't given.
                     resfn = 'initial_resconf%03d.gro' % i
                     FNULL = open(os.devnull, 'w') # sink for output spam
-                    trjproc = subprocess.Popen([cmdnames.trjconv, '-f', initial_confs[i],
-                                                '-s', tpr, '-o', resfn, '-pbc', 'none'], 
-                                               stdin=subprocess.PIPE, stdout=FNULL, stderr=FNULL)
+                    cmd = cmdnames.trjconv.split()
+                    cmd += ['-f', initial_confs[i], '-s', tpr, '-o', resfn, '-pbc', 'none']
+                    trjproc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                               stdout=FNULL, stderr=FNULL)
                     writeStdin = StringIO()
                     writeStdin.write("Protein\n")       # output selection (should match the choice in get_cvs)
                     # Give the stdin to trjconv then wait for completion

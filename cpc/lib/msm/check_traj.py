@@ -31,7 +31,7 @@ def checkTrajectory(filename):
     """Check an existing trajectory and return the trajectory time in ns, 
         the delta t, and the number of frames"""
     cmdnames = cmds.GromacsCommands()
-    proc=subprocess.Popen([cmdnames.gmxcheck, "-f", filename],
+    proc=subprocess.Popen(cmdnames.gmxcheck.split() + ["-f", filename],
                           stdin=None,
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.PIPE)
