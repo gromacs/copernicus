@@ -1,7 +1,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 # 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published 
@@ -39,7 +39,7 @@ from cpc.dataflow import IntValue
 from cpc.dataflow import FloatValue
 from cpc.dataflow import Resources
 import cpc.util
-
+import cmds
 
 class GromacsError(cpc.util.CpcError):
     pass
@@ -59,8 +59,10 @@ def primefactors(x):
 
 def tryRun(tprFile, runDir, Ncores):
     """Try to run mdrun with Ncores cores."""
-    cmdlist=[ "mdrun", "-nt", "%d"%Ncores, "-s", tprFile, "-rcon", "0.7",
-              "-maxh", "0.0005" ]
+    cmdnames = cmds.GromacsCommands()
+    cmdlist = cmdnames.mdrun.split()
+    cmdlist += ["-nt", "%d"%Ncores, "-s", tprFile, "-rcon", "0.7",
+                "-maxh", "0.0005" ]
     proc=subprocess.Popen(cmdlist, 
                           stdin=None,
                           stdout=subprocess.PIPE,

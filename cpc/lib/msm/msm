@@ -45,7 +45,7 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import Resources
 #import cpc.util
 #import cpc.util.log
-
+from cpc.lib.gromacs import cmds
 
 #import msmproject
 
@@ -407,12 +407,13 @@ inf.seek(0)
 inp=cpc.dataflow.readInput(inf)
 
 if inp.testing():
+    cmdnames = cmds.GromacsCommands()
     # TODO: make it possible for sub-functions to be checked now.
-    cpc.util.plugin.testCommand("trjcat -version")
-    cpc.util.plugin.testCommand("eneconv -version")
-    cpc.util.plugin.testCommand("grompp -version")
-    cpc.util.plugin.testCommand("trjconv -version")
-    cpc.util.plugin.testCommand("gmxdump -version")
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.trjcat)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.eneconv)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.trjconv)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
     # try to import msmproject and thereby msmbuilder
     import msmproject
     sys.exit(0)

@@ -56,6 +56,7 @@ import msmbuilder.Trajectory
 # cpc stuff
 import cpc.dataflow
 from cpc.dataflow import FileValue
+from cpc.lib.gromacs import cmds
 
 log=logging.getLogger(__name__)
 
@@ -92,6 +93,7 @@ class MSMProject(object):
         self.grpname       = inp.getInput('grpname')
         #self.num_sim       = inp.getInput('num_to_start')
         self.lag_time      = inp.getInput('lag_time')
+        self.cmdnames = cmds.GromacsCommands()
 
         #TODO IMAN get input weights
         if self.lag_time is not None and self.lag_time <= 0:
@@ -364,9 +366,9 @@ class MSMProject(object):
             if(i==MaxState and have_maxstate==0):
                 maxstatefn=os.path.join(self.inp.getOutputDir(), 'maxstate.pdb')
                 sys.stderr.write("writing out pdb of most populated state.\n")
-                args=["trjconv","-f",trajname,
-                      "-s",self.tprfile,
-                      "-o",maxstatefn,"-pbc","mol","-dump","%d"%time]
+                args = self.cmdnames.trjconv.split()
+                args += ["-f", trajname, "-s", self.tprfile,
+                         "-o", maxstatefn, "-pbc", "mol", "-dump", "%d" % time]
                 if self.ndx is not None:
                     args.extend( [ "-n", self.ndx ] )
                 proc = subprocess.Popen(args, stdin=subprocess.PIPE, 
@@ -390,9 +392,9 @@ class MSMProject(object):
             time        = frame_nr * trajdata.dt 
             #maxstatefn=os.path.join(self.inp.getOutputDir(), '.conf')
             outfn=os.path.join(self.inp.getOutputDir(), 'new_run_%d.gro'%(j))
-            args=["trjconv","-f","%s"%trajname,
-                  "-s" ,self.tprfile, 
-                  "-o", outfn, "-pbc","mol","-dump","%d"%time]
+            args = self.cmdnames.trjconv.split()
+            args += ["-f", "%s"%trajname, "-s", self.tprfile, 
+                     "-o", outfn, "-pbc", "mol", "-dump", "%d" % time]
             sys.stderr.write("writing out new run %s .\n"%outfn)
             proc = subprocess.Popen(args, stdin=subprocess.PIPE, 
                                     stdout=sys.stdout, 
@@ -512,10 +514,10 @@ class MSMProject(object):
                         sys.stderr.write("Writing new start confs.\n")
                         outfn=os.path.join(self.inp.getOutputDir(),
                                            'macro%d-%d.gro'%(i,num_started))
-                        args=["trjconv","-f","%s"%trajname,
-                              "-s",self.tprfile, 
+                        args = self.cmdnames.trjconv.split()
+                        args += ["-f", "%s" % trajname, "-s", self.tprfile,
                               "-o", outfn, 
-                              "-pbc","mol","-dump","%d"%time]
+                              "-pbc", "mol", "-dump", "%d" % time]
                         proc = subprocess.Popen(args, stdin=subprocess.PIPE, 
                                                 stdout=sys.stdout, 
                                                 stderr=sys.stderr)

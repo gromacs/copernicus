@@ -41,6 +41,7 @@ from cpc.dataflow import StringValue
 from cpc.dataflow import Resources
 import cpc.util
 
+import cmds
 import tune
 import iterate
 
@@ -86,9 +87,10 @@ def procSettings(inp, outMdpDir):
 
 
 def grompp(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing(): 
-        # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("grompp -version")
+        # if there are no inputs, we're testing whether the command can run
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
         return 
 
     #log.debug("base dir=%s"%inp.getBaseDir())
@@ -125,11 +127,11 @@ def grompp(inp):
                 nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
-    cmdlist=[ "grompp", "-f", mdpfile,
-              "-quiet",
-              "-c", inp.getInput('conf'),
-              "-p", 'topol.top', # we made sure it's there
-              "-o", "topol.tpr" ]
+    cmdlist = cmdnames.grompp.split()  + ["-f", mdpfile, "-quiet",
+                                          "-c", inp.getInput('conf'),
+                                          "-p", 'topol.top',
+                                          # we made sure it's there
+                                          "-o", "topol.tpr" ]
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
@@ -200,6 +202,7 @@ def extract_mdp(inp):
     return fo
 
 def tune_fn(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
         #cpc.util.plugin.testCommand("grompp -version")
@@ -220,11 +223,12 @@ def tune_fn(inp):
                 nname=os.path.join(inp.getOutputDir(), os.path.split(filename)[1])
                 shutil.copy(filename, nname)
     # and execute grompp
-    cmdlist=[ "grompp", "-f", mdpfile,
-              "-quiet",
-              "-c", inp.getInput('conf'),
-              "-p", 'topol.top', # we made sure it's there
-              "-o", "topol.tpr" ]
+    cmdlist = cmdnames.grompp.split()
+    cmdlist += ["-f", mdpfile,
+                "-quiet",
+                "-c", inp.getInput('conf'),
+                "-p", 'topol.top', # we made sure it's there
+                "-o", "topol.tpr" ]
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
@@ -248,9 +252,10 @@ def tune_fn(inp):
     return fo
 
 def grompps(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("grompp -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
         return
 
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
@@ -277,11 +282,12 @@ def grompps(inp):
 
 
 def mdruns(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("trjcat -version")
-        cpc.util.plugin.testCommand("eneconv -version")
-        cpc.util.plugin.testCommand("gmxdump -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.trjcat)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.eneconv)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
         return
 
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
@@ -305,9 +311,10 @@ def mdruns(inp):
 
 
 def grompp_mdruns(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
     # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("grompp -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
         return
 
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),

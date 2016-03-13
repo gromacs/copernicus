@@ -45,6 +45,7 @@ import cpc.util
 
 import tune
 import iterate
+import cmds
 
 class MdrunError(cpc.util.CpcError):
     pass
@@ -54,7 +55,8 @@ class GromacsError(cpc.util.CpcError):
 
 def extractConf(tprFile, confFile):
     """Extract a configuration to confFile from tprFile."""
-    cmdlist=['editconf', '-f', tprFile, '-o', confFile]
+    cmdnames = cmds.GromacsCommands()
+    cmdlist = cmdnames.editconf.split() + ['-f', tprFile, '-o', confFile]
     proc=subprocess.Popen(cmdlist,
                           stdin=None,
                           stdout=subprocess.PIPE,
@@ -67,8 +69,8 @@ def extractConf(tprFile, confFile):
 
 
 def runGmxCheckGap(fileTypeFlag, checkFile):
-
-    cmd=['gmxcheck', fileTypeFlag, checkFile]
+    cmdnames = cmds.GromacsCommands()
+    cmd = cmdnames.gmxcheck.split() + [fileTypeFlag, checkFile]
     proc=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
     #noMatchLine=re.compile(r'Timesteps at.*don\'t match.*\(([0-9.]+),\s([0-9.]+)\)')
@@ -93,9 +95,9 @@ def runGmxCheckGap(fileTypeFlag, checkFile):
 
 def checkConfoutDir(path):
 
-    xtcso = sorted(glob.glob(os.path.join(path, "traj.part*.xtc")))
-    trrso = sorted(glob.glob(os.path.join(path, "traj.part*.trr")))
-    edrso = sorted(glob.glob(os.path.join(path, "traj.part*.edr")))
+    xtcso = sorted(glob.glob(os.path.join(path, "traj.*xtc")))
+    trrso = sorted(glob.glob(os.path.join(path, "traj.*trr")))
+    edrso = sorted(glob.glob(os.path.join(path, "ener.*edr")))
 
     xtcs = []
     trrs = []
@@ -141,6 +143,7 @@ class TrajFileCollection(object):
         self.lastDir=lastrundir
         self.newRunDir=currundir
         self.lastTrajNr=self._extractLastTrajNr()
+        self.cmdnames = cmds.GromacsCommands()
 
     def getLastDir(self):
         """Return the last run directory."""
@@ -248,7 +251,7 @@ class TrajFileCollection(object):
             nsteps=1
             # now check how far along the run is by inspecting the
             # step number we're at.
-            cmd=['gmxdump', '-cp', self.lastcpt ]
+            cmd = self.cmdnames.gmxdump.split() + ['-cp', self.lastcpt]
             sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
             stepline=re.compile('step = .*')
@@ -273,7 +276,7 @@ class TrajFileCollection(object):
                 self.lastTrajNr=newFileNumber
             #sp.communicate()
             # and get the total step number
-            cmd=['gmxdump', '-s', tpr ]
+            cmd = self.cmdnames.gmxdump.split() + ['-s', tpr]
             sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT)
             stepline=re.compile('[ ]*nsteps.*')
@@ -295,8 +298,8 @@ class TrajFileCollection(object):
         if self.lastcpt is not None:
             outfile=os.path.join(self.lastDir, 'confout.part%04d.gro'  % self.getLastTrajNr())
             tprfile=os.path.join(self.lastDir, 'topol.tpr')
-            cmd=['trjconv', '-f', self.lastcpt, '-s', tprfile, '-o', outfile]
-
+            cmd = self.cmdnames.trjconv.split()
+            cmd += ['-f', self.lastcpt, '-s', tprfile, '-o', outfile]
             sp = subprocess.Popen(cmd, stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE,
                                   stderr = subprocess.PIPE)
@@ -339,6 +342,7 @@ def checkErr(stde, rsrc, tpr, persDir):
 
 def extractData(confout, outDir, persDir, fo):
     """Concatenate all output data from the partial runs into the end results"""
+    cmdnames = cmds.GromacsCommands()
     #outputs=dict()
     # Concatenate stuff
     confoutPath=os.path.join(outDir, "confout.gro")
@@ -348,7 +352,7 @@ def extractData(confout, outDir, persDir, fo):
     fo.setOut('conf', FileValue(confoutPath))
     # fix the xtc files
     xtcso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.part*.xtc")))
+                                          "traj.*xtc")))
     # cull empty files and duplicate trajectory names
     xtcs=[]
     xtcbase=[]
@@ -371,7 +375,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     xtcoutname=os.path.join(outDir, "traj.xtc")
     if len(xtcs) > 0:
-        cmd=["trjcat", "-f"]
+        cmd = cmdnames.trjcat.split() + ["-f"]
         cmd.extend(xtcs)
         cmd.extend(["-o", xtcoutname])
         stdo=open(os.path.join(persDir,"trjcat_xtc.out"),"w")
@@ -381,7 +385,7 @@ def extractData(confout, outDir, persDir, fo):
         fo.setOut('xtc', FileValue(xtcoutname))
     # do the trrs
     trrso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.part*.trr")))
+                                          "traj.*trr")))
     # cull empty files and duplicate trajectory names
     trrs=[]
     trrbase=[]
@@ -403,7 +407,7 @@ def extractData(confout, outDir, persDir, fo):
     # concatenate them
     trroutname=os.path.join(outDir, "traj.trr")
     if len(trrs) > 0:
-        cmd=["trjcat", "-f"]
+        cmd = cmdnames.trjcat.split() + ["-f"]
         cmd.extend(trrs)
         cmd.extend(["-o", trroutname])
         stdo=open(os.path.join(persDir,"trjcat_trr.out"),"w")
@@ -412,7 +416,7 @@ def extractData(confout, outDir, persDir, fo):
         stdo.close()
         fo.setOut('trr', FileValue(trroutname))
     # and the edrs
-    edrso = glob.glob(os.path.join(persDir, "run_???", "ener.part*.edr"))
+    edrso = glob.glob(os.path.join(persDir, "run_???", "ener.*edr"))
     # cull empty files and duplicate trajectory names
     edrs=[]
     edrbase=[]
@@ -437,7 +441,7 @@ def extractData(confout, outDir, persDir, fo):
         log.debug("Concatenating edr files: %s" % edrs)
     # concatenate them
     if len(edrs) > 0:
-        cmd=["eneconv", "-f"]
+        cmd = cmdnames.eneconv.split() + ["-f"]
         cmd.extend(edrs)
         cmd.extend(["-o", edroutname])
         stdo=open(os.path.join(persDir,"eneconv.out"),"w")
@@ -469,7 +473,7 @@ def extractData(confout, outDir, persDir, fo):
     outf.close()
     fo.setOut('stderr', FileValue(stderrname))
     # and do md.log
-    logo = glob.glob(os.path.join(persDir, "run_???", "md.part*.log"))
+    logo = glob.glob(os.path.join(persDir, "run_???", "md.*log"))
     logname=os.path.join(outDir, "md.log")
     outf=open(logname,"w")
     for infile in logo:
@@ -484,11 +488,12 @@ def extractData(confout, outDir, persDir, fo):
 
 
 def mdrun(inp):
+    cmdnames = cmds.GromacsCommands()
     if inp.testing():
         # if there are no inputs, we're testing wheter the command can run
-        cpc.util.plugin.testCommand("trjcat -version")
-        cpc.util.plugin.testCommand("eneconv -version")
-        cpc.util.plugin.testCommand("gmxdump -version")
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.trjcat)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.eneconv)
+        cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
         return
     persDir=inp.getPersistentDir()
     outDir=inp.getOutputDir()
@@ -540,7 +545,7 @@ def mdrun(inp):
     if inp.cmd is not None:
         log.debug("Return code was %s"%str(inp.cmd.getReturncode()))
     # try to find out whether the run has already finished
-    confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
+    confout=glob.glob(os.path.join(persDir, "run_???", "confout.*gro"))
     if len(confout) > 0:
         confoutDir = os.path.dirname(confout[0])
         hasFinalData = checkConfoutDir(confoutDir)
