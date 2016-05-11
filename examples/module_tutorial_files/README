@@ -1,0 +1,16 @@
+This bundle contains tutorial files for building a copernicus module.
+
+- In the module directory we you have a folder called math which contains the module definition. 
+  Drop the math directory into cpc/lib
+  
+- in the executable directory you have a folder with the same name (math) which contains the 
+  executable xml. drop this one into cpc/plugins/executables
+  
+- the python script double.py is a script that the worker will run. To make this one accesible 
+  to the worker you will have to either specify the absolute path in executable.xml. Just change
+  double.py to MY_ABSOLUTE_PATH/double.py. You can also add the absolute path to your PATH by calling
+  export PATH:$PATH:MYABSOLUTE_PATH
+  
+- the file double_workflow.sh is a simple script that sets up a copernicus project using 
+  the double module
+     

@@ -612,8 +612,7 @@ class CmdLine(object):
                 str+='\"%s\"--\"%s\"\n'%(node.getHostname(),neighbour.getHostname)
             for worker in node.workerStates.itervalues():                
                 str+='\"%s\" [shape=polygon,sides=5,peripheries=3,color=lightblue,style=filled];\n'%node.host
-                str+='\"%s\"--\"worker_%s\"\n'%(node.host,worker.host)                    
-                #co.write("worker %s status:%s\n"%(worker.host,worker.status))
+                str+='\"%s\"--\"worker_%s\"\n'%(node.host,worker.host)
         
         str+="}"    
         return str

@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<executable-list>
+
+    <!--the executable has a name which it matches to the command name on the queue, an executable might have support for -->
+    <!--different types of platforms, for example smp or mpi. A version of the executable can be defined. This can be used -->
+    <!--when creating a command to specify the minimum version required-->
+    <executable name="math/double" platform="smp" arch="" version="1.0">
+        <!--the command that the executable will call is defined here. you can define a command, script -->
+        <!--or a program in the same way that you call it on the command line-->
+        <run in_path="yes" cmdline="double.py"/>
+    </executable>
+</executable-list>
+
