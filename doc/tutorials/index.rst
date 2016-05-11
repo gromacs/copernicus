@@ -14,4 +14,5 @@ Contents:
    msm-tutorial.rst
    fe-tutorial.rst
    string-tutorial.rst
+   module-tutorial.rst
 
