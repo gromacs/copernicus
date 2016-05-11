@@ -6,6 +6,8 @@ Module Tutorial
 
 This tutorial will walk through the steps required to create a simple copernicus module
 
+Tutorial files can be found `here <https://github.com/gromacs/copernicus/tree/master/examples/module_tutorial_files>`_
+
 The components of a module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -33,30 +35,39 @@ and their types.
 
     <?xml version="1.0"?>
     <cpc>
-        <!--we can define custom types, here we want to have arrays of integers-->
+        <!--
+         A simple copernicus function that takes in an array of integers and doubles
+         their values.
+        -->
+
+        <!--Inputs and outputs of our function will be Integer arrays
+        Here we define the a type called int_array, and we specify that the
+        member-type(contents) of the array should be ints
+        -->
         <type id="int_array" base="array" member-type="int"/>
 
-        <!--the function should have a unique id-->
-        <function id="double" type="python-extended">
-            <desc>Doubles the input value</desc>
-
-            <!--all input fields are defined in the input tag, you can define as many fields as you like-->
+        <function id="double_value" type="python-extended">
+            <desc></desc>
             <inputs>
                 <!--each field has a unique id and a type-->
-                <field type="int_array" id="digits">
-                    <desc>Input values that will be doubled</desc>
+                <field type="int_array" id="integer_inputs">
+                    <desc>Integer inputs</desc>
                 </field>
             </inputs>
             <outputs>
-                <field type="int_array" id="double_digits">
-                    <desc>The doubled output values</desc>
+                <field type="int_array" id="integer_outputs">
+                    <desc>Integer outpus</desc>
                 </field>
             </outputs>
-
-            <!--the controller defines the module method that will be run-->
-            <controller function="cpc.lib.double.run"
-                        import="cpc.lib.double"
-                        persistent_dir="true"/>
+            <!-- when this function is called it will call the python function
+                 defined below. The path is the same as when one imports a module in python
+                 we also specify that we want to create a persistent directory for this module
+                 we will use this to keep track of states.
+                -->
+            <controller
+                    function="cpc.lib.math.double_script.run"
+                    import="cpc.lib.math.double_script"
+                    persistent_dir="true"/>
         </function>
     </cpc>
 
@@ -87,42 +98,92 @@ In this method we can:
 
 .. code-block:: python
 
-    from cpc.dataflow import IntValue, FloatValue, StringValue
-    import cpc.command
+    import cpc
+    from cpc.dataflow import IntValue, Resources
+
+    __author__ = 'iman'
+
+    import logging
 
 
-    #this method is triggered as soon as an input is set,updated or when a command is finished
+    log=logging.getLogger(__name__)
+
+    #our run functions
+    #the incoming value is of type cpc.dataflow.run.FunctionRunInput
     def run(inp):
+        if inp.testing():
+            ''' When an instance of a function is first created a test call is performed
+            here you can test to see if certain prerequisites are met.
+             for example if this function is ran on the server only it might need to access some binaries'''
+            return
 
-        #First we check so we have not received a finished command
-        if inp.cmd is None:
+        fo = inp.getFunctionOutput()
+        #get hold of the inputs
+        # the name that is provided must match the id of the input in the xml file
+        #find what changed or was added in the array
+        val = inp.getInputValue('integer_inputs')
+        updatedIndices = [ i for i,val in enumerate(val.value) if val.isUpdated()]
 
-            #we create a new command and add it to the queue
+        log.debug(updatedIndices)
 
-            #get hold of the input value. the name n_samples matches id attribute of the input field defined in the xml
-            n_samples = inp.getInput('n_samples')
+        # only one command is finished per call
+        if inp.cmd:
+            runResultLogic(inp,updatedIndices[0])
+            return
 
-            #create a command, we need a persistent directory to save results to later, a unique name (pi/gen_samples)
-            #for the command that is used when matching jobs to a worker, and an array of arguments which in this case is
-            #the input value that we set
-            cmd = Command(cmd = cpc.command.Command(inp.getPersistentDir(), "double",
-                                                    [n_samples]))
+        #run some login on the changes
 
-            #the output is what holds the command
-            fo = inp.getFunctionOutput()
-            fo.addCommand(cmd)
-
-
-        else:
-            #we have a finished command, lets grab the results and set it to the output
-            #results from the worker is persisted in files
-            #we grab the files,
-            #TODO how do we grab a result?
-            #Todo How do we add an integer to the output array?
-            fo = inp.getFunctionOutput()
-            fo.setOut("double_digits", IntValue(endTime))
+        for i in updatedIndices:
+            #THIS IS WHERE WE SHOULD PUT OUR LOGIC
+            runLogic(inp,i)
 
         return fo
+
+
+    def runLogic(inp,i):
+
+        #Sending a job for a worker to compute
+        val = inp.getInputValue('integer_inputs')
+        arr = inp.getInput('integer_inputs')
+        #1 create command
+        storageDir = "%s/%s"%(inp.getPersistentDir(),i)
+
+        #the command name should match the executable name of the plugin
+        commandName = "demo/double"
+
+        args = [arr[i].get()]
+
+        cmd =cpc.command.Command(storageDir
+                                 ,commandName
+                                 ,args)
+
+
+        #2 define how many cores we want for this job
+        resources = Resources()
+        resources.min.set('cores',1)
+        resources.max.set('cores',1)
+        resources.updateCmd(cmd)
+
+
+        #2 add the command to the function output --> will be added to the queue
+        fo = inp.getFunctionOutput()
+        fo.addCommand(cmd)
+
+
+
+    def runResultLogic(inp,index):
+
+        #in this case we are getting the result directly from stdout
+        # stdout = "%s/%s/stdout"%(inp.getBaseDir(),inp.cmd.dir)
+        stdout = "%s/stdout"%(inp.cmd.getDir())
+        with open(stdout,"r") as f:
+            result = int(f.readline().strip())
+            log.debug("result is %s"%result)
+            fo = inp.getFunctionOutput()
+            fo.setOut("integer_outputs[%s]"%index,IntValue(result))
+
+        return fo
+
 
 
 
@@ -151,15 +212,12 @@ And add the executables.xml file under it.
         <!--the executable has a name which it matches to the command name on the queue, an executable might have support for -->
         <!--different types of platforms, for example smp or mpi. A version of the executable can be defined. This can be used -->
         <!--when creating a command to specify the minimum version required-->
-        <executable name="double" platform="smp" arch="" version="1.0">
+        <executable name="math/double" platform="smp" arch="" version="1.0">
             <!--the command that the executable will call is defined here. you can define a command, script -->
-            <!--or a program in the same way that you call it on the command line
-            $ARGS is the arguments that you have passed along in the command
-            -->
-            <run in_path="yes" cmdline="double $ARGS" />
+            <!--or a program in the same way that you call it on the command line-->
+            <run in_path="yes" cmdline="double.py"/>
         </executable>
     </executable-list>
-
 
 
 this xml calls the command double which is a python script that we have created.

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<cpc>
+    <!--
+     A simple copernicus function that takes in an array of integers and doubles
+     their values.
+    -->
+
+    <!--Inputs and outputs of our function will be Integer arrays
+    Here we define the a type called int_array, and we specify that the
+    member-type(contents) of the array should be ints
+    -->
+    <type id="int_array" base="array" member-type="int"/>
+
+    <function id="double_value" type="python-extended">
+        <desc></desc>
+        <inputs>
+            <!--each field has a unique id and a type-->
+            <field type="int_array" id="integer_inputs">
+                <desc>Integer inputs</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="int_array" id="integer_outputs">
+                <desc>Integer outpus</desc>
+            </field>
+        </outputs>
+        <!-- when this function is called it will call the python function
+             defined below. The path is the same as when one imports a module in python
+             we also specify that we want to create a persistent directory for this module
+             we will use this to keep track of states.
+            -->
+        <controller
+                function="cpc.lib.math.double_script.run"
+                import="cpc.lib.math.double_script"
+                persistent_dir="true"/>
+    </function>
+</cpc>
