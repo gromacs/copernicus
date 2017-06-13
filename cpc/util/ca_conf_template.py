@@ -37,7 +37,7 @@ serial = $$dir/serial\n\
 \n\
 default_crl_days = 7\n\
 default_days = 365\n\
-default_md = md5\n\
+default_md = sha1\n\
 \n\
 policy = copernicus_policy\n\
 x509_extensions = certificate_extensions\n\
@@ -57,7 +57,7 @@ basicConstraints = CA:false\n\
 [ req ]\n\
 default_bits = 2048\n\
 default_keyfile = ca/keys/priv.pem\n\
-default_md = md5\n\
+default_md = sha1\n\
 \n\
 prompt = no\n\
 distinguished_name = copernicus_root_ca\n\

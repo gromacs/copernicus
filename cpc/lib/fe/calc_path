@@ -31,7 +31,6 @@ except ImportError:
 import cpc.dataflow
 from cpc.dataflow import FloatValue
 
-
 class FEError(cpc.dataflow.ApplicationError):
     pass
 

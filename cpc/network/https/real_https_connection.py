@@ -75,6 +75,7 @@ class HttpsConnectionWithCertReq(httplib.HTTPConnection):
                                         self.privateKeyFile,
                                         self.certFile,
                                         cert_reqs = ssl.CERT_REQUIRED,
+                                        ssl_version = ssl.PROTOCOL_SSLv23,
                                         ca_certs=self.caFile)
             self.sock.connect((self.host,self.port))
             self.connected = True
@@ -103,6 +104,7 @@ class HttpsConnectionNoCertReq(httplib.HTTPConnection):
 
             #create an ssl context and load certificate verify locations
             self.sock = ssl.wrap_socket(sock,
+                                        ssl_version = ssl.PROTOCOL_SSLv23,
                                         cert_reqs = ssl.CERT_NONE)
             self.sock.connect((self.host,self.port))
 

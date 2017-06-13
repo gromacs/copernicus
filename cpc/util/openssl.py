@@ -203,6 +203,7 @@ class OpenSSL(object):
 
         (stdout, stderr) = p.communicate()
         if p.returncode == 1:
+            print args
             raise SetupError(
                 "An error occured while generating a root certificate request\n openssl returned the following error:\n" % stderr)
 
@@ -214,6 +215,7 @@ class OpenSSL(object):
 
         (stdout, stderr) = p.communicate()
         if p.returncode == 1:
+            print args
             raise SetupError(
                 "An error occured while generating a root certificate \n openssl returned the following error:\n" % stderr)
 

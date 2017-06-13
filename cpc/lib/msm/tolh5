@@ -103,7 +103,7 @@ def removeSolAndPBC(inFile, outFile, tprFile, grpname, ndxFile, persDir):
     sys.stderr.write("Removing solvent and pbc:\n")
     args = cmdnames.trjconv.split()
     args += ["-f", "%s" % inFile, "-s", tprFile, "-o",
-             "%s "% outFile, "-pbc", "mol"]
+             "%s"% outFile, "-pbc", "mol"]
     if ndxFile is not None:
         args.extend( [ '-n', ndxFile ] )
     proc = subprocess.Popen(args, stdin=subprocess.PIPE,
@@ -171,10 +171,11 @@ def tolh5(inp, out):
 inp=cpc.dataflow.readInput()
 
 if inp.testing():
-    cpc.util.plugin.testCommand("gmxcheck -version")
-    cpc.util.plugin.testCommand("grompp -version")
-    cpc.util.plugin.testCommand("trjconv -version")
-    cpc.util.plugin.testCommand("gmxdump -version")
+    cmdnames = cmds.GromacsCommands()
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxcheck)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.trjconv)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
     sys.exit(0)
 
 # prepare the output data

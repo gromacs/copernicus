@@ -69,8 +69,10 @@ class HTTPSServerWithCertAuthentication(CopernicusServer):
         try:
             self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
                                            cert_reqs = ssl.CERT_REQUIRED,
+                                           ssl_version = ssl.PROTOCOL_SSLv23,
                                            ca_certs=ca
                                            )
+            self.socket.context.set_servername_callback(None)
             self.server_bind()
             self.server_activate()
 
@@ -105,6 +107,7 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
         try:
             self.socket =  ssl.wrap_socket(sock, fpem, fcert, server_side=True,\
                                            cert_reqs = ssl.CERT_NONE,
+                                           ssl_version = ssl.PROTOCOL_TLSv1_2,
                                            ca_certs=ca)
             self.server_bind()
             self.server_activate()

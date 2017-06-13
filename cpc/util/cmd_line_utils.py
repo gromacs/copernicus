@@ -76,6 +76,7 @@ def getClientConf():
             " Use cpcc add-server to add one.")
     except cpc.util.conf.conf_base.ConfError as e:
         raise ClientError(e)     
+    return cfg
 
 def addServer(name, host, port):
     ClientConf().addServer(name, host,port)

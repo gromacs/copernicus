@@ -80,7 +80,8 @@ def gen_ref_pdb(inp, out):
 inp=cpc.dataflow.readInput()
 
 if inp.testing():
-    cpc.util.plugin.testCommand("trjconv -version")
+    cmdnames = cmds.GromacsCommands()
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.trjconv)
     sys.exit(0)
 
 # prepare the output data

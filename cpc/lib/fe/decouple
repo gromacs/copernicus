@@ -35,9 +35,9 @@ from cpc.dataflow import FloatValue
 from cpc.dataflow import IntValue
 from cpc.dataflow import RecordValue
 from cpc.dataflow import ArrayValue
+from cpc.lib.gromacs import cmds
 
 import fe_decouple
-
 
 
 # read the input data
@@ -49,11 +49,13 @@ inf.seek(0)
 inp=cpc.dataflow.readInput(inf)
 
 if inp.testing():
+
+    cmdnames = cmds.GromacsCommands()
     # TODO: make it possible for sub-functions to be checked now.
-    cpc.util.plugin.testCommand("g_bar -version")
-    cpc.util.plugin.testCommand("grompp -version")
-    cpc.util.plugin.testCommand("trjconv -version")
-    cpc.util.plugin.testCommand("gmxdump -version")
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.bar)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.grompp)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.trjconv)
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxdump)
     # try to import msmproject and thereby msmbuilder
     sys.exit(0)
 

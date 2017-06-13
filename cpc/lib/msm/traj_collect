@@ -31,7 +31,7 @@ except ImportError:
 
 import cpc.dataflow
 import cpc.util
-
+from cpc.lib.gromacs import cmds
 
 #import msmbuilder.Trajectory
 
@@ -126,7 +126,8 @@ def trajCollect(inp):
 inp=cpc.dataflow.readInput()
 
 if inp.testing():
-    cpc.util.plugin.testCommand("gmxcheck -version")
+    cmdnames = cmds.GromacsCommands()
+    cpc.util.plugin.testCommand("%s -version" % cmdnames.gmxcheck)
     sys.exit(0)
 
 # prepare the output data

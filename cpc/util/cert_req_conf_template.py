@@ -5,7 +5,7 @@ Created on Oct 25, 2011
 '''
 template = "[ req ]\n\
 default_bits = 2048\n\
-default_md = md5\n\
+default_md = sha1\n\
 \n\
 prompt = no\n\
 distinguished_name = cert_req\n\
