@@ -5,7 +5,9 @@
   <import name="gromacs" />
   <import name="meas" />
   <import name="int" />
-  <import name="coord" />
+  <import name="fe" />
+
+  <type id="file_list" base="array" member-type="file" />
 
   <type id="grompp_input" base="record">
     <desc>Partial grompp input</desc>
@@ -18,7 +20,7 @@
             complete="true">
       <desc>array of files to include</desc>
     </field>
-    <field type="gromacs::mdp_array" id="settings" opt="true" 
+    <field type="gromacs::mdp_array" id="settings" opt="true"
            complete="true">
       <desc>array of settings</desc>
     </field>
@@ -27,6 +29,7 @@
     </field>
   </type>
 
+<!--
   <function id="umbrella-sampling" type="external">
     <inputs>
       <field id="conf" type="file">
@@ -59,4 +62,667 @@
       </field>
     </outputs>
   </function>
+-->
+  <function id="grow_into_system" type="external">
+      <desc>Grows a molecule into a system at regular positions to, e.g., generate
+            starting positions for crooks nonequilibrium forward-reverse sampling.
+            Duplicates of the molecule can be generated in the x, y and z dimensions
+            to reduce the number of positions that have to be generated and thereby
+            improve the sampling.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration).</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to grow in.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to grow in.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the z dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_lateral_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x/z dimensions. Defaults to 1.</desc>
+          </field>
+          <field type="bool" id="pull_even" opt="true">
+              <desc>Pull the lateral duplicated molecules to space them evenly to the next z layer. Defaults to False</desc>
+          </field>
+          <field type="int" id="n_outputs" opt="true">
+              <desc>The number of system outputs to generate. Defaults to 1.</desc>
+          </field>
+          <field type="bool" id="gen_bound_fe_output" opt="true">
+              <desc>Generate .gro, .top, .ndx and .mdp for binding free energy calculations of the
+                    first position along the reaction coordinate in the system. This is used for calculating the energy required to
+                    transfer the molecule from water into the membrane and is used as a zero
+                    point for the PMF. Default: False</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-outputs>
+          <field type="file_list" id="starting_conf_files"/>
+          <field type="int" id="n_index_groups"/>
+          <field type="gromacs::mdp_array_array" id="settings_array"/>
+          <field type="gromacs::mdp_array_array" id="pull_even_settings_array"/>
+      </subnet-outputs>
+      <outputs>
+          <field type="file_list" id="conf">
+              <desc>A list (of length n_outputs) of coordinate files with the molecules grown into the system.</desc>
+          </field>
+          <field type="file_list" id="pull_even_conf">
+              <desc>A list (of length n_outputs) of coordinate files with the molecules grown into the system and lateral
+                    inserted mols pulled to be evenly distributed between the layers in the Z dimension.</desc>
+          </field>
+          <field type="file" id="ndx">
+              <desc>An index file with the inserted molecules.</desc>
+          </field>
+          <field type="file" id="top">
+              <desc>A topology file with the inserted molecules.</desc>
+          </field>
+          <field type="int" id="system_center_atom">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM when
+                    pulling.</desc>
+          </field>
+          <field type="float" id="system_z_dim">
+              <desc>The Z dimension of the system.</desc>
+          </field>
+          <field type="file" id="bound_conf">
+              <desc>A .gro file with the molecule in position 0. This is suitable for binding free
+                    energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_ndx">
+              <desc>An index file for binding free energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_top">
+              <desc>A topology file for binding free energy calculations.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_into_system" persistent_dir="true" />
+  </function>
 
+<!--  <function id="grow_into_system_2017" type="external">
+      <desc>Grows a molecule into a system at regular positions to, e.g., generate
+            starting positions for crooks nonequilibrium forward-reverse sampling.
+            Duplicates of the molecule can be generated in the x, y and z dimensions
+            to reduce the number of positions that have to be generated and thereby
+            improve the sampling.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration).</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to grow in.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to grow in.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the z dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_lateral_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x/z dimensions. Defaults to 1.</desc>
+          </field>
+          <field type="bool" id="pull_even" opt="true">
+              <desc>Pull the lateral duplicated molecules to space them evenly to the next z layer. Defaults to False</desc>
+          </field>
+          <field type="int" id="n_outputs" opt="true">
+              <desc>The number of system outputs to generate. Defaults to 1.</desc>
+          </field>
+          <field type="bool" id="gen_bound_fe_output" opt="true">
+              <desc>Generate .gro, .top, .ndx and .mdp for binding free energy calculations of the
+                    first position along the reaction coordinate in the system. This is used for calculating the energy required to
+                    transfer the molecule from water into the membrane and is used as a zero
+                    point for the PMF. Default: False</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-outputs>
+          <field type="file_list" id="starting_conf_files"/>
+          <field type="int" id="n_index_groups"/>
+          <field type="gromacs::mdp_array_array" id="settings_array"/>
+      </subnet-outputs>
+      <outputs>
+          <field type="file_list" id="conf">
+              <desc>A list (of length n_outputs) of coordinate files with the molecule grown into the system.</desc>
+          </field>
+          <field type="file" id="ndx">
+              <desc>An index file with the inserted molecules.</desc>
+          </field>
+          <field type="file" id="top">
+              <desc>A topology file with the inserted molecules.</desc>
+          </field>
+          <field type="int" id="system_center_atom">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM when
+                    pulling.</desc>
+          </field>
+          <field type="float" id="system_z_dim">
+              <desc>The Z dimension of the system.</desc>
+          </field>
+          <field type="file" id="bound_conf">
+              <desc>A .gro file with the molecule in position 0. This is suitable for binding free
+                    energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_ndx">
+              <desc>An index file for binding free energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_top">
+              <desc>A topology file for binding free energy calculations.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_into_system_2017" persistent_dir="true" />
+  </function>-->
+
+  <function id="pull_through_system" type="external">
+      <desc>Pulls a molecule through a system generating output at regular
+            positions to, e.g., generate starting positions for umbrella sampling.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration).</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    pulling simulations.</desc>
+          </field>
+          <field type="file_list" id="confs">
+              <desc>Configurations of the system with the molecule(s) to pull at their
+                    initial position(s).</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_index_groups" opt="true">
+              <desc>The number of copies of the molecule. Defaults to 1.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies of the molecule in the z dimension. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_lateral_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x/z dimensions. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_umbrellas" opt="true">
+              <desc>The number of snapshots of the system to generate, e.g., for umbrella sampling.
+                    Defaults to 25.</desc>
+          </field>
+          <field type="int" id="system_center_atom" opt="true">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM
+                  when applying umbrella sampling. If this is not set the numerical middle atom will be
+                  used.</desc>
+          </field>
+          <field type="bool" id="pull_both_directions" opt="true">
+              <desc>Generate umbrella sampling positions by pulling in both directions. Defaults to False</desc>
+          </field>
+          <field type="bool" id="pull_increasing_speed" opt="true">
+              <desc>Pull with speed increasing by 1% (percent units) per pulled molecule. This reduces exact overlap of umbrella windows. Defaults to False</desc>
+          </field>
+          <field type="bool" id="pull_between_z_dups" opt="true">
+              <desc>Pull only the distance to the next copy in the Z dimension.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-inputs>
+        <field type="file-list" id="trrs" />
+        <field type="file-list" id="tprs" />
+      </subnet-inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array_array" id="settings_array"/>
+      </subnet-outputs>
+      <outputs>
+          <field type="file_list" id="confs">
+              <desc>A list of coordinate files with the molecule pulled through the system.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="pull_through_system" persistent_dir="true" />
+  </function>
+
+<!--  <function id="calc_permeability" type="external">
+      <desc>Generates a diffusion profile, resistivity profile, based on a PMF and integrated ACT,
+            and also the integral of the resistivity and log(P).</desc>
+      <inputs>
+          <field type="file" id="pmf">
+              <desc>The PMF profile.</desc>
+          </field>
+          <field type="file" id="iact">
+              <desc>The integrated correlation times.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature of the system</desc>
+          </field>
+          <field type="float" id="integral_min_x" opt="true">
+              <desc>The position to start integrating to calculate resistivity and log(P). E.g. the lower boundary
+                    of the membrane.</desc>
+          </field>
+          <field type="float" id="integral_max_x" opt="true">
+              <desc>The position to stop integrating to calculate resistivity and log(P). E.g. the upper boundary
+                    of the membrane.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first umbrella window), e.g. the "binding free energy"
+                    of the first umbrella window.</desc>
+          </field>
+      </inputs>
+      <outputs>
+          <field type="file" id="diffusion_profile">
+              <desc>The diffusion profile. An error estimate will be generated if present in the input.
+              </desc>
+          </field>
+          <field type="file" id="resistivity_profile">
+              <desc>The resistivity profile.</desc>
+          </field>
+          <field type="float" id="resistivity">
+              <desc>The integral of the resistivity (s/cm2).</desc>
+          </field>
+          <field type="float" id="resistivity_error">
+              <desc>The stdev of the resistivity (s/cm2).</desc>
+          </field>
+          <field type="float" id="p">
+              <desc>The permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="p_error">
+              <desc>The stdev of the permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="log_p">
+              <desc>The log of the permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="log_p_error">
+              <desc>The stdev of the log of the permeability coefficient (cm/h).</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="calc_permeability" persistent_dir="true" />
+  </function>
+  -->
+  <function id="umbrella_permeability" type="external">
+      <desc>Runs umbrella sampling of a system on a molecule placed at relevant positions to calculate the
+            permeability through a membrane.</desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A template of input values for grompp (except configuration). Umbrella
+                    sampling parameters will be added.</desc>
+          </field>
+          <field type="file_list" id="confs">
+              <desc>A list of configurations of the system with the molecule to study at
+                    relevant positions.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to sample (must match the name in the index file).</desc>
+          </field>
+          <field type="int" id="n_index_groups">
+              <desc>The number of index groups in each configuration to sample using umbrellas.</desc>
+          </field>
+          <field type="int" id="n_umbrellas">
+              <desc>The number of umbrella windows to generate, i.e. the number of configurations.</desc>
+          </field>
+          <field type="string" id="define_umbrella" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    umbrella simulations.</desc>
+          </field>
+          <field type="int" id="n_steps_umbrella" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="float" id="spring_constant" opt="true">
+              <desc>The spring constant to be used for umbrella sampling. Default: 2000 kJ/nm^2.</desc>
+          </field>
+          <field type="int" id="system_center_atom" opt="true">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM
+                  when applying umbrella sampling. If this is not set the numerical middle atom will be
+                  used.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first umbrella window), e.g. the "binding free energy"
+                    of the first umbrella window.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array_array" id="settings_array"/>
+      </subnet-outputs>
+      <outputs>
+      </outputs>
+      <controller log="true" executable="umbrella_permeability" persistent_dir="true" />
+  </function>
+
+<!--  <function id="grow_umbrella_permeability" type="external">
+      <desc>Grows a molecule into a system at regular positions followed by umbrella
+            sampling to calculate the permeability through a membrane.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration) for growing
+                    the system. The topology and index files will be updated and passed
+                    on to umbrella sampling.</desc>
+  </field>-->
+<!--            <field type="file" id="mdp_umbrella" opt="true">
+              <desc>A separate mdp file can be used for the umbrella sampling.</desc>
+          </field>--><!--
+          <field type="string" id="define_grow" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="string" id="define_equil" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    equilibration simulations run for each umbrella simulation. This is
+                    only used if n_steps_equil is provided.</desc>
+          </field>
+          <field type="string" id="define_umbrella" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    umbrella simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to grow in.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to grow in.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps_grow" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_steps_equil" opt="true">
+              <desc>If this value is set an equilibration, with this many steps, will be run
+                    for each umbrella window.</desc>
+          </field>
+          <field type="int" id="n_steps_umbrella" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file
+                    for the umbrella sampling.</desc>
+          </field>
+          <field type="int" id="n_x_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_y_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the y dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the y dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_x_systems" opt="true">
+              <desc>The number of systems to generate with different coordinate offset in
+                    of the investigated molecule in the x dimension. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_y_systems" opt="true">
+              <desc>The number of systems to generate with different coordinate offset in
+                    of the investigated molecule in the y dimension. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_z_systems" opt="true">
+              <desc>The number of systems to generate with different coordinate offset in
+                    of the investigated molecule in the z dimension. When pulling
+                    across a membrane this is the number of umbrella windows. Defaults to 25.</desc>
+          </field>
+          <field type="bool" id="random_xy" opt="true">
+              <desc>Generate random positions in the x/y plane. Defaults to False.</desc>
+          </field>
+          <field type="bool" id="random_z" opt="true">
+              <desc>Generate random positions in the z plane. Defaults to False.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="float" id="spring_constant" opt="true">
+              <desc>The spring constant to be used for umbrella sampling. Default: 2000 kJ/nm^2.</desc>
+          </field>
+          <field type="bool" id="cyclic" opt="true">
+              <desc>Create a cyclic/periodic energy profile. Default: no.</desc>
+          </field>
+          <field type="bool" id="sym" opt="true">
+              <desc>Symmetrize energy profile around z=0. Default: no.</desc>
+          </field>
+          <field type="int" id="n_bootstraps" opt="true">
+              <desc>Number of bootstraps for error analysis. Default: 0.</desc>
+          </field>
+          <field type="float" id="ac_smooth" opt="true">
+              <desc>Smooth autocorrelation times along reaction coordinate with
+                    Gaussian of this sigma. Default: 0.</desc>
+          </field>
+          <field type="float" id="integral_min_x" opt="true">
+              <desc>The position to start integrating to calculate resistivity and log(P). E.g. the lower boundary
+                    of the membrane.</desc>
+          </field>
+          <field type="float" id="integral_max_x" opt="true">
+              <desc>The position to stop integrating to calculate resistivity and log(P). E.g. the upper boundary
+                    of the membrane.</desc>
+          </field>
+          <field type="meas::meas" id="hydration_mol_delta_f" opt="true">
+              <desc>The hydration free energy of the molecule. If this input is specified the
+                    binding free energy (compared to water) of the first umbrella window is also calculated and added to
+                    the PMF for the umbrella sampling.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first umbrella window), e.g. the "binding free energy"
+                    of the first umbrella window. If this is specified the hydration_mol_delta_f input is
+                    ignored and no binding free energy is calculated.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-inputs>
+          <field type="meas::meas" id="bound_delta_f" />
+      </subnet-inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array" id="bound_settings_array"/>
+          <field type="gromacs::mdp_array_array" id="equil_settings_array"/>
+          <field type="meas::meas" id="zero_point_delta_f" />
+      </subnet-outputs>
+      <outputs>
+          <field type="file" id="pmf_profile">
+              <desc>The PMF from WHAM on the system.</desc>
+          </field>
+          <field type="file" id="resistivity_profile">
+              <desc>The resistivity profile.</desc>
+          </field>
+          <field type="float" id="resistivity">
+              <desc>The integral of the resistivity (s/cm2).</desc>
+          </field>
+          <field type="float" id="resistivity_error">
+              <desc>The stdev of the resistivity (s/cm2).</desc>
+          </field>
+          <field type="float" id="p">
+              <desc>The permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="p_error">
+              <desc>The stdev of the permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="log_p">
+              <desc>The log of the permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="float" id="log_p_error">
+              <desc>The stdev of the log of the permeability coefficient (cm/h).</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_umbrella_permeability" persistent_dir="true" />
+  </function>-->
+
+  <function id="pull_umbrella_permeability" type="external">
+      <desc>Pull a molecule through a system generating output at regular intervals
+            followed by umbrella sampling to calculate the permeability through a membrane.
+            The starting positions are grown into the system before the pulling is started.
+            There can be multiple molecules pulled through the system at the same time.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration) for growing
+                    the system. The topology and index files will be updated and passed
+                    on to umbrella sampling.</desc>
+          </field>
+<!--            <field type="file" id="mdp_umbrella" opt="true">
+              <desc>A separate mdp file can be used for the umbrella sampling.</desc>
+          </field>-->
+          <field type="string" id="define_grow" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="string" id="define_pull" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    pulling simulations.</desc>
+          </field>
+          <field type="string" id="define_equil" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    equilibration simulations run for each umbrella simulation. This is
+                    only used if n_steps_equil is provided.</desc>
+          </field>
+          <field type="string" id="define_umbrella" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    umbrella simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to pull.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to pull.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to pull (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps_grow" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_steps_pull" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_steps_equil" opt="true">
+              <desc>If this value is set an equilibration, with this many steps, will be run
+                    for each umbrella window.</desc>
+          </field>
+          <field type="int" id="n_steps_umbrella" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file
+                    for the umbrella sampling.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the z dimension. Duplicates in the same
+                    system are placed as far apart as possible. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_lateral_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x/z dimensions. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_umbrellas" opt="true">
+              <desc>The number of positions in the z dimension when pulling. Defaults to 25.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="float" id="spring_constant" opt="true">
+              <desc>The spring constant to be used for umbrella sampling. Default: 2000 kJ/nm^2.</desc>
+          </field>
+          <field type="bool" id="pull_both_directions" opt="true">
+              <desc>Generate umbrella sampling positions by pulling in both directions. Defaults to False</desc>
+          </field>
+          <field type="bool" id="pull_increasing_speed" opt="true">
+              <desc>Pull with speed increasing by 1% (percent units) per pulled molecule. This reduces exact overlap of umbrella windows. Defaults to False</desc>
+          </field>
+          <field type="bool" id="pull_between_z_dups" opt="true">
+              <desc>Pull only the distance to the next copy in the Z dimension.</desc>
+          </field>
+          <field type="bool" id="grow_pull_even" opt="true">
+              <desc>Pull the lateral duplicated molecules to space them evenly to the next z layer. Defaults to False</desc>
+          </field>
+          <field type="meas::meas" id="hydration_mol_delta_f" opt="true">
+              <desc>The hydration free energy of the molecule. If this input is specified the
+                    binding free energy (compared to water) of the first umbrella window is also calculated and added to
+                    the PMF for the umbrella sampling.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first umbrella window), e.g. the "binding free energy"
+                    of the first umbrella window. If this is specified the hydration_mol_delta_f input is
+                    ignored and no binding free energy is calculated.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-inputs>
+          <field type="meas::meas" id="bound_delta_f" />
+      </subnet-inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array" id="bound_settings_array"/>
+          <field type="gromacs::mdp_array_array" id="equil_settings_array"/>
+          <field type="meas::meas" id="zero_point_delta_f" />
+      </subnet-outputs>
+      <outputs>
+      </outputs>
+      <controller log="true" executable="pull_umbrella_permeability" persistent_dir="true" />
+  </function>
+
+  <function id="grow_gen_bound_conf" type="external">
+      <desc>From a simulation with at least one molecule grown into the membrane remove all
+            but the first in-grown molecule to prepare the system for calculating the free
+            energy of that bound state.</desc>
+      <inputs>
+          <field type="file" id="conf">
+              <desc>The coordinate gro file.</desc>
+          </field>
+          <field type="file" id="ndx" opt="true">
+              <desc>Input index file.</desc>
+          </field>
+          <field type="file" id="top" opt="true">
+              <desc>Input topology file.</desc>
+          </field>
+          <field type="int" id="sys_n_atoms">
+              <desc>The number of atoms in the system (without the grown-in molecule).</desc>
+          </field>
+          <field type="int" id="molecule_n_atoms">
+              <desc>The number of atoms of the grown-in molecule.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule.</desc>
+          </field>
+      </inputs>
+      <outputs>
+          <field type="file" id="conf">
+              <desc>The coordinates of the modified system.</desc>
+          </field>
+          <field type="file" id="ndx">
+              <desc>Output ndx file.</desc>
+          </field>
+          <field type="file" id="top">
+              <desc>Output topology file.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_gen_bound_conf" persistent_dir="true"  />
+  </function>
+
+</cpc>
