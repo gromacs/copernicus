@@ -1,0 +1,396 @@
+<?xml version="1.0"?>
+<cpc>
+  <!-- a module for crooks nonequilibrium forward-reverse pulling with bin-passing analysis.-->
+  <import name="resource" />
+  <import name="gromacs" />
+  <import name="meas" />
+  <import name="int" />
+  <import name="fe" />
+
+  <type id="file_list" base="array" member-type="file" />
+  <type id="meas_array" base="array" member-type="meas::meas" />
+
+  <type id="grompp_input" base="record">
+    <desc>Partial grompp input</desc>
+    <field type="file" id="mdp" ><desc>A .mdp settings file</desc></field>
+    <field type="file" id="top" ><desc>A .top topology file</desc></field>
+    <field type="file" id="ndx" opt="true">
+      <desc>A .ndx index file</desc>
+    </field>
+    <field type="gromacs::grompp_include_array" id="include" opt="true"
+            complete="true">
+      <desc>array of files to include</desc>
+    </field>
+    <field type="gromacs::mdp_array" id="settings" opt="true"
+           complete="true">
+      <desc>array of settings</desc>
+    </field>
+    <field type="string" id="mdrun_cmdline_options" opt="true">
+      <desc>mdrun command line options</desc>
+    </field>
+  </type>
+
+  <function id="grow_into_system" type="external">
+      <desc>Grows a molecule into a system at regular positions to, e.g., generate
+            starting positions for crooks nonequilibrium forward-reverse sampling.
+            Duplicates of the molecule can be generated in the x, y and z dimensions
+            to reduce the number of positions that have to be generated and thereby
+            improve the sampling.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration).</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to grow in.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to grow in.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_x_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_y_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the y dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the z dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_outputs" opt="true">
+              <desc>The number of system outputs to generate. Defaults to 1.</desc>
+          </field>
+          <field type="bool" id="gen_bound_fe_output" opt="true">
+              <desc>Generate .gro, .top, .ndx and .mdp for binding free energy calculations of the
+                    first position along the reaction coordinate in the system. This is used for calculating the energy required to
+                    transfer the molecule from water into the membrane and is used as a zero
+                    point for the PMF. Default: False</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-outputs>
+          <field type="file_list" id="starting_conf_files"/>
+          <field type="int" id="n_index_groups"/>
+          <field type="gromacs::mdp_array_array" id="settings_array"/>
+          <field type="gromacs::mdp_array_array" id="bound_equil_settings_array"/>
+      </subnet-outputs>
+      <outputs>
+          <field type="file_list" id="conf">
+              <desc>A list (of length n_z_positions) of coordinate files with the molecule grown into the system.</desc>
+          </field>
+          <field type="file" id="ndx">
+              <desc>An index file with the inserted molecules.</desc>
+          </field>
+          <field type="file" id="top">
+              <desc>A topology file with the inserted molecules.</desc>
+          </field>
+          <field type="int" id="system_center_atom">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM when
+                    pulling.</desc>
+          </field>
+          <field type="float" id="system_z_dim">
+              <desc>The Z dimension of the system.</desc>
+          </field>
+          <field type="file" id="bound_conf">
+              <desc>A .gro file with the molecule in position 0. This is suitable for binding free
+                    energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_ndx">
+              <desc>An index file for binding free energy calculations.</desc>
+          </field>
+          <field type="file" id="bound_top">
+              <desc>A topology file for binding free energy calculations.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_into_system" persistent_dir="true" />
+  </function>
+
+  <function id="pull_fr" type="external">
+      <desc>Equilibration followed by pulling in the forward direction, equilibration and pulling in the reverse direction a number of times.
+            The procedure follows Kosztin et al. J. Chem. Phys. 2006, 124, 064106-1--064106-11.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration).</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    pulling simulations. If define is set and not define_equil the
+                    define string will be used for equilibration as well.</desc>
+          </field>
+          <field type="string" id="define_equil" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    equilibration simulations. If define is set and not define_equil the
+                    define string will be used for equilibration as well.</desc>
+          </field>
+          <field type="file_list" id="confs">
+              <desc>Configurations of the system with the molecule(s) to pull at their
+                    initial position(s).</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps_equil" opt="true">
+              <desc>The number of steps to equilibrate between each pull</desc>
+          </field>
+          <field type="int" id="n_steps_pull" opt="true">
+              <desc>The number of steps to pull in the forward and reverse directions respectively</desc>
+          </field>
+          <field type="float" id="spring_constant" opt="true">
+              <desc>The spring constant to be used for pulling. This should be high enough to qualify as a stiff
+                    spring. Default: 10000 kJ/nm^2.</desc>
+          </field>
+          <field type="int" id="n_index_groups" opt="true">
+              <desc>The number of copies of the molecule. Defaults to 1.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="int" id="system_center_atom" opt="true">
+              <desc>The atom closest to the system center position to use as PBC atom to determine COM
+                  when pulling. If this is not set the numerical middle atom will be used.</desc>
+          </field>
+          <field type="float" id="system_z_dim">
+              <desc>The dimension of the system in Z (the length of the reaction coordinate).</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first point along the reaction coordinate), e.g. the "binding free energy"
+                    of the first z position.</desc>
+          </field>
+          <field type="bool" id="sym" opt="true">
+              <desc>Symmetrize energy profile around z=0. Default: yes.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array_array" id="equil_settings_array"/>
+          <field type="gromacs::mdp_array_array" id="f_settings_array"/>
+          <field type="gromacs::mdp_array_array" id="r_settings_array"/>
+      </subnet-outputs>
+      <outputs>
+          <field type="file_list" id="pullx">
+              <desc>A list of pull coordinate files.</desc>
+          </field>
+          <field type="file_list" id="pullf">
+              <desc>A list of pull force files.</desc>
+          </field>
+          <field type="meas::meas" id="p">
+              <desc>The permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="meas::meas" id="log_p">
+              <desc>The log of the permeability coefficient (cm/h).</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="pull_fr" persistent_dir="true" />
+  </function>
+
+  <function id="calc_permeability" type="external">
+      <desc>Generates a diffusion profile, resistivity profile, PMF as well as the resistivity, the permeability (P) and log P.
+            The analyses are performed using the bin-passing method, see Nategholeslam et al. J. Phys. Chem. B 2014, 118, 14203--14214.</desc>
+      <inputs>
+          <field type="file_list" id="pullx" complete="true">
+              <desc>A list of pull coordinates. Must match pullf.</desc>
+          </field>
+          <field type="file_list" id="pullf" complete="true">
+              <desc>A list of pull forces. Must match pullx.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature of the system. Defaults to 303.15 K</desc>
+          </field>
+          <field type="float" id="react_coord_range">
+              <desc>The range of the reaction coordinate.</desc>
+          </field>
+          <field type="int" id="n_steps_pull">
+              <desc>The number of steps of the pulling simulations - to calculate the pulling speed of the spring along the reaction coordinate.</desc>
+          </field>
+          <field type="int" id="n_bins" opt="true">
+              <desc>The number of bins used to calculate the PMF and diffusion etc. Defaults to 200.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point (first point along the reaction coordinate), e.g. the "binding free energy"
+                    of the first z position.</desc>
+          </field>
+          <field type="bool" id="sym" opt="true">
+              <desc>Symmetrize energy profile around z=0. Default: yes.</desc>
+          </field>
+      </inputs>
+      <outputs>
+          <field type="file" id="diffusion_profile">
+              <desc>The diffusion profile. An error estimate will be generated if present in the input.
+              </desc>
+          </field>
+          <field type="file" id="resistivity_profile">
+              <desc>The resistivity profile.</desc>
+          </field>
+          <field type="file" id="pmf">
+              <desc>The PMF.</desc>
+          </field>
+          <field type="meas::meas" id="resistivity">
+              <desc>The integral of the resistivity (s/cm2).</desc>
+          </field>
+          <field type="meas::meas" id="p">
+              <desc>The permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="meas::meas" id="log_p">
+              <desc>The log of the permeability coefficient (cm/h).</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="calc_permeability" persistent_dir="true" />
+  </function>
+
+  <function id="grow_crooks_permeability" type="external">
+      <desc>Grows a molecule into a system followed by pulling it a number of times to calculate the permeability through a membrane.
+      </desc>
+      <inputs>
+          <field type="grompp_input" id="grompp">
+              <desc>A full set of input values for grompp (except configuration) for growing
+                    the system. The topology and index files will be updated and passed
+                    on to Crooks pulling.</desc>
+          </field>
+          <field type="string" id="define_grow" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    growing simulations.</desc>
+          </field>
+          <field type="string" id="define_equil" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    equilibration simulations.</desc>
+          </field>
+          <field type="string" id="define" opt="true">
+              <desc>A set of define statements, e.g., for restraints to be applied to the
+                    pulling simulations.</desc>
+          </field>
+          <field type="file" id="system_conf">
+              <desc>A configuration of the system without the molecule to grow in.</desc>
+          </field>
+          <field type="file" id="molecule_conf">
+              <desc>A configuration of the molecule to grow in.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule to grow in (must match the name in the force field).</desc>
+          </field>
+          <field type="int" id="n_steps_grow" opt="true">
+              <desc>If this value is set it will override the n_steps value in the mdp file.</desc>
+          </field>
+          <field type="int" id="n_steps_equil" opt="true">
+              <desc>The number of steps to equilibrate between each pull</desc>
+          </field>
+          <field type="int" id="n_steps_pull" opt="true">
+              <desc>The number of steps to pull in the forward and reverse directions respectively</desc>
+          </field>
+          <field type="float" id="spring_constant" opt="true">
+              <desc>The spring constant to be used for pulling. This should be high enough to qualify as a stiff
+                    spring. Default: 10000 kJ/nm^2.</desc>
+          </field>
+          <field type="int" id="n_sets" opt="true">
+<!--              <desc>The number of independent data sets (if flex_n_sets is False this is the number of data sets) per experiment repetition. Defaults to 14.</desc>-->
+              <desc>The number of independent data sets per experiment repetition. Defaults to 20.</desc>
+          </field>
+          <field type="int" id="n_experiment_reps" opt="true">
+              <desc>The number of times to repeat the forward-reverse pulling (all sets) to get independent results to compare. Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_x_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the x dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_y_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the y dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="int" id="n_z_dups_in_sys" opt="true">
+              <desc>The number of copies to generate in the z dimension. Duplicates in the same
+                    system are placed as far apart as possible (or at random positions). Defaults to 1.</desc>
+          </field>
+          <field type="float" id="temperature" opt="true">
+              <desc>The temperature to run at.</desc>
+          </field>
+          <field type="bool" id="sym" opt="true">
+              <desc>Symmetrize energy profile around z=0. Default: True.</desc>
+          </field>
+          <field type="meas::meas" id="hydration_mol_delta_f" opt="true">
+              <desc>The hydration free energy of the molecule. If this input is specified the
+                    binding free energy (compared to water) of the zero point along the reaction coordinate is also calculated and added to
+                    the PMF, i.e. the zero_point_delta_f will be calculated.</desc>
+          </field>
+          <field type="meas::meas" id="zero_point_delta_f" opt="true">
+              <desc>Energy to add to the PMF zero point, e.g. the "binding free energy" at the zero point in the reaction coordinate.
+                    If this is specified the hydration_mol_delta_f input is
+                    ignored and no binding free energy is calculated.</desc>
+          </field>
+          <field type="resource::run_desc" id="resources" opt="true">
+              <desc>The run resources for a typical run</desc>
+          </field>
+      </inputs>
+      <subnet-inputs>
+          <field type="meas::meas" id="bound_delta_f" />
+          <field type="meas_array" id="p_list" />
+      </subnet-inputs>
+      <subnet-outputs>
+          <field type="gromacs::mdp_array" id="bound_settings_array"/>
+          <field type="meas::meas" id="zero_point_delta_f" />
+      </subnet-outputs>
+      <outputs>
+          <field type="meas::meas" id="p">
+              <desc>The permeability coefficient (cm/h).</desc>
+          </field>
+          <field type="meas::meas" id="log_p">
+              <desc>The log of the permeability coefficient (cm/h).</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_crooks_permeability" persistent_dir="true" />
+  </function>
+
+  <function id="grow_gen_bound_conf" type="external">
+      <desc>From a simulation with at least one molecule grown into the membrane remove all
+            but the first in-grown molecule to prepare the system for calculating the free
+            energy of that bound state.</desc>
+      <inputs>
+          <field type="file" id="conf">
+              <desc>The coordinate gro file.</desc>
+          </field>
+          <field type="file" id="ndx" opt="true">
+              <desc>Input index file.</desc>
+          </field>
+          <field type="file" id="top" opt="true">
+              <desc>Input topology file.</desc>
+          </field>
+          <field type="int" id="sys_n_atoms">
+              <desc>The number of atoms in the system (without the grown-in molecule).</desc>
+          </field>
+          <field type="int" id="molecule_n_atoms">
+              <desc>The number of atoms of the grown-in molecule.</desc>
+          </field>
+          <field type="string" id="molecule_name">
+              <desc>The name of the molecule.</desc>
+          </field>
+      </inputs>
+      <outputs>
+          <field type="file" id="conf">
+              <desc>The coordinates of the modified system.</desc>
+          </field>
+          <field type="file" id="ndx">
+              <desc>Output ndx file.</desc>
+          </field>
+          <field type="file" id="top">
+              <desc>Output topology file.</desc>
+          </field>
+      </outputs>
+      <controller log="true" executable="grow_gen_bound_conf" persistent_dir="true"  />
+  </function>
+
+</cpc>
