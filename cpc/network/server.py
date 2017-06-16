@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2016, Sander Pronk, Iman Pouya, Erik Lindahl, Magnus Lundborg,
+# and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -64,6 +65,7 @@ class HTTPSServerWithCertAuthentication(CopernicusServer):
         fpem = conf.getPrivateKey()
         fcert = conf.getCertFile()
         ca = conf.getCaChainFile()
+        log.info("Server address family: %s. INET6: %s." % (self.address_family, socket.AF_INET6))
         sock = socket.socket(self.address_family,self.socket_type)
 
         try:
@@ -88,6 +90,11 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
     This server provides no verification as of now, but is scheduled to provide
     server side verification
     """
+
+    ## Force IPv6 if possible
+    if socket.has_ipv6:
+        log.info("Socket has IPv6 support.")
+        address_family = socket.AF_INET6
     def __init__(self, handler_class, conf, serverState):
         self.conf=conf
         self.serverState=serverState
@@ -100,6 +107,7 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
         fpem = conf.getPrivateKey()
         fcert = conf.getCertFile()
         ca = conf.getCaChainFile()
+
         sock = socket.socket(self.address_family,self.socket_type)
 
         try:
@@ -112,7 +120,8 @@ class HTTPSServerNoCertAuthentication(HTTPServer__base):
         except Exception:
             #FIXME this is not always true server can not start due to other
             # reasons
-            print "HTTPS port %s already taken"%conf.getServerSecurePort()
+            traceback.print_exc()
+            print "HTTPS port %s already taken"%conf.getClientSecurePort()
             serverState.doQuit()
 
 

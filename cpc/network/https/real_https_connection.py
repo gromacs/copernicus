@@ -1,8 +1,22 @@
-'''
-Created on Sep 20, 2011
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011-2016, Sander Pronk, Iman Pouya, Erik Lindahl, Magnus Lundborg,
+# and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-@author: iman
-'''
 import httplib
 import logging
 import socket
@@ -67,16 +81,16 @@ class HttpsConnectionWithCertReq(httplib.HTTPConnection):
 
 
     def connect(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         #create an ssl context and load certificate verify locations
         try:
+            # Using socket.create_connection means that we do not have to specify AF_INET or AF_INET6
+            sock = socket.create_connection((self.host,self.port))
+
             self.sock = ssl.wrap_socket(sock,
                                         self.privateKeyFile,
                                         self.certFile,
                                         cert_reqs = ssl.CERT_REQUIRED,
                                         ca_certs=self.caFile)
-            self.sock.connect((self.host,self.port))
             self.connected = True
 
         except ssl.SSLError as e:
@@ -99,12 +113,12 @@ class HttpsConnectionNoCertReq(httplib.HTTPConnection):
     def connect(self):
 
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
             #create an ssl context and load certificate verify locations
+            # Using socket.create_connection means that we do not have to specify AF_INET or AF_INET6
+            sock = socket.create_connection((self.host,self.port))
+
             self.sock = ssl.wrap_socket(sock,
                                         cert_reqs = ssl.CERT_NONE)
-            self.sock.connect((self.host,self.port))
 
         except ssl.SSLError as e:
             log.error(e)

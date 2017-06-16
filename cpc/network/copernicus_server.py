@@ -1,3 +1,23 @@
+# This file is part of Copernicus
+# http://www.copernicus-computing.org/
+#
+# Copyright (C) 2011-2016, Sander Pronk, Iman Pouya, Erik Lindahl, Magnus Lundborg,
+# and others.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as published
+# by the Free Software Foundation
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+
 from BaseHTTPServer import HTTPServer
 import BaseHTTPServer
 import SocketServer
@@ -32,6 +52,10 @@ class HTTPServer__base(SocketServer.ThreadingMixIn,HTTPServer):
 
 class CopernicusServer(HTTPServer__base):
 
+    ## Force IPv6 if possible
+    if socket.has_ipv6:
+        log.info("Socket has IPv6 support.")
+        address_family = socket.AF_INET6
     def __init__(self, handler_class, conf,serverState):
         BaseHTTPServer.HTTPServer.__init__(self, (conf.getServerHost(),
                         conf.getServerSecurePort()),handler_class)
@@ -41,6 +65,7 @@ class CopernicusServer(HTTPServer__base):
         # shutdown if we seen keep-alive in the header
         self.daemon_threads = True
         self.serverState = serverState
+
 
     def serve_forever(self, poll_interval=0.5):
         """Handle one request at a time until shutdown.
