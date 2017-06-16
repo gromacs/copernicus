@@ -1,10 +1,11 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2017, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -77,37 +78,47 @@ def tune(rsrc, confFile, tprFile, testRunDir, Nmax=None):
     """Set max. run based on configuration file."""
     # TODO: fix this. For now, only count the number of particles and
     # the system size.
-    # read the system size 
-    inf=open(confFile, 'r')
-    i=0
-    for line in inf:
-        lastsplit=line.split()
-        if i==1:
-            N=int(line)
-        i+=1
-    sx=float(lastsplit[0])
-    sy=float(lastsplit[0])
-    sz=float(lastsplit[0])
-    # as a rough estimate, the max. number of cells is 1 per rounded nm
-    mincellsize=1.2
-    Nsize = int(sx/mincellsize)*int(sy/mincellsize)*int(sz/mincellsize)
-    # and the max. number of processors should be N/250
-    NN = int(N/250)
+    # read the system size
     if Nmax is None:
+        inf=open(confFile, 'r')
+        i=0
+        for line in inf:
+            lastsplit=line.split()
+            if i==1:
+                N=int(line)
+            i+=1
+        sx=float(lastsplit[0])
+        sy=float(lastsplit[0])
+        sz=float(lastsplit[0])
+        # as a rough estimate, the max. number of cells is 1 per rounded nm
+        mincellsize=1.2
+        Nsize = int(sx/mincellsize)*int(sy/mincellsize)*int(sz/mincellsize)
+        # and the max. number of processors should be N/250
+        NN = int(N/250)
         # the max number of processors to use should be the minimum of these
         Nmax = min(Nsize, NN)
     Nmax = max(1, Nmax)
 
     while True:
+        # Between 48 and 64 the remaining cores can be difficult to use.
+        # See if 64 would work.
+        if Nmax > 48 and Nmax < 64:
+            Nmax = 64
+        # 30 is sometimes not a good number (often difficult to use the remaining cores).
+        # See if 32 would work instead.
+        elif Nmax == 30:
+            Nmax = 32
         # make sure we return a sane number:
-        # It's either 4 or smaller, 6, or has at least 3 prime factors. 
-        if (Nmax < 5 or Nmax == 6 or 
-            (Nmax < 32 and len(primefactors(Nmax)) > 2) or
-            (Nmax < 32 and len(primefactors(Nmax)) > 3) ): 
+        # It's either 4 or smaller, 6, or has at least 3 prime factors.
+        if (Nmax < 5 or Nmax == 6 or
+            len(primefactors(Nmax)) >= 3):
             canRun, stdo=tryRun(tprFile, testRunDir, Nmax)
             if canRun:
                 break
-        Nmax -= 1 
+        if Nmax > 20 and Nmax % 2 == 0:
+            Nmax /= 2
+        else:
+            Nmax -= 1
         if Nmax < 1:
             raise GromacsError("Can't run simulation: %s"%stdo)
     rsrc.min.set('cores', 1)
