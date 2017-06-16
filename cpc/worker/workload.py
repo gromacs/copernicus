@@ -106,7 +106,7 @@ class WorkLoad(object):
                      (self.used['cores'].value==other.used['cores'].value))
         if not matchNcores:
             log.debug("ncores doesn't match: %d, %d"%
-                      (self.used['cores'].value==other.used['cores'].value))
+                      (self.used['cores'].value, other.used['cores'].value))
             return False
         if exe.joinMatchArgs:
             matchArgs=True
