@@ -1,7 +1,8 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+# Copyright (C) 2011-2017, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as published
@@ -285,6 +286,264 @@ def _eneconv(inp, fo):
 def eneconv(inp):
     fo=inp.getFunctionOutput()
     _eneconv(inp, fo)
+    return fo
+
+def _genconf(inp, fo):
+    """Internal implementation of genconf"""
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("genconf -version")
+        return
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    if pers.get('init') is None:
+        init=True
+        pers.set('init', 1)
+    else:
+        inpItems=[ 'conf', 'nmolat', 'nbox', 'dist', 'cmdline_options' ]
+        if not checkUpdated(inp, inpItems):
+            return
+        init=False
+    writeStdin=StringIO()
+
+    conf=inp.getInput('conf')
+
+    outDir=inp.getOutputDir()
+    outname=os.path.join(outDir, "out.gro")
+
+    nmolat=inp.getInput('nmolat')
+
+    cmdline=["genconf", '-f', conf, '-o', outname, '-nmolat', nmolat]
+
+    nbox=inp.getInput('nbox')
+    if nbox is not None and len(nbox) == 3:
+        cmdline.extend(['-nbox', '%d %d %d' % (nbox[0], nbox[1], nbox[2])])
+    dist=inp.getInput('dist')
+    if dist is not None and len(dist) == 3:
+        cmdline.extend(['-dist', '%.3f %.3f %.3f' % (dist[0], dist[1], dist[2])])
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline.extend(cmdlineOpts)
+    log.debug(cmdline)
+
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.getOutputDir(),
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(writeStdin.getvalue())
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: genconf returned %s"%(stdout))
+    fo.setOut('conf', FileValue(outname))
+
+    pers.write()
+
+def genconf(inp):
+    fo=inp.getFunctionOutput()
+    _genconf(inp, fo)
+    return fo
+
+def _editconf(inp, fo):
+    """Internal implementation of genconf"""
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand("editconf -version")
+        return
+    pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
+                                               "persistent.dat"))
+    if pers.get('init') is None:
+        init=True
+        pers.set('init', 1)
+    else:
+        inpItems=[ 'conf', 'boxtype', 'box', 'angles', 'distance', 'cmdline_options' ]
+        if not checkUpdated(inp, inpItems):
+            return
+        init=False
+    writeStdin=StringIO()
+
+    conf=inp.getInput('conf')
+
+    outDir=inp.getOutputDir()
+    outname=os.path.join(outDir, "out.gro")
+    cmdline=["editconf", '-f', conf, '-o', outname]
+
+
+    bt=inp.getInput('boxtype')
+    if bt:
+        cmdline.extend(['-bt', '%s' % bt])
+    box=inp.getInput('box')
+    if box is not None and len(box) == 3:
+        cmdline.extend(['-box', '%.3f %.3f %.3f' % (box[0], box[1], box[2])])
+    angles=inp.getInput('angles')
+    if angles is not None and len(angles) == 3:
+        cmdline.extend(['-angles', '%.3f %.3f %.3f' % (angles[0], angles[1], angles[2])])
+    d=inp.getInput('distance')
+    if d is not None:
+        cmdline.extend(['-d', '%.3f' % d])
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline.extend(cmdlineOpts)
+    log.debug(cmdline)
+
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.getOutputDir(),
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(writeStdin.getvalue())
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: editconf returned %s"%(stdout))
+    fo.setOut('conf', FileValue(outname))
+
+    pers.write()
+
+def editconf(inp):
+    fo=inp.getFunctionOutput()
+    _editconf(inp, fo)
+    return fo
+
+def genWhamInput(inp):
+
+    outDir=inp.getOutputDir()
+
+    tprListFileName = os.path.join(outDir, 'tpr-files.dat')
+    pullXListFileName = os.path.join(outDir, 'pullx-files.dat')
+    pullFListFileName = os.path.join(outDir, 'pullf-files.dat')
+
+    tpr = inp.getInput('tpr')
+    nUmbrellas = len(tpr)
+    pullx = inp.getInput('pullx')
+    pullf = inp.getInput('pullf')
+    if not pullx and not pullf:
+        raise GromacsError("SYNTAX ERROR: pullx OR pullf must be provided.")
+    if pullx and pullf:
+        raise GromacsError("SYNTAX ERROR: Both pullx AND pullf cannot be provided.")
+
+    tprListFile = open(tprListFileName, 'w')
+    if pullx:
+        pullXListFile = open(pullXListFileName, 'w')
+        pullFListFile = None
+        pullFListFileName = None
+    else:
+        pullFListFile = open(pullFListFileName, 'w')
+        pullXListFile = None
+        pullXListFileName = None
+
+    for i in xrange(nUmbrellas):
+        f = inp.getInput('tpr[%d]' % i)
+        tprListFile.write('%s\n' % f)
+        if pullx:
+            f = inp.getInput('pullx[%d]' % i)
+            pullXListFile.write('%s\n' % f)
+        else:
+            f = inp.getInput('pullf[%d]' % i)
+            pullFListFile.write('%s\n' % f)
+
+    return(tprListFileName, pullXListFileName, pullFListFileName)
+
+def getWhamRange(tprFile):
+
+    cmd=['gmxdump', '-s', tprFile ]
+    sp=subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT)
+    for line in sp.stdout:
+        if ' init ' in line:
+            pos=abs(float(line.split()[2]))
+            return pos
+
+
+def wham(inp):
+    if inp.testing():
+        # if there are no inputs, we're testing wheter the command can run
+        cpc.util.plugin.testCommand('g_wham -version')
+        return
+
+    writeStdin=StringIO()
+
+    outDir=inp.getOutputDir()
+
+    (tprFiles, pullxFiles, pullfFiles) = genWhamInput(inp)
+
+    outProf = os.path.join(outDir, 'profile.xvg')
+    outHist = os.path.join(outDir, 'histo.xvg')
+    outIact = os.path.join(outDir, 'iact.xvg')
+
+
+    cmdline=['g_wham', '-it', tprFiles, '-o', outProf, '-hist', outHist, '-ac']
+
+    if pullxFiles:
+        cmdline.extend(['-ix', pullxFiles])
+    else:
+        cmdline.extend(['-if', pullfFiles])
+
+    limitRange = inp.getInput('limit_range')
+    if limitRange or limitRange is None:
+        f = inp.getInput('tpr[0]')
+        limit = getWhamRange(f)
+        if limit:
+            cmdline.extend(['-min', '%f' % (-limit), '-max', '%f' % limit])
+
+    beginTime = inp.getInput('begin_time')
+    if beginTime is not None:
+        cmdline.extend(['-b', '%g' % beginTime])
+    endTime = inp.getInput('end_time')
+    if endTime is not None:
+        cmdline.extend(['-e', '%g' % endTime])
+    temperature = inp.getInput('temperature')
+    if temperature is not None:
+        cmdline.extend(['-temp', '%f' % temperature])
+    bins = inp.getInput('bins')
+    if bins is not None:
+        cmdline.extend(['-bins', '%d' % bins])
+    cyclic = inp.getInput('cyclic')
+    if cyclic:
+        cmdline.extend(['-cycl'])
+    sym = inp.getInput('sym')
+    if sym:
+        cmdline.extend(['-sym'])
+    nBootstraps = inp.getInput('n_bootstraps')
+    if nBootstraps:
+        outBSRes = os.path.join(outDir, 'bsResult.xvg')
+        outBSProfs = os.path.join(outDir, 'bsProfs.xvg')
+        cmdline.extend(['-nBootstrap', '%d' % nBootstraps, '-bsres', outBSRes, '-bsprof', outBSProfs, '-tol', '1e-05'])
+    else:
+        outBSRes = None
+        outBSProfs = None
+    acsig = inp.getInput('ac_smooth')
+    if acsig:
+        cmdline.extend(['-acsig', '%f' % acsig])
+
+    if inp.getInput('cmdline_options') is not None:
+        cmdlineOpts=shlex.split(inp.getInput('cmdline_options'))
+    else:
+        cmdlineOpts=[]
+    cmdline.extend(cmdlineOpts)
+    log.debug(cmdline)
+
+    proc=subprocess.Popen(cmdline,
+                          stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT,
+                          cwd=inp.getOutputDir(),
+                          close_fds=True)
+    (stdout, stderr)=proc.communicate(writeStdin.getvalue())
+    if proc.returncode != 0:
+        raise GromacsError("ERROR: g_wham returned %s"%(stdout))
+
+    fo=inp.getFunctionOutput()
+
+    fo.setOut('profile', FileValue(outProf))
+    fo.setOut('histogram', FileValue(outHist))
+    fo.setOut('bs_results', FileValue(outBSRes))
+    fo.setOut('bs_profiles', FileValue(outBSProfs))
+    fo.setOut('iact', FileValue(outIact))
+
     return fo
 
 def pdb2gmx(inp):

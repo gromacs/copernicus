@@ -1,7 +1,7 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
 #
-# Copyright (C) 2011-2014, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Copyright (C) 2011-2015, Sander Pronk, Iman Pouya, Magnus Lundborg,
 # Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -333,11 +333,87 @@ def checkErr(stde, rsrc, tpr, persDir):
                 log.debug("Found domain decomp error")
                 confFile=os.path.join(persDir, 'conf.gro')
                 extractConf(tpr, confFile)
-                tune.tune(rsrc, confFile, tpr, persDir, rsrc.max.get('cores')-1)
+                nCores = rsrc.max.get('cores')
+                if nCores:
+                    if nCores > 20:
+                        nCores /= 2
+                    else:
+                        nCores -= 1
+                tune.tune(rsrc, confFile, tpr, persDir, nCores)
                 OK=True
                 break
     inf.close()
     return not OK
+
+def getFileList(persDir, runDirsPattern, filePattern):
+
+    fileso = sorted(glob.glob(os.path.join(persDir, runDirsPattern,
+                                          filePattern)))
+    # cull empty files and duplicate trajectory names
+    files=[]
+    filebase=[]
+    try:
+        for f in fileso:
+            st=os.stat(f)
+            base=os.path.split(f)[1]
+            if st.st_size>0:
+                if base not in filebase:
+                    files.append(f)
+                    filebase.append(base)
+                else:
+                    # there already was a file with this name. Overwrite
+                    # it because mdrun wasn't aware of it when writing.
+                    ind=filebase.index(base)
+                    files[ind]=f
+    except OSError:
+        pass
+
+    return files
+
+def concatenateTrajs(persDir, files, outname):
+
+    suffix = outname[-3:]
+
+    cmd=["trjcat", "-f"]
+    cmd.extend(files)
+    cmd.extend(["-o", outname])
+    stdo=open(os.path.join(persDir,"trjcat_%s.out" % suffix),"w")
+    sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
+    sp.communicate(None)
+    stdo.close()
+
+def concatenateEdrs(persDir, files, outname):
+
+    cmd=["eneconv", "-f"]
+    cmd.extend(files)
+    cmd.extend(["-o", outname])
+    stdo=open(os.path.join(persDir,"eneconv.out"),"w")
+    sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
+    sp.communicate(None)
+    stdo.close()
+
+def concatenateXvgs(persDir, files, outname):
+
+    with open(outname, 'w') as outf:
+        lastTime = None
+        for fnumber, infName in enumerate(files):
+            with open(infName) as inf:
+                lines = inf.readlines()
+                for line in lines:
+                    if not line:
+                        continue
+                    if not line[0] == '#' and not line[0] == '@':
+                        parts = line.split()
+                        try:
+                            time = float(parts[0])
+                        except Exception as e:
+                            time = 0.0
+                        if time > lastTime or lastTime == None:
+                            if '\n' in line:
+                                lastTime = time
+                                outf.write(line)
+                    elif fnumber == 0:
+                        outf.write(line)
 
 
 def extractData(confout, outDir, persDir, fo):
@@ -350,108 +426,54 @@ def extractData(confout, outDir, persDir, fo):
     #outputs['conf'] = Value(confoutPath,
     #                        inp.function.getOutput('conf').getType())
     fo.setOut('conf', FileValue(confoutPath))
-    # fix the xtc files
-    xtcso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.*xtc")))
-    # cull empty files and duplicate trajectory names
-    xtcs=[]
-    xtcbase=[]
-    try:
-        for file in xtcso:
-            st=os.stat(file)
-            base=os.path.split(file)[1]
-            if st.st_size>0:
-                if base not in xtcbase:
-                    xtcs.append(file)
-                    xtcbase.append(base)
-                else:
-                    # there already was a file with this name. Overwrite
-                    # it because mdrun wasn't aware of it when writing.
-                    ind=xtcbase.index(base)
-                    xtcs[ind]=file
-    except OSError:
-        pass
 
+
+    # get the xtc files
+    xtcs = getFileList(persDir, "run_???", "traj.*xtc")
     # concatenate them
     xtcoutname=os.path.join(outDir, "traj.xtc")
     if len(xtcs) > 0:
-        cmd = cmdnames.trjcat.split() + ["-f"]
-        cmd.extend(xtcs)
-        cmd.extend(["-o", xtcoutname])
-        stdo=open(os.path.join(persDir,"trjcat_xtc.out"),"w")
-        sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
-        sp.communicate(None)
-        stdo.close()
+        concatenateTrajs(persDir, xtcs, xtcoutname)
         fo.setOut('xtc', FileValue(xtcoutname))
-    # do the trrs
-    trrso = sorted(glob.glob(os.path.join(persDir, "run_???",
-                                          "traj.*trr")))
-    # cull empty files and duplicate trajectory names
-    trrs=[]
-    trrbase=[]
-    try:
-        for file in trrso:
-            st=os.stat(file)
-            base=os.path.split(file)[1]
-            if st.st_size>0:
-                if base not in trrbase:
-                    trrs.append(file)
-                    trrbase.append(base)
-                else:
-                    # there already was a file with this name. Overwrite
-                    # it because mdrun wasn't aware of it when writing.
-                    ind=trrbase.index(base)
-                    trrs[ind]=file
-    except OSError:
-        pass
+
+    # get the trrs
+    trrs = getFileList(persDir, "run_???", "traj.*trr")
     # concatenate them
     trroutname=os.path.join(outDir, "traj.trr")
     if len(trrs) > 0:
-        cmd = cmdnames.trjcat.split() + ["-f"]
-        cmd.extend(trrs)
-        cmd.extend(["-o", trroutname])
-        stdo=open(os.path.join(persDir,"trjcat_trr.out"),"w")
-        sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
-        sp.communicate(None)
-        stdo.close()
+        concatenateTrajs(persDir, trrs, trroutname)
         fo.setOut('trr', FileValue(trroutname))
+
     # and the edrs
-    edrso = glob.glob(os.path.join(persDir, "run_???", "ener.*edr"))
-    # cull empty files and duplicate trajectory names
-    edrs=[]
-    edrbase=[]
-    try:
-        for file in edrso:
-            st=os.stat(file)
-            base=os.path.split(file)[1]
-            if st.st_size>0:
-                if base not in edrbase:
-                    edrs.append(file)
-                    edrbase.append(base)
-                else:
-                    # there already was a file with this name. Overwrite
-                    # it because mdrun wasn't aware of it when writing.
-                    ind=edrbase.index(base)
-                    log.debug("Overwriting existing edr file %s with %s" % (edrs[ind], file))
-                    edrs[ind]=file
-    except OSError:
-        pass
-    edroutname=os.path.join(outDir, "ener.edr")
-    if len(edrs) > 1:
-        log.debug("Concatenating edr files: %s" % edrs)
+    edrs = getFileList(persDir, "run_???", "ener.*edr")
     # concatenate them
+    edroutname=os.path.join(outDir, "ener.edr")
     if len(edrs) > 0:
-        cmd = cmdnames.eneconv.split() + ["-f"]
-        cmd.extend(edrs)
-        cmd.extend(["-o", edroutname])
-        stdo=open(os.path.join(persDir,"eneconv.out"),"w")
-        sp=subprocess.Popen(cmd, stdout=stdo, stderr=subprocess.STDOUT)
-        sp.communicate(None)
-        stdo.close()
-        log.debug("Setting edr output to %s" % edroutname)
+        concatenateEdrs(persDir, edrs, edroutname)
         fo.setOut('edr', FileValue(edroutname))
+
+    # Umbrella sampling files
+    pullxs = getFileList(persDir, "run_???", "pullx.*xvg")
+    pullxoutname = os.path.join(outDir, "pullx.xvg")
+    if len(pullxs) > 0:
+        concatenateXvgs(persDir, pullxs, pullxoutname)
+        fo.setOut('pullx', FileValue(pullxoutname))
+    pullfs = getFileList(persDir, "run_???", "pullf.*xvg")
+    pullfoutname = os.path.join(outDir, "pullf.xvg")
+    if len(pullfs) > 0:
+        concatenateXvgs(persDir, pullfs, pullfoutname)
+        fo.setOut('pullf', FileValue(pullfoutname))
+
+    # dhdl files
+    dhdls = getFileList(persDir, "run_???", "dhdl.*xvg")
+    dhdloutname = os.path.join(outDir, "dhdl.xvg")
+    if len(dhdls) > 0:
+        concatenateXvgs(persDir, dhdls, dhdloutname)
+        fo.setOut('dhdl', FileValue(dhdloutname))
+
     # do the stdout
     stdouto = glob.glob(os.path.join(persDir, "run_???", "stdout"))
+    stdouto.sort(key=os.path.getmtime)
     stdoutname=os.path.join(outDir, "stdout")
     outf=open(stdoutname,"w")
     for infile in stdouto:
@@ -462,8 +484,10 @@ def extractData(confout, outDir, persDir, fo):
     outf.write("%f\n"%time.time())
     outf.close()
     fo.setOut('stdout', FileValue(stdoutname))
+
     # do the stderr
     stderro = glob.glob(os.path.join(persDir, "run_???", "stderr"))
+    stderro.sort(key=os.path.getmtime)
     stderrname=os.path.join(outDir, "stderr")
     outf=open(stderrname,"w")
     for infile in stderro:
@@ -472,8 +496,10 @@ def extractData(confout, outDir, persDir, fo):
         inf.close()
     outf.close()
     fo.setOut('stderr', FileValue(stderrname))
+
     # and do md.log
     logo = glob.glob(os.path.join(persDir, "run_???", "md.*log"))
+    logo.sort(key=os.path.getmtime)
     logname=os.path.join(outDir, "md.log")
     outf=open(logname,"w")
     for infile in logo:
@@ -507,6 +533,7 @@ def mdrun(inp):
     lasttpr=pers.get('lasttpr')
     newtpr=inp.getInput('tpr')
     #if inp.getInputValue('tpr').isUpdated():
+    log.debug("mdrun inp.cmd: %s" % inp.cmd)
     if newtpr!= lasttpr:
         lasttpr=newtpr
         # there was no previous command.
@@ -528,8 +555,20 @@ def mdrun(inp):
                     pass
         init=True
         pers.set('lasttpr', lasttpr)
-    elif inp.cmd is None:
-        return fo
+
+    # try to find out whether the run has already finished
+    confout=glob.glob(os.path.join(persDir, "run_???", "confout.part*.gro"))
+    if len(confout) > 0:
+        confoutDir = os.path.dirname(confout[0])
+        hasFinalData = checkConfoutDir(confoutDir)
+        if hasFinalData:
+            log.debug("Extracting data. ")
+            # confout exists. we're finished. Concatenate all the runs if
+            # we need to, but first create the output dict
+            extractData(confout, outDir, persDir, fo)
+            return fo
+    #if inp.cmd is None:
+        #return fo
     if init:
         if rsrc.max.get('cores') is None:
             confFile=os.path.join(persDir, 'conf.gro')
@@ -544,17 +583,6 @@ def mdrun(inp):
             rsrc.load(rsrcFilename)
     if inp.cmd is not None:
         log.debug("Return code was %s"%str(inp.cmd.getReturncode()))
-    # try to find out whether the run has already finished
-    confout=glob.glob(os.path.join(persDir, "run_???", "confout.*gro"))
-    if len(confout) > 0:
-        confoutDir = os.path.dirname(confout[0])
-        hasFinalData = checkConfoutDir(confoutDir)
-        if hasFinalData:
-            log.debug("Extracting data. ")
-            # confout exists. we're finished. Concatenate all the runs if
-            # we need to, but first create the output dict
-            extractData(confout, outDir, persDir, fo)
-            return fo
 
     tfc=TrajFileCollection(persDir)
     lastDir = tfc.getLastDir()
@@ -636,9 +664,9 @@ def mdrun(inp):
                     return fo
             else:
                 log.debug("Last run did not produce any output files. Cannot generate coordinates from checkpoint.")
-        # now the priority ranges from 1 to 4, depending on how
+        # now the priority ranges from 1 to 5, depending on how
         # far along the simulation is.
-        prio += 1+int(3*(completed))
+        prio += 1+int(5*(completed))
         log.debug("Setting new priority to %d because it's in progress"%
                   prio)
     # we can always add state.cpt, even if it doesn't exist.

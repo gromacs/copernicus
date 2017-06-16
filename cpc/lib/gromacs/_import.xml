@@ -18,7 +18,6 @@
         </field>
     </type>-->
 
-
     <type id="mdp_file_array" base="array" member-type="file" />
     <type id="conf_array" base="array" member-type="file" />
     <type id="top_array" base="array" member-type="file" />
@@ -36,7 +35,10 @@
     <type id="xtc_array" base="array" member-type="file" />
     <type id="trr_array" base="array" member-type="file" />
     <type id="edr_array" base="array" member-type="file" />
+    <type id="xvg_array" base="array" member-type="file" />
     <type id="log_array" base="array" member-type="file" />
+
+    <type id="file_list" base="array" member-type="file" />
 
     <!-- individual settings -->
     <type id="setting" base="record">
@@ -50,6 +52,9 @@
     <type id="mdp_array_array" base="array" member-type="mdp_array">
         <desc>An array of arrays of grompp mdp settings</desc>
     </type>
+
+    <type id="int_vector" base="array" member-type="int" />
+    <type id="float_vector" base="array" member-type="float" />
 
 
     <function id="grompp" type="python-extended">
@@ -124,6 +129,15 @@
             </field>
             <field type="file" id="edr">
                 <desc>energy+measurements output file</desc>
+            </field>
+            <field type="file" id="pullx">
+                <desc>umbrella sampling output file</desc>
+            </field>
+            <field type="file" id="pullf">
+                <desc>umbrella sampling  output file</desc>
+            </field>
+            <field type="file" id="dhdl">
+                <desc>dhdl output file</desc>
             </field>
             <field type="file" id="log">
                 <desc>The md.log output with performance data</desc>
@@ -478,7 +492,7 @@
                 <desc>Multiply energy component by this factor.</desc>
             </field>
             <field type="string" id="cmdline_options" opt="true">
-                <desc>An optional string with command line options for trjconv
+                <desc>An optional string with command line options for eneconv
                     to use</desc>
             </field>
         </inputs>
@@ -492,6 +506,69 @@
                     persistent_dir="true" />
     </function>
 
+
+    <function id="genconf" type="python-extended">
+        <desc>Multiplies a coordinate file by stacking them on top of each other</desc>
+        <inputs>
+            <field type="file" id="conf">
+                <desc>The input structure.</desc>
+            </field>
+            <field type="int" id="nmolat">
+                <desc>Number of atoms per molecules.</desc>
+            </field>
+            <field type="int_vector" id="nbox" opt="true">
+                <desc>Number of boxes. Default: 1 1 1.</desc>
+            </field>
+            <field type="float_vector" id="dist" opt="true">
+                <desc>Distance between boxes. Default: 0 0 0.</desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for genconf
+                    to use</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="conf">
+                <desc>Processed structure.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.genconf"
+                    import="cpc.lib.gromacs"
+                    persistent_dir="true" />
+    </function>
+
+    <function id="editconf" type="python-extended">
+        <desc>Converts and manipulates generic structures.</desc>
+        <inputs>
+            <field type="file" id="conf">
+                <desc>The input structure.</desc>
+            </field>
+            <field type="string" id="boxtype" opt="true">
+                <desc>Box type: triclinic, cubic, dodecahedron, octahedron. Default: triclinic.</desc>
+            </field>
+            <field type="float_vector" id="box" opt="true">
+                <desc>Box vector lengths. Default: 0 0 0.</desc>
+            </field>
+            <field type="float_vector" id="angles" opt="true">
+                <desc>Angles between the box vectors. Default: 90 90 90.</desc>
+            </field>
+            <field type="float" id="distance" opt="true">
+                <desc>Minimum distance between the solute and the box edge.</desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for genconf
+                    to use</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="conf">
+                <desc>Processed structure.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.editconf"
+                    import="cpc.lib.gromacs"
+                    persistent_dir="true" />
+    </function>
 
     <function id="pdb2gmx" type="python-extended">
         <desc>Creates processed gro and topology from pdb.</desc>
@@ -527,6 +604,74 @@
         <controller function="cpc.lib.gromacs.pdb2gmx"
                     import="cpc.lib.gromacs"
                     persistent_dir="true" />
+    </function>
+
+    <function id="wham" type="python-extended">
+        <inputs>
+            <field type="file_list" id="tpr" complete="true">
+                <desc>The tpr file names to use.</desc>
+            </field>
+            <field type="file_list" id="pullx" complete="true" opt="true">
+                <desc>The pullx files to use. Either pullx
+                      or pullf must be provided, but not both.</desc>
+            </field>
+            <field type="file_list" id="pullf" complete="true" opt="true">
+                <desc>The pullf files to use. Either pullx
+                      or pullf must be provided, but not both.</desc>
+            </field>
+            <field type="float" id="begin_time" opt="true">
+                <desc>First time to analyze (ps). Default: 50 ps.</desc>
+            </field>
+            <field type="float" id="end_time" opt="true">
+                <desc>Last time to analyze (ps). Default: 1e+20 ps.</desc>
+            </field>
+            <field type="float" id="temperature" opt="true">
+                <desc>Temperature of the simulations. Default: 298 K.</desc>
+            </field>
+            <field type="int" id="bins" opt="true">
+                <desc>Number of bins in profile. Default: 200.</desc>
+            </field>
+            <field type="bool" id="cyclic" opt="true">
+                <desc>Create a cyclic/periodic profile. Default: false.</desc>
+            </field>
+            <field type="bool" id="sym" opt="true">
+                <desc>Symmetrize profile around z=0. Default: false.</desc>
+            </field>
+            <field type="bool" id="limit_range" opt="true">
+                <desc>Only generate PMF between min and max umbrella position. Default: true.</desc>
+            </field>
+            <field type="int" id="n_bootstraps" opt="true">
+                <desc>Number of bootstraps for error analysis. Default: 0.</desc>
+            </field>
+            <field type="float" id="ac_smooth" opt="true">
+                <desc>Smooth autocorrelation times along reaction coordinate with
+                      Gaussian of this sigma. Default: 0.</desc>
+            </field>
+            <field type="string" id="cmdline_options" opt="true">
+                <desc>An optional string with command line options for genconf
+                    to use</desc>
+            </field>
+        </inputs>
+        <outputs>
+            <field type="file" id="profile">
+                <desc>The free energy profile</desc>
+            </field>
+            <field type="file" id="histogram">
+                <desc>The umbrella histogram</desc>
+            </field>
+            <field type="file" id="bs_results">
+                <desc>Average bootstrapping profile and standard deviations</desc>
+            </field>
+            <field type="file" id="bs_profiles">
+                <desc>All bootstrapping profiles</desc>
+            </field>
+            <field type="file" id="iact">
+                <desc>Integrated autocorrelation times.</desc>
+            </field>
+        </outputs>
+        <controller function="cpc.lib.gromacs.wham"
+                    import="cpc.lib.gromacs"
+                    persistent_dir="false" />
     </function>
 
 
@@ -672,6 +817,15 @@
             <field type="trr_array" id="trr">
                 <desc>Array of full-precision (trr) trajectory files</desc>
             </field>
+            <field type="xvg_array" id="pullx">
+                <desc>Array of umbrella sampling output files</desc>
+            </field>
+            <field type="xvg_array" id="pullf">
+                <desc>Array of umbrella sampling  output files</desc>
+            </field>
+            <field type="xvg_array" id="dhdl">
+                <desc>Array of dhdl output files</desc>
+            </field>
             <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
             </field>
@@ -739,6 +893,15 @@
             </field>
             <field type="edr_array" id="edr">
                 <desc>Array of energy+measurements output files</desc>
+            </field>
+            <field type="xvg_array" id="pullx">
+                <desc>Array of umbrella sampling output files</desc>
+            </field>
+            <field type="xvg_array" id="pullf">
+                <desc>Array of umbrella sampling  output files</desc>
+            </field>
+            <field type="xvg_array" id="dhdl">
+                <desc>Array of dhdl output files</desc>
             </field>
             <field type="log_array" id="log">
                 <desc>The md.log output with performance data</desc>

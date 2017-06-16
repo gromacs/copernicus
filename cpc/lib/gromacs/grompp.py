@@ -1,10 +1,11 @@
 # This file is part of Copernicus
 # http://www.copernicus-computing.org/
-# 
-# Copyright (C) 2011, Sander Pronk, Iman Pouya, Erik Lindahl, and others.
+#
+# Copyright (C) 2011-2016, Sander Pronk, Iman Pouya, Magnus Lundborg,
+# Erik Lindahl, and others.
 #
 # This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 2 as published 
+# it under the terms of the GNU General Public License version 2 as published
 # by the Free Software Foundation
 #
 # This program is distributed in the hope that it will be useful,
@@ -294,7 +295,7 @@ def mdruns(inp):
                                                "persistent.dat"))
 
     inputs = ['tpr','priority','cmdline_options','resources']
-    outputs = [ 'conf', 'xtc', 'trr', 'edr', 'log' ]
+    outputs = [ 'conf', 'xtc', 'trr', 'edr', 'pullx', 'pullf', 'dhdl', 'log' ]
     running=0
     if(pers.get("running")):
         running=pers.get("running")
@@ -324,7 +325,7 @@ def grompp_mdruns(inp):
     mdrun_inputs = [ 'priority', 'cmdline_options', 'resources']
     inputs = grompp_inputs + mdrun_inputs
     grompp_outputs = [ 'tpr' ]
-    mdrun_outputs = [ 'conf', 'xtc', 'trr', 'edr', 'log' ]
+    mdrun_outputs = [ 'conf', 'xtc', 'trr', 'edr', 'pullx', 'pullf', 'dhdl', 'log' ]
     outputs = grompp_outputs + mdrun_outputs
     running=0
     if(pers.get("running")):
