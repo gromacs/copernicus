@@ -192,6 +192,14 @@ class Platform(object):
             rsrc.writeXML(outf)
         outf.write('  </pref>\n')
         outf.write(' </resources>\n')
+        
+        outf.write(' <run-vars>\n')
+        if self.runvars.vars.get('GMXARGS'):
+            outf.write('  <run-var name="%s" value="%s"/>' % ('GMXARGS', self.runvars.vars['GMXARGS']))
+        else:
+            outf.write('  <run-var name="%s" value=""/>' % 'GMXARGS')
+        outf.write(' </run-vars>\n')
+        
         outf.write('</platform>\n')
 
 

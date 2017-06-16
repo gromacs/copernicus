@@ -34,9 +34,10 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                 else:
                     MPI=True
             elif re.match(r"MPI Library", line, re.IGNORECASE): # 4.6
-                if re.match(r".*thread_mpi", line, re.IGNORECASE):
+                par=line.split()[-1]
+                if par == "thread_mpi":
                     threadMPI=True
-                elif line.split()[-1] == "MPI":
+                else:
                     MPI=True
             elif re.match(r"GPU", line, re.IGNORECASE):
                 if line.split()[-1] != "disabled":
@@ -53,7 +54,7 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                     (name,platform, version))
                 if re.match(r"4.6",version):
                   outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s -ntomp 1" />\n'%(cmd, opts))
-                else: 
+                else:
                   outf.write('    <run in_path="yes" cmdline="$MPIRUN %s %s" />\n'%(cmd, opts))
                 outf.write('    <cmd-joinable match_args="yes" match_ncores="yes" common_args="-multidir" specific_args="$RUN_DIR" />\n')
                 outf.write('</executable>\n')
@@ -63,7 +64,7 @@ def try_report_command(outf, name, cmd, opts="", isMdrun=False):
                     '<executable name="gromacs/%s" platform="smp" arch="" version="%s">\n'%
                     (name, version))
                 if isMdrun:
-                    nopts="%s -nt $NCORES"%(opts)
+                    nopts="%s -nt $NCORES $GMXARGS"%(opts)
                 else:
                     nopts=opts
                 outf.write('    <run in_path="yes" cmdline="%s %s" />\n'%

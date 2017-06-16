@@ -54,8 +54,10 @@ try:
         ncores_max=multiprocessing.cpu_count()
     except NotImplementedError:
         pass
-    ncores_min=1    # the minimum number of cores available
+    ncores_min=1     # the minimum number of cores available
     ncores_pref=None # the preferred size of an individual run. 
+    gmxargs=""       # Command arguments used when running GROMACS.
+
     # parse the arguments
     prevarg=None
     err=False
@@ -70,6 +72,8 @@ try:
                 prevarg=arg
             elif arg == "--join":
                 joinRuns=True
+            elif arg == "-gmxargs":
+                prevarg=arg
             else:
                 err=True
         else:
@@ -77,11 +81,14 @@ try:
                 ncores_max=int(arg)
             elif prevarg == "-s":
                 ncores_pref=int(arg)
+            elif prevarg == "-gmxargs":
+                gmxargs = arg
+            
             prevarg=None
 
 
     if err or (prevarg is not None) or (ncores_max==0):
-        print "Usage: cpc worker smp [--join] -n <ncores> [-s <run-size>]"
+        print "Usage: cpc worker smp [--join] [-n <ncores>] [-s <run-size>] [-gmxargs \"ARGS\"]"
         sys.exit(1)
 
     if command == "platform":
@@ -104,6 +111,11 @@ try:
             print('        <resource name="cores" value="%d"/>'%ncores_pref)
         print('    </pref>')
         print('  </resources>')
+        
+        print('  <run-vars>')
+        print('      <run-var name="GMXARGS" value="%s"/>'%gmxargs)
+        print('  </run-vars>')
+        
         print('  </platform>')
         print('</platform-list>')
     elif command == "run":
