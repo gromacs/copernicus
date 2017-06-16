@@ -51,7 +51,11 @@ def piecewiseLinearInterpolation(x, xpoints, ypoints):
         if xpoints[i] >= x:
             break
     # then do a linear interpolation
-    x1 = xpoints[i-1]
+    try:
+        x1 = xpoints[i-1]
+    except Exception:
+        i = 1
+        x1 = xpoints[1-1]
     x2 = xpoints[i]
     y1 = ypoints[i-1]
     y2 = ypoints[i]

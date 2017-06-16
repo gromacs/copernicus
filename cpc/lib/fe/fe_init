@@ -103,6 +103,8 @@ def fe_init(inp, out):
                                        'value' : inp.getInputValue('a')}))
         valarray.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
                                        'value' : inp.getInputValue('b') }))
+        valarray.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                       'value' : StringValue('0')}))
         out.setSubOut('settings', ArrayValue(valarray))
 
         settings_array=[]

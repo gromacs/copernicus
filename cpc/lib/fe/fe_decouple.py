@@ -591,6 +591,7 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
         last_equil['lj'] = pers.get('last_equil_lj') or 0
         last_equil['ljq'] = pers.get('last_equil_ljq') or 0
         totErr = 2*precision
+        finished = True
         if simultaneousDecoupling:
             avg['ljq'] = res['ljq'].getAvg()
             err['ljq'] = res['ljq'].getErr()
@@ -617,13 +618,15 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
                 totErr = math.sqrt(err['lj']*err['lj'] + err['q']*err['q'])
                 out.setOut('delta_f.value', FloatValue(mult*totVal))
                 out.setOut('delta_f.error', FloatValue(totErr))
+            else:
+                finished = False
 
             if minIterations:
                 tooFewIterations['lj'] = nruns['lj'] - last_equil['lj'] <= minIterations
                 tooFewIterations['q'] = nruns['q'] - last_equil['q'] <= minIterations
 
         # now add iterations if the error is more than the desired error
-        if totErr > precision or any(v == True for v in tooFewIterations.itervalues()):
+        if finished and (totErr > precision or any(v == True for v in tooFewIterations.itervalues())):
             if simultaneousDecoupling:
                 sys.stderr.write('totErr (%s) > precision. nruns_ljq=%d\n' % (totErr, nruns['ljq']))
             else:
