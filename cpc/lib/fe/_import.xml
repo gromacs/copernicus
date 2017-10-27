@@ -13,6 +13,9 @@
         <field type="file" id="ndx" opt="true">
             <desc>A .ndx index file</desc>
         </field>
+        <field type="file" id="rcoord" opt="true">
+            <desc>A coord file used as reference for restraints</desc>
+        </field>
         <field type="gromacs::grompp_include_array" id="include" opt="true"
                 complete="true">
             <desc>array of files to include</desc>
@@ -240,12 +243,21 @@
                       Default False.
                 </desc>
             </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
+                </desc>
+            </field>
             <field type="lambda_array" id="lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
                       of Coulomb and Lennard-Jones.
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
         </inputs>
@@ -275,12 +287,15 @@
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
             <field type="meas_array" id="dG_ljq_array"/>
+            <field type="meas_array" id="dG_restr_array"/>
             <field type="fe_path_array" id="path_q" />
             <field type="fe_path_array" id="path_lj" />
             <field type="fe_path_array" id="path_ljq" />
+            <field type="fe_path_array" id="path_restr" />
             <field type="bool_list" id="done_reoptimization_list_q" />
             <field type="bool_list" id="done_reoptimization_list_lj" />
             <field type="bool_list" id="done_reoptimization_list_ljq" />
+            <field type="bool_list" id="done_reoptimization_list_restr" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>
@@ -407,12 +422,21 @@
                       Default False.
                 </desc>
             </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
+                </desc>
+            </field>
             <field type="lambda_array" id="lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
                       of Coulomb and Lennard-Jones.
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
             <field type="int" id="n_repetitions">
@@ -594,6 +618,11 @@
                       Default False.
                 </desc>
             </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
+                </desc>
+            </field>
             <field type="lambda_array" id="solvation_lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
                       of Coulomb and Lennard-Jones for solvation.
@@ -622,6 +651,10 @@
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
         </inputs>
@@ -822,12 +855,21 @@
                       Default False.
                 </desc>
             </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
+                </desc>
+            </field>
             <field type="lambda_array" id="solvation_lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
                       of Coulomb and Lennard-Jones for solvation.
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="solvation_lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
             <field type="lambda_array" id="binding_lambdas_q" opt="true">
@@ -850,6 +892,10 @@
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="binding_lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
             <field type="int" id="n_repetitions">
@@ -934,6 +980,11 @@
             </field>
             <field type="float" id="sc_alpha" opt="true">
                 <desc>Soft-core alpha parameter for the mdruns.</desc>
+            </field>
+            <field type="bool" id="is_restraint_decoupling" opt="true">
+                <desc>
+                    Is this decoupling restraints? Default is False.
+                </desc>
             </field>
         </inputs>
         <outputs>
@@ -1052,6 +1103,11 @@
             </field>
             <field type="int" id="init_step" opt="true">
                 <desc>The starting step of the iteration.
+                </desc>
+            </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
                 </desc>
             </field>
         </inputs>
@@ -1197,12 +1253,21 @@
                       Default False.
                 </desc>
             </field>
+            <field type="bool" id="restraints_decoupling" opt="true">
+                <desc>Decouple restraints - this will generate a separate set of runs.
+                      Default False.
+                </desc>
+            </field>
             <field type="lambda_array" id="lambdas_ljq" opt="true">
                 <desc>Optional list of lambda values for simultaneous decoupling
                       of Coulomb and Lennard-Jones.
                       Only used if simultaneous_decoupling=True.
                       If specifying a lambda array there will be no lambda
                       point optimization.
+                </desc>
+            </field>
+            <field type="lambda_array" id="lambdas_restr" opt="true">
+                <desc>Optional list of lambda values for decoupling restraints.
                 </desc>
             </field>
         </inputs>
@@ -1222,12 +1287,15 @@
             <field type="meas_array" id="dG_q_array"/>
             <field type="meas_array" id="dG_lj_array"/>
             <field type="meas_array" id="dG_ljq_array"/>
+            <field type="meas_array" id="dG_restr_array"/>
             <field type="fe_path_array" id="path_q" />
             <field type="fe_path_array" id="path_lj" />
             <field type="fe_path_array" id="path_ljq" />
+            <field type="fe_path_array" id="path_restr" />
             <field type="bool_list" id="done_reoptimization_list_q" />
             <field type="bool_list" id="done_reoptimization_list_lj" />
             <field type="bool_list" id="done_reoptimization_list_ljq" />
+            <field type="bool_list" id="done_reoptimization_list_restr" />
         </subnet-inputs>
         <subnet-outputs>
             <field type="string_array" id="endpoint_array"/>

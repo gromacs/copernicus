@@ -167,14 +167,23 @@ def g_bar(inp):
     lambdaReg=re.compile(r".*lambda.*")
     pointReg=re.compile(r".*point.*")
     totalReg=re.compile(r".*total.*")
+    lambdaValReg=re.compile(r".*; lambda = .*")
+    
     results=[] # the array of detailed results in kT
     phases=[ "start", "detailed_results", "final" ]
     phase=0
     i=0
+    lambdaValueList = []
     #log.debug(stdout)
     for line in iter(stdout.splitlines()):
         if phase == 0:
+            if lambdaValReg.match(line):
+                if line[-1] == ')':
+                    lambdaValueList.append(float(line.split('(')[-1].split(',')[0]))
+                else:
+                    lambdaValueList.append(float(line.split()[-1]))
             if detailedStart.match(line):
+                lambdaValueList.sort()
                 phase=1
         elif phase == 1:
             if finalStart.match(line):
@@ -210,6 +219,13 @@ def g_bar(inp):
             elif len(spl) >= 8 and totalReg.match(spl[0]):
                 total_dG=float(spl[5])
                 total_dG_err=float(spl[7])
+    
+    # Sanitize the lambda values (make sure that they are lambdas - not lambda indexes:
+    if results and (results[-1].lambda_A > 1.0 or results[-1].lambda_B > 1.0):
+        for rs in results:
+            rs.lambda_A = lambdaValueList[int(rs.lambda_A)]
+            rs.lambda_B = lambdaValueList[int(rs.lambda_B)]
+    
     # now fill the results array
     resValArray=[]
     for rs in results:

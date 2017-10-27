@@ -70,6 +70,9 @@ class partialRes(object):
             elif '_ljq_' in name:
                 tp = 'ljq'
                 last_equil = pers.get('last_equil_ljq') or 0
+            elif '_restr_' in name:
+                tp = 'restr'
+                last_equil = pers.get('last_equil_restr') or 0
             else:
                 tp = ''
                 doneReoptimization = None
@@ -274,6 +277,8 @@ def addEquilibration(name, i, inp, out, pers, optimize):
         out.addConnection(None, '%s:in.sc_alpha' % iname, FloatValue(0))
     else:
         out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
+        
+    out.addConnection('self:ext_in.restraints_decoupling', '%s:in.restraints_decoupling' % iname)
 
     doOptimize = BoolValue(optimize)
     # connect the outputs
@@ -345,6 +350,8 @@ def addIteration(name, i, initStep, inp, out, pers, optimize, isOptIter=False):
         out.addConnection(None, '%s:in.sc_alpha' % iname, FloatValue(0))
     else:
         out.addConnection('self:ext_in.sc_alpha', '%s:in.sc_alpha' % iname)
+
+    out.addConnection('self:ext_in.restraints_decoupling', '%s:in.restraints_decoupling' % iname)
 
     # connect the outputs
     out.addConnection('%s:out.dG'%iname, 'self:sub_in.dG_%s_array[%d]' % (name, i))
@@ -429,6 +436,12 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
     last_equil = dict()
     tooFewIterations = dict()
 
+    inpRestraintsDecoupl = inp.getInput('restraints_decoupling')
+    if inpRestraintsDecoupl is not None:
+        restraintsDecoupling = inpRestraintsDecoupl
+    else:
+        restraintsDecoupling = False
+
     inpSimDecoupl = inp.getInput('simultaneous_decoupling')
     if inpSimDecoupl is not None:
         simultaneousDecoupling = inpSimDecoupl
@@ -444,11 +457,18 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
         lambdas_lj = inp.getInput('lambdas_lj')
         if lambdas_q or lambdas_lj:
             optimizeLambdas = False
+            
+    if restraintsDecoupling:
+        lambdas_restr = inp.getInput('lambdas_restr')
+        if lambdas_restr:
+            optimizeLambdas = False
 
     if simultaneousDecoupling:
         types = ['ljq']
     else:
         types = ['q', 'lj']
+    if restraintsDecoupling:
+        types.append('restr')
 
     if init is None:
         init = 1
@@ -503,6 +523,10 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
             out.addConnection('self:sub_out.endpoint_array[1]', 'init_q:in.b')
             out.addConnection('self:sub_out.endpoint_array[1]', 'init_lj:in.a')
             out.addConnection('self:sub_out.endpoint_array[2]', 'init_lj:in.b')
+        if restraintsDecoupling:
+            out.addConnection(None, 'init_restr:in.a', StringValue('vdwq'))
+            out.addConnection(None, 'init_restr:in.b', StringValue('vdwq'))
+            out.addConnection(None, 'init_restr:in.is_restraint_decoupling', BoolValue('true'))
         pers.set('init', init)
 
     for tp in types:
@@ -542,12 +566,12 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
                 nruns[tp] += 1
             else:
                 sys.stderr.write("Failed adding %s iteration\n" % tp)
-
+                
     if simultaneousDecoupling:
         res['ljq'] = partialRes('dG_ljq_array', inp, out, pers)
         changed['ljq'] = res['ljq'].getUpdated()
         res['ljq'].updateOutput('partial_results', 0,
-                             'Lennard-Jones and electrostatics decoupling', 'path_ljq')
+                                'Lennard-Jones and electrostatics decoupling', 'path_ljq')
 
         sys.stderr.write('ljq: %f +- %f.\n' % (res['ljq'].getAvg() or 0, res['ljq'].getErr() or -1))
 
@@ -568,6 +592,20 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
 
         sys.stderr.write('Changed Q: %s, Changed LJ: %s\n' % (changed['q'], changed['lj']))
 
+    if restraintsDecoupling:
+        res['restr'] = partialRes('dG_restr_array', inp, out, pers)
+        changed['restr'] = res['restr'].getUpdated()
+        if simultaneousDecoupling:
+            res['restr'].updateOutput('partial_results', 1,
+                                    'Restraints decoupling', 'path_restr')
+        else:
+            res['restr'].updateOutput('partial_results', 2,
+                                    'Restraints decoupling', 'path_restr')
+        
+        sys.stderr.write('restr: %f +- %f.\n' % (res['restr'].getAvg() or 0, res['restr'].getErr() or -1))
+
+        sys.stderr.write('Changed restr: %s\n' % changed['restr'])
+
     precision = inp.getInput('precision')
     minIterations = inp.getInput('min_iterations')
     if optimizeLambdas and minIterations:
@@ -585,21 +623,35 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
         tooFewIterations['ljq'] = False
         tooFewIterations['lj'] = False
         tooFewIterations['q'] = False
+        tooFewIterations['restr'] = False
 
     if any(v == True for v in changed.itervalues()) or changedPrecision or changedMinIterations:
         last_equil['q'] = pers.get('last_equil_q') or 0
         last_equil['lj'] = pers.get('last_equil_lj') or 0
         last_equil['ljq'] = pers.get('last_equil_ljq') or 0
+        last_equil['restr'] = pers.get('last_equil_restr') or 0
         totErr = 2*precision
-        finished = True
+        
+        if restraintsDecoupling:
+            avg['restr'] = res['restr'].getAvg()
+            err['restr'] = res['restr'].getErr()
+            sys.stderr.write('avg_restr = %s, err_restr = %s\n' % (avg['restr'], err['restr']))
+
+            if minIterations:
+                tooFewIterations['restr'] = nruns['restr'] - last_equil['restr'] <= minIterations
+        
         if simultaneousDecoupling:
             avg['ljq'] = res['ljq'].getAvg()
             err['ljq'] = res['ljq'].getErr()
             sys.stderr.write('avg_ljq = %s, err_ljq = %s\n' % (avg['ljq'], err['ljq']))
-            if avg['ljq'] != None:
+            if avg['ljq'] != None and (restraintsDecoupling is False or avg['restr'] != None):
                 # update the totals
-                totVal = avg['ljq']
-                totErr = err['ljq']
+                if restraintsDecoupling:
+                    totVal = avg['ljq'] - avg['restr']
+                    totErr = math.sqrt(err['ljq']*err['ljq'] + err['restr']*err['restr'])
+                else:
+                    totVal = avg['ljq']
+                    totErr = err['ljq']
                 out.setOut('delta_f.value', FloatValue(mult*totVal))
                 out.setOut('delta_f.error', FloatValue(totErr))
 
@@ -612,21 +664,24 @@ def decouple(inp, out, relaxation_time, mult, n_lambdas_init=16):
             err['q'] = res['q'].getErr()
             err['lj'] = res['lj'].getErr()
             sys.stderr.write('avg_q = %s, avg_lj = %s, err_q = %s, err_lj = %s\n' % (avg['q'], avg['lj'], err['q'], err['lj']))
-            if not (avg['q'] is None or avg['lj'] is None):
+            if avg['q'] != None and avg['lj'] != None and (restraintsDecoupling is False or avg['restr'] != None):
                 # update the totals
-                totVal = avg['q'] + avg['lj']
-                totErr = math.sqrt(err['lj']*err['lj'] + err['q']*err['q'])
+                if restraintsDecoupling:
+                    totVal = avg['q'] + avg['lj'] - avg['restr']
+                    totErr = math.sqrt(err['lj']*err['lj'] + err['q']*err['q'] + err['restr']*err['restr'])
+                else:
+                    totVal = avg['q'] + avg['lj']
+                    totErr = math.sqrt(err['lj']*err['lj'] + err['q']*err['q'])
+                    
                 out.setOut('delta_f.value', FloatValue(mult*totVal))
                 out.setOut('delta_f.error', FloatValue(totErr))
-            else:
-                finished = False
 
             if minIterations:
                 tooFewIterations['lj'] = nruns['lj'] - last_equil['lj'] <= minIterations
                 tooFewIterations['q'] = nruns['q'] - last_equil['q'] <= minIterations
 
         # now add iterations if the error is more than the desired error
-        if finished and (totErr > precision or any(v == True for v in tooFewIterations.itervalues())):
+        if totErr > precision or any(v == True for v in tooFewIterations.itervalues()):
             if simultaneousDecoupling:
                 sys.stderr.write('totErr (%s) > precision. nruns_ljq=%d\n' % (totErr, nruns['ljq']))
             else:

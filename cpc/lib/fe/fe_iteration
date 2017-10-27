@@ -63,6 +63,11 @@ def fe_iteration(inp, out):
     if optimizeLambdas is None:
         optimizeLambdas = True
 
+    restraintsDecoupling = inp.getInput('restraints_decoupling') or False
+
+    aState = inp.getInput('path.a')
+    bState = inp.getInput('path.b')       
+
     selfRunIndex=3-inp.getInput('priority')
 
     calc_path=pers.get('calc_path')
@@ -78,7 +83,15 @@ def fe_iteration(inp, out):
             out.addInstance('calc_path', 'calc_path')
             out.addConnection('g_bar:out.bar_values', 'calc_path:in.bar_values')
             out.addConnection('calc_path:out.lambdas', 'self:sub_in.new_lambdas')
-            out.addConnection('self:ext_in.stddev_spacing', 'calc_path:in.stddev_spacing')
+            
+            # Lower the spacing for restraints decoupling (not higher than 0.2). Otherwise there are often only 2 lambda points.
+            if restraintsDecoupling and aState == bState:
+                spacing = inp.getInput('stddev_spacing') or 1
+                spacing = min(0.2, spacing)
+                out.addConnection(None, 'calc_path:in.stddev_spacing', FloatValue(spacing))
+            else:
+                out.addConnection('self:ext_in.stddev_spacing', 'calc_path:in.stddev_spacing')
+                
             out.addConnection('self:ext_in.dl_power', 'calc_path:in.dl_power')
 
             # for backward compatibility
@@ -98,6 +111,7 @@ def fe_iteration(inp, out):
         # connect the mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'runs:in.top[0]')
         out.addConnection('self:ext_in.grompp.ndx', 'runs:in.ndx[0]')
+        out.addConnection('self:ext_in.grompp.rcoord', 'runs:in.rcoord[0]')
         out.addConnection('self:ext_in.grompp.include', 'runs:in.include[0]')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'runs:in.cmdline_options[0]')
@@ -117,74 +131,122 @@ def fe_iteration(inp, out):
         sc_alpha=inp.getInput('sc_alpha')
         if sc_alpha is None:
             sc_alpha = 0.5
+            
+        lambdaStr = ''
+        for lam in lambdas:
+            lambdaStr += '%g ' % lam
+
+        if restraintsDecoupling:
+            qRestrLambdas = ''
+            vdwRestrLambdas = ''
+            restrLambdas = ''
+            for lam in lambdas:
+                restrLambdas += '%g ' % lam
+                #vdwRestrLambdas += '%g ' % (1-lam)
+                #qRestrLambdas += '1 '
+                vdwRestrLambdas += '0 '
+                qRestrLambdas += '0 '
 
         for i in xrange(nLambdas):
             lam=lambdas[i]
             mdp=[]
 
-            # Make a list of lambdas
-            foreignLambdas=''
+            ## Make a list of lambdas
+            #foreignLambdas=''
+            #if lambdasAllToAll:
+                #for j in xrange(nLambdas):
+                    #if j == i:
+                        #continue
+                    #foreignLambdas += '%g ' % lambdas[j]
+            #else:
+                #if i > 0:
+                    #prv = lambdas[i-1]
+                #else:
+                    #prv = None
+                #if i < nLambdas - 1:
+                    #nxt = lambdas[i+1]
+                #else:
+                    #nxt = None
+                #if prv is not None:
+                    #foreignLambdas += '%g ' % prv
+                #if nxt is not None:
+                    #foreignLambdas += '%g ' % nxt
+
+
+                ## Temporary special case for 41 lambdas to have neighbouring lambdas to be able
+                ## to derive 21 and 11 lambdas from the simulations.
+                #if not optimizeLambdas and nLambdas == 41:
+                    #prvprv = None
+                    #prvprvprv = None
+                    #nxtnxt = None
+                    #nxtnxtnxt = None
+                    #if i % 2 == 0:
+                        #if i > 1:
+                            #prvprv = lambdas[i-2]
+                        #if i < nLambdas - 2:
+                            #nxtnxt = lambdas[i+2]
+                    #if i % 4 == 0:
+                        #if i > 3:
+                            #prvprvprv = lambdas[i-4]
+                        #if i < nLambdas - 4:
+                            #nxtnxtnxt = lambdas[i+4]
+
+                    #if prvprv is not None:
+                        #if prvprvprv is not None:
+                            #foreignLambdas += '%g ' % prvprvprv
+                        #foreignLambdas += '%g ' % prvprv
+                    #if nxtnxt is not None:
+                        #if nxtnxtnxt is not None:
+                            #foreignLambdas += '%g ' % nxtnxtnxt
+                        #foreignLambdas += '%g ' % nxtnxt
+                ## End of special case
+                    
+            if 'q' in aState and not 'q' in bState:
+                mdp.append(RecordValue( { 'name' : StringValue('coul-lambdas'),
+                                            'value' : StringValue(lambdaStr)}))
+                if restraintsDecoupling:
+                    mdp.append(RecordValue( { 'name' : StringValue('restraint-lambdas'),
+                                              'value': StringValue(qRestrLambdas)}))
+                                            
+            if 'vdw' in aState and not 'vdw' in bState:
+                mdp.append(RecordValue( { 'name' : StringValue('vdw-lambdas'),
+                                          'value' : StringValue(lambdaStr)}))
+                if restraintsDecoupling:
+                    mdp.append(RecordValue( { 'name' : StringValue('restraint-lambdas'),
+                                              'value': StringValue(vdwRestrLambdas)}))
+            if restraintsDecoupling and aState == bState:
+                mdp.append(RecordValue( { 'name' : StringValue('restraint-lambdas'),
+                                          'value': StringValue(restrLambdas)}))
+
+            mdp.append(RecordValue( { 'name' : StringValue('init-lambda-state'),
+                                    'value' : StringValue('%d'%i)}))
             if lambdasAllToAll:
-                for j in xrange(nLambdas):
-                    if j == i:
-                        continue
-                    foreignLambdas += '%g ' % lambdas[j]
+                    mdp.append(RecordValue( { 'name' : StringValue('calc-lambda-neighbors'),
+                                            'value' : StringValue('-1')}))
             else:
-                if i > 0:
-                    prv = lambdas[i-1]
+                if nLambdas == 41:
+                    mdp.append(RecordValue( { 'name' : StringValue('calc-lambda-neighbors'),
+                                            'value' : StringValue('4')}))
                 else:
-                    prv = None
-                if i < nLambdas - 1:
-                    nxt = lambdas[i+1]
-                else:
-                    nxt = None
-                if prv is not None:
-                    foreignLambdas += '%g ' % prv
-                if nxt is not None:
-                    foreignLambdas += '%g ' % nxt
+                    mdp.append(RecordValue( { 'name' : StringValue('calc-lambda-neighbors'),
+                                            'value' : StringValue('1')}))
 
-
-                # Temporary special case for 41 lambdas to have neighbouring lambdas to be able
-                # to derive 21 and 11 lambdas from the simulations.
-                if not optimizeLambdas and nLambdas == 41:
-                    prvprv = None
-                    prvprvprv = None
-                    nxtnxt = None
-                    nxtnxtnxt = None
-                    if i % 2 == 0:
-                        if i > 1:
-                            prvprv = lambdas[i-2]
-                        if i < nLambdas - 2:
-                            nxtnxt = lambdas[i+2]
-                    if i % 4 == 0:
-                        if i > 3:
-                            prvprvprv = lambdas[i-4]
-                        if i < nLambdas - 4:
-                            nxtnxtnxt = lambdas[i+4]
-
-                    if prvprv is not None:
-                        if prvprvprv is not None:
-                            foreignLambdas += '%g ' % prvprvprv
-                        foreignLambdas += '%g ' % prvprv
-                    if nxtnxt is not None:
-                        if nxtnxtnxt is not None:
-                            foreignLambdas += '%g ' % nxtnxtnxt
-                        foreignLambdas += '%g ' % nxtnxt
-                # End of special case
-
-            mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                      'value' : StringValue('%g'%lam)}))
+            #mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                    #'value' : StringValue('%g'%lam)}))
+            #mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
+                                    #'value' : StringValue(foreignLambdas)}))
+            
             nsteps=inp.getInput('nsteps')
             mdp.append(RecordValue( { 'name' : StringValue('nsteps'),
-                                      'value' : StringValue('%d'%nsteps) }))
-            mdp.append(RecordValue( { 'name' : StringValue('foreign-lambda'),
-                                      'value' : StringValue(foreignLambdas)}))
+                                    'value' : StringValue('%d'%nsteps) }))
             initStep = inp.getInput('init_step')
             if initStep:
                 mdp.append(RecordValue( { 'name' : StringValue('init-step'),
-                                          'value' : StringValue('%d'%initStep) }))
+                                        'value' : StringValue('%d'%initStep) }))
             mdp.append(RecordValue( { 'name' : StringValue('sc-alpha'),
-                                      'value' : StringValue('%g'%sc_alpha)}))
+                                    'value' : StringValue('%g'%sc_alpha)}))
+            mdp.append(RecordValue( {'name' : StringValue('nstenergy'),
+                                        'value': StringValue('1000')}))
             settings_array.append(ArrayValue(mdp))
 
         # Include edr files from earlier iterations

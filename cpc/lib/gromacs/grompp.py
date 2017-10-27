@@ -104,7 +104,8 @@ def grompp(inp):
             inp.getInputValue('top').isUpdated() or 
             inp.getInputValue('include').isUpdated() or 
             inp.getInputValue('settings').isUpdated() or
-            inp.getInputValue('ndx').isUpdated()):
+            inp.getInputValue('ndx').isUpdated() or 
+            inp.getInputValue('rcoord').isUpdated()):
         if pers.get('init') is not None:
             return fo
     if pers.get('init') is not None:
@@ -113,6 +114,7 @@ def grompp(inp):
         log.debug("include: %s"%(inp.getInputValue('include').isUpdated()))
         log.debug("settings: %s"%(inp.getInputValue('settings').isUpdated()))
         log.debug("ndx: %s"%(inp.getInputValue('ndx').isUpdated()))
+        log.debug("rcoord: %s"%(inp.getInputValue('rcoord').isUpdated()))
 
     pers.set('init', 1)
     mdpfile=procSettings(inp, inp.getOutputDir())
@@ -132,10 +134,14 @@ def grompp(inp):
                                           "-c", inp.getInput('conf'),
                                           "-p", 'topol.top',
                                           # we made sure it's there
-                                          "-o", "topol.tpr" ]
+                                          "-o", "topol.tpr",
+                                          "-maxwarn", "2"]
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
+    if inp.hasInput('rcoord'):
+        cmdlist.append('-r')
+        cmdlist.append(inp.getInput('rcoord'))
     # TODO: symlink all the auxiliary files into the run dir
     stdoutfn=os.path.join(inp.getOutputDir(), "stdout")
     stdoutf=open(stdoutfn,"w")
@@ -233,6 +239,9 @@ def tune_fn(inp):
     if inp.hasInput('ndx'):
         cmdlist.append('-n')
         cmdlist.append(inp.getInput('ndx'))
+    if inp.hasInput('rcoord'):
+        cmdlist.append('-r')
+        cmdlist.append(inp.getInput('rcoord'))
     proc=subprocess.Popen(cmdlist, 
                           stdin=None,
                           stdout=subprocess.PIPE,
@@ -262,7 +271,7 @@ def grompps(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
-    inputs = ['mdp','top','conf', 'ndx', 'settings', 'include']
+    inputs = ['mdp','top','conf', 'ndx', 'rcoord', 'settings', 'include']
     outputs = [ 'tpr' ]
     running=0
     if(pers.get("running")):
@@ -321,7 +330,7 @@ def grompp_mdruns(inp):
     pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
                                                "persistent.dat"))
 
-    grompp_inputs = ['mdp','top','conf', 'ndx', 'settings', 'include' ]
+    grompp_inputs = ['mdp','top','conf', 'ndx', 'rcoord', 'settings', 'include' ]
     mdrun_inputs = [ 'priority', 'cmdline_options', 'resources']
     inputs = grompp_inputs + mdrun_inputs
     grompp_outputs = [ 'tpr' ]

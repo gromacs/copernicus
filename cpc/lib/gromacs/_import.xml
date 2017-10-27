@@ -22,6 +22,7 @@
     <type id="conf_array" base="array" member-type="file" />
     <type id="top_array" base="array" member-type="file" />
     <type id="ndx_array" base="array" member-type="file" />
+    <type id="rcoord_array" base="array" member-type="file" />
     <!--<type id="out-grompps_array" base="array"
           member-type="out-grompps" />-->
     <!--<type id="out-mdrun-multi_array" base="array"
@@ -78,6 +79,9 @@
             </field>
             <field type="file" id="ndx" opt="true">
                 <desc>An .ndx index file</desc>
+            </field>
+            <field type="file" id="rcoord" opt="true">
+                <desc>A coord file used as reference for restraints</desc>
             </field>
         </inputs>
         <outputs>
@@ -216,6 +220,9 @@
             </field>
             <field type="file" id="ndx" opt="true">
                 <desc>An .ndx index file</desc>
+            </field>
+            <field type="file" id="rcoord" opt="true">
+                <desc>A coord file used as reference for restraints</desc>
             </field>
             <field type="string" id="cmdline_options" opt="true">
                 <desc>An optional string with command line options for mdrun
@@ -763,11 +770,14 @@
             <field type="ndx_array" id="ndx" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
+            <field type="rcoord_array" id="rcoord" opt="true">
+                <desc>An array of coord files used as reference for restraints</desc>
+            </field>
             <field type="mdp_array_array" id="settings" opt="true">
                 <desc>An array of arrays of settings</desc>
             </field>
             <field type="grompp_include_array_array" id="include" opt="true">
-                <desc>An array of .ndx index files</desc>
+                <desc>An array of include settings</desc>
             </field>
         </inputs>
         <outputs>
@@ -855,11 +865,14 @@
             <field type="ndx_array" id="ndx" opt="true">
                 <desc>An array of .ndx index files</desc>
             </field>
+            <field type="rcoord_array" id="rcoord" opt="true">
+                <desc>An array of coord files used as reference for restraints</desc>
+            </field>
             <field type="mdp_array_array" id="settings" opt="true">
                 <desc>An array of arrays of settings</desc>
             </field>
             <field type="grompp_include_array_array" id="include" opt="true">
-                <desc>An array of .ndx index files</desc>
+                <desc>An array of include settings</desc>
             </field>
             <field type="prio_array" id="priority" opt="true">
                 <desc>An optional priority for commands issued</desc>

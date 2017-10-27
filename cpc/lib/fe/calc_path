@@ -37,9 +37,11 @@ class FEError(cpc.dataflow.ApplicationError):
 
 
 class path_point:
-    def __init__(self, lambda_a, lambda_b, stddev, stddev_err, dG, dG_err):
+    def __init__(self, lambda_a, lambda_b, s_A, s_B, stddev, stddev_err, dG, dG_err):
         self.lambda_a = lambda_a
         self.lambda_b = lambda_b
+        self.s_A = s_A
+        self.s_B = s_B
         self.stddev = stddev
         self.stddev_err = stddev_err
         self.dG = dG
@@ -71,16 +73,18 @@ class path:
         for i in xrange(len(inp.getInput('bar_values'))):
             la = inp.getInput('bar_values[%d].lambda_A'%i)
             lb = inp.getInput('bar_values[%d].lambda_B'%i)
+            sa = inp.getInput('bar_values[%d].s_A.value'%i)
+            sb = inp.getInput('bar_values[%d].s_B.value'%i)
             stddev = inp.getInput('bar_values[%d].stdev.value'%i)
             stddev_err = inp.getInput('bar_values[%d].stdev.error'%i)
             dG = inp.getInput('bar_values[%d].dG_kT.value'%i)
             dG_err = inp.getInput('bar_values[%d].dG_kT.error'%i)
-            self.res.append(path_point(la, lb, stddev, stddev_err, dG, dG_err))
+            self.res.append(path_point(la, lb, sa, sb, stddev, stddev_err, dG, dG_err))
         # and sort the results in lambda_a
         self.res.sort(key = lambda b: b.lambda_a)
 
 
-    def makeLambdaSpacing(self, targetStddev = 1, dlPower = 1.0):
+    def makeLambdaSpacing(self, targetStddev = 1, dlPower = 1.0, penaliseUndersampling = True):
         """Return an array with a new set of lambda values to use as optimal
            spacings. This is based on the results from the current path:
            it tries to space the lambda points so that the expected per
@@ -104,15 +108,29 @@ class path:
         stddevs = [ 0 ]
         stddev_sum = 0.
         for i in xrange(Norig):
+
+            ## Applied to penalise violations of the second law of thermodynamics
+            #pen = 0
+            #if penaliseUndersampling:
+                #if self.res[i].s_A < 0:
+                    #pen += min(1, 2*abs(self.res[i].s_A))
+                #if self.res[i].s_B < 0:
+                    #pen += min(1, 2*abs(self.res[i].s_B))
+            #stddev_sum += pow(self.res[i].stddev+pen, 1 / dlPower)
+            
             stddev_sum += pow(self.res[i].stddev, 1 / dlPower)
             lambdas.append( self.res[i].lambda_b )
             stddevs.append(stddev_sum)
         #sys.stderr.write("Old stdev spacing: %s\n"%str(stddevs))
         # we now have a set of points, and the total sum in stddev_sum.
         # First choose the number of new lambda points:
-        # Do not make more than twice as many lambda points as were there
-        # originally.
-        Nintervals = int(min(((stddev_sum + 1) * targetStddev) / targetStddev, Norig*2))
+        # Do not make more than twice as many or fewer than half as many lambda points
+        # as were there originally.
+        sys.stderr.write("stddev_sum: %f, targetStddev: %f\n" % (stddev_sum, targetStddev))
+        Nintervals = int(min((stddev_sum+0.5*targetStddev)/targetStddev, Norig*2))
+        Nintervals = int(max(Nintervals, Norig/2))
+        Nintervals = int(max(Nintervals, 1))
+        sys.stderr.write("Nintervals: %d\n" % Nintervals)
         # now generate the points
         newLambdas=[]
         newLambdas.append( self.res[0].lambda_a )
@@ -134,17 +152,10 @@ def calc_path(inp, out):
     #pers=cpc.dataflow.Persistence(os.path.join(inp.getPersistentDir(),
     #                                           "persistent.dat"))
 
-    spVal=inp.getInput('stddev_spacing')
-    if spVal is not None:
-        spacing=spVal
-    else:
-        spacing=1.
+    spacing=inp.getInput('stddev_spacing') or 1.0
 
-    dlPower = inp.getInput('dl_power')
-    if dlPower is not None:
-        power = max(0, dlPower)
-    else:
-        power = 1.
+    power = inp.getInput('dl_power') or 1.0
+    power = max(0.0, power)
 
     # construct the input path
     p = path(inp)

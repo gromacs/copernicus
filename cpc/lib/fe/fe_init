@@ -70,6 +70,11 @@ def fe_init(inp, out):
     if relax_time_value.isUpdated() or npoints_init_value.isUpdated():
         # create settings to be used in tuning/running
         i=0
+
+        aState = inp.getInput('path.a')
+        bState = inp.getInput('path.b')        
+        restraintDecoupling = inp.getInput('is_restraint_decoupling') or False
+
         inSettings=inp.getInput('grompp.settings')
         valarray=[]
         if inSettings is not None:
@@ -103,14 +108,20 @@ def fe_init(inp, out):
                                        'value' : inp.getInputValue('a')}))
         valarray.append(RecordValue( { 'name' : StringValue('couple-lambda1'),
                                        'value' : inp.getInputValue('b') }))
-        valarray.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                       'value' : StringValue('0')}))
+        #valarray.append(RecordValue( { 'name' : StringValue('init-lambda'),
+                                       #'value' : StringValue('0')}))
         out.setSubOut('settings', ArrayValue(valarray))
 
         settings_array=[]
         mdp=[]
+            
+        if restraintDecoupling:
+            #mdp.append(RecordValue( { 'name' : StringValue('comm-mode'),
+                                        #'value': StringValue('none')}))
+            mdp.append(RecordValue( { 'name' : StringValue('restraint-lambdas'),
+                                      'value' : StringValue('0 0.5 1')}))
         mdp.append(RecordValue( { 'name' : StringValue('init-lambda'),
-                                'value' : StringValue('0')}))
+                                  'value' : StringValue('0')}))
         frame_spacing=int(relax_time/(npoints_init-1))
         # make sure it is divisible
         relax_time=(npoints_init-1)*frame_spacing
@@ -140,6 +151,7 @@ def fe_init(inp, out):
         # connect everything to it
         out.addConnection('self:ext_in.grompp.mdp', 'mdrun_tune:in.mdp')
         out.addConnection('self:ext_in.grompp.top', 'mdrun_tune:in.top')
+        out.addConnection('self:ext_in.grompp.rcoord', 'mdrun_tune:in.rcoord')
         out.addConnection('self:ext_in.grompp.include',
                           'mdrun_tune:in.include')
         out.addConnection('self:sub_out.settings', 'mdrun_tune:in.settings')
@@ -172,6 +184,7 @@ def fe_init(inp, out):
         # connect the output grompp settings
         out.addConnection('self:ext_in.grompp.top', 'self:ext_out.grompp.top')
         out.addConnection('self:ext_in.grompp.ndx', 'self:ext_out.grompp.ndx')
+        out.addConnection('self:ext_in.grompp.rcoord', 'self:ext_out.grompp.rcoord')
         out.addConnection('self:ext_in.grompp.include',
                           'self:ext_out.grompp.include')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
@@ -196,6 +209,7 @@ def fe_init(inp, out):
         # connect the tpr, mdp and resources
         out.addConnection('self:ext_in.grompp.top', 'grompp:in.top')
         out.addConnection('self:ext_in.grompp.ndx', 'grompp:in.ndx')
+        out.addConnection('self:ext_in.grompp.rcoord', 'grompp:in.rcoord')
         out.addConnection('self:ext_in.grompp.include', 'grompp:in.include')
         out.addConnection('self:ext_in.grompp.mdrun_cmdline_options',
                           'mdrun:in.cmdline_options')
